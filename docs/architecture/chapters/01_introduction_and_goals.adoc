@@ -72,10 +72,9 @@ endif::arc42help[]
 |===
 |ID |Quality Goal |Motivation
 |[[QG1,Easy to learn]]QG1 |Easy to learn (Learnability) |Users should be able to use the app without reading a manual or getting training. Nowadays, users expect to be able to use an app intuitively.
-|[[QG2]]QG2 |Easy to operate (Operability) |Users should be able to use the app without getting frustrated. The app should be responsive and provide feedback to user actions.
-|[[QG3]]QG3 |Secure (Security) |Expenses are a sensitive topic. Users mus be able to trust in the integrity and the confidentiality of their data.
-|[[QG4]]QG4 | Easy to host (Flexibility) | Users with technical background should be able to host the app themselves without much effort.
-|[[QG5]]QG5 |Maintainable (Maintainability) | The code should be easy to understand and to modify. This is important since the app is open-source and contributions by the community are welcome.
+|[[QG2]]QG2 |Secure (Security) |Expenses are a sensitive topic. Users mus be able to trust in the integrity and the confidentiality of their data.
+|[[QG3]]QG3 |Easy to host (Flexibility) | Users with technical background should be able to host the app themselves without much effort.
+|[[QG4]]QG4 |Maintainable (Maintainability) | The code should be easy to understand and to modify. This is important since the app is open-source and contributions by the community are welcome.
 |===
 // end::quality-goals[]
 
