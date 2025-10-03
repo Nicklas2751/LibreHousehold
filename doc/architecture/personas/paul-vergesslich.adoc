@@ -1,0 +1,75 @@
+= Persona: Paul Petersson - Der vergessliche Partner
+
+== Demografische Daten
+
+* *Name:* Paul Petersson
+* *Alter:* 28 Jahre
+* *Beruf:* It-Support-Spezialist
+* *Wohnort:* Hamburg
+* *Wohnsituation:* Mit seiner Freundin in einer kleinen Wohnung
+* *Technik-Affinität:* Hoch
+* *Geräte:* Smartphone (Android), PC
+
+== Hintergrund
+
+Paul lebt mit seiner Freundin in einer kleinen Wohnung in Hamburg. Er arbeitet als IT-Support-Spezialist und hat einen hektischen Alltag. Paul ist technikaffin, aber oft vergesslich, wenn es um die Organisation seines Haushalts geht. Er hat Schwierigkeiten, den Überblick über seine wiederkehrenden Aufgaben zu behalten und vergisst auch mal die Blumen zu gießen oder den Müll rauszubringen. Da ihm wichtig ist, dass seine Freundin ihn nicht ständig an solche Aufgaben erinnern muss, sucht er nach einer Lösung, die ihm hilft, den Haushalt besser zu organisieren. Zudem möchte er sicherstellen, dass die gemeinsamen Ausgaben fair aufgeteilt werden, ohne dass es zu Missverständnissen kommt.
+
+== Ziele und Motivationen
+
+* Erinnerungen für wiederkehrende Haushaltsaufgaben
+* Faire und transparente Kostenaufteilung
+* Einfache Bedienung und Integration in den Alltag
+* Reduzierung von Stress und Missverständnissen im Haushalt
+* Verbesserung der Kommunikation mit seiner Freundin bezüglich Haushaltsaufgaben
+
+== Frustrationen und Pain Points
+
+* Vergisst oft wichtige Aufgaben im Haushalt
+* Schwierigkeiten, den Überblick über gemeinsame Ausgaben zu behalten
+* Komplizierte Apps, die mehr Zeit kosten als sie sparen
+* Mangelnde Flexibilität bei der Kostenaufteilung
+* Stressige Diskussionen über Geldangelegenheiten
+
+== Technologie-Nutzung
+
+* Nutzt sein Smartphone intensiv für Kommunikation und Organisation
+* Verwendet Kalender-Apps und To-Do-Listen, aber keine spezifische Haushalts-App
+* Offen für neue Technologien, die seinen Alltag erleichtern
+* Bevorzugt Apps mit klarer Benutzeroberfläche und einfacher Navigation
+
+== Nutzungsszenarien für LibreHousehold
+
+=== Primäre Nutzung
+* Einrichtung von wiederkehrenden Erinnerungen für Haushaltsaufgaben
+* Verwaltung und Aufteilung gemeinsamer Ausgaben
+* Nutzung der App zur Verbesserung der Kommunikation mit seiner Freundin
+
+=== Sekundäre Nutzung
+* Integration mit Kalender-Apps
+* Nutzung von Benachrichtigungen zur Erinnerung an Aufgaben und Zahlungen
+* Aufteilen von Ausgaben basierend auf individuellen Vereinbarungen
+* Aufteilen von Kosten für eine Party mit Freunden
+
+== Besondere Anforderungen
+
+* Integration mit Kalender-Apps
+* Ausgabenaufteilung auch mit Personen außerhalb des Haushalts
+
+== Zitate
+
+_"Ich vergesse ständig, den Müll rauszubringen. Eine Erinnerung wäre super."_
+
+_"Ich möchte, dass die Kostenaufteilung fair und transparent ist, ohne dass es zu Diskussionen kommt."_
+
+_"Ich brauche eine App, die einfach zu bedienen ist und mir wirklich hilft, meinen Alltag zu organisieren."_
+
+_"Ich will keine Werbung, die mich bei der Nutzung der App stört."_
+
+_"Ich möchte auch Ausgaben mit Freunden teilen können, wenn wir zusammen etwas unternehmen."_
+
+== Erfolgsmessung
+
+* Regelmäßige Nutzung der App zur Verwaltung von Haushaltsaufgaben und Ausgaben
+* Positive Rückmeldungen von seiner Freundin bezüglich der Organisation im Haushalt
+* Reduzierung von vergessenen Aufgaben und Missverständnissen bei Ausgaben
+

@@ -1,0 +1,79 @@
+= Persona: Sabrina Hoffmann - Die vielbeschäftigte Familienfrau
+
+== Demografische Daten
+
+* *Name:* Sabrina Hoffmann
+* *Alter:* 35 Jahre
+* *Beruf:* Teilzeit-Buchhalterin und Mutter
+* *Wohnort:* Hamburg
+* *Wohnsituation:* Große WG mit Partner und befreundeter Familie (6 Erwachsene, 3 Kinder)
+* *Technik-Affinität:* Mittel
+* *Geräte:* Smartphone (Android), gelegentlich Laptop
+
+== Hintergrund
+
+Sabrina lebt mit ihrem Partner und ihrer 8-jährigen Tochter in einer ungewöhnlichen WG-Konstellation mit einer befreundeten Familie. Diese alternative Wohnform ermöglicht es beiden Familien, Kosten zu teilen und sich gegenseitig zu unterstützen. Sabrina arbeitet 20 Stunden pro Woche als Buchhalterin und kümmert sich um den Großteil der Haushaltsorganisation.
+
+== Ziele und Motivationen
+
+* Faire Kostenaufteilung zwischen zwei Familien mit unterschiedlichen Einkommen
+* Transparenz bei gemeinsamen Ausgaben für alle Beteiligten
+* Zeitersparnis bei der Haushaltsorganisation
+* Kindgerechte Aufgabenverteilung auch für die älteren Kinder
+* Entlastung bei der mentalen Last der Haushaltsführung
+
+== Frustrationen und Pain Points
+
+* Komplexe Kostenaufteilung mit verschiedenen Anteilen je nach Ausgabentyp
+* Unterschiedliche Technik-Affinität der WG-Mitglieder
+* Wenig Zeit für komplizierte Apps oder Einrichtung
+* Kinder sollen altersgerecht einbezogen werden
+* Balance zwischen Kontrolle und Vertrauen bei Ausgaben
+
+== Technologie-Nutzung
+
+* Nutzt hauptsächlich das Smartphone für Apps
+* Bevorzugt einfache, intuitive Bedienung
+* Verwendet WhatsApp, Instagram und Banking-Apps regelmäßig
+* Schätzt große, gut lesbare Buttons und Schrift
+* Benötigt gelegentlich Hilfe bei der Einrichtung neuer Apps
+
+== Nutzungsszenarien für LibreHousehold
+
+=== Primäre Nutzung
+* Erfassung der wöchentlichen Großeinkäufe
+* Überblick über monatliche Fixkosten (Miete, Strom, Internet)
+* Koordination von Haushaltsaufgaben zwischen allen Bewohnern
+
+=== Sekundäre Nutzung
+* Planung größerer Anschaffungen oder Reparaturen
+* Erstellung von Einkaufslisten für gemeinsame Besorgungen
+* Einbeziehung der Kinder bei altersgerechten Aufgaben
+
+== Besondere Anforderungen
+
+* Verschiedene Aufteilungsschlüssel (50/50, nach Personen, nach Einkommen)
+* Einfache Bedienung auch für weniger technikaffine WG-Mitglieder
+* Kategorisierung von Ausgaben (Lebensmittel, Haushalt, Kinder)
+* Kindersichere Bereiche oder vereinfachte Ansichten
+* Erinnerungsfunktionen für regelmäßige Aufgaben
+
+== Zitate
+
+_"Ich brauche eine App, die auch mein Partner und die andere Familie ohne Anleitung verstehen."_
+
+_"Die Kostenaufteilung muss flexibel sein - nicht alles wird fifty-fifty geteilt."_
+
+_"Es wäre toll, wenn auch die älteren Kinder ihre kleinen Aufgaben eintragen könnten."_
+
+_"Ich habe nicht viel Zeit, um komplizierte Einstellungen zu machen - es muss einfach funktionieren."_
+
+== Erfolgsmessung
+
+Sabrina wäre mit LibreHousehold zufrieden, wenn:
+
+* Alle Erwachsenen die App regelmäßig und gerne nutzen
+* Die monatliche Kostenabrechnung maximal 15 Minuten dauert
+* Diskussionen über Geldangelegenheiten reduziert werden
+* Die Kinder spielerisch in Haushaltsaufgaben einbezogen werden können
+* Sie weniger mentale Last bei der Haushaltsorganisation trägt
