@@ -13,6 +13,13 @@ ifndef::imagesdir[:imagesdir: ./images]
 [[section-context-and-scope]]
 == Context and Scope
 
+// tag::system-context-diagram[]
+.High Level System Context Diagram
+[plantuml, bar, svg]
+....
+include::../images/system_context.puml[]
+....
+// end::system-context-diagram[]
 
 ifdef::arc42help[]
 [role="arc42help"]

@@ -8,7 +8,7 @@
 // configure EN settings for asciidoc
 include::chapters/config.adoc[]
 
-= image:arc42-logo.png[arc42] Template
+= LibreHousehold Architecture Documentation
 :revnumber: {revnumber}
 :revdate: {revdate}
 :revremark: {revremark}

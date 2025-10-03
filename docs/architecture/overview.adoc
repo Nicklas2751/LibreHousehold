@@ -1,0 +1,19 @@
+= Software architecture overview
+
+include::chapters/01_introduction_and_goals.adoc[tag=mission-statement]
+
+Find more information about the goals in xref:arc42.adoc#section-introduction-and-goals[Chapter 1 - Introduction and Goals].
+
+:toc:
+
+== xref:arc42.adoc#section-context-and-scope[Context]
+
+include::chapters/03_context_and_scope.adoc[tag=system-context-diagram]
+
+== xref:arc42.adoc#section-introduction-and-goals[Quality Goals]
+
+include::chapters/01_introduction_and_goals.adoc[tag=quality-goals]
+
+== xref:arc42.adoc#section-solution-strategy[Solution Strategy]
+
+include::chapters/04_solution_strategy.adoc[tag=solution-strategy-mapping]
