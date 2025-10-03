@@ -19,9 +19,8 @@ ifndef::imagesdir[:imagesdir: ./images]
 |===
 |Quality Goal |Solution strategies
 |<<QG1,QG1 - Easy to learn>> |
-|<<QG2,QG2 - Easy to operate>> |
-|<<QG3,QG3 - Secure>> |
-|<<QG4,QG4 - Easy to host>> |
-|<<QG5,QG5 - Maintainable>> |
+|<<QG2,QG2 - Secure>> |
+|<<QG3,QG3 - Easy to host>> |
+|<<QG4,QG4 - Maintainable>> |
 |===
 // end::solution-strategy-mapping[]
