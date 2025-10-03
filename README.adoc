@@ -1,0 +1,23 @@
+= LibreHousehold
+
+LibreHousehold is a free and open-source software for managing household expenses and tasks. It is designed to be simple and user-friendly, with a modern UI and without any ads. It can be used on mobile devives as well as on desktop computers. It don't need to be installed but should feel like a native app.
+
+In difference to many other similar apps, LibreHousehold is designed to be completely free without any annoying ads. It should be easy to host it yourself or to contribute to it.
+Its code is built to be easily understandable and maintainable.
+
+== Features
+
+- Create households and invite other house-/flatmates
+- Track and share expenses with your mates
+- Create and manage tasks
+- Work offline and sync later
+- Responsive design for mobile and desktop
+
+== Main Goals
+
+- Completely free
+- No ads
+- Modern Look & Feel
+- Easy to use
+- Easy to host yourself
+- Easy to contribute

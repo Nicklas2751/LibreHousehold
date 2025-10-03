@@ -1,0 +1,68 @@
+= Persona: Anna Müller - Die organisierte Studentin
+
+== Demografische Daten
+
+* *Name:* Anna Müller
+* *Alter:* 22 Jahre
+* *Beruf:* Psychologie-Studentin im 5. Semester
+* *Wohnort:* München
+* *Wohnsituation:* 4er-WG in Studentenwohnheim
+* *Technik-Affinität:* Hoch
+* *Geräte:* Smartphone (iOS), Laptop (MacBook)
+
+== Hintergrund
+
+Anna studiert Psychologie an der LMU München und wohnt seit zwei Jahren in einer 4er-WG. Sie ist von Natur aus sehr organisiert und übernimmt oft die Rolle der "WG-Managerin". Ihr Budget ist begrenzt, weshalb sie jeden Euro zweimal umdreht und großen Wert auf faire Kostenaufteilung legt.
+
+== Ziele und Motivationen
+
+* Faire und transparente Aufteilung aller WG-Ausgaben
+* Vermeidung von Konflikten durch klare Absprachen
+* Zeitersparnis bei der Verwaltung von Ausgaben und Aufgaben
+* Übersicht über alle gemeinsamen Kosten behalten
+* Stress reduzieren durch automatisierte Erinnerungen
+
+== Frustrationen und Pain Points
+
+* Mitbewohner vergessen oft, ihre Ausgaben zu dokumentieren
+* Endlose WhatsApp-Diskussionen über "Wer hat was bezahlt?"
+* Komplizierte Excel-Tabellen, die niemand außer ihr versteht
+* Ständiges Nachrechnen und Mahnen bei Kostenerstattungen
+* Verschiedene Apps für verschiedene Zwecke sind zu umständlich
+
+== Technologie-Nutzung
+
+* Nutzt täglich verschiedene Apps für Organisation (Notion, Google Calendar)
+* Bevorzugt intuitive, schön gestaltete Apps
+* Verwendet hauptsächlich das Smartphone für alltägliche Aufgaben
+* Schätzt Offline-Funktionalität bei schlechtem WLAN im Studentenwohnheim
+* Teilt gerne Links und lädt andere zu gemeinsamen Tools ein
+
+== Nutzungsszenarien für LibreHousehold
+
+=== Primäre Nutzung
+* Erfassung von Einkäufen direkt nach dem Bezahlen im Supermarkt
+* Wöchentliche Überprüfung der WG-Ausgaben vor dem WG-Abend
+* Erstellen und Zuweisen von Haushaltsaufgaben
+
+=== Sekundäre Nutzung
+* Planen größerer gemeinsamer Anschaffungen
+* Vorbereitung der monatlichen Abrechnung
+* Erinnerungen für WG-Mitglieder bei überfälligen Aufgaben
+
+== Zitate
+
+_"Ich will nicht ständig hinterher rennen müssen, um zu erfahren, wer was ausgegeben hat."_
+
+_"Eine App, die alle nutzen können, ohne dass ich jedes Mal erklären muss, wie sie funktioniert."_
+
+_"Am liebsten würde ich alles sofort erfassen, auch wenn ich gerade kein Internet habe."_
+
+== Erfolgsmessung
+
+Anna wäre mit LibreHousehold zufrieden, wenn:
+
+* Alle WG-Mitglieder die App regelmäßig nutzen
+* Diskussionen über Geld um 80% reduziert werden
+* Die monatliche Abrechnung in unter 10 Minuten erledigt ist
+* Sie nicht mehr als "WG-Mama" fungieren muss
