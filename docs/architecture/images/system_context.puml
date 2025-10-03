@@ -1,0 +1,29 @@
+@startuml
+left to right direction
+skinparam componentFontColor automatic
+skinparam component {
+  backgroundColor<<system>> CornflowerBlue
+}
+skinparam nodesep 20
+
+component "LibreHousehold" <<system>> as librehousehold {
+}
+
+actor "User" as user
+actor "Administrator" as admin
+
+node "E-Mail Server" as mail
+
+user -> librehousehold
+admin -> librehousehold
+librehousehold -> mail
+
+user -[hidden]-> admin
+
+legend bottom
+  <#GhostWhite,#GhostWhite>|        |= __Legend__ |
+  |<#CornflowerBlue>  | System|
+  | | External systems and actors|
+end legend
+
+@enduml
