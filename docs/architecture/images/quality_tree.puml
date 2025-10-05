@@ -1,0 +1,26 @@
+@startmindmap
+!theme plain
+title LibreHousehold Quality Tree (ISO 25010-2023)
+
+* **ISO 25010-2023**\n**Quality Model**
+** **Interaction capability**
+*** **Learnability**
+**** [[#QG1]]: Easy to learn
+***** [[#USC1]]: Create household in 3 clicks
+***** [[#USC2]]: 90% can create expense without help
+** **Security**
+*** [[#QG2]]: Secure
+**** [[#USC3]]: Cannot modify other users' expenses
+**** [[#USC4]]: API returns only own household data
+**** [[#USC5]]: Unauthenticated users redirected to login
+**** [[#USC6]]: Passwords hashed and salted
+**** [[#USC7]]: Encrypted communication (WiFi attack)
+** **Maintainability**
+*** [[#QG4]]: Maintainable
+**** [[#CSC1]]: Add expense type in 5 minutes
+** **Flexibility**
+*** **Installability**
+**** [[#QG3]]: Easy to host
+***** [[#USC8]]: 90% can deploy in 10 minutes
+
+@endmindmap
