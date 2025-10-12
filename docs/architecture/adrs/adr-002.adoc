@@ -1,0 +1,24 @@
+[[adr-002]]
+= ADR 002: Kotlin as backend language
+
+== Context
+
+We need to choose a programming language for our backend services. Since the app will be open source we need to choose a language that is widely used and has a good community support <<QG4,(QG4)>>. We also want to choose a language that is easy to learn and has a good tooling support. As <<QG3,QG3>> describes, we want to make it easy for users to host the app themselves. Therefore, we need to choose a language that is easy to deploy and has a good support for containerization.
+
+== Considered Options
+
+Java; Kotlin; Python; JavaScript (Node.js)
+
+== Decision Outcome
+
+Kotlin is the chosen programming language for our backend services. Kotlin is a modern programming language that is fully interoperable with Java. It has a concise syntax and a good tooling support. Kotlin is also easy to learn for developers who are familiar with Java or other C-style languages. Furthermore, Kotlin has a good support for coroutines, which makes it easy to write asynchronous code. It's resource consumption is comparable to Java, and way better than Python or JavaScript (Node.js). Kotlin can be easily deployed in Docker containers, which makes it easy for users to host the app themselves. Java is used more widely than Kotlin but the maintainer and author of this document is experienced with Java and wants to use this project to get more familiar with Kotlin.
+
+== Consequences
+
+**Negative:**
+
+- Kotlin is not as widely used as Java, which might make it harder to find developers who are familiar with the language.
+
+**Positive:**
+
+- Kotlins reputation of being a more modern and concise language than Java might attract developers who are looking for a more enjoyable programming experience.

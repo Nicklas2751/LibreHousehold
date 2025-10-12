@@ -1,0 +1,57 @@
+[[adr-006]]
+= ADR 006: Progressive Web App (PWA) for the Frontend
+
+== Context
+
+For the frontend a technology is needed which allows to build a modern app with a good user experience. Since the most users will use it on their mobile devices, it must be optimized for mobile use.
+
+== Considered Options
+
+Android & iOS native Apps; Flutter; Progressive Web App (PWA)
+
+== Decision Outcome
+
+The frontend will be implemented as a Progressive Web App (PWA). This allows to reach the most users with the least effort. The app can be used on any device with a modern web browser. No installation is needed, the app can be used directly from the browser. Users with technical background can host the app themselves <<QG3,(QG3)>>. JavaScript and TypeScript, the base of PWAs, are widely used and known by many developers. This makes it easy for new contributors to understand the code and to contribute <<QG4,(QG4)>>. There will be no app store costs and no need to go through the app store review process.
+
+== Pros and Cons of the Options
+
+.Overview of the pros and cons of the considered options
+[cols="2a,2a"]
+|===
+|Pros |Cons
+
+2+^s|Native Apps
+|
+- Best performance
+- Access to all device features
+|
+- High development effort (separate apps for Android and iOS)
+- Users need to install the app
+- Users need to update the app
+- More difficult to contribute (different codebases for Android and iOS)
+- The backend can be hosted anywhere, but the apps need to be published in the app stores (Google Play Store, Apple App Store).
+- App store costs
+
+2+^s|Flutter
+|
+- Single codebase for Android and iOS
+- Good performance
+- Access to most device features
+|
+- Users need to install the app
+- Users need to update the app
+- The backend can be hosted anywhere, but the apps need to be published in the app stores (Google Play Store, Apple App Store).
+- App store costs
+
+2+^s|Progressive Web App (PWA)
+|
+- Platform independent (runs on any device with a modern web browser)
+- No installation needed
+- Easy to update (updates are deployed on the server, no need for users to update the app)
+- Easy to contribute (many developers know JavaScript/TypeScript)
+- Users with technical background can host the app themselves <<QG3,(QG3)>>
+- No app store costs
+|
+- Limited access to device features
+- Slightly lower performance compared to native apps
+|===

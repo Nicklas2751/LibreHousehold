@@ -1,0 +1,41 @@
+[[adr-000]]
+= ADR 000: A template for Architecture Decision Records
+
+== Context
+
+== Considered Options
+
+Option 1; Option 2
+
+== Decision Outcome
+
+== Pros and Cons of the Options
+
+.Overview of the pros and cons of the considered options
+[cols="2a,2a"]
+|===
+|Pros |Cons
+
+2+^s|Option 1
+|
+- Pro
+|
+- Con
+
+2+^s|Option 2
+|
+- Pro
+|
+- Con
+
+|===
+
+== Consequences
+
+**Negative:**
+
+- Something negative about the decision
+
+**Positive:**
+
+- Something positive about the decision

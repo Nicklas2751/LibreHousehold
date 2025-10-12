@@ -1,0 +1,16 @@
+[[adr-007]]
+= ADR 007: Svelte as Frontend Framework
+
+== Context
+
+A good frontend framework is needed to build the PWA frontend which is easy to use, has good performance, and a strong community.
+
+== Considered Options
+
+React; Vue; Angular; Svelte.
+
+== Decision Outcome
+
+Svelte is chosen as the frontend framework.
+Angular is too complex for the needs of this project. React tends to mix HTML and JavaScript too much. Vue is a good option, but Svelte has a smaller bundle size and better performance.
+The maintainer also has good experience with Svelte.

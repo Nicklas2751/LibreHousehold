@@ -1,0 +1,10 @@
+[[adr-009]]
+= ADR 009: Save passwords only hashed and salted with Argon2id
+
+== Context
+
+To ensure user passwords are stored securely, they should be hashed and salted before being saved in the database <<QG2,(QG2)>>.
+
+== Decision Outcome
+
+https://en.wikipedia.org/wiki/Argon2[Argon2id] will be used to hash and salt passwords before storing them in the database. It's easily available with Spring Security and is currently https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html[recommended by OWASP].
