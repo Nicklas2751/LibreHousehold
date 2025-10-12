@@ -1,0 +1,11 @@
+[[adr-001]]
+= ADR 001: Split Front- and Backend
+
+== Context
+
+The application could be implemented as one whole application with the app itself and some server logic in one thing with server sent rendering or as a split application with a frontend and a backend communicating via an API.
+
+== Decision Outcome
+
+To keep it simple, easy to understand and maintainable (<<QG4,QG4>>) the application will be implemented as a split application with a frontend and a backend communicating via an API.
+This also allows to choose the best fitting technologies for each part of the application. But it also means that two applications have to be maintained and deployed. So if one contributor wants to add a feature which needs changes in both parts, he has to know the different technologies used in both parts.

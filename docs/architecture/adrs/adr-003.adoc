@@ -1,0 +1,10 @@
+[[adr-003]]
+= ADR 003: Modular division based on subject
+
+== Context
+
+The codebase need to be simple structured and easy to understand for new contributors to archive the maintainability quality goal <<QG4,QG4>>.
+
+== Decision Outcome
+
+The codebase will be structured in modules based on subject. Each module should have a clear responsibility and should encapsulate all related functionality. This will make it easier for new contributors to understand the codebase and to find the relevant parts of the code.

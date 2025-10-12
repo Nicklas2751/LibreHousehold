@@ -1,0 +1,11 @@
+[[adr-008]]
+= ADR 008: TypeScript as the main language for frontend development
+
+== Context
+
+Svelte can be developed using JavaScript or TypeScript. We need to decide which language to use for the development of the frontend.
+
+== Decision Outcome
+
+TypeScript will be used as the main language for frontend development.
+Its type safety will help to creating a more robust and maintainable codebase <<QG4,(QG4)>>.
