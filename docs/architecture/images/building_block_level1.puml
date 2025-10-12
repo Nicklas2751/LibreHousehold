@@ -1,0 +1,84 @@
+@startuml
+left to right direction
+skinparam componentFontColor automatic
+skinparam component {
+  backgroundColor<<module>> $LIGHT
+}
+skinparam node {
+backgroundColor<<external>> #GRAY
+}
+skinparam nodesep 20
+
+component "LibreHousehold" <<system>> as librehousehold {
+
+    component "Progressive Web App (PWA)" <<subsystem>> as pwa {
+        component "Expenses" <<module>> as fe_expenses
+        component "Tasks" <<module>> as fe_tasks
+        component "User Settings" <<module>> as fe_user_settings
+        component "App Settings" <<module>> as fe_app_settings
+        component "Household" <<module>> as fe_household
+        component "Setup" <<module>> as fe_setup
+        component "Administration" <<module>> as fe_administration
+        component "Notifications" <<module>> as fe_notifications
+    }
+
+    component "Backend" <<subsystem>> as backend {
+        component "Expenses" <<module>> as be_expenses {
+            portIn "REST API" as api_expenses
+        }
+
+        component "Tasks" <<module>> as be_tasks {
+            portIn "REST API" as api_tasks
+        }
+
+        component "User Settings" <<module>> as be_user_settings {
+            portIn "REST API" as api_user_settings
+        }
+
+        component "Household" <<module>> as be_household {
+            portIn "REST API" as api_household
+        }
+
+        component "Setup" <<module>> as be_setup {
+            portIn "REST API" as api_setup
+        }
+
+        component "Administration" <<module>> as be_administration {
+            portIn "REST API" as api_administration
+        }
+
+        component "Notifications" <<module>> as be_notifications {
+            portIn "Websocket" as api_notifications
+        }
+
+        portOut "SMTP" as smtp
+    }
+
+}
+
+actor "User" as user
+actor "Administrator" as admin
+
+user -d-> fe_expenses
+user -d-> fe_tasks
+user -d-> fe_user_settings
+user -d-> fe_app_settings
+user -d-> fe_household
+
+admin -d-> fe_setup
+admin -d-> fe_administration
+
+fe_expenses -d-> api_expenses
+fe_tasks -d-> api_tasks
+fe_user_settings -d-> api_user_settings
+fe_household -d-> api_household
+fe_setup -d-> api_setup
+fe_administration -d-> api_administration
+fe_notifications -d-> api_notifications
+
+be_setup -d-> smtp
+be_administration -d-> smtp
+
+user -[hidden]-> admin
+
+@enduml
