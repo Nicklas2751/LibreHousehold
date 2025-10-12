@@ -4,7 +4,7 @@
 :jbake-menu: arc42
 :jbake-order: 3
 :filename: /chapters/03_context_and_scope.adoc
-ifndef::imagesdir[:imagesdir: ./images]
+ifndef::imagesdir[:imagesdir: ../images]
 
 :toc:
 
@@ -15,10 +15,7 @@ ifndef::imagesdir[:imagesdir: ./images]
 
 // tag::system-context-diagram[]
 .High Level System Context Diagram
-[plantuml, bar, svg]
-....
-include::../images/system_context.puml[]
-....
+plantuml::{imagesdir}/system_context.puml[format=svg, alt="High Level System Context Diagram"]
 // end::system-context-diagram[]
 
 === User (Actor)
