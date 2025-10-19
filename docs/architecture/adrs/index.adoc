@@ -1,0 +1,14 @@
+:jbake-title: Architecture Decision Records
+:jbake-type: page_toc
+:jbake-status: published
+:jbake-menu: adrs
+
+=== xref:adr-001.adoc[ADR 001: Split Front- and Backend]
+=== xref:adr-002.adoc[ADR 002: Kotlin as backend language]
+=== xref:adr-003.adoc[ADR 003: Modular division based on subject]
+=== xref:adr-004.adoc[ADR 004: Modular Monolith (Modulith) as architecture style]
+=== xref:adr-005.adoc[ADR 005: Spring Boot as backend framework]
+=== xref:adr-006.adoc[ADR 006: Progressive Web App (PWA) for the Frontend]
+=== xref:adr-007.adoc[ADR 007: Svelte as Frontend Framework]
+=== xref:adr-008.adoc[ADR 008: TypeScript as the main language for frontend development]
+=== xref:adr-009.adoc[ADR 009: Save passwords only hashed and salted with Argon2id]

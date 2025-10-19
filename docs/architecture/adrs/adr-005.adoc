@@ -1,3 +1,9 @@
+:jbake-title: ADR 005: Spring Boot as backend framework
+:jbake-type: page_toc
+:jbake-status: published
+:jbake-menu: adrs
+:jbake-order: 5
+
 [[adr-005]]
 = ADR 005: Spring Boot as backend framework
 

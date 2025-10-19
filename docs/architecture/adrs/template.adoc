@@ -1,3 +1,10 @@
+:jbake-title: ADR 000: A template for Architecture Decision Records
+:jbake-type: page_toc
+// Change to 'published' when the ADR is finalized
+:jbake-status: draft
+:jbake-menu: adrs
+:jbake-order: 1
+
 [[adr-000]]
 = ADR 000: A template for Architecture Decision Records
 

@@ -1,3 +1,9 @@
+:jbake-title: ADR 006: Progressive Web App (PWA) for the Frontend
+:jbake-type: page_toc
+:jbake-status: published
+:jbake-menu: adrs
+:jbake-order: 6
+
 [[adr-006]]
 = ADR 006: Progressive Web App (PWA) for the Frontend
 

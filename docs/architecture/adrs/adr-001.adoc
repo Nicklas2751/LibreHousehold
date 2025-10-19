@@ -1,3 +1,9 @@
+:jbake-title: ADR 001: Split Front- and Backend
+:jbake-type: page_toc
+:jbake-status: published
+:jbake-menu: adrs
+:jbake-order: 1
+
 [[adr-001]]
 = ADR 001: Split Front- and Backend
 

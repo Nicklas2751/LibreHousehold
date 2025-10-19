@@ -5,6 +5,7 @@
 :jbake-order: 9
 :filename: /chapters/09_architecture_decisions.adoc
 :imagesdir: ../images
+:relfileprefix: ../adrs/
 
 :toc:
 
@@ -13,12 +14,4 @@
 [[section-design-decisions]]
 == Architecture Decisions
 
-include::../adrs/adr-001.adoc[leveloffset=2]
-include::../adrs/adr-002.adoc[leveloffset=2]
-include::../adrs/adr-003.adoc[leveloffset=2]
-include::../adrs/adr-004.adoc[leveloffset=2]
-include::../adrs/adr-005.adoc[leveloffset=2]
-include::../adrs/adr-006.adoc[leveloffset=2]
-include::../adrs/adr-007.adoc[leveloffset=2]
-include::../adrs/adr-008.adoc[leveloffset=2]
-include::../adrs/adr-009.adoc[leveloffset=2]
+include::../adrs/index.adoc[]

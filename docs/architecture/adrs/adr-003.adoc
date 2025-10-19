@@ -1,3 +1,9 @@
+:jbake-title: ADR 003: Modular division based on subject
+:jbake-type: page_toc
+:jbake-status: published
+:jbake-menu: adrs
+:jbake-order: 3
+
 [[adr-003]]
 = ADR 003: Modular division based on subject
 

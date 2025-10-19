@@ -1,3 +1,9 @@
+:jbake-title: ADR 009: Save passwords only hashed and salted with Argon2id
+:jbake-type: page_toc
+:jbake-status: published
+:jbake-menu: adrs
+:jbake-order: 9
+
 [[adr-009]]
 = ADR 009: Save passwords only hashed and salted with Argon2id
 

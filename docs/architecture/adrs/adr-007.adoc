@@ -1,3 +1,9 @@
+:jbake-title: ADR 007: Svelte as Frontend Framework
+:jbake-type: page_toc
+:jbake-status: published
+:jbake-menu: adrs
+:jbake-order: 7
+
 [[adr-007]]
 = ADR 007: Svelte as Frontend Framework
 
