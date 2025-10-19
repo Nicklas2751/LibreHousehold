@@ -26,4 +26,4 @@ Its code is built to be easily understandable and maintainable.
 
 == Software Architecture Overview
 
-An overview of the software architecture can be found in the xref:docs/architecture/overview.adoc[Architecture Overview].
+An overview of the software architecture can be found in the https://librehousehold.wiegandt.eu[Architecture Overview].
