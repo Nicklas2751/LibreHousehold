@@ -4,7 +4,7 @@
 :jbake-menu: arc42
 :jbake-order: 9
 :filename: /chapters/09_architecture_decisions.adoc
-ifndef::imagesdir[:imagesdir: ./images]
+:imagesdir: ../images
 
 :toc:
 

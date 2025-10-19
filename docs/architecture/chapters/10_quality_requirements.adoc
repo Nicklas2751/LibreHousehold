@@ -4,7 +4,7 @@
 :jbake-menu: arc42
 :jbake-order: 10
 :filename: /chapters/10_quality_requirements.adoc
-ifndef::imagesdir[:imagesdir: ./images]
+:imagesdir: ../images
 
 :toc:
 
@@ -21,27 +21,27 @@ include::../images/quality_tree.puml[]
 
 The quality tree above shows how the LibreHousehold quality goals map to the ISO 25010-2023 quality characteristics:
 
-* <<QG1,**QG1 (Easy to learn)**>> maps to **Usability → Learnability**
-* <<QG2,**QG2 (Secure)**>> maps to **Security**
-* <<QG3,**QG3 (Easy to host)**>> maps to **Flexibility → Installability**
-* <<QG4,**QG4 (Maintainable)**>> maps to **Maintainability**
+* xref:01_introduction_and_goals.adoc#QG1[**QG1 (Easy to learn)**] maps to **Usability → Learnability**
+* xref:01_introduction_and_goals.adoc#QG2[**QG2 (Secure)**] maps to **Security**
+* xref:01_introduction_and_goals.adoc#QG3[**QG3 (Easy to host)**] maps to **Flexibility → Installability**
+* xref:01_introduction_and_goals.adoc#QG4[**QG4 (Maintainable)**] maps to **Maintainability**
 
 === Quality Requirements Overview
 
-==== <<QG1,QG1 - Easy to learn>>
+==== xref:01_introduction_and_goals.adoc#QG1[QG1 - Easy to learn]
 
 Modern mobile apps must be easy to learn and intuitive to use. No user wants to read a manual or watch a tutorial before using the app.
 So to be successful and be adopted by many users, LibeHousehold must be easy to learn.
 
-==== <<QG2,QG2 - Secure>>
+==== xref:01_introduction_and_goals.adoc#QG2[QG2 - Secure]
 
 Expenses are, like money in general, a sensitive topic. To be accepted the users must be sure that their data is safe and secure. No unauthorized person must be able to access the data. As well as other users should not be able to modify or delete data they are not allowed to.
 
-==== <<QG3,QG3 - Easy to host>>
+==== xref:01_introduction_and_goals.adoc#QG3[QG3 - Easy to host]
 
 Many people, especially in the open-source community, want to host their own instance of LibreHousehold. This also keeps the costs low and gives the users full control over their data. Additionally, it enables users to easily use a modified version of LibreHousehold. It's unacceptable that these users must follow hour long, complex tutorials to get LibreHousehold up and running.
 
-==== <<QG4,QG4 - Maintainable>>
+==== xref:01_introduction_and_goals.adoc#QG4[QG4 - Maintainable]
 
 LibreHousehold is a non-commercial hobby project. To keep the project alive and reduce the workload for the maintainer, it must be easy for new developers to understand the code and contribute. Additionally, the code must be easy to maintain and extend. This also the reason why the project is open-source.
 
@@ -57,21 +57,21 @@ LibreHousehold is a non-commercial hobby project. To keep the project alive and 
 [options="header",cols="1,1,4,2,2,2"]
 |===
 |ID |Quality Goal |Scenario |Context/Background |Source/Stimulus |Metric/Acceptance Criteria
-|[[USC1]]USC1 |<<QG1,QG1>> |A new user can create a new household with only three clicks |The app greets new users with a welcome wizard guiding them to create a new household. |A new user opens the app for the first time. |The user needs no more than three clicks to create a new household and start using the app.
-|[[USC2]]USC2 |<<QG1,QG1>> |A new user who is able to use his smartphone without help want's to create a new expense for his household. He is able to create one without any help like nine out of ten other users with the same experience. |Users can create expenses for the household to track or share them with the other members of the household. |A new user want's to create a new expense. |Nine out of ten users who can use their smartphone without help don't need any help to create a new expense.
+|[[USC1]]USC1 |xref:01_introduction_and_goals.adoc#QG1[QG1] |A new user can create a new household with only three clicks |The app greets new users with a welcome wizard guiding them to create a new household. |A new user opens the app for the first time. |The user needs no more than three clicks to create a new household and start using the app.
+|[[USC2]]USC2 |xref:01_introduction_and_goals.adoc#QG1[QG1] |A new user who is able to use his smartphone without help want's to create a new expense for his household. He is able to create one without any help like nine out of ten other users with the same experience. |Users can create expenses for the household to track or share them with the other members of the household. |A new user want's to create a new expense. |Nine out of ten users who can use their smartphone without help don't need any help to create a new expense.
 
-|[[USC3]]USC3 |<<QG2,QG2>> |A user from the same household attempts to change another user's expense directly via the API. The API returns an error and nothing is changed. |Users of the same household see the expenses created by each other but aren't allowed to change them. |A user tries to change an expense not created by him. |The user receives an error message and the expense remains unchanged.
-|[[USC4]]USC4 |<<QG2,QG2>> |A user requests all expenses from the API. The API returns only the expenses from his household. |Users are only allowed to access the expenses of their own household. |A user requests all expenses. |The user receives not a single expense from another household.
-|[[USC5]]USC5 |<<QG2,QG2>> |An unauthenticated user opens a deep link to an expense of his household. He gets redirected to the Login and can see it after the login. |Only authenticated users are allowed to see data of a household like the expenses. |An unauthenticated user opening a deep link to an expense. |No data is shown before the user logged in. After a successful login the user can see the expense.
-|[[USC6]]USC6 |<<QG2,QG2>> |An attacker was able to steal the database table containing the user credentials. The passwords are hashed and salted. |User credentials are stored hashed to be able to check them on login. |An attacker was able to steal the database table containing the user credentials. |The attacker is not able to log in with any of the stolen credentials, nor he knows the passwords of the users.
-|[[USC7]]USC7 |<<QG2,QG2>> |A user is sitting in a cafe and using the public WiFi to access his expenses. An attacker in the same network is not able to intercept the communication and read the data. |The app must communicate with the backend to show the user data. |An attacker in the same network is trying to intercept the communication between the app and the backend. |The attacker is not able to read any data, especially no user credentials or expense data.
+|[[USC3]]USC3 |xref:01_introduction_and_goals.adoc#QG2[QG2] |A user from the same household attempts to change another user's expense directly via the API. The API returns an error and nothing is changed. |Users of the same household see the expenses created by each other but aren't allowed to change them. |A user tries to change an expense not created by him. |The user receives an error message and the expense remains unchanged.
+|[[USC4]]USC4 |xref:01_introduction_and_goals.adoc#QG2[QG2] |A user requests all expenses from the API. The API returns only the expenses from his household. |Users are only allowed to access the expenses of their own household. |A user requests all expenses. |The user receives not a single expense from another household.
+|[[USC5]]USC5 |xref:01_introduction_and_goals.adoc#QG2[QG2] |An unauthenticated user opens a deep link to an expense of his household. He gets redirected to the Login and can see it after the login. |Only authenticated users are allowed to see data of a household like the expenses. |An unauthenticated user opening a deep link to an expense. |No data is shown before the user logged in. After a successful login the user can see the expense.
+|[[USC6]]USC6 |xref:01_introduction_and_goals.adoc#QG2[QG2] |An attacker was able to steal the database table containing the user credentials. The passwords are hashed and salted. |User credentials are stored hashed to be able to check them on login. |An attacker was able to steal the database table containing the user credentials. |The attacker is not able to log in with any of the stolen credentials, nor he knows the passwords of the users.
+|[[USC7]]USC7 |xref:01_introduction_and_goals.adoc#QG2[QG2] |A user is sitting in a cafe and using the public WiFi to access his expenses. An attacker in the same network is not able to intercept the communication and read the data. |The app must communicate with the backend to show the user data. |An attacker in the same network is trying to intercept the communication between the app and the backend. |The attacker is not able to read any data, especially no user credentials or expense data.
 
-|[[USC8]]USC8 |<<QG3,QG3>> |A tech-savvy user with knowledge of modern server administration is able to start the application within ten minutes and do a first login. Nine out of then users with knowledge of modern server administration are able to do so.  |The application and all its parts must be easy to host by others. |A tech-savvy user with knowledge tries to run the application on his machine. |Nine out of ten users with knowledge of modern server administration are able to start the application within ten minutes so they can log in the first time.
+|[[USC8]]USC8 |xref:01_introduction_and_goals.adoc#QG3[QG3] |A tech-savvy user with knowledge of modern server administration is able to start the application within ten minutes and do a first login. Nine out of then users with knowledge of modern server administration are able to do so.  |The application and all its parts must be easy to host by others. |A tech-savvy user with knowledge tries to run the application on his machine. |Nine out of ten users with knowledge of modern server administration are able to start the application within ten minutes so they can log in the first time.
 |===
 
 .Change Scenarios
 [options="header",cols="1,1,2,4,4,4"]
 |===
 |ID |Quality Goal |Scenario |Context/Background |Source/Stimulus |Metric/Acceptance Criteria
-|[[CSC1]]CSC1 |<<QG4,QG4>> |The majority of new developer with knowledge in the used programming language can add a new out-of-the-box expense type within five minutes |The app knows different types of expenses out-of-the-box a user can choose from when creating a new expense.  |A new developer downloads the source code of the app and want's to create a new out-of-the-box expense type. | More than fifty percent of new developers with knowledge in the used programming language are able to find the relevant code parts, understand them and add a new out-of-the-box expense type within five minutes or less.
+|[[CSC1]]CSC1 |xref:01_introduction_and_goals.adoc#QG4[QG4] |The majority of new developer with knowledge in the used programming language can add a new out-of-the-box expense type within five minutes |The app knows different types of expenses out-of-the-box a user can choose from when creating a new expense.  |A new developer downloads the source code of the app and want's to create a new out-of-the-box expense type. | More than fifty percent of new developers with knowledge in the used programming language are able to find the relevant code parts, understand them and add a new out-of-the-box expense type within five minutes or less.
 |===

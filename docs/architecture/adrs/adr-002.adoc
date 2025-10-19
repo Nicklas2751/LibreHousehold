@@ -3,7 +3,7 @@
 
 == Context
 
-We need to choose a programming language for our backend services. Since the app will be open source we need to choose a language that is widely used and has a good community support <<QG4,(QG4)>>. We also want to choose a language that is easy to learn and has a good tooling support. As <<QG3,QG3>> describes, we want to make it easy for users to host the app themselves. Therefore, we need to choose a language that is easy to deploy and has a good support for containerization.
+We need to choose a programming language for our backend services. Since the app will be open source we need to choose a language that is widely used and has a good community support xref:../chapters/01_introduction_and_goals.adoc#QG4[(QG4)]. We also want to choose a language that is easy to learn and has a good tooling support. As xref:../chapters/01_introduction_and_goals.adoc#QG3[QG3] describes, we want to make it easy for users to host the app themselves. Therefore, we need to choose a language that is easy to deploy and has a good support for containerization.
 
 == Considered Options
 

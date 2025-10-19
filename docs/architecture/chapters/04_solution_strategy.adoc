@@ -4,7 +4,7 @@
 :jbake-menu: arc42
 :jbake-order: 4
 :filename: /chapters/04_solution_strategy.adoc
-ifndef::imagesdir[:imagesdir: ./images]
+:imagesdir: ../images
 
 :toc:
 
@@ -18,24 +18,24 @@ ifndef::imagesdir[:imagesdir: ./images]
 [options="header",cols="1,2a"]
 |===
 |Quality Goal |Solution strategies
-|<<QG1,QG1 - Easy to learn>> |
+|xref:01_introduction_and_goals.adoc#QG1[QG1 - Easy to learn] |
 
-|<<QG2,QG2 - Secure>>
+|xref:01_introduction_and_goals.adoc#QG2[QG2 - Secure]
 |
-- <<adr-009, ADR 009 - Save passwords only hashed and salted with Argon2id>>
+- xref:09_architecture_decisions.adoc#adr-009[ADR 009 - Save passwords only hashed and salted with Argon2id]
 
-|<<QG3,QG3 - Easy to host>>
+|xref:01_introduction_and_goals.adoc#QG3[QG3 - Easy to host]
 |
-- <<adr-002, ADR 002 - Kotlin as backend language>>
-- <<adr-006, ADR 006 - Progressive Web App (PWA) for the Frontend>>
+- xref:09_architecture_decisions.adoc#adr-002[ADR 002 - Kotlin as backend language]
+- xref:09_architecture_decisions.adoc#adr-006[ADR 006 - Progressive Web App (PWA) for the Frontend]
 
-|<<QG4,QG4 - Maintainable>>
+|xref:01_introduction_and_goals.adoc#QG4[QG4 - Maintainable]
 |
-- <<adr-001, ADR 001 - Split Front- and Backend>>
-- <<adr-002, ADR 002 - Kotlin as backend language>>
-- <<adr-003, ADR 003 - Modular division based on subject>>
-- <<adr-004, ADR 004 - Modular Monolith (Modulith) as architecture style>>
-- <<adr-006, ADR 006 - Progressive Web App (PWA) for the Frontend>>
-- <<adr-008, ADR 008 - TypeScript as the main language for frontend development>>
+- xref:09_architecture_decisions.adoc#adr-001[ADR 001 - Split Front- and Backend]
+- xref:09_architecture_decisions.adoc#adr-002[ADR 002 - Kotlin as backend language]
+- xref:09_architecture_decisions.adoc#adr-003[ADR 003 - Modular division based on subject]
+- xref:09_architecture_decisions.adoc#adr-004[ADR 004 - Modular Monolith (Modulith) as architecture style]
+- xref:09_architecture_decisions.adoc#adr-006[ADR 006 - Progressive Web App (PWA) for the Frontend]
+- xref:09_architecture_decisions.adoc#adr-008[ADR 008 - TypeScript as the main language for frontend development]
 |===
 // end::solution-strategy-mapping[]

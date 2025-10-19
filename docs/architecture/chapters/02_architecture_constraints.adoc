@@ -4,7 +4,7 @@
 :jbake-menu: arc42
 :jbake-order: 2
 :filename: /chapters/02_architecture_constraints.adoc
-ifndef::imagesdir[:imagesdir: ./images]
+:imagesdir: ../images
 
 :toc:
 
