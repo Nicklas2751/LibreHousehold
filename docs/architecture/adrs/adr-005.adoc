@@ -12,4 +12,4 @@ Ktor; Spring Boot
 == Decision Outcome
 
 Spring Boot will be used as backend framework. It's very popular, has a big community and is easy to use. It also has a lot of integrations with other libraries and frameworks.
-In difference with Ktor, Spring Boot is more mature and has a lot more features out of the box. Also, the documentation is a lot better and it directly supports Moduliths <<adr-004>>.
+In difference with Ktor, Spring Boot is more mature and has a lot more features out of the box. Also, the documentation is a lot better and it directly supports Moduliths <<adr-004].

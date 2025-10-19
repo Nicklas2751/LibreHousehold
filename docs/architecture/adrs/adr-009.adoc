@@ -3,7 +3,7 @@
 
 == Context
 
-To ensure user passwords are stored securely, they should be hashed and salted before being saved in the database <<QG2,(QG2)>>.
+To ensure user passwords are stored securely, they should be hashed and salted before being saved in the database xref:../chapters/01_introduction_and_goals.adoc#QG2[(QG2)].
 
 == Decision Outcome
 

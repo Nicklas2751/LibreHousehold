@@ -3,7 +3,7 @@
 
 == Context
 
-The codebase need to be simple structured and easy to understand for new contributors to archive the maintainability quality goal <<QG4,QG4>>.
+The codebase need to be simple structured and easy to understand for new contributors to archive the maintainability quality goal xref:../chapters/01_introduction_and_goals.adoc#QG4[QG4].
 
 == Decision Outcome
 

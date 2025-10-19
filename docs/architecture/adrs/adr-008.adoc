@@ -8,4 +8,4 @@ Svelte can be developed using JavaScript or TypeScript. We need to decide which 
 == Decision Outcome
 
 TypeScript will be used as the main language for frontend development.
-Its type safety will help to creating a more robust and maintainable codebase <<QG4,(QG4)>>.
+Its type safety will help to creating a more robust and maintainable codebase xref:../chapters/01_introduction_and_goals.adoc#QG4[(QG4)].

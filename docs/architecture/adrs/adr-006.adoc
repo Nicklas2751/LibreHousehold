@@ -11,7 +11,7 @@ Android & iOS native Apps; Flutter; Progressive Web App (PWA)
 
 == Decision Outcome
 
-The frontend will be implemented as a Progressive Web App (PWA). This allows to reach the most users with the least effort. The app can be used on any device with a modern web browser. No installation is needed, the app can be used directly from the browser. Users with technical background can host the app themselves <<QG3,(QG3)>>. JavaScript and TypeScript, the base of PWAs, are widely used and known by many developers. This makes it easy for new contributors to understand the code and to contribute <<QG4,(QG4)>>. There will be no app store costs and no need to go through the app store review process.
+The frontend will be implemented as a Progressive Web App (PWA). This allows to reach the most users with the least effort. The app can be used on any device with a modern web browser. No installation is needed, the app can be used directly from the browser. Users with technical background can host the app themselves xref:../chapters/01_introduction_and_goals.adoc#QG3[(QG3)]. JavaScript and TypeScript, the base of PWAs, are widely used and known by many developers. This makes it easy for new contributors to understand the code and to contribute xref:../chapters/01_introduction_and_goals.adoc#QG4[(QG4)]. There will be no app store costs and no need to go through the app store review process.
 
 == Pros and Cons of the Options
 
@@ -49,7 +49,7 @@ The frontend will be implemented as a Progressive Web App (PWA). This allows to 
 - No installation needed
 - Easy to update (updates are deployed on the server, no need for users to update the app)
 - Easy to contribute (many developers know JavaScript/TypeScript)
-- Users with technical background can host the app themselves <<QG3,(QG3)>>
+- Users with technical background can host the app themselves xref:../chapters/01_introduction_and_goals.adoc#QG3[(QG3)]
 - No app store costs
 |
 - Limited access to device features

@@ -4,7 +4,7 @@
 :jbake-menu: arc42
 :jbake-order: 1
 :filename: /chapters/01_introduction_and_goals.adoc
-ifndef::imagesdir[:imagesdir: ../images]
+:imagesdir: ../images
 
 :toc:
 
