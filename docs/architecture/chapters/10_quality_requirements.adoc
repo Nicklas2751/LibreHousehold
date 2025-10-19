@@ -8,8 +8,6 @@
 
 :toc:
 
-
-
 [[section-quality-scenarios]]
 == Quality Requirements
 
