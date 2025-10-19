@@ -1,3 +1,9 @@
+:jbake-title: ADR 004: Modular Monolith (Modulith) as architecture style
+:jbake-type: page_toc
+:jbake-status: published
+:jbake-menu: adrs
+:jbake-order: 4
+
 [[adr-004]]
 = ADR 004: Modular Monolith (Modulith) as architecture style
 

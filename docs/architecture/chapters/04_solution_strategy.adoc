@@ -22,20 +22,20 @@
 
 |xref:01_introduction_and_goals.adoc#QG2[QG2 - Secure]
 |
-- xref:09_architecture_decisions.adoc#adr-009[ADR 009 - Save passwords only hashed and salted with Argon2id]
+- xref:../adrs/adr-009.adoc[ADR 009 - Save passwords only hashed and salted with Argon2id]
 
 |xref:01_introduction_and_goals.adoc#QG3[QG3 - Easy to host]
 |
-- xref:09_architecture_decisions.adoc#adr-002[ADR 002 - Kotlin as backend language]
-- xref:09_architecture_decisions.adoc#adr-006[ADR 006 - Progressive Web App (PWA) for the Frontend]
+- xref:../adrs/adr-002.adoc[ADR 002 - Kotlin as backend language]
+- xref:../adrs/adr-006.adoc[ADR 006 - Progressive Web App (PWA) for the Frontend]
 
 |xref:01_introduction_and_goals.adoc#QG4[QG4 - Maintainable]
 |
-- xref:09_architecture_decisions.adoc#adr-001[ADR 001 - Split Front- and Backend]
-- xref:09_architecture_decisions.adoc#adr-002[ADR 002 - Kotlin as backend language]
-- xref:09_architecture_decisions.adoc#adr-003[ADR 003 - Modular division based on subject]
-- xref:09_architecture_decisions.adoc#adr-004[ADR 004 - Modular Monolith (Modulith) as architecture style]
-- xref:09_architecture_decisions.adoc#adr-006[ADR 006 - Progressive Web App (PWA) for the Frontend]
-- xref:09_architecture_decisions.adoc#adr-008[ADR 008 - TypeScript as the main language for frontend development]
+- xref:../adrs/adr-001.adoc[ADR 001 - Split Front- and Backend]
+- xref:../adrs/adr-002.adoc[ADR 002 - Kotlin as backend language]
+- xref:../adrs/adr-003.adoc[ADR 003 - Modular division based on subject]
+- xref:../adrs/adr-004.adoc[ADR 004 - Modular Monolith (Modulith) as architecture style]
+- xref:../adrs/adr-006.adoc[ADR 006 - Progressive Web App (PWA) for the Frontend]
+- xref:../adrs/adr-008.adoc[ADR 008 - TypeScript as the main language for frontend development]
 |===
 // end::solution-strategy-mapping[]

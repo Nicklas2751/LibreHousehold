@@ -1,3 +1,9 @@
+:jbake-title: ADR 008: TypeScript as the main language for frontend development
+:jbake-type: page_toc
+:jbake-status: published
+:jbake-menu: adrs
+:jbake-order: 8
+
 [[adr-008]]
 = ADR 008: TypeScript as the main language for frontend development
 
