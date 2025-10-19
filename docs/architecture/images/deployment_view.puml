@@ -1,0 +1,64 @@
+@startuml
+skinparam componentFontColor automatic
+skinparam component {
+  backgroundColor<<frontend>> LightBlue
+  backgroundColor<<backend>> CornflowerBlue
+  backgroundColor<<infrastructure>> Orange
+  backgroundColor<<container>> LightGreen
+}
+skinparam node {
+  backgroundColor<<device>> LightGray
+  backgroundColor<<server>> Gold
+}
+skinparam nodesep 20
+skinparam ranksep 30
+
+node "User Devices" <<device>> as devices {
+  node "Desktop PC" <<device>> as pc {
+    component "Web Browser\n(Chrome, Firefox, Safari)" as browser_pc
+  }
+  node "Smartphone" <<device>> as smartphone {
+    component "PWA in Browser\n(Embedded WebView)" as browser_mobile
+  }
+
+}
+
+node "Server Infrastructure" <<server>> as server {
+  node "Backend Container" <<container>> as backend_container {
+    component "LibreHousehold Backend\n(Kotlin, Spring Boot)" <<backend>> as backend
+  }
+
+  node "Nginx Container" <<container>> as nginx_container {
+    component "Static PWA Files\n(HTML, JS, CSS)" <<frontend>> as pwa_files
+    component "Nginx Web Server" <<infrastructure>> as nginx
+  }
+}
+
+component "External E-Mail Server (SMTP)" <<external>> as mail_server
+database "Database" <<external>> as database
+
+
+' Connections
+nginx -r-> pwa_files : "serves static files"
+nginx -d-> backend : "forwards API requests"
+
+browser_pc -d-> nginx : "HTTPS requests"
+browser_mobile -d-> nginx : "HTTPS requests"
+
+backend -d-> mail_server : "send notifications"
+backend -d-> database : "persistence"
+
+' Hidden connections for better layout
+devices -[hidden]d-> server
+
+legend bottom
+  <#GhostWhite,#GhostWhite>|        |= __Legend__ |
+  |<#LightBlue>  | Frontend Components|
+  |<#CornflowerBlue>  | Backend Components|
+  |<#Orange>  | Infrastructure|
+  |<#LightGreen>  | Container Runtime|
+  |<#LightGray>  | User Devices|
+  |<#Gold>  | Server Infrastructure|
+end legend
+
+@enduml
