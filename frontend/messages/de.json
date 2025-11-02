@@ -30,6 +30,25 @@
       "household_name_error": "Gib einen Haushaltsnamen mit mindestens drei Zeichen ein.",
       "back_button": "Zurück",
       "continue_button": "Weiter"
+    },
+    "create_account_step": {
+      "title": "Richte dein Konto ein",
+      "text": "Als Ersteller bist du der Administrator deines Haushalts.",
+      "admin_name_label": "Dein Name",
+      "admin_name_placeholder": "z.B., Max Mustermann",
+      "admin_name_error": "Gib einen Namen mit mindestens drei Zeichen ein.",
+      "admin_email_label": "Deine E-Mail",
+      "admin_email_placeholder": "z.B., max.mustermann@example.org",
+      "admin_email_error": "Gib eine gültige E-Mail-Adresse ein.",
+      "back_button": "Zurück",
+      "continue_button": "Weiter"
+    },
+    "finish_step": {
+      "title": "Alles erledigt!",
+      "text": "Dein Haushalt wurde erfolgreich erstellt. Du kannst andere einladen, deinem Haushalt über den untenstehenden Link oder QR-Code beizutreten.",
+      "invite_text": "Lade andere zu deinem Haushalt ein:",
+      "invite_link_copied_toast": "Einladungslink in die Zwischenablage kopiert",
+      "finish_button": "Einrichtung abschließen"
     }
   }
 }
