@@ -1,4 +1,35 @@
 {
-	"$schema": "https://inlang.com/schema/inlang-message-format",
-	"hello_world": "Hello, {name} from de!"
+  "$schema": "https://inlang.com/schema/inlang-message-format",
+  "hello_world": "Hello, {name} from de!",
+  "setup": {
+    "subtitle": "Haushaltsverwaltung vereinfachen",
+    "welcome_step": {
+      "title": "Willkommen bei LibreHousehold",
+      "text": "Lass uns deinen Haushalt einrichten, um dir bei der Verwaltung von Aufgaben und Ausgaben zu helfen.",
+      "feature_cards": {
+        "card_1": {
+          "title": "Verwalte Aufgaben",
+          "description": "Weise Haushaltsaufgaben einfach zu und verfolge sie."
+        },
+        "card_2": {
+          "title": "Verfolge gemeinsame Ausgaben",
+          "description": "Teile Kosten und sieh, wer wem was schuldet."
+        },
+        "card_3": {
+          "title": "Ausgabenstatistiken anzeigen",
+          "description": "Analysiere die Ausgabengewohnheiten deines Haushalts im Laufe der Zeit."
+        }
+      },
+      "get_started_button": "Loslegen"
+    },
+    "create_step": {
+      "title": "Erstelle deinen Haushalt",
+      "text": "Gib deinem Haushalt einen Namen und lade optional ein Bild hoch.",
+      "household_name_label": "Haushaltsname",
+      "household_name_placeholder": "z.B., Die Müllers",
+      "household_name_error": "Gib einen Haushaltsnamen mit mindestens drei Zeichen ein.",
+      "back_button": "Zurück",
+      "continue_button": "Weiter"
+    }
+  }
 }
