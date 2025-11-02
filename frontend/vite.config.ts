@@ -10,8 +10,9 @@ export default defineConfig({
 		sveltekit(),
 		paraglideVitePlugin({
 			project: './project.inlang',
-			outdir: './src/lib/paraglide'
-		})
+			outdir: './src/lib/paraglide',
+            strategy: ["localStorage", "preferredLanguage", "url", "baseLocale"]
+        })
 	],
 	test: {
 		expect: { requireAssertions: true },

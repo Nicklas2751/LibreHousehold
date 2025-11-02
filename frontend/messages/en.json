@@ -1,4 +1,35 @@
 {
-	"$schema": "https://inlang.com/schema/inlang-message-format",
-	"hello_world": "Hello, {name} from en!"
+  "$schema": "https://inlang.com/schema/inlang-message-format",
+  "hello_world": "Hello, {name} from en!",
+  "setup": {
+    "subtitle": "Simplify household management",
+    "welcome_step": {
+        "title": "Welcome to LibreHousehold",
+        "text": "Let's set up your household to help you manage tasks and expenses.",
+        "feature_cards": {
+          "card_1": {
+            "title": "Manage Tasks",
+            "description": "Easily assign and track household chores."
+          },
+          "card_2": {
+            "title": "Track shared expenses",
+            "description": "Split costs and see who owes what."
+          },
+          "card_3": {
+            "title": "View spending statistic",
+            "description": "Analyze your household's spending habits over time."
+          }
+        },
+        "get_started_button": "Get Started"
+    },
+    "create_step": {
+      "title": "Create your household",
+      "text": "Give your household a name and optionally upload an image.",
+      "household_name_label": "Household Name",
+      "household_name_placeholder": "e.g., The Smiths",
+      "household_name_error": "Enter a household name with at least three characters.",
+      "back_button": "Back",
+      "continue_button": "Continue"
+    }
+  }
 }
