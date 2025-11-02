@@ -30,6 +30,25 @@
       "household_name_error": "Enter a household name with at least three characters.",
       "back_button": "Back",
       "continue_button": "Continue"
+    },
+    "create_account_step": {
+      "title": "Set up your account",
+      "text": "As the creator, you'll be the admin of your household.",
+      "admin_name_label": "Your Name",
+      "admin_name_placeholder": "e.g., John Doe",
+      "admin_name_error": "Enter a name with at least three characters.",
+      "admin_email_label": "Your email",
+      "admin_email_placeholder": "e.g., john.doe@example.org",
+      "admin_email_error": "Enter a valid mail address.",
+      "back_button": "Back",
+      "continue_button": "Continue"
+    },
+    "finish_step": {
+      "title": "You're all set!",
+      "text": "Your household has been created successfully. You can invite others to join your household using the link or the QR code below.",
+      "invite_text": "Invite others to your household:",
+      "invite_link_copied_toast": "Invite link copied to clipboard",
+      "finish_button": "Finish setup"
     }
   }
 }
