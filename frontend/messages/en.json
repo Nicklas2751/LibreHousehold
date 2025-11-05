@@ -45,9 +45,11 @@
     },
     "finish_step": {
       "title": "You're all set!",
-      "text": "Your household has been created successfully. You can invite others to join your household using the link or the QR code below.",
       "invite_text": "Invite others to your household:",
       "invite_link_copied_toast": "Invite link copied to clipboard",
+      "invite_link_shared_toast": "Invite link shared",
+      "invite_link_cant_shared_toast": "Invite link cannot be shared: {error}",
+      "invite_link_share_text": "Join my Household on LibreHousehold",
       "finish_button": "Finish setup"
     }
   }

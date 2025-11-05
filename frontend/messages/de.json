@@ -45,9 +45,11 @@
     },
     "finish_step": {
       "title": "Alles erledigt!",
-      "text": "Dein Haushalt wurde erfolgreich erstellt. Du kannst andere einladen, deinem Haushalt über den untenstehenden Link oder QR-Code beizutreten.",
       "invite_text": "Lade andere zu deinem Haushalt ein:",
       "invite_link_copied_toast": "Einladungslink in die Zwischenablage kopiert",
+      "invite_link_shared_toast": "Einladungslink geteilt",
+      "invite_link_cant_shared_toast": "Einladungslink kann nicht geteilt werden: {error}",
+      "invite_link_share_text": "Trete meinem Haushalt bei LibreHousehold bei",
       "finish_button": "Einrichtung abschließen"
     }
   }
