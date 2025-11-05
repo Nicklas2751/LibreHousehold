@@ -3,12 +3,16 @@
     import {TaskListIcon} from "@indaco/svelte-iconoir/task-list";
     import {EuroIcon} from "@indaco/svelte-iconoir/euro";
     import {StatsReportIcon} from "@indaco/svelte-iconoir/stats-report";
-    import IconCard from './IconCard.svelte';
+    import IconCard from '$lib/IconCard.svelte';
     import {CopyIcon} from "@indaco/svelte-iconoir/copy";
     import {addToast} from "$lib/stores/toastStore";
     import {Toast} from "$lib/toast";
+    import {onMount} from 'svelte';
+    import {QRCode} from "@castlenine/svelte-qrcode";
+    import {ShareIosIcon} from "@indaco/svelte-iconoir/share-ios";
 
-    const inviteUrl = `https://flateshare.app/invite/${Math.random().toString(36).substring(2, 10)}`;
+    const householdId = Math.random().toString(36).substring(2, 15);
+    let inviteUrl: string = $state('');
     const maxSteps: number = 4;
     let step: number = $state(0);
 
@@ -16,6 +20,11 @@
     let householdImage: string = $state('');
     let adminName: string = $state('');
     let adminEmail: string = $state('');
+
+    onMount(() => {
+        const baseUrl = `${window.location.protocol}//${window.location.host}`;
+        inviteUrl = `${baseUrl}/invite/${householdId}`;
+    });
 
     function nextStep() {
         if (step < maxSteps - 1) {
@@ -57,6 +66,21 @@
         }
     }
 
+    function canBrowserShareInviteLink(): boolean {
+        if (!navigator.share || !navigator.canShare) {
+            return false;
+        }
+
+        return navigator.canShare(createInviteLinkShareData());
+    }
+
+    function createInviteLinkShareData(): ShareData {
+        return {
+            text: m['setup.finish_step.invite_link_share_text'](),
+            url: inviteUrl
+        };
+    }
+
     function copyInviteLink() {
         navigator.clipboard.writeText(inviteUrl)
             .then(() => {
@@ -67,8 +91,20 @@
             });
     }
 
+    async function shareInviteLink() {
+        const shareData = createInviteLinkShareData();
+        await navigator.share(shareData)
+            .then(() => {
+                console.log('Invite link shared successfully');
+                addToast(new Toast(m['setup.finish_step.invite_link_shared_toast'](), 'success'));
+            })
+            .catch(err => {
+                addToast(new Toast(m['setup.finish_step.invite_link_cant_shared_toast'](err), 'error'));
+            });
+    }
+
     function finish() {
-        
+
     }
 </script>
 
@@ -145,28 +181,17 @@
         </form>
     {:else if step === 3}
         <h2 class="text-xl font-bold text-base-content">{m['setup.finish_step.title']()}</h2>
-        <p>{m['setup.finish_step.text']()}</p>
-        <div class="card card-side bg-base-content/15 card-xs shadow-sm p-1">
-            <figure>
-                <div class="m-3 flex h-20 w-20 items-center text-center justify-center rounded-full bg-neutral-content place-self-center">
-                    {#if householdImage}
-                        <img src={householdImage} alt="{householdName}" class="w-full h-full object-cover rounded-full" />
-                    {:else}
-                        <p class="text-4xl font-bold text-black/50">{houseHoldNameInitials()}</p>
-                    {/if}
-                </div>
-            </figure>
-            <div class="card-body ml-2">
-                <h2 class="card-title">{householdName}</h2>
-                <p class="text-start">Admin: {adminName} - {adminEmail}</p>
-            </div>
-        </div>
         <p>{m['setup.finish_step.invite_text']()}</p>
+        <QRCode isResponsive={true} dispatchDownloadUrl={true} data={inviteUrl} />
         <div class="join">
             <label class="input join-item w-full">
                 <input type="text" class="input w-full" value={inviteUrl} readonly />
             </label>
-            <button class="btn btn-neutral join-item" onclick={copyInviteLink}><CopyIcon/></button>
+            {#if canBrowserShareInviteLink()}
+                <button class="btn btn-neutral join-item" onclick={shareInviteLink}><ShareIosIcon/></button>
+                {:else}
+                <button class="btn btn-neutral join-item" onclick={copyInviteLink}><CopyIcon/></button>
+            {/if}
         </div>
         <button class="btn rounded-lg btn-primary w-full p-6" onclick={finish}>{m['setup.finish_step.finish_button']()}</button>
     {/if}
