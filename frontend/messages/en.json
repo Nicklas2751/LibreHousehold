@@ -50,7 +50,8 @@
       "invite_link_shared_toast": "Invite link shared",
       "invite_link_cant_shared_toast": "Invite link cannot be shared: {error}",
       "invite_link_share_text": "Join my Household on LibreHousehold",
-      "finish_button": "Finish setup"
+      "finish_button": "Finish setup",
+      "close_setup_button": "Go to Dashboard"
     }
   }
 }

@@ -13,13 +13,15 @@
 		"format": "prettier --write .",
 		"lint": "prettier --check . && eslint .",
 		"test:unit": "vitest",
-		"test": "npm run test:unit -- --run"
+		"test": "npm run test:unit -- --run",
+		"openapi": "rm -rf src/generated-sources/openapi; npx @openapitools/openapi-generator-cli generate -i ../api/openapi.yml -g typescript-fetch -o src/generated-sources/openapi --additional-properties=supportsES6=true,modelPropertyNaming=original"
 	},
 	"devDependencies": {
 		"@castlenine/svelte-qrcode": "^2.3.0",
 		"@eslint/compat": "^1.4.1",
 		"@eslint/js": "^9.39.0",
 		"@inlang/paraglide-js": "^2.4.0",
+		"@openapitools/openapi-generator-cli": "^2.25.0",
 		"@sveltejs/adapter-auto": "^7.0.0",
 		"@sveltejs/kit": "^2.48.4",
 		"@sveltejs/vite-plugin-svelte": "^6.2.1",
@@ -46,6 +48,7 @@
 		"vitest-browser-svelte": "^2.0.1"
 	},
 	"dependencies": {
-		"@indaco/svelte-iconoir": "^7.11.1"
+		"@indaco/svelte-iconoir": "^7.11.1",
+		"uuid": "^13.0.0"
 	}
 }

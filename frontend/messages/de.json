@@ -50,7 +50,8 @@
       "invite_link_shared_toast": "Einladungslink geteilt",
       "invite_link_cant_shared_toast": "Einladungslink kann nicht geteilt werden: {error}",
       "invite_link_share_text": "Trete meinem Haushalt bei LibreHousehold bei",
-      "finish_button": "Einrichtung abschließen"
+      "finish_button": "Einrichtung abschließen",
+      "close_setup_button": "Zum Dashboard gehen"
     }
   }
 }
