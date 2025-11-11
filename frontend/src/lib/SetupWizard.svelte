@@ -10,8 +10,13 @@
     import {onMount} from 'svelte';
     import {QRCode} from "@castlenine/svelte-qrcode";
     import {ShareIosIcon} from "@indaco/svelte-iconoir/share-ios";
+    import {Configuration, type CreateHouseholdRequest, HouseholdApi} from "../generated-sources/openapi";
+    import {v4 as uuidv4} from 'uuid';
+    import {updateHouseholdState} from "$lib/stores/householdState.svelte";
+    import {Household} from "$lib/household";
+    import {Admin} from "$lib/admin";
 
-    const householdId = Math.random().toString(36).substring(2, 15);
+    const householdId: string = uuidv4();
     let inviteUrl: string = $state('');
     const maxSteps: number = 4;
     let step: number = $state(0);
@@ -33,10 +38,10 @@
     }
 
     function goBackToStep(targetStep: number) {
-        //TODO enable checking if going back is allowed again
-        // if (targetStep >= 0 && targetStep < step) {
+        // Allow going back only if not on the last step. On the last step the household is already created so going back is not allowed.
+        if (step !== maxSteps - 1 && targetStep >= 0 && targetStep < step) {
             step = targetStep;
-        // }
+        }
     }
 
     function houseHoldNameInitials(): string {
@@ -103,8 +108,35 @@
             });
     }
 
-    function finish() {
+    async function finish() {
+        const apiConfig = new Configuration({basePath: '/api'});
+        const api = new HouseholdApi(apiConfig);
 
+        const body = {
+            // Household (optional)
+            household: {
+                id: householdId,
+                name: householdName,
+                image: householdImage,
+                admin: {
+                    name: adminName,
+                    email: adminEmail,
+                },
+            }
+        } satisfies CreateHouseholdRequest;
+
+        try {
+            const data = await api.createHousehold(body);
+            console.log(data);
+            const adminObj = data.admin as { name: string; email: string };
+            const household = new Household(data.id, data.name, new Admin(adminObj.name, adminObj.email));
+            household.image = data.image;
+            household.isSaved = true;
+            updateHouseholdState(household);
+            nextStep();
+        } catch (error) {
+            console.error(error);
+        }
     }
 </script>
 
@@ -116,83 +148,97 @@
 <div class="flex flex-col justify-around gap-5">
     <ul class="steps mt-12">
         {#each {length: maxSteps} as _, i}
-            <li class={ i <= step ? 'step step-primary' : 'step' } onclick={() => goBackToStep(i)} />
+            <li class={ i <= step ? 'step step-primary' : 'step' } onclick={() => goBackToStep(i)}/>
         {/each}
     </ul>
     {#if step === 0}
         <h2 class="text-xl font-bold text-base-content">{m['setup.welcome_step.title']()}</h2>
         <p>{m['setup.welcome_step.text']()}</p>
         <IconCard
-            icon={TaskListIcon}
-            title={m['setup.welcome_step.feature_cards.card_1.title']()}
-            description={m['setup.welcome_step.feature_cards.card_1.description']()}
+                icon={TaskListIcon}
+                title={m['setup.welcome_step.feature_cards.card_1.title']()}
+                description={m['setup.welcome_step.feature_cards.card_1.description']()}
         />
         <IconCard
-            icon={EuroIcon}
-            title={m['setup.welcome_step.feature_cards.card_2.title']()}
-            description={m['setup.welcome_step.feature_cards.card_2.description']()}
+                icon={EuroIcon}
+                title={m['setup.welcome_step.feature_cards.card_2.title']()}
+                description={m['setup.welcome_step.feature_cards.card_2.description']()}
         />
         <IconCard
-            icon={StatsReportIcon}
-            title={m['setup.welcome_step.feature_cards.card_3.title']()}
-            description={m['setup.welcome_step.feature_cards.card_3.description']()}
+                icon={StatsReportIcon}
+                title={m['setup.welcome_step.feature_cards.card_3.title']()}
+                description={m['setup.welcome_step.feature_cards.card_3.description']()}
         />
-        <button class="btn rounded-lg btn-primary w-full p-6" onclick={nextStep}>{m['setup.welcome_step.get_started_button']()}</button>
+        <button class="btn rounded-lg btn-primary w-full p-6"
+                onclick={nextStep}>{m['setup.welcome_step.get_started_button']()}</button>
     {:else if step === 1}
         <h2 class="text-xl font-bold text-base-content">{m['setup.create_step.title']()}</h2>
         <p>{m['setup.create_step.text']()}</p>
         <label class="m-3 flex h-20 w-20 items-center text-center justify-center rounded-full bg-neutral-content place-self-center">
             {#if householdImage}
-                <img src={householdImage} alt="{householdName}" class="w-full h-full object-cover rounded-full" />
+                <img src={householdImage} alt="{householdName}" class="w-full h-full object-cover rounded-full"/>
             {:else}
                 <p class="text-4xl font-bold text-black/50">{houseHoldNameInitials()}</p>
             {/if}
-            <input type="file" accept="image/*" class="hidden" onchange={handleImageChange} />
+            <input type="file" accept="image/*" class="hidden" onchange={handleImageChange}/>
         </label>
         <form onsubmit={nextStep}>
             <fieldset class="fieldset">
                 <legend class="fieldset-legend">{m['setup.create_step.household_name_label']()} *</legend>
-                <input type="text" class="input validator input-bordered w-full" minlength="3" placeholder={m['setup.create_step.household_name_placeholder']()} bind:value={householdName} required />
+                <input type="text" class="input validator input-bordered w-full" minlength="3"
+                       placeholder={m['setup.create_step.household_name_placeholder']()} bind:value={householdName}
+                       required/>
                 <div class="validator-hint">{m['setup.create_step.household_name_error']()}</div>
             </fieldset>
             <div class="flex justify-between gap-3">
-                <button type="button" class="btn btn-outline flex-1" onclick={() => goBackToStep(step-1)}>{m['setup.create_step.back_button']()}</button>
+                <button type="button" class="btn btn-outline flex-1"
+                        onclick={() => goBackToStep(step-1)}>{m['setup.create_step.back_button']()}</button>
                 <button type="submit" class="btn btn-primary flex-1">{m['setup.create_step.continue_button']()}</button>
             </div>
         </form>
     {:else if step === 2}
         <h2 class="text-xl font-bold text-base-content">{m['setup.create_account_step.title']()}</h2>
         <p>{m['setup.create_account_step.text']()}</p>
-        <form onsubmit={nextStep}>
+        <form onsubmit={finish}>
             <fieldset class="fieldset">
                 <legend class="fieldset-legend">{m['setup.create_account_step.admin_name_label']()} *</legend>
-                <input type="text" class="input validator input-bordered w-full" minlength="3" placeholder={m['setup.create_account_step.admin_name_placeholder']()} bind:value={adminName} required />
+                <input type="text" class="input validator input-bordered w-full" minlength="3"
+                       placeholder={m['setup.create_account_step.admin_name_placeholder']()} bind:value={adminName}
+                       required/>
                 <div class="validator-hint">{m['setup.create_account_step.admin_name_error']()}</div>
             </fieldset>
             <fieldset class="fieldset">
                 <legend class="fieldset-legend">{m['setup.create_account_step.admin_email_label']()} *</legend>
-                <input type="email" class="input validator input-bordered w-full" placeholder={m['setup.create_account_step.admin_email_placeholder']()} bind:value={adminEmail} required />
+                <input type="email" class="input validator input-bordered w-full"
+                       placeholder={m['setup.create_account_step.admin_email_placeholder']()} bind:value={adminEmail}
+                       required/>
                 <div class="validator-hint">{m['setup.create_account_step.admin_email_error']()}</div>
             </fieldset>
             <div class="flex justify-between gap-3">
-                <button type="button" class="btn btn-outline flex-1" onclick={() => goBackToStep(step-1)}>{m['setup.create_account_step.back_button']()}</button>
-                <button type="submit" class="btn btn-primary flex-1">{m['setup.create_account_step.continue_button']()}</button>
+                <button type="button" class="btn btn-outline flex-1"
+                        onclick={() => goBackToStep(step-1)}>{m['setup.create_account_step.back_button']()}</button>
+                <button type="submit" class="btn btn-primary flex-1">{m['setup.finish_step.finish_button']()}</button>
             </div>
         </form>
     {:else if step === 3}
         <h2 class="text-xl font-bold text-base-content">{m['setup.finish_step.title']()}</h2>
         <p>{m['setup.finish_step.invite_text']()}</p>
-        <QRCode isResponsive={true} dispatchDownloadUrl={true} data={inviteUrl} />
+        <QRCode isResponsive={true} dispatchDownloadUrl={true} data={inviteUrl}/>
         <div class="join">
             <label class="input join-item w-full">
-                <input type="text" class="input w-full" value={inviteUrl} readonly />
+                <input type="text" class="input w-full" value={inviteUrl} readonly/>
             </label>
             {#if canBrowserShareInviteLink()}
-                <button class="btn btn-neutral join-item" onclick={shareInviteLink}><ShareIosIcon/></button>
-                {:else}
-                <button class="btn btn-neutral join-item" onclick={copyInviteLink}><CopyIcon/></button>
+                <button class="btn btn-neutral join-item" onclick={shareInviteLink}>
+                    <ShareIosIcon/>
+                </button>
+            {:else}
+                <button class="btn btn-neutral join-item" onclick={copyInviteLink}>
+                    <CopyIcon/>
+                </button>
             {/if}
         </div>
-        <button class="btn rounded-lg btn-primary w-full p-6" onclick={finish}>{m['setup.finish_step.finish_button']()}</button>
+        <!-- TODO: navigate to dashboard -->
+        <button class="btn rounded-lg btn-primary w-full p-6">{m['setup.finish_step.close_setup_button']()}</button>
     {/if}
 </div>

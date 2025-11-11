@@ -14,6 +14,16 @@ export default defineConfig({
             strategy: ["localStorage", "url", "preferredLanguage",  "baseLocale"]
         })
 	],
+    server: {
+        cors: { origin: /^https?:\/\/(?:(?:[^:]+\.)?localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/ },
+        proxy: {
+            '/api': {
+                target: 'http://localhost:80',
+                changeOrigin: true,
+                rewrite: (path) => path.replace(/^\/api/, '')
+            }
+        }
+    },
 	test: {
 		expect: { requireAssertions: true },
 		projects: [
