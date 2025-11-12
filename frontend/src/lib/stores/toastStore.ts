@@ -7,7 +7,7 @@ export const addToast = (toast: Toast) => {
     toasts.update((all) => [toast, ...all]);
 
     setTimeout(
-        () =>   dismissToast(toast.id),
+        () => dismissToast(toast.id),
         toast.timeout
     );
 };
