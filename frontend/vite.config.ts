@@ -11,8 +11,8 @@ export default defineConfig({
 		paraglideVitePlugin({
 			project: './project.inlang',
 			outdir: './src/lib/paraglide',
-            strategy: ["localStorage", "url", "preferredLanguage", "baseLocale"]
-        })
+			strategy: ["localStorage", "url", "preferredLanguage", "baseLocale"]
+		})
 	],
     server: {
         cors: { origin: /^https?:\/\/(?:(?:[^:]+\.)?localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/ },
