@@ -265,7 +265,7 @@ describe('setupWizardLogic', () => {
 			const householdId = '12345';
 			const result = generateInviteUrl(baseUrl, householdId);
 
-			expect(result).toBe('https://example.com//invite/12345');
+			expect(result).toBe('https://example.com/invite/12345');
 		});
 
 		it('should handle localhost URLs', () => {
