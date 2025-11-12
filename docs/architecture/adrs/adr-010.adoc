@@ -1,0 +1,19 @@
+:jbake-title: ADR 010: Use API first with OpenAPI Specification
+:jbake-type: page_toc
+// Change to 'published' when the ADR is finalized
+:jbake-status: draft
+:jbake-menu: adrs
+:jbake-order: 1
+
+[[adr-010]]
+= ADR 010: Use API first with OpenAPI Specification
+
+== Context
+
+We must decide how we want to start.
+
+== Decision Outcome
+
+We go API first with OpenAPI specification.
+
+This approach allows us to generate some Client and Server code directly from the specification, which speeds up development and ensures consistency between the API design and implementation. But instead of designing the whole API upfront, we will evolve the OpenAPI specification iteratively as we develop new features.
