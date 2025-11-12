@@ -1,27 +1,27 @@
 {
   "$schema": "https://inlang.com/schema/inlang-message-format",
-  "hello_world": "Hello, {name} from de!",
-  "setup": {
-    "subtitle": "Haushaltsverwaltung vereinfachen",
-    "welcome_step": {
-      "title": "Willkommen bei LibreHousehold",
-      "text": "Lass uns deinen Haushalt einrichten, um dir bei der Verwaltung von Aufgaben und Ausgaben zu helfen.",
-      "feature_cards": {
-        "card_1": {
-          "title": "Verwalte Aufgaben",
-          "description": "Weise Haushaltsaufgaben einfach zu und verfolge sie."
-        },
-        "card_2": {
-          "title": "Verfolge gemeinsame Ausgaben",
-          "description": "Teile Kosten und sieh, wer wem was schuldet."
-        },
-        "card_3": {
-          "title": "Ausgabenstatistiken anzeigen",
-          "description": "Analysiere die Ausgabengewohnheiten deines Haushalts im Laufe der Zeit."
-        }
+  "subtitle": "Haushaltsverwaltung vereinfachen",
+  "welcome": {
+    "title": "Willkommen bei LibreHousehold",
+    "text": "Lass uns deinen Haushalt einrichten, um dir bei der Verwaltung von Aufgaben und Ausgaben zu helfen.",
+    "feature_cards": {
+      "card_1": {
+        "title": "Verwalte Aufgaben",
+        "description": "Weise Haushaltsaufgaben einfach zu und verfolge sie."
       },
-      "get_started_button": "Loslegen"
+      "card_2": {
+        "title": "Verfolge gemeinsame Ausgaben",
+        "description": "Teile Kosten und sieh, wer wem was schuldet."
+      },
+      "card_3": {
+        "title": "Ausgabenstatistiken anzeigen",
+        "description": "Analysiere die Ausgabengewohnheiten deines Haushalts im Laufe der Zeit."
+      }
     },
+    "setup_button": "Registrieren",
+    "login_button": "Anmelden"
+  },
+  "setup": {
     "create_step": {
       "title": "Erstelle deinen Haushalt",
       "text": "Gib deinem Haushalt einen Namen und lade optional ein Bild hoch.",

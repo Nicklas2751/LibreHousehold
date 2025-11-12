@@ -1,9 +1,5 @@
 <script lang="ts">
     import {m} from '$lib/paraglide/messages.js';
-    import {TaskListIcon} from "@indaco/svelte-iconoir/task-list";
-    import {EuroIcon} from "@indaco/svelte-iconoir/euro";
-    import {StatsReportIcon} from "@indaco/svelte-iconoir/stats-report";
-    import IconCard from '$lib/IconCard.svelte';
     import {CopyIcon} from "@indaco/svelte-iconoir/copy";
     import {addToast} from "$lib/stores/toastStore";
     import {Toast} from "$lib/toast";
@@ -27,7 +23,7 @@
 
     const householdId: string = uuidv4();
     let inviteUrl: string = $state('');
-    const maxSteps: number = 4;
+    const maxSteps: number = 3;
     let step: number = $state(0);
 
     let householdName: string = $state('');
@@ -133,7 +129,7 @@
     <span class="text-white font-bold text-xl">LH</span>
 </div>
 <h1 class="text-2xl font-bold text-base-content text-center">LibreHousehold</h1>
-<p class="text-base-content/70 mt-2 text-center">{m['setup.subtitle']()}</p>
+<p class="text-base-content/70 mt-2 text-center">{m['subtitle']()}</p>
 <div class="flex flex-col justify-around gap-5">
     <ul class="steps mt-12">
         {#each {length: maxSteps} as _, i}
@@ -141,26 +137,6 @@
         {/each}
     </ul>
     {#if step === 0}
-        <h2 class="text-xl font-bold text-base-content">{m['setup.welcome_step.title']()}</h2>
-        <p>{m['setup.welcome_step.text']()}</p>
-        <IconCard
-                icon={TaskListIcon}
-                title={m['setup.welcome_step.feature_cards.card_1.title']()}
-                description={m['setup.welcome_step.feature_cards.card_1.description']()}
-        />
-        <IconCard
-                icon={EuroIcon}
-                title={m['setup.welcome_step.feature_cards.card_2.title']()}
-                description={m['setup.welcome_step.feature_cards.card_2.description']()}
-        />
-        <IconCard
-                icon={StatsReportIcon}
-                title={m['setup.welcome_step.feature_cards.card_3.title']()}
-                description={m['setup.welcome_step.feature_cards.card_3.description']()}
-        />
-        <button class="btn rounded-lg btn-primary w-full p-6"
-                onclick={nextStep}>{m['setup.welcome_step.get_started_button']()}</button>
-    {:else if step === 1}
         <h2 class="text-xl font-bold text-base-content">{m['setup.create_step.title']()}</h2>
         <p>{m['setup.create_step.text']()}</p>
         <label class="m-3 flex h-20 w-20 items-center text-center justify-center rounded-full bg-neutral-content place-self-center">
@@ -180,12 +156,12 @@
                 <div class="validator-hint">{m['setup.create_step.household_name_error']()}</div>
             </fieldset>
             <div class="flex justify-between gap-3">
-                <button type="button" class="btn btn-outline flex-1"
-                        onclick={() => goBackToStep(step-1)}>{m['setup.create_step.back_button']()}</button>
+                <a type="button" class="btn btn-outline flex-1"
+                        href="/">{m['setup.create_step.back_button']()}</a>
                 <button type="submit" class="btn btn-primary flex-1">{m['setup.create_step.continue_button']()}</button>
             </div>
         </form>
-    {:else if step === 2}
+    {:else if step === 1}
         <h2 class="text-xl font-bold text-base-content">{m['setup.create_account_step.title']()}</h2>
         <p>{m['setup.create_account_step.text']()}</p>
         <form onsubmit={finish}>
@@ -209,7 +185,7 @@
                 <button type="submit" class="btn btn-primary flex-1">{m['setup.finish_step.finish_button']()}</button>
             </div>
         </form>
-    {:else if step === 3}
+    {:else if step === 2}
         <h2 class="text-xl font-bold text-base-content">{m['setup.finish_step.title']()}</h2>
         <p>{m['setup.finish_step.invite_text']()}</p>
         <QRCode isResponsive={true} dispatchDownloadUrl={true} data={inviteUrl}/>
