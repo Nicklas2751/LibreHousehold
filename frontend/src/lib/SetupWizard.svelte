@@ -15,6 +15,15 @@
     import {updateHouseholdState} from "$lib/stores/householdState.svelte";
     import {Household} from "$lib/household";
     import {Admin} from "$lib/admin";
+    import {
+        calculateNextStep,
+        calculateTargetStep,
+        checkCanBrowserShareInviteLink,
+        createInviteLinkShareData,
+        generateHouseholdNameInitials,
+        generateInviteUrl,
+        readFileAsDataURL
+    } from '$lib/setupWizardLogic';
 
     const householdId: string = uuidv4();
     let inviteUrl: string = $state('');
@@ -28,62 +37,42 @@
 
     onMount(() => {
         const baseUrl = `${window.location.protocol}//${window.location.host}`;
-        inviteUrl = `${baseUrl}/invite/${householdId}`;
+        inviteUrl = generateInviteUrl(baseUrl, householdId);
     });
 
     function nextStep() {
-        if (step < maxSteps - 1) {
-            step += 1;
-        }
+        step = calculateNextStep(step, maxSteps);
     }
 
     function goBackToStep(targetStep: number) {
-        // Allow going back only if not on the last step. On the last step the household is already created so going back is not allowed.
-        if (step !== maxSteps - 1 && targetStep >= 0 && targetStep < step) {
-            step = targetStep;
-        }
+        step = calculateTargetStep(step, targetStep, maxSteps);
     }
 
     function houseHoldNameInitials(): string {
-        if (householdName.trim().length === 0) {
-            return '+';
-        }
-        const words = householdName.trim().split(' ');
-        if (words.length >= 2) {
-            return words[0].charAt(0) + words[1].charAt(0);
-        }
-        return words[0].charAt(0);
+        return generateHouseholdNameInitials(householdName);
     }
 
-    function handleImageChange(event: Event) {
+    async function handleImageChange(event: Event) {
         const target = event.target as HTMLInputElement;
         const files = target.files;
 
         if (files && files.length > 0) {
             const file = files[0];
-            const reader = new FileReader();
-
-            reader.onload = (e) => {
-                householdImage = e.target?.result as string;
-            };
-
-            reader.readAsDataURL(file);
+            try {
+                householdImage = await readFileAsDataURL(file);
+            } catch (error) {
+                console.error('Error reading file:', error);
+            }
         }
     }
 
     function canBrowserShareInviteLink(): boolean {
-        if (!navigator.share || !navigator.canShare) {
-            return false;
-        }
-
-        return navigator.canShare(createInviteLinkShareData());
+        const shareData = createInviteLinkShareData(inviteUrl, m['setup.finish_step.invite_link_share_text']());
+        return checkCanBrowserShareInviteLink(shareData);
     }
 
-    function createInviteLinkShareData(): ShareData {
-        return {
-            text: m['setup.finish_step.invite_link_share_text'](),
-            url: inviteUrl
-        };
+    function getInviteLinkShareData(): ShareData {
+        return createInviteLinkShareData(inviteUrl, m['setup.finish_step.invite_link_share_text']());
     }
 
     function copyInviteLink() {
@@ -97,7 +86,7 @@
     }
 
     async function shareInviteLink() {
-        const shareData = createInviteLinkShareData();
+        const shareData = getInviteLinkShareData();
         await navigator.share(shareData)
             .then(() => {
                 console.log('Invite link shared successfully');
