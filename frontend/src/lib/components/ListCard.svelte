@@ -1,4 +1,5 @@
 <script lang="ts">
+    import {m} from '$lib/paraglide/messages.js';
 
     interface Props {
         title: string;
@@ -24,7 +25,7 @@
 <div class={`card card-border bg-base-200 drop-shadow-xl ${colSpan}`}>
     <div class="border-b-1 border-b-gray-500 p-2 flex justify-between flex-column">
         <h2 class="card-title">{title}</h2>
-        <a href={viewAllHref} class="text-primary">View all</a>
+        <a href={viewAllHref} class="text-primary">{m["dashboard.view_all"]()}</a>
     </div>
     <div class="card-body">
         {#if items.length === 0}
