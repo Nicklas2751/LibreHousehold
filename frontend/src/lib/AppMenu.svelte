@@ -3,7 +3,6 @@
     import {ClipboardCheckIcon} from "@indaco/svelte-iconoir/clipboard-check";
     import {CashIcon} from "@indaco/svelte-iconoir/cash";
     import {StatsReportIcon} from "@indaco/svelte-iconoir/stats-report";
-    import {GroupIcon} from "@indaco/svelte-iconoir/group";
     import {SettingsIcon} from "@indaco/svelte-iconoir/settings";
     import {m} from '$lib/paraglide/messages.js';
 </script>
@@ -43,32 +42,26 @@
             </a>
         </li>
         <li>
-            <a>
+            <a href="/app/tasks">
                 <ClipboardCheckIcon/>
                 {m["menu.tasks"]()}
                 <span class="badge badge-xs">99+</span>
             </a>
         </li>
         <li>
-            <a>
+            <a href="/app/expenses">
                 <CashIcon/>
                 {m["menu.expenses"]()}
             </a>
         </li>
         <li>
-            <a>
+            <a href="/app/statistics">
                 <StatsReportIcon/>
                 {m["menu.statistics"]()}
             </a>
         </li>
         <li>
-            <a>
-                <GroupIcon/>
-                {m["menu.household"]()}
-            </a>
-        </li>
-        <li>
-            <a>
+            <a href="/app/settings">
                 <SettingsIcon/>
                 {m["menu.settings"]()}
             </a>
