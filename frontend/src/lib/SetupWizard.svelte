@@ -20,6 +20,7 @@
         generateInviteUrl,
         readFileAsDataURL
     } from '$lib/setupWizardLogic';
+    import {goto} from "$app/navigation";
 
     const householdId: string = uuidv4();
     let inviteUrl: string = $state('');
@@ -203,7 +204,6 @@
                 </button>
             {/if}
         </div>
-        <!-- TODO: navigate to dashboard -->
-        <button class="btn rounded-lg btn-primary w-full p-6">{m['setup.finish_step.close_setup_button']()}</button>
+        <button class="btn rounded-lg btn-primary w-full p-6" onclick={ async () => await goto("/app/dashboard")}>{m['setup.finish_step.close_setup_button']()}</button>
     {/if}
 </div>

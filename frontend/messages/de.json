@@ -60,5 +60,33 @@
     "expenses": "Ausgaben",
     "statistics": "Statistiken",
     "settings": "Einstellungen"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "task_due_card": {
+      "title": "Bald fällige Aufgaben"
+    },
+    "you_owe_card": {
+      "title": "Du schuldest"
+    },
+    "owed_to_you_card": {
+      "title": "Dir wird geschuldet"
+    },
+    "upcoming_tasks_card": {
+      "title": "Anstehende Aufgaben",
+      "no_tasks": "Keine anstehenden Aufgaben",
+      "create_button": "Aufgaben erstellen"
+    },
+    "recent_expenses_card": {
+      "title": "Kürzliche Ausgaben",
+      "no_expenses": "Keine kürzlichen Ausgaben",
+      "add_button": "Ausgabe hinzufügen"
+    },
+    "debts_overview_card": {
+      "title": "Schulden Übersicht",
+      "no_debts": "Keine Schulden zum Anzeigen",
+      "add_button": "Ausgabe hinzufügen"
+    },
+    "view_all": "Alle anzeigen"
   }
 }
