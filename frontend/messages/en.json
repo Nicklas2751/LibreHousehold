@@ -60,5 +60,33 @@
     "expenses": "Expenses",
     "statistics": "Statistics",
     "settings": "Settings"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "task_due_card": {
+      "title": "Tasks Due soon"
+    },
+    "you_owe_card": {
+      "title": "You Owe"
+    },
+    "owed_to_you_card": {
+      "title": "Owed to You"
+    },
+    "upcoming_tasks_card": {
+      "title": "Upcoming Tasks",
+      "no_tasks": "No upcoming tasks",
+      "create_button": "Create Tasks"
+    },
+    "recent_expenses_card": {
+      "title": "Recent Expenses",
+      "no_expenses": "No recent expenses",
+      "add_button": "Add Expense"
+    },
+    "debts_overview_card": {
+      "title": "Debts Overview",
+      "no_debts": "No debts to display",
+      "add_button": "Add Expense"
+    },
+    "view_all": "View all"
   }
 }
