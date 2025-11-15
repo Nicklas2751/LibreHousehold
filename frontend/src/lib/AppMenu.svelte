@@ -5,30 +5,31 @@
     import {StatsReportIcon} from "@indaco/svelte-iconoir/stats-report";
     import {SettingsIcon} from "@indaco/svelte-iconoir/settings";
     import {m} from '$lib/paraglide/messages.js';
+    import {goto} from "$app/navigation";
 </script>
 
 <div class="dock md:hidden">
-    <button class="dock-active">
+    <button class="dock-active" onclick={ async () => await goto("/app/dashboard")}>
         <HomeIcon/>
         <span class="dock-label">{m["menu.dashboard"]()}</span>
     </button>
 
-    <button>
+    <button onclick={ async () => await goto("/app/tasks")}>
         <ClipboardCheckIcon/>
         <span class="dock-label">{m["menu.tasks"]()}</span>
     </button>
 
-    <button>
+    <button onclick={ async () => await goto("/app/expenses")}>
         <CashIcon/>
         <span class="dock-label">{m["menu.expenses"]()}</span>
     </button>
 
-    <button>
+    <button onclick={ async () => await goto("/app/statistics")}>
         <StatsReportIcon/>
         <span class="dock-label">{m["menu.statistics"]()}</span>
     </button>
 
-    <button>
+    <button onclick={ async () => await goto("/app/settings")}>
         <SettingsIcon/>
         <span class="dock-label">{m["menu.settings"]()}</span>
     </button>
