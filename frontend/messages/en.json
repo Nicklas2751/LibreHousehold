@@ -53,5 +53,13 @@
       "finish_button": "Finish setup",
       "close_setup_button": "Go to Dashboard"
     }
+  },
+  "menu": {
+    "dashboard": "Dashboard",
+    "tasks": "Tasks",
+    "expenses": "Expenses",
+    "statistics": "Statistics",
+    "household": "Household",
+    "settings": "Settings"
   }
 }
