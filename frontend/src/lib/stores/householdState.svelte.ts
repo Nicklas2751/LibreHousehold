@@ -1,5 +1,5 @@
-import type {Household} from "$lib/household";
 import {type Writable, writable} from "svelte/store";
+import type {Household} from "../../generated-sources/openapi";
 
 export const householdState: Writable<Household | undefined> = writable(undefined);
 
