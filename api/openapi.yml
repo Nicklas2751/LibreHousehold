@@ -15,6 +15,8 @@ servers:
 tags:
   - name: household
     description: Operations related to households
+  - name: tasks
+    description: Operations related to tasks
 paths:
   /household:
     post:
@@ -43,6 +45,184 @@ paths:
                 $ref: '#/components/schemas/Problem'
         "409":
           description: The household already exists.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        default:
+          description: An error occurred - see the status code and problem for more information.
+          content:
+            "application/problem+json":
+              schema:
+                $ref: '#/components/schemas/Problem'
+
+  /household/{householdId}/members:
+    get:
+      summary: Get all members of a household
+      description: Retrieves all members of the specified household.
+      tags:
+        - members
+      operationId: getMembers
+      parameters:
+        - name: householdId
+          in: path
+          required: true
+          description: The unique identifier of the household.
+          schema:
+            type: string
+            format: uuid
+            example: "f3ce1a6b-aba1-478d-9f01-ec484f23ce60"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Member"
+        "404":
+          description: No household found with the specified ID.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        default:
+          description: An error occurred - see the status code and problem for more information.
+          content:
+            "application/problem+json":
+              schema:
+                $ref: '#/components/schemas/Problem'
+    post:
+      summary: Add a new member to a household
+      description: Adds a new member to the specified household.
+      tags:
+        - members
+      operationId: createMember
+      parameters:
+        - name: householdId
+          in: path
+          required: true
+          description: The unique identifier of the household.
+          schema:
+            type: string
+            format: uuid
+            example: "f3ce1a6b-aba1-478d-9f01-ec484f23ce60"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Member"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Member"
+        "400":
+          description: The data for the new member is invalid.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        "404":
+          description: No household found with the specified ID.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        "409":
+          description: The member already exists.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        default:
+          description: An error occurred - see the status code and problem for more information.
+          content:
+            "application/problem+json":
+              schema:
+                $ref: '#/components/schemas/Problem'
+
+  /household/{householdId}/tasks:
+    get:
+      summary: Get all tasks of a household
+      description: Retrieves all tasks of the specified household. Returns an empty list if no tasks exist.
+      tags:
+        - tasks
+      operationId: getTasks
+      parameters:
+        - name: householdId
+          in: path
+          required: true
+          description: The unique identifier of the household.
+          schema:
+            type: string
+            format: uuid
+            example: "f3ce1a6b-aba1-478d-9f01-ec484f23ce60"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Task"
+        "404":
+          description: No household found with the specified ID.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        default:
+          description: An error occurred - see the status code and problem for more information.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+    post:
+      summary: Create a new task
+      description: Creates a new tasks.
+      tags:
+        - tasks
+      operationId: createTask
+      parameters:
+        - name: householdId
+          in: path
+          required: true
+          description: The unique identifier of the household.
+          schema:
+            type: string
+            format: uuid
+            example: "f3ce1a6b-aba1-478d-9f01-ec484f23ce60"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Task"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "400":
+          description: The data for the new task is invalid.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        "404":
+          description: No household found with the specified ID.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        "409":
+          description: The task already exists.
           content:
             application/problem+json:
               schema:
@@ -101,19 +281,6 @@ components:
             e.g. by adding a fragment identifier or sub-path to the problem type.
             May be used to locate the root of this problem in the source code.
           example: '/some/uri-reference#specific-occurrence-context'
-    Admin:
-      type: object
-      required:
-        - email
-        - name
-      properties:
-        email:
-          type: string
-          format: email
-          description: The unique email address of the admin user.
-        name:
-          type: string
-          description: The name of the admin user.
     Household:
       type: object
       required:
@@ -127,13 +294,102 @@ components:
           description: The unique identifier of the household. This must be generated by the client.
         name:
           type: string
+          minLength: 3
           description: The name of the household.
         image:
           type: string
           format: base64
           description: A base64 encoded image representing the household.
         admin:
-          type: object
-          description: The admin user of the household.
-          schema:
-            $ref: "#/components/schemas/Admin"
+          type: string
+          format: uuid
+          description: The unique identifier of the admin member of the household. Since the household must be saved before members can be added, this must be the id of a member that will be created after the household is created.
+      example:
+        id: "f3ce1a6b-aba1-478d-9f01-ec484f23ce60"
+        name: "My Household"
+        image: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAoCAYAAACM/rhtAAAFZ0lEQVR4AcyYSUgcQRSG/5lDAlkIISSBbIQEErJdAlnIcgiEJAQEL4IigogoHvSgB0VFRRA9CYKgKOrJi7gvIN4EFRU9iTsq4oqi4IKIosavoIdxMs60M2YRXnfNq/f+/+uuKg/tHBgYOJqZmTlaWFj4rwIm2Jw3btzQ2tqarl69qjt37vwXAQtMsDkvXLigJ0+eaGJiQltbW/rXfzDAAhNsToAgJsEEBeT+ReANAywwwWAAGZBgggIKyf3NwBNvGGCxvF2AJJiggEIayP2NwAtPvGFw9zwByAQFFNJAI7k/GXjghSfenl6/AVJAIQ00IkDuTwTaeOCFpzcPr4AU0kAjAgiRO89AE2088DpN+1RAGmhEACEEyZ1HoIUm2nj40vQJSCMCCCGIMLlgAg200ETbn5ZfQAQQQhBhDMgFEvSigRaadjRsASKEIMIYYETuLEEPvWigZbfXNiCCCGOAEYbk7AS19NCLhp0eq+ZMgDRhgBGGGJPzFdRQSw+9vmq9zZ0ZEBGMMMQYAHLegjlqqKXHW42/XECAiGKIMQCAkHMPcsxRQ6373FnGAQNigjEAgABEjmBMjjlqyAUaQQFiCgAgAAFGMCbHHDXBRNCAmAMCEGAEY3LMBRvnAhgshK/+cwF0X1beHm+RnC9ju3NBAwICEGAsK8GYHHN2QU6rCwoQAEAAAswyYUyOOWqsfCD3gAExBgAQgDzNyTFHDbWe83Z/BwSIIcYAACJ5t2OOGmrp8V7lO3tmQIwwxBgA3/IyHwSopYdef/We82cCxAAjDO3AWWbU0kMvGlbezv1UwJ2dHXV1deno6MjoIIzB/fv3dfwdRwcHByZv9wIkvTU1Ndrc3DzRhtfY2JhXzVMBU1JS9PnzZ+3t7ZlPIsA1Nzfr9u3bevbsma5fv67BwcETRv5+ZGdnKzY2VsPDw0aT+ry8PF2+fPlUTa+ATU1NKi0tpV/b29vmuw333NxcVVVVaXl5WSEhIfr586f29/dNnb+Lu6a13J2dncrMzPSp+Rvg4uKioqKiFBcXZzx5cwg2Njbq48ePio6ONm8xLS1NKysrZhtkZGTo27dvrrdSXl6uL1++aHV11Wh4al65csV8sCorK9P79++9aprG48sJwMPDQ1McHh6u0NDQ42kZIfYPy/Lp0yeT4/L48WNump6eVkJCgnp7e5Wenq7x8XHzcPTfvHlT7poRERGmhwuarMTTp09dD+auSQ1xArCoqEizs7NiKefm5pgXT8tgdHTU7DvGxKVLl3Tr1i2z4e/du6eKigoVFxfr69ev+v79uxITEymTpVlYWGh+u19YnUePHpktxCF017TqXIDHXzSVnJyssLAw1dXViaejqKOjQ0tLS3rx4oVZUnJWsMQsP7/pe/78uebn55Wfny+n0ylLMzIyUj09Perr66NU7pobGxtmlYAF0l2TYhcgh+D169dqaGhQZWWlqqurmVdOTo6GhobMXmH5TPL4AsjxTS9fvuSm2tpajYyMmLfKaeXfE5pv3rxRa2urOQzoUuypyXLzoPxbY97SZOwCfPjwodi07CX+fVhiPDkH4N27d2prazNPzzZISkoSy/PgwQNxCGJiYpSamipOa0tLizgor169Un9/vyt8aa6vr6ukpER37949sZUMIK+WV8xT8DSQOxwObq748eOHgGJ/8TDd3d0GxuFwCDgORFZWlnnTgMbHx2tqasrVz8Dh8K3JFqivr9fk5KTr4Dj5R+wJh9iHDx/EMl28eJGfcjgcZsPzcZulZI9aS9He3m5g2OQUFxQUmF7rVJIj7Gi+ffvWtSdhc2LI13TeIkvlL3Z3d3Xt2jVzcPzV2p331IQFJth+AQAA//9Opj3vAAAABklEQVQDAM9TAgNdiTbvAAAAAElFTkSuQmCC"
+        admin: "7c3a40a8-3f57-4645-8cf5-820a6a8d3613"
+    Member:
+      type: object
+      required:
+        - id
+        - name
+        - email
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: The unique identifier of the member.
+        name:
+          type: string
+          description: The name of the member.
+        email:
+          type: string
+          format: email
+          description: The email address of the member.
+        avatar:
+          type: string
+          format: base64
+          description: A base64 encoded image representing the member's avatar.
+      example:
+        id: "7c3a40a8-3f57-4645-8cf5-820a6a8d3613"
+        name: "John Doe"
+        email: "john.doe@example.org"
+        avatar: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAoCAYAAACM/rhtAAAFZ0lEQVR4AcyYSUgcQRSG/5lDAlkIISSBbIQEErJdAlnIcgiEJAQEL4IigogoHvSgB0VFRRA9CYKgKOrJi7gvIN4EFRU9iTsq4oqi4IKIosavoIdxMs60M2YRXnfNq/f+/+uuKg/tHBgYOJqZmTlaWFj4rwIm2Jw3btzQ2tqarl69qjt37vwXAQtMsDkvXLigJ0+eaGJiQltbW/rXfzDAAhNsToAgJsEEBeT+ReANAywwwWAAGZBgggIKyf3NwBNvGGCxvF2AJJiggEIayP2NwAtPvGFw9zwByAQFFNJAI7k/GXjghSfenl6/AVJAIQ00IkDuTwTaeOCFpzcPr4AU0kAjAgiRO89AE2088DpN+1RAGmhEACEEyZ1HoIUm2nj40vQJSCMCCCGIMLlgAg200ETbn5ZfQAQQQhBhDMgFEvSigRaadjRsASKEIMIYYETuLEEPvWigZbfXNiCCCGOAEYbk7AS19NCLhp0eq+ZMgDRhgBGGGJPzFdRQSw+9vmq9zZ0ZEBGMMMQYAHLegjlqqKXHW42/XECAiGKIMQCAkHMPcsxRQ6373FnGAQNigjEAgABEjmBMjjlqyAUaQQFiCgAgAAFGMCbHHDXBRNCAmAMCEGAEY3LMBRvnAhgshK/+cwF0X1beHm+RnC9ju3NBAwICEGAsK8GYHHN2QU6rCwoQAEAAAswyYUyOOWqsfCD3gAExBgAQgDzNyTFHDbWe83Z/BwSIIcYAACJ5t2OOGmrp8V7lO3tmQIwwxBgA3/IyHwSopYdef/We82cCxAAjDO3AWWbU0kMvGlbezv1UwJ2dHXV1deno6MjoIIzB/fv3dfwdRwcHByZv9wIkvTU1Ndrc3DzRhtfY2JhXzVMBU1JS9PnzZ+3t7ZlPIsA1Nzfr9u3bevbsma5fv67BwcETRv5+ZGdnKzY2VsPDw0aT+ry8PF2+fPlUTa+ATU1NKi0tpV/b29vmuw333NxcVVVVaXl5WSEhIfr586f29/dNnb+Lu6a13J2dncrMzPSp+Rvg4uKioqKiFBcXZzx5cwg2Njbq48ePio6ONm8xLS1NKysrZhtkZGTo27dvrrdSXl6uL1++aHV11Wh4al65csV8sCorK9P79++9aprG48sJwMPDQ1McHh6u0NDQ42kZIfYPy/Lp0yeT4/L48WNump6eVkJCgnp7e5Wenq7x8XHzcPTfvHlT7poRERGmhwuarMTTp09dD+auSQ1xArCoqEizs7NiKefm5pgXT8tgdHTU7DvGxKVLl3Tr1i2z4e/du6eKigoVFxfr69ev+v79uxITEymTpVlYWGh+u19YnUePHpktxCF017TqXIDHXzSVnJyssLAw1dXViaejqKOjQ0tLS3rx4oVZUnJWsMQsP7/pe/78uebn55Wfny+n0ylLMzIyUj09Perr66NU7pobGxtmlYAF0l2TYhcgh+D169dqaGhQZWWlqqurmVdOTo6GhobMXmH5TPL4AsjxTS9fvuSm2tpajYyMmLfKaeXfE5pv3rxRa2urOQzoUuypyXLzoPxbY97SZOwCfPjwodi07CX+fVhiPDkH4N27d2prazNPzzZISkoSy/PgwQNxCGJiYpSamipOa0tLizgor169Un9/vyt8aa6vr6ukpER37949sZUMIK+WV8xT8DSQOxwObq748eOHgGJ/8TDd3d0GxuFwCDgORFZWlnnTgMbHx2tqasrVz8Dh8K3JFqivr9fk5KTr4Dj5R+wJh9iHDx/EMl28eJGfcjgcZsPzcZulZI9aS9He3m5g2OQUFxQUmF7rVJIj7Gi+ffvWtSdhc2LI13TeIkvlL3Z3d3Xt2jVzcPzV2p331IQFJth+AQAA//9Opj3vAAAABklEQVQDAM9TAgNdiTbvAAAAAElFTkSuQmCC"
+    Task:
+      type: object
+      required:
+        - id
+        - title
+        - dueDate
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: The unique identifier of the task. This must be generated by the client.
+        title:
+          type: string
+          minLength: 3
+          description: The title of the task.
+        assignedTo:
+          type: string
+          format: uuid
+          description: The id of the user the task is assigned to.
+        description:
+          type: string
+          description: A detailed description of the task.
+        dueDate:
+          type: string
+          format: date
+          description: The due date of the task or if it's a recurring task, the first due date.
+        recurring:
+          type: boolean
+          description: Indicates if the task is recurring.
+        recurrenceUnit:
+          type: string
+          enum:
+            - days
+            - weeks
+            - months
+            - years
+          description: The unit of recurrence for the task. Required if the task is recurring.
+        recurrenceInterval:
+          type: integer
+          minimum: 1
+          description: The interval of recurrence for the task. Required if the task is recurring.
+        done:
+          type: string
+          format: date
+          description: |
+            The date when the task was completed. Null if the task is not yet completed.
+            If the task is recurring, the task is done for the moment if the done date is after the last due date.
+      example:
+        id: "760e8400-e29b-41d4-a716-446655440000"
+        title: "Take out the trash"
+        assignedTo: "7c3a40a8-3f57-4645-8cf5-820a6a8d3613"
+        description: "Take out the trash."
+        dueDate: "2024-07-01"
+        recurring: true
+        recurrenceUnit: "weeks"
+        recurrenceInterval: 1
+        done: null

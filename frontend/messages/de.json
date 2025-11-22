@@ -88,5 +88,39 @@
       "add_button": "Ausgabe hinzufügen"
     },
     "view_all": "Alle anzeigen"
+  },
+  "tasks": {
+    "title": "Aufgaben",
+    "create_task_button": "Erstelle deine erste Aufgabe",
+    "list_title": "Aufgabenliste",
+    "no_tasks": "Keine Aufgaben verfügbar. Erstellen eine um loszulegen!",
+    "filter": {
+      "all": "Alle",
+      "assigned_to_me": "Meine",
+      "completed": "Abgeschlossen",
+      "pending": "Ausstehend"
+    },
+    "new": {
+      "title": "Neue Aufgabe erstellen",
+      "cancel_button": "Abbrechen",
+      "task_title_label": "Aufgabentitel",
+      "task_title_placeholder": "z.B., Müll rausbringen",
+      "task_title_error": "Gib einen Aufgabentitel mit mindestens drei Zeichen ein.",
+      "assigned_to_label": "Zugewiesen an",
+      "assigned_to_placeholder": "Wähle ein Haushaltsmitglied",
+      "description_label": "Beschreibung",
+      "description_placeholder": "z.B., Bitte bring den Müll raus bevor du gehst.",
+      "due_date_label": "Fälligkeitsdatum",
+      "due_date_error": "Gib ein Fälligkeitsdatum ein, dass entweder heute ist oder in der Zukunft liegt.",
+      "recurring_label": "Wiederkehrende Aufgabe?",
+      "recurrence_pattern_label": "Wiederholungseinheit",
+      "recurrence_pattern_days": "Tage",
+      "recurrence_pattern_weeks": "Wochen",
+      "recurrence_pattern_months": "Monate",
+      "recurrence_pattern_years": "Jahre",
+      "recurrence_pattern_times_label": "Alle wie viele Einheiten?",
+      "next_recurrence_date_label": "Mit dem aktuellen Fälligkeitsdatum {date}, wird die nächste Wiederholung am {nextDate} sein.",
+      "create_button": "Aufgabe erstellen"
+    }
   }
 }

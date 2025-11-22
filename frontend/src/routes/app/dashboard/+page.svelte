@@ -1,11 +1,12 @@
 <script lang="ts">
     import {m} from '$lib/paraglide/messages.js';
-    import StatCard from '$lib/components/StatCard.svelte';
-    import ListCard from '$lib/components/ListCard.svelte';
+    import StatCard from '$lib/StatCard.svelte';
+    import ListCard from '$lib/ListCard.svelte';
     import {goto} from "$app/navigation";
+    import PageTitle from "$lib/PageTitle.svelte";
 </script>
 
-<h2 class="text-xl font-bold pt-5 pl-5">{m["dashboard.title"]()}</h2>
+<PageTitle title={m["dashboard.title"]()} />
 
 <div class="grid md:grid-cols-6 gap-4 p-5">
 

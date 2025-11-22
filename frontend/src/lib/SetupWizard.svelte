@@ -6,11 +6,9 @@
     import {onMount} from 'svelte';
     import {QRCode} from "@castlenine/svelte-qrcode";
     import {ShareIosIcon} from "@indaco/svelte-iconoir/share-ios";
-    import {Configuration, type CreateHouseholdRequest, HouseholdApi} from "../generated-sources/openapi";
+    import {Configuration, type Household, HouseholdApi, type Member} from "../generated-sources/openapi";
     import {v4 as uuidv4} from 'uuid';
     import {updateHouseholdState} from "$lib/stores/householdState.svelte";
-    import {Household} from "$lib/household";
-    import {Admin} from "$lib/admin";
     import {
         calculateNextStep,
         calculateTargetStep,
@@ -21,6 +19,7 @@
         readFileAsDataURL
     } from '$lib/setupWizardLogic';
     import {goto} from "$app/navigation";
+    import {addMember} from "$lib/stores/memberStore";
 
     const householdId: string = uuidv4();
     let inviteUrl: string = $state('');
@@ -96,28 +95,23 @@
 
     async function finish() {
         const apiConfig = new Configuration({basePath: '/api'});
-        const api = new HouseholdApi(apiConfig);
+        const householdApi = new HouseholdApi(apiConfig);
 
-        const body = {
-            // Household (optional)
-            household: {
+        let adminMember: Member = {
+            id: uuidv4(),
+            name: adminName,
+            email: adminEmail
+        };
+        let household: Household = {
                 id: householdId,
                 name: householdName,
                 image: householdImage,
-                admin: {
-                    name: adminName,
-                    email: adminEmail,
-                },
-            }
-        } satisfies CreateHouseholdRequest;
+                admin: adminMember.id
+        };
 
         try {
-            const data = await api.createHousehold(body);
-            console.log(data);
-            const adminObj = data.admin as { name: string; email: string };
-            const household = new Household(data.id, data.name, new Admin(adminObj.name, adminObj.email));
-            household.image = data.image;
-            household.isSaved = true;
+            household = await householdApi.createHousehold({household: household});
+            adminMember = await addMember(householdId, adminMember);
             updateHouseholdState(household);
             nextStep();
         } catch (error) {

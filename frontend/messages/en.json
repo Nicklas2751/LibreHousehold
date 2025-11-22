@@ -88,5 +88,39 @@
       "add_button": "Add Expense"
     },
     "view_all": "View all"
+  },
+  "tasks": {
+    "title": "Tasks",
+    "create_task_button": "Create Task",
+    "list_title": "Task List",
+    "no_tasks": "No tasks available. Create one to get started!",
+    "filter": {
+      "all": "All",
+      "assigned_to_me": "Assigned to me",
+      "completed": "Completed",
+      "pending": "Pending"
+    },
+    "new": {
+      "title": "New Task",
+      "cancel_button": "Cancel",
+      "task_title_label": "Task Title",
+      "task_title_placeholder": "e.g., Clean the kitchen",
+      "task_title_error": "Enter a task title with at least three characters.",
+      "assigned_to_label": "Assign to",
+      "assigned_to_select_placeholder": "Select a household member",
+      "description_label": "Description",
+      "description_placeholder": "e.g., Remember to clean the fridge and mop the floor.",
+      "due_date_label": "Due Date",
+      "due_date_error": "Select a due date, which is today or in the future.",
+      "recurring_label": "Recurring task?",
+      "recurrence_pattern_label": "Recurrence Unit",
+      "recurrence_pattern_days": "Days",
+      "recurrence_pattern_weeks": "Weeks",
+      "recurrence_pattern_months": "Monhts",
+      "recurrence_pattern_years": "Years",
+      "recurrence_pattern_times_label": "Every how many units?",
+      "next_recurrence_date_label": "With currenct due date {date}, next recurrence will be on {nextDate}.",
+      "create_button": "Create Task"
+    }
   }
 }
