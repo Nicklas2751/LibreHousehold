@@ -15,10 +15,10 @@ export function getLastDueDate(task: Task): Date | undefined {
     }
 
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    today.setUTCHours(0, 0, 0, 0);
 
     let currentDueDate = new Date(task.dueDate);
-    currentDueDate.setHours(0, 0, 0, 0);
+    currentDueDate.setUTCHours(0, 0, 0, 0);
 
     // If the first due date is already after today, there's no due date before today
     if (currentDueDate > today) {
@@ -26,8 +26,10 @@ export function getLastDueDate(task: Task): Date | undefined {
     }
 
     // Calculate all due dates until we reach or pass today
-    for( let nextDueDate = currentDueDate; nextDueDate < today; nextDueDate = addInterval(currentDueDate, task.recurrenceUnit!, task.recurrenceInterval!)) {
+    let nextDueDate = addInterval(currentDueDate, task.recurrenceUnit!, task.recurrenceInterval!);
+    while (nextDueDate <= today) {
         currentDueDate = nextDueDate;
+        nextDueDate = addInterval(nextDueDate, task.recurrenceUnit!, task.recurrenceInterval!);
     }
 
     return currentDueDate;
@@ -44,13 +46,13 @@ export function getNextDueDateAfterToday(task: Task): Date | undefined {
     }
 
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    today.setUTCHours(0, 0, 0, 0);
 
     let currentDueDate = new Date(task.dueDate);
-    currentDueDate.setHours(0, 0, 0, 0);
+    currentDueDate.setUTCHours(0, 0, 0, 0);
 
     // Calculate all due dates until we find one after today
-    for(; currentDueDate <= today; currentDueDate = addInterval(currentDueDate, task.recurrenceUnit!, task.recurrenceInterval!)) {
+    while (currentDueDate <= today) {
         currentDueDate = addInterval(currentDueDate, task.recurrenceUnit!, task.recurrenceInterval!);
     }
 
@@ -69,16 +71,16 @@ export function addInterval(date: Date, unit: string, interval: number): Date {
 
     switch (unit) {
         case 'days':
-            newDate.setDate(newDate.getDate() + interval);
+            newDate.setUTCDate(newDate.getUTCDate() + interval);
             break;
         case 'weeks':
-            newDate.setDate(newDate.getDate() + (interval * 7));
+            newDate.setUTCDate(newDate.getUTCDate() + (interval * 7));
             break;
         case 'months':
-            newDate.setMonth(newDate.getMonth() + interval);
+            newDate.setUTCMonth(newDate.getUTCMonth() + interval);
             break;
         case 'years':
-            newDate.setFullYear(newDate.getFullYear() + interval);
+            newDate.setUTCFullYear(newDate.getUTCFullYear() + interval);
             break;
     }
 
@@ -106,12 +108,12 @@ export function checkIsDone(task: Task): boolean {
 
     // Normalize done date to ignore time
     const doneDate = new Date(task.done);
-    doneDate.setHours(0, 0, 0, 0);
+    doneDate.setUTCHours(0, 0, 0, 0);
 
     if (!task.recurring) {
         // For non-recurring tasks, check if done date is after the due date
         const dueDate = new Date(task.dueDate);
-        dueDate.setHours(0, 0, 0, 0);
+        dueDate.setUTCHours(0, 0, 0, 0);
         return doneDate > dueDate;
     }
 

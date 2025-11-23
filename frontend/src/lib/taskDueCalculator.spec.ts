@@ -146,9 +146,8 @@ describe('taskDueCalculator', () => {
 			};
 			const result = getLastDueDate(task);
 			expect(result).toBeDefined();
-			// When the first due date is exactly today, next would be 11-23
-			// Since 11-23 > today, today is excluded as last due
-			expect(result?.getUTCDate()).toBe(21);
+			// When the first due date is exactly today, today should be returned as last due date
+			expect(result?.getUTCDate()).toBe(22);
 		});
 
 		it('should return the last due date for daily recurring task', () => {
@@ -162,7 +161,7 @@ describe('taskDueCalculator', () => {
 			};
 			const result = getLastDueDate(task);
 			expect(result).toBeDefined();
-			// Due dates: 20, 21, 22, 23 - since 23 > 22, 22 is the last
+			// Due dates: 20, 21, 22 (today), 23 (future) - since 23 > today, 22 is the last
 			expect(result?.getUTCDate()).toBe(22);
 		});
 
@@ -177,8 +176,8 @@ describe('taskDueCalculator', () => {
 			};
 			const result = getLastDueDate(task);
 			expect(result).toBeDefined();
-			// The function includes today if today is exactly on a due date
-			expect(result?.getUTCDate()).toBe(21);
+			// Due dates: 01, 08, 15, 22 (today), 29 (future) - 22 is the last
+			expect(result?.getUTCDate()).toBe(22);
 		});
 
 		it('should return the last due date for monthly recurring task', () => {
@@ -192,10 +191,10 @@ describe('taskDueCalculator', () => {
 			};
 			const result = getLastDueDate(task);
 			expect(result).toBeDefined();
-			// Due dates: 09-22, 10-22, 11-22 (today), 12-22 (next > today)
-			// So last is 21 (before adding next month)
-			expect(result?.getUTCMonth()).toBe(10); // November
-			expect(result?.getUTCDate()).toBe(21);
+			// Due dates: 09-22 (month 8), 10-22 (month 9), 11-22 (month 10=today), 12-22 (month 11, future)
+			// So last is 11-22 (month 10)
+			expect(result?.getUTCMonth()).toBe(10); // November (0-based)
+			expect(result?.getUTCDate()).toBe(22);
 		});
 
 		it('should return the last due date for yearly recurring task', () => {
@@ -224,8 +223,8 @@ describe('taskDueCalculator', () => {
 			};
 			const result = getLastDueDate(task);
 			expect(result).toBeDefined();
-			// Due dates: 15, 18, 21, 24 - 24 > 22, so returns 20 (before 21)
-			expect(result?.getUTCDate()).toBe(20);
+			// Due dates: 15, 18, 21, 24 - today is 22, so 24 > 22, last is 21
+			expect(result?.getUTCDate()).toBe(21);
 		});
 
 		it('should ignore time component and work with dates only', () => {
@@ -239,8 +238,8 @@ describe('taskDueCalculator', () => {
 			};
 			const result = getLastDueDate(task);
 			expect(result).toBeDefined();
-			// Same as 2025-11-20, Dates: 20, 21, 22, 23 - since 23 > 22, 21 is last
-			expect(result?.getUTCDate()).toBe(21);
+			// Same as 2025-11-20, Dates: 20, 21, 22 (today), 23 (future) - 22 is last
+			expect(result?.getUTCDate()).toBe(22);
 		});
 	});
 
@@ -302,8 +301,8 @@ describe('taskDueCalculator', () => {
 			};
 			const result = getNextDueDateAfterToday(task);
 			expect(result).toBeDefined();
-			// Starts from 25 > 22, so loop back to 25 but function continues incrementing
-			expect(result?.getUTCDate()).toBe(24);
+			// 25 > 22 (today), so the result is 25 itself
+			expect(result?.getUTCDate()).toBe(25);
 		});
 
 		it('should calculate next due date for daily recurring task', () => {
@@ -317,8 +316,8 @@ describe('taskDueCalculator', () => {
 			};
 			const result = getNextDueDateAfterToday(task);
 			expect(result).toBeDefined();
-			// Due dates: 20, 21, 22 (<=today), continues so returns 22
-			expect(result?.getUTCDate()).toBe(22);
+			// Due dates: 20, 21, 22 (today), loop increments to 23
+			expect(result?.getUTCDate()).toBe(23);
 		});
 
 		it('should calculate next due date for weekly recurring task', () => {
@@ -332,8 +331,8 @@ describe('taskDueCalculator', () => {
 			};
 			const result = getNextDueDateAfterToday(task);
 			expect(result).toBeDefined();
-			// Due dates: 15, 22 (<=today), function increments so returns 28
-			expect(result?.getUTCDate()).toBe(28);
+			// Due dates: 15, 22 (today), 29 (next) - loop increments, so 29
+			expect(result?.getUTCDate()).toBe(29);
 		});
 
 		it('should calculate next due date for monthly recurring task', () => {
@@ -347,9 +346,9 @@ describe('taskDueCalculator', () => {
 			};
 			const result = getNextDueDateAfterToday(task);
 			expect(result).toBeDefined();
-			// Sept 22, Oct 22, Nov 22 (<=today), continues incrementing
-			expect(result?.getUTCMonth()).toBe(11); // December
-			expect(result?.getUTCDate()).toBe(21);
+			// Sept 22 (month 8), Oct 22 (month 9), Nov 22 (month 10=today), increments to Dec 22 (month 11)
+			expect(result?.getUTCMonth()).toBe(11); // December (0-based)
+			expect(result?.getUTCDate()).toBe(22);
 		});
 
 		it('should calculate next due date for yearly recurring task', () => {
@@ -365,7 +364,7 @@ describe('taskDueCalculator', () => {
 			expect(result).toBeDefined();
 			// 2024-11-22, 2025-11-22 (<=today), increments
 			expect(result?.getUTCFullYear()).toBe(2026);
-			expect(result?.getUTCDate()).toBe(21);
+			expect(result?.getUTCDate()).toBe(22);
 		});
 
 		it('should handle tasks with recurrence intervals > 1', () => {
