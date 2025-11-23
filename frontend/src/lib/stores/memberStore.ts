@@ -21,3 +21,10 @@ export const loadMembers = async (householdId: string): Promise<boolean> => {
     members.set(await api.getMembers({householdId: householdId}));
     return true;
 }
+
+export const findMember = async (householdId: string, memberId: string): Promise<Member|undefined> => {
+    const foundMember = await api.getMember({householdId: householdId, memberId: memberId});
+    if(foundMember) {
+        return foundMember;
+    }
+}
