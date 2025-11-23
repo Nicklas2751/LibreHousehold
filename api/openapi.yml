@@ -145,6 +145,50 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
 
+  /household/{householdId}/members/{memberId}:
+    get:
+      summary: Get a specific member of a household
+      description: Retrieves a specific member of the specified household.
+      tags:
+        - members
+      operationId: getMember
+      parameters:
+        - name: householdId
+          in: path
+          required: true
+          description: The unique identifier of the household.
+          schema:
+            type: string
+            format: uuid
+            example: "f3ce1a6b-aba1-478d-9f01-ec484f23ce60"
+        - name: memberId
+          in: path
+          required: true
+          description: The unique identifier of the member.
+          schema:
+            type: string
+            format: uuid
+            example: "7c3a40a8-3f57-4645-8cf5-820a6a8d3613"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Member"
+        "404":
+          description: No household or member found with the specified IDs.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        default:
+          description: An error occurred - see the status code and problem for more information.
+          content:
+            "application/problem+json":
+              schema:
+                $ref: '#/components/schemas/Problem'
+
   /household/{householdId}/tasks:
     get:
       summary: Get all tasks of a household

@@ -5,10 +5,10 @@
     import PageTitleActionBar from "$lib/PageTitleActionBar.svelte";
     import {addTask, loadTasks, tasks} from "$lib/stores/taskStore";
     import {v4 as uuidv4} from "uuid";
-    import {loadMembers, members} from "$lib/stores/memberStore";
+    import {findMember, loadMembers, members} from "$lib/stores/memberStore";
     import {householdState} from "$lib/stores/householdState.svelte";
-    import type {Task} from "../../../../generated-sources/openapi";
-    import {addInterval} from "$lib/taskDueCalculator";
+    import {addInterval, checkIsDone} from "$lib/taskDueCalculator";
+    import type {Member} from "../../../../generated-sources/openapi";
 
     const today = new Date().toISOString().split('T')[0];
     let dueDate: string = $state(today);
@@ -58,8 +58,16 @@
         await goto("/app/tasks")
     }
 
-    function taskIsDone(task: Task): boolean {
-        return !!task.done && !task.recurring;
+    async function getMember(memberId: string): Promise<Member | undefined> {
+        if (memberId) {
+            const member = $members.find(m => m.id === memberId);
+            if (member) {
+                return member;
+            }
+            if ($householdState) {
+                return findMember($householdState.id, memberId);
+            }
+        }
     }
 </script>
 
@@ -183,9 +191,17 @@
                                 <li class="list-row items-center">
                                     <div class="list-col-grow">
                                         <div>{task.title}</div>
-                                        <div class="text-xs uppercase font-semibold opacity-60">{task.assignedTo}</div>
+                                        {#if task.assignedTo}
+                                            {#await getMember(task.assignedTo)}
+                                                <span class="loading loading-dots"></span>
+                                            {:then member}
+                                                {#if member}
+                                                    <div class="text-xs uppercase font-semibold opacity-60">{member.name}</div>
+                                                {/if}
+                                            {/await}
+                                        {/if}
                                     </div>
-                                    <input type="checkbox" bind:checked={taskIsDone(task)} class="checkbox"/>
+                                    <input type="checkbox" checked={checkIsDone(task)} class="checkbox"/>
                                 </li>
                             {/each}
                         </ul>
