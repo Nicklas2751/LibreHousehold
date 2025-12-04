@@ -277,6 +277,61 @@ paths:
             "application/problem+json":
               schema:
                 $ref: '#/components/schemas/Problem'
+
+  /household/{householdId}/tasks/{taskId}:
+    patch:
+      summary: Update a task
+      description: Partially updates a task. Only the fields provided in the request body will be updated.
+      tags:
+        - tasks
+      operationId: updateTask
+      parameters:
+        - name: householdId
+          in: path
+          required: true
+          description: The unique identifier of the household.
+          schema:
+            type: string
+            format: uuid
+            example: "f3ce1a6b-aba1-478d-9f01-ec484f23ce60"
+        - name: taskId
+          in: path
+          required: true
+          description: The unique identifier of the task.
+          schema:
+            type: string
+            format: uuid
+            example: "760e8400-e29b-41d4-a716-446655440000"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "400":
+          description: The data for updating the task is invalid.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        "404":
+          description: No household or task found with the specified ID.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        default:
+          description: An error occurred - see the status code and problem for more information.
+          content:
+            "application/problem+json":
+              schema:
+                $ref: '#/components/schemas/Problem'
 components:
   schemas:
     Problem:
@@ -437,3 +492,15 @@ components:
         recurrenceUnit: "weeks"
         recurrenceInterval: 1
         done: null
+    TaskUpdate:
+      type: object
+      description: Object containing the fields to update for a task. All fields are optional.
+      properties:
+        done:
+          type: string
+          format: date
+          nullable: true
+          description: |
+            The date when the task was completed. Set to null to mark the task as not completed.
+      example:
+        done: "2024-07-01"
