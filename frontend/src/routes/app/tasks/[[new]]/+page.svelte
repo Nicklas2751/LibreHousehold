@@ -3,7 +3,7 @@
     import {m} from '$lib/paraglide/messages.js';
     import {afterNavigate, goto} from "$app/navigation";
     import PageTitleActionBar from "$lib/PageTitleActionBar.svelte";
-    import {addTask, loadTasks, tasks} from "$lib/stores/taskStore";
+    import {addTask, loadTasks, tasks, updateTaskDoneStatus} from "$lib/stores/taskStore";
     import {v4 as uuidv4} from "uuid";
     import {findMember, loadMembers, members} from "$lib/stores/memberStore";
     import {householdState} from "$lib/stores/householdState.svelte";
@@ -201,7 +201,14 @@
                                             {/await}
                                         {/if}
                                     </div>
-                                    <input type="checkbox" checked={checkIsDone(task)} class="checkbox"/>
+                                    <input type="checkbox" bind:checked={
+                                        () => checkIsDone(task),
+                                        (checked) => {
+                                            if ($householdState) {
+                                                updateTaskDoneStatus($householdState.id, task.id, checked ? new Date() : null);
+                                            }
+                                        }
+                                    } class="checkbox"/>
                                 </li>
                             {/each}
                         </ul>
