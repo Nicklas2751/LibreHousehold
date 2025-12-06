@@ -1,6 +1,13 @@
 <script lang="ts">
     import {m} from '$lib/paraglide/messages.js';
 
+    interface DisplayItem {
+        id: string;
+        title: string;
+        subtitle: string;
+        isHighlighted?: boolean;
+    }
+
     interface Props {
         title: string;
         colSpan?: string;
@@ -9,6 +16,7 @@
         viewAllHref: string;
         buttonLabel: string;
         buttonOnClick?: () => void;
+        itemMapper?: (item: any) => DisplayItem;
     }
 
     const {
@@ -19,6 +27,7 @@
         viewAllHref,
         buttonLabel,
         buttonOnClick,
+        itemMapper,
     }: Props = $props();
 </script>
 
@@ -38,8 +47,11 @@
         {:else}
             <div class="space-y-2">
                 {#each items as item (item.id)}
-                    <div>
-                        <p>{item}</p>
+                    {@const displayItem = itemMapper ? itemMapper(item) : item}
+                    <div class="flex justify-between items-center gap-4 p-2 bg-base-100 rounded-lg"
+                         class:text-secondary={displayItem.isHighlighted}>
+                        <span class="font-medium truncate flex-shrink">{displayItem.title}</span>
+                        <span class="text-sm whitespace-nowrap flex-shrink-0">{displayItem.subtitle}</span>
                     </div>
                 {/each}
             </div>

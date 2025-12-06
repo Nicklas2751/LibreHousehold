@@ -235,7 +235,35 @@ The `Task` schema has a `done` field (date format) that either contains a date o
 * `recurrenceInterval`: count (min 1)
 * For recurring tasks, the task is "done" if the done date is after the last due date
 
-== Current Task: Task Filters
+== Current Task: Dashboard Upcoming Tasks
+
+=== Summary
+
+Display the next 10 pending tasks on the dashboard with a generic ListCard component that can also be used for expenses later.
+
+=== Implementation Status
+
+[cols="1,2,1"]
+|===
+|Step |Description |Status
+
+|1 |Create generic ListCard with DisplayItem interface and itemMapper prop |✅ Done
+|2 |Add TaskStore integration to dashboard |✅ Done
+|3 |Implement mapTaskToDisplayItem with overdue detection |✅ Done
+|4 |Filter, sort, and limit tasks to 10 |✅ Done
+|5 |Validation & Build |✅ Done
+|===
+
+=== Implementation Notes
+
+* **Generic ListCard** with `DisplayItem` interface: `{id, title, subtitle, isHighlighted}`
+* **Mapper function pattern**: `itemMapper?: (item: any) => DisplayItem` for flexibility
+* **Layout**: Title left-aligned, subtitle right-aligned in one line using Flexbox
+* **Overdue tasks** highlighted with DaisyUI `text-secondary` class
+* **Reusable** for expenses: just provide different mapper function
+* Tasks sorted by due date (ascending), limited to 10 items
+
+== Previous Task: Task Filters
 
 === Summary
 
