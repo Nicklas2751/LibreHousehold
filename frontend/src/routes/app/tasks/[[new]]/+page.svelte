@@ -169,6 +169,61 @@
         </form>
     {/if}
 
+    <!-- Mobile Task List -->
+    <div class="md:hidden pb-10">
+        {#if $householdState}
+            {#await loadTasks($householdState.id)}
+                <div class="flex justify-center items-center h-64">
+                    <span class="loading loading-dots"></span>
+                </div>
+            {:then _}
+                {#if filteredTasks.length === 0}
+                    <p class="text-base-content/50 text-center mt-10">{m["tasks.no_tasks"]()}</p>
+                {:else}
+                    <ul class="space-y-2 mt-4">
+                        {#each filteredTasks as task (task.id)}
+                            <li class="bg-base-200 rounded-lg p-3 flex items-center gap-3">
+                                <div class="flex-1">
+                                    <div class="flex justify-between items-center gap-4">
+                                        <span class="font-medium"
+                                              class:text-secondary={isTaskOverdue(task)}>
+                                            {task.title}
+                                        </span>
+                                        {#if task.dueDate}
+                                            <span class="text-sm whitespace-nowrap"
+                                                  class:text-secondary={isTaskOverdue(task)}>
+                                                {new Date(task.dueDate).toLocaleDateString('de-DE')}
+                                            </span>
+                                        {/if}
+                                    </div>
+                                    {#if task.assignedTo}
+                                        {#await getMember(task.assignedTo)}
+                                            <span class="loading loading-dots loading-xs"></span>
+                                        {:then member}
+                                            {#if member}
+                                                <span class="text-xs uppercase font-semibold opacity-60">{member.name}</span>
+                                            {/if}
+                                        {/await}
+                                    {/if}
+                                </div>
+                                <input type="checkbox"
+                                       bind:checked={
+                                           () => checkIsDone(task),
+                                           (checked) => {
+                                               if ($householdState) {
+                                                   updateTaskDoneStatus($householdState.id, task.id, checked ? new Date() : null);
+                                               }
+                                           }
+                                       }
+                                       class="checkbox"/>
+                            </li>
+                        {/each}
+                    </ul>
+                {/if}
+            {/await}
+        {/if}
+    </div>
+
     <div id="task-list-desktop" class="max-md:hidden card card-border bg-base-200 drop-shadow-xl mt-10">
         <div class="border-b-1 border-b-gray-500 p-2 flex justify-between flex-column">
             <h2 class="card-title">{m["tasks.list_title"]()}</h2>
