@@ -20,7 +20,7 @@
         const dueDate = task.dueDate ? new Date(task.dueDate) : null;
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        const isOverdue = dueDate && dueDate < today;
+        const isOverdue: boolean = dueDate !== undefined && dueDate !== null && dueDate < today;
 
         return {
             id: task.id,
@@ -30,6 +30,7 @@
         };
     }
 
+    const countOfUpcomingTasks: number = $derived(filterTasks($tasks, TaskFilterType.PENDING, undefined).length);
     const upcomingTasks = $derived.by(() => {
         const pending = filterTasks($tasks, TaskFilterType.PENDING, undefined);
         return pending
@@ -48,7 +49,7 @@
 
     <StatCard
         title={m["dashboard.task_due_card.title"]()}
-        value="0"
+        value={countOfUpcomingTasks.toString()}
     />
 
     <StatCard
