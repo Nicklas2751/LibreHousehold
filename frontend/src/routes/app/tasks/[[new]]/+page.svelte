@@ -10,7 +10,7 @@
     import {addInterval, checkIsDone} from "$lib/taskDueCalculator";
     import {filterTasks, TaskFilterType} from "$lib/taskFilter";
     import {userState} from "$lib/stores/userState";
-    import type {Member} from "../../../../generated-sources/openapi";
+    import type {Member, Task} from "../../../../generated-sources/openapi";
 
     const today = new Date().toISOString().split('T')[0];
     let dueDate: string = $state(today);
@@ -64,6 +64,16 @@
                 return findMember($householdState.id, memberId);
             }
         }
+    }
+
+    function isTaskOverdue(task: Task): boolean {
+        if (!task.dueDate) return false;
+        if (checkIsDone(task)) return false;
+
+        const dueDate = new Date(task.dueDate);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return dueDate < today;
     }
 </script>
 
@@ -184,16 +194,27 @@
                         <ul class="list bg-base-100 rounded-box shadow-md">
                             {#each filteredTasks as task (task.id)}
                                 <li class="list-row items-center">
-                                    <div class="list-col-grow">
-                                        <div>{task.title}</div>
-                                        {#if task.assignedTo}
-                                            {#await getMember(task.assignedTo)}
-                                                <span class="loading loading-dots"></span>
-                                            {:then member}
-                                                {#if member}
-                                                    <div class="text-xs uppercase font-semibold opacity-60">{member.name}</div>
-                                                {/if}
-                                            {/await}
+                                    <div class="list-col-grow flex justify-between items-center gap-4">
+                                        <div class="flex flex-col">
+                                            <span class="font-medium"
+                                                  class:text-secondary={isTaskOverdue(task)}>
+                                                {task.title}
+                                            </span>
+                                            {#if task.assignedTo}
+                                                {#await getMember(task.assignedTo)}
+                                                    <span class="loading loading-dots loading-xs"></span>
+                                                {:then member}
+                                                    {#if member}
+                                                        <span class="text-xs uppercase font-semibold opacity-60">{member.name}</span>
+                                                    {/if}
+                                                {/await}
+                                            {/if}
+                                        </div>
+                                        {#if task.dueDate}
+                                            <span class="text-sm whitespace-nowrap"
+                                                  class:text-secondary={isTaskOverdue(task)}>
+                                                {new Date(task.dueDate).toLocaleDateString('de-DE')}
+                                            </span>
                                         {/if}
                                     </div>
                                     <input type="checkbox" bind:checked={
