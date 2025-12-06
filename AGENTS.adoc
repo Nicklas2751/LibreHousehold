@@ -235,7 +235,106 @@ The `Task` schema has a `done` field (date format) that either contains a date o
 * `recurrenceInterval`: count (min 1)
 * For recurring tasks, the task is "done" if the done date is after the last due date
 
-== Current Task: Dashboard Upcoming Tasks
+== Current Task: Mobile View für Tasks-Seite
+
+=== Summary
+
+Add a mobile view for the tasks page with a scrollable full-screen list between the header (title, create button, filters) and the bottom navigation.
+
+=== Implementation Status
+
+[cols="1,2,1"]
+|===
+|Step |Description |Status
+
+|1 |Add mobile task list after filter buttons |✅ Done
+|2 |Card-style layout with touch-friendly spacing |✅ Done
+|3 |Same features as desktop (checkbox, overdue detection, member display) |✅ Done
+|4 |Validation & Build |✅ Done
+|===
+
+=== Implementation Notes
+
+* **Mobile-only**: `md:hidden` class ensures list only shows on mobile (< 768px)
+* **Card-style items**: `bg-base-200 rounded-lg p-3` for better touch interaction
+* **Bottom padding**: `pb-20` (80px) prevents bottom navigation from covering tasks
+* **Natural scrolling**: No fixed container, uses page scrolling (better for touch devices)
+* **Consistent layout**: Same title-left/date-right layout as desktop
+* **Shared logic**: Uses same `filteredTasks` $derived store as desktop
+* **Responsive**: Desktop list unchanged, mobile list appears below filters
+
+=== Layout Structure
+
+```
+Mobile (< 768px):
+┌─────────────────────────┐
+│ Titel + Create Button   │ ← PageTitleActionBar
+│ Filter Buttons          │ ← Already existed
+├─────────────────────────┤
+│ Scrollable Task List    │ ← NEW!
+│ (Card-style items)      │
+├─────────────────────────┤
+│ Bottom Navigation       │
+└─────────────────────────┘
+```
+
+== Previous Task: Fix Overdue Detection - Exclude Completed Tasks
+
+=== Summary
+
+Bug fix: Completed tasks should NOT be marked as overdue, even if they were completed after the due date. Uses `checkIsDone()` from `taskDueCalculator` which handles both regular and recurring tasks correctly.
+
+=== Implementation Status
+
+[cols="1,2,1"]
+|===
+|Step |Description |Status
+
+|1 |Tasks Page: Add `checkIsDone(task)` check to `isTaskOverdue` |✅ Done
+|2 |Dashboard: Add `checkIsDone(task)` check to `mapTaskToDisplayItem` |✅ Done
+|3 |Validation & Build |✅ Done
+|===
+
+=== Implementation Notes
+
+* **Uses `checkIsDone()` instead of simple `task.done` check**: Handles recurring tasks correctly
+* **Recurring Tasks**: A task with `done` is only done for the LAST due date. If a new occurrence is due, it's overdue again
+* **Non-recurring Tasks**: `checkIsDone` checks if `done > dueDate`
+* **Logic**: Task is overdue if: has dueDate AND not done AND dueDate < today
+
+=== Bug Description
+
+**Before**: A task with `dueDate: 01.12.2024` and `done: 05.12.2024` was incorrectly marked as overdue (secondary color).
+
+**After**: Completed tasks are never marked as overdue, regardless of when they were completed.
+
+== Previous Task: Tasks Page - Overdue Detection & Inline Date
+
+=== Summary
+
+Add overdue detection and inline date display to the tasks page, matching the dashboard layout.
+
+=== Implementation Status
+
+[cols="1,2,1"]
+|===
+|Step |Description |Status
+
+|1 |Add `isTaskOverdue` function |✅ Done
+|2 |Change layout: Flexbox for inline date (title left, date right) |✅ Done
+|3 |Add `text-secondary` class for overdue tasks |✅ Done
+|4 |Validation & Build |✅ Done
+|===
+
+=== Implementation Notes
+
+* **Consistent with Dashboard**: Same overdue logic and layout pattern
+* **Overdue Detection**: Tasks with `dueDate < today` marked with `text-secondary`
+* **Inline Layout**: Title left-aligned, date right-aligned in one line using Flexbox
+* **Member Display**: Still shown below title (vertically stacked)
+* Date format: `toLocaleDateString('de-DE')` for German formatting
+
+== Previous Task: Dashboard Upcoming Tasks
 
 === Summary
 
