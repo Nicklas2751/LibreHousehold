@@ -235,7 +235,91 @@ The `Task` schema has a `done` field (date format) that either contains a date o
 * `recurrenceInterval`: count (min 1)
 * For recurring tasks, the task is "done" if the done date is after the last due date
 
-== Current Task: Mobile View für Tasks-Seite
+== Current Task: Migration zu Svelte 5 State API ($app/state)
+
+=== Summary
+
+Migrate from deprecated `page` from `$app/stores` to the new Svelte 5 API `page` from `$app/state`.
+
+=== Implementation Status
+
+[cols="1,2,1"]
+|===
+|Step |Description |Status
+
+|1 |Change import from '$app/stores' to '$app/state' |✅ Done
+|2 |Remove $ prefix: `$page` → `page` (10 occurrences) |✅ Done
+|3 |Validation & Build |✅ Done
+|===
+
+=== Implementation Notes
+
+* **Svelte 5 State API**: `import {page} from '$app/state'` (no $ prefix in usage)
+* **Key Difference**:
+  - Old (deprecated): `$page.url.pathname` (with $)
+  - New (Svelte 5): `page.url.pathname` (without $)
+* **Rune-based**: State is automatically reactive through Svelte 5 Runes
+* **Bundle Size**: Smaller bundle (app/_layout: 11.94 KB → 10.89 KB)
+* **Changes**: 1 import + 10 replacements (5 mobile buttons + 5 desktop links)
+
+=== Migration Pattern
+
+**Before**:
+```svelte
+import {page} from '$app/stores';
+class:dock-active={$page.url.pathname === '/app/dashboard'}
+```
+
+**After**:
+```svelte
+import {page} from '$app/state';
+class:dock-active={page.url.pathname === '/app/dashboard'}
+```
+
+== Previous Task: Dynamische Active-State für Menü
+
+=== Summary
+
+Make the menu (both mobile and desktop) show the currently displayed page as active, instead of always showing only the dashboard as active.
+
+=== Implementation Status
+
+[cols="1,2,1"]
+|===
+|Step |Description |Status
+
+|1 |Import $page store from '$app/stores' |✅ Done (migrated to $app/state)
+|2 |Mobile: Dynamic `class:dock-active` for all 5 buttons |✅ Done
+|3 |Desktop: Dynamic `class:menu-active` for all 5 links |✅ Done
+|4 |Use `startsWith` for Tasks (includes /app/tasks/new) |✅ Done
+|5 |Validation & Build |✅ Done
+|===
+
+=== Implementation Notes
+
+* **SvelteKit page State**: `page.url.pathname` to get current route (Svelte 5 State API)
+* **class: Directive**: `class:class-name={boolean}` dynamically adds CSS classes
+* **Tasks Special Case**: Uses `startsWith('/app/tasks')` because of subpage `/app/tasks/new`
+* **Other Pages**: Use `=== '/app/...'` for exact match (no subpages yet)
+* **Mobile**: `dock-active` class on buttons
+* **Desktop**: `menu-active` class on links
+* **Badge preserved**: Task counter badge (99+) remains on desktop menu
+
+=== Routes & Active States
+
+[cols="2,2"]
+|===
+|Route |Active Menu Item
+
+|`/app/dashboard` |Dashboard
+|`/app/tasks` |Tasks
+|`/app/tasks/new` |Tasks (due to startsWith)
+|`/app/expenses` |Expenses
+|`/app/statistics` |Statistics
+|`/app/settings` |Settings
+|===
+
+== Previous Task: Mobile View für Tasks-Seite
 
 === Summary
 

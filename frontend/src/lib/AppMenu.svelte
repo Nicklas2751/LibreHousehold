@@ -1,4 +1,5 @@
 <script>
+    import {page} from '$app/state';
     import {HomeIcon} from "@indaco/svelte-iconoir/home";
     import {ClipboardCheckIcon} from "@indaco/svelte-iconoir/clipboard-check";
     import {CashIcon} from "@indaco/svelte-iconoir/cash";
@@ -9,27 +10,27 @@
 </script>
 
 <div class="dock md:hidden">
-    <button class="dock-active" onclick={ async () => await goto("/app/dashboard")}>
+    <button class:dock-active={page.url.pathname === '/app/dashboard'} onclick={ async () => await goto("/app/dashboard")}>
         <HomeIcon/>
         <span class="dock-label">{m["menu.dashboard"]()}</span>
     </button>
 
-    <button onclick={ async () => await goto("/app/tasks")}>
+    <button class:dock-active={page.url.pathname.startsWith('/app/tasks')} onclick={ async () => await goto("/app/tasks")}>
         <ClipboardCheckIcon/>
         <span class="dock-label">{m["menu.tasks"]()}</span>
     </button>
 
-    <button onclick={ async () => await goto("/app/expenses")}>
+    <button class:dock-active={page.url.pathname === '/app/expenses'} onclick={ async () => await goto("/app/expenses")}>
         <CashIcon/>
         <span class="dock-label">{m["menu.expenses"]()}</span>
     </button>
 
-    <button onclick={ async () => await goto("/app/statistics")}>
+    <button class:dock-active={page.url.pathname === '/app/statistics'} onclick={ async () => await goto("/app/statistics")}>
         <StatsReportIcon/>
         <span class="dock-label">{m["menu.statistics"]()}</span>
     </button>
 
-    <button onclick={ async () => await goto("/app/settings")}>
+    <button class:dock-active={page.url.pathname === '/app/settings'} onclick={ async () => await goto("/app/settings")}>
         <SettingsIcon/>
         <span class="dock-label">{m["menu.settings"]()}</span>
     </button>
@@ -37,32 +38,32 @@
 <div class="max-sm:hidden fixed bottom-0 w-screen flex justify-around">
     <ul class="menu bg-base-200 menu-horizontal rounded-box ">
         <li>
-            <a class="menu-active" href="/app/dashboard">
+            <a class:menu-active={page.url.pathname === '/app/dashboard'} href="/app/dashboard">
                 <HomeIcon/>
                 {m["menu.dashboard"]()}
             </a>
         </li>
         <li>
-            <a href="/app/tasks">
+            <a class:menu-active={page.url.pathname.startsWith('/app/tasks')} href="/app/tasks">
                 <ClipboardCheckIcon/>
                 {m["menu.tasks"]()}
                 <span class="badge badge-xs">99+</span>
             </a>
         </li>
         <li>
-            <a href="/app/expenses">
+            <a class:menu-active={page.url.pathname === '/app/expenses'} href="/app/expenses">
                 <CashIcon/>
                 {m["menu.expenses"]()}
             </a>
         </li>
         <li>
-            <a href="/app/statistics">
+            <a class:menu-active={page.url.pathname === '/app/statistics'} href="/app/statistics">
                 <StatsReportIcon/>
                 {m["menu.statistics"]()}
             </a>
         </li>
         <li>
-            <a href="/app/settings">
+            <a class:menu-active={page.url.pathname === '/app/settings'} href="/app/settings">
                 <SettingsIcon/>
                 {m["menu.settings"]()}
             </a>
