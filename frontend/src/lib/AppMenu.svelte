@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
     import {page} from '$app/state';
     import {HomeIcon} from "@indaco/svelte-iconoir/home";
     import {ClipboardCheckIcon} from "@indaco/svelte-iconoir/clipboard-check";
@@ -7,6 +7,10 @@
     import {SettingsIcon} from "@indaco/svelte-iconoir/settings";
     import {m} from '$lib/paraglide/messages.js';
     import {goto} from "$app/navigation";
+    import {filterTasks, TaskFilterType} from "$lib/taskFilter";
+    import {tasks} from "$lib/stores/taskStore";
+
+    const countOfUpcomingTasks: number = $derived(filterTasks($tasks, TaskFilterType.PENDING, undefined).length);
 </script>
 
 <div class="dock md:hidden">
@@ -47,7 +51,7 @@
             <a class:menu-active={page.url.pathname.startsWith('/app/tasks')} href="/app/tasks">
                 <ClipboardCheckIcon/>
                 {m["menu.tasks"]()}
-                <span class="badge badge-xs">99+</span>
+                <span class="badge badge-xs" class:hidden={countOfUpcomingTasks === 0}>{countOfUpcomingTasks}</span>
             </a>
         </li>
         <li>
