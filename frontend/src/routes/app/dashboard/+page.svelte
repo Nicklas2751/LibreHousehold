@@ -20,7 +20,7 @@
         const dueDate = task.dueDate ? new Date(task.dueDate) : null;
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        const isOverdue = dueDate ? dueDate < today : false;
+        const isOverdue = dueDate && dueDate < today;
 
         return {
             id: task.id,
