@@ -1,0 +1,318 @@
+= AGENTS - LibreHousehold Context for AI Assistants
+
+This document serves as context and quick reference for AI assistants helping with LibreHousehold development. It summarizes the most important architectural decisions and concepts.
+
+== Project Overview
+
+LibreHousehold is a free and open-source software for managing household expenses and tasks. The project is currently in active development (WIP).
+
+=== Main Goals
+- Completely free
+- No ads
+- Modern user interface
+- Easy to use
+- Easy to self-host
+- Easy to contribute
+
+=== Main Features
+- Create households and invite other house-/flatmates
+- Track and share expenses with your mates
+- Create and manage tasks
+- Work offline and sync later
+- Responsive design for mobile and desktop
+
+== Architecture Decisions (ADRs)
+
+=== Frontend & Backend Separation (ADR-001)
+- **Decision**: Split Frontend/Backend with API communication
+- **Reason**: Simplicity, understandability, maintainability (QG4)
+- **Technologies**: Separate applications with best-fitting technologies each
+
+=== Backend Technology (ADR-002)
+- **Language**: Kotlin
+- **Reason**: Modern, Java-interoperable, good coroutine support, better performance than Python/Node.js
+- **Container**: Docker support for easy hosting (QG3)
+
+=== Architecture Style (ADR-004)
+- **Style**: Modular Monolith (Modulith)
+- **Reason**: Combination of monolith simplicity and microservice modularity
+- **Advantage**: Modules can be extracted to microservices later
+
+=== Frontend Technology (ADR-006)
+- **Technology**: Progressive Web App (PWA)
+- **Reason**: Cross-platform, no app store costs, easy to host
+- **Language**: TypeScript (ADR-008) for type safety and maintainability
+
+== Quality Goals
+
+[cols="1,4,8"]
+|===
+|ID |Quality Goal |Motivation
+
+|QG1 |Easy to learn (Learnability) |Users should be able to use the app without reading a manual or getting training
+|QG2 |Secure (Security) |Expenses are sensitive data - integrity and confidentiality are important
+|QG3 |Easy to host (Flexibility) |Technical users should be able to host the app themselves without much effort
+|QG4 |Maintainable (Maintainability) |Code should be understandable and modifiable for open-source contributions
+|===
+
+== System Architecture
+
+=== High-Level Structure
+- **Frontend**: Progressive Web App (PWA) with TypeScript
+- **Backend**: Kotlin-based Modular Monolith
+- **External Systems**: E-Mail Server for notifications
+
+=== Modules (Frontend & Backend)
+
+[cols="2,5"]
+|===
+|Module |Responsibility
+
+|**Expenses** |Managing expenses (CRUD operations)
+|**Tasks** |Managing tasks (CRUD operations)
+|**User Settings** |User-specific settings, changing login data
+|**App Settings** |Frontend-specific settings (frontend only)
+|**Household** |Creating/managing households, inviting/removing users
+|**Setup** |Initial application setup for administrators
+|**Administration** |Application management, user management, system settings
+|**Notifications** |Sending/displaying notifications, configuration
+|===
+
+=== Actors
+- **User**: Normal users of the app for household/expense management
+- **Administrator**: Hosts and manages an app instance
+- **E-Mail Server**: External system for email delivery
+
+== Development Context
+
+=== Project Structure
+```
+LibreHousehold/
+├── backend/           # Kotlin Backend (Modular Monolith)
+├── frontend/          # TypeScript PWA
+├── docs/
+│   └── architecture/  # Arc42 Architecture Documentation
+│       ├── adrs/      # Architecture Decision Records
+│       └── chapters/  # Arc42 Chapters
+├── build/             # Build Artifacts
+└── README.adoc        # Project README
+```
+
+=== Important Design Principles
+1. **Modularity**: Clear module boundaries with defined interfaces
+2. **Offline-First**: App should work without internet connection
+3. **Responsive Design**: Mobile-first approach
+4. **Self-hostable**: Docker containers for easy deployment
+5. **Open Source**: Community-friendly and contribution-encouraging
+
+== Technology Stack
+
+=== Backend
+- **Language**: Kotlin
+- **Architecture**: Modular Monolith (Modulith)
+- **Deployment**: Docker Container
+- **Security**: Argon2id for password hashing (ADR-009)
+
+=== Frontend
+- **Type**: Progressive Web App (PWA)
+- **Language**: TypeScript
+- **Framework**: [To be determined - probably Svelte based on ADR-008 context]
+
+=== External Integrations
+- E-Mail Server for notifications and invitations
+
+== Status & Development State
+
+The project is in **active development** (Work in Progress). The architecture is defined, but implementation is ongoing.
+
+== Important Notes for AI Assistants
+
+1. **Maintainability is Priority**: Code should be understandable for open-source contributions
+2. **Respect Module Boundaries**: Modules communicate only through defined interfaces
+3. **Mobile-First**: UI/UX decisions should consider mobile devices
+4. **Security**: Handle sensitive data (expenses) securely
+5. **Deployment**: Changes should consider Docker containerization
+
+== Guardrails for AI Agents
+
+=== Workflow Rules
+
+1. **ALWAYS create a plan first** in AsciiDoc under `.agent-plans/` before implementing anything
+2. **Plan must be explicitly confirmed by the user** before starting implementation
+3. This file (AGENTS.adoc) is the central reference for all important information
+
+=== Svelte MCP Tools
+
+* Call `list-sections` first to discover all available documentation sections
+* Use `get-documentation` to fetch all relevant sections at once
+* `svelte-autofixer` **MUST** be used before sending Svelte code to the user
+* Only use `playground-link` after user confirmation
+
+=== Context7
+
+* Use Context7 for code generation, setup, and API documentation
+
+=== OpenAPI Development
+
+* **ALWAYS** validate OpenAPI changes with Spectral MCP before committing
+* Ensure all new schemas and properties have `example` values
+* Use PATCH for partial resource updates, with the request body containing the fields to update
+* Follow REST best practices: path identifies the resource, body contains the changes
+* After OpenAPI changes, regenerate the TypeScript client with `npm run openapi`
+
+=== Test-Driven Development (TDD)
+
+* **Follow TDD** for all business logic: Write tests FIRST (RED), then implement (GREEN), then refactor
+* **Unit tests required** for all pure functions and business logic
+* **UI-only changes** (visual, styling) do not require tests
+* Test files: `*.spec.ts` next to the source file
+* Run tests with: `npm run test`
+
+=== Error Handling
+
+* Show toast notifications on errors (using the toast store)
+* Use optimistic updates for UI responsiveness
+* Background saves should not block user interaction
+
+== Frontend-specific Details
+
+=== Technology Stack (Details)
+
+* **Framework**: SvelteKit 5 with TypeScript
+* **State Management**: Svelte Stores with `writable` and Svelte 5 Runes
+* **i18n**: Paraglide (`$lib/paraglide/messages.js`)
+* **Styling**: DaisyUI + Tailwind CSS
+* **OpenAPI Client**: Generated TypeScript client under `src/generated-sources/openapi`
+
+=== Important Frontend Files
+
+[cols="1,2"]
+|===
+|File |Description
+
+|`frontend/src/lib/stores/taskStore.ts`
+|Store for tasks with API functions
+
+|`frontend/src/lib/stores/memberStore.ts`
+|Store for household members
+
+|`frontend/src/lib/stores/householdState.svelte.ts`
+|Svelte 5 Rune-based state for the household
+
+|`frontend/src/lib/taskDueCalculator.ts`
+|Logic for due dates and recurrence
+
+|`frontend/src/routes/app/tasks/[[new]]/+page.svelte`
+|Task overview and creation page
+
+|===
+
+=== Store Pattern
+
+Stores use the pattern with `Configuration` and an `Api` class:
+
+[source,typescript]
+----
+const apiConfig = new Configuration({basePath: '/api'});
+const api = new TasksApi(apiConfig);
+
+export const functionName = async (householdId: string, ...): Promise<ReturnType> => {
+    // API call
+    // Store update
+};
+----
+
+== Findings & Notes
+
+=== Task Schema
+
+The `Task` schema has a `done` field (date format) that either contains a date or is null.
+
+=== Recurring Tasks
+
+* `recurring: boolean`
+* `recurrenceUnit`: days, weeks, months, years
+* `recurrenceInterval`: count (min 1)
+* For recurring tasks, the task is "done" if the done date is after the last due date
+
+== Current Task: Task Filters
+
+=== Summary
+
+Implement task filtering functionality (All, Assigned to Me, Pending, Completed).
+
+=== Implementation Status
+
+[cols="1,2,1"]
+|===
+|Step |Description |Status
+
+|1 |Write unit tests for `filterTasks` function (TDD RED phase) |✅ Done
+|2 |Implement `taskFilter.ts` with `filterTasks` function (TDD GREEN phase) |✅ Done
+|3 |Integrate into UI with `$derived` and `bind:group` |✅ Done
+|4 |All tests pass (124 tests), build successful |✅ Done
+|===
+
+=== Implementation Notes
+
+* `TaskFilterType` const exported from `taskFilter.ts`
+* `filterTasks(tasks, filterType, currentUserId)` - pure function for filtering
+* Uses `checkIsDone()` from `taskDueCalculator.ts` for pending/completed logic
+* Radio buttons use `bind:group` for Svelte 5 compatibility
+
+== Previous Task: Save Task Done Date
+
+=== Summary
+
+Implement a feature to persist the "task done" date when a user marks a task as done or undone.
+
+=== Implementation Status
+
+[cols="1,2,1"]
+|===
+|Step |Description |Status
+
+|1 |OpenAPI: PATCH endpoint `/household/{householdId}/tasks/{taskId}` with `TaskUpdate` schema |✅ Done
+|2 |Generate TypeScript client (`npm run openapi`) |✅ Done
+|3 |Task Store: `updateTaskDoneStatus` function with optimistic update and error handling |✅ Done
+|4 |Task Page: Connect checkbox to new function |✅ Done
+|5 |Build & Validation: svelte-check, autofixer, npm run build |✅ Done
+|===
+
+=== Implementation Notes
+
+* The checkbox uses optimistic updates - UI updates immediately, API call happens in background
+* On API error: rollback to previous state and show error toast
+* The `TaskUpdate` schema is extensible for future partial updates (e.g., title, description)
+
+=== Implementation Steps
+
+1. **OpenAPI Specification** (`api/openapi.yml`)
+   - Add `PATCH /household/{householdId}/tasks/{taskId}` endpoint
+   - Resource ID (task id) in path, field values in request body (REST best practice)
+   - Include example for the new endpoint
+   - **Validate with Spectral** before proceeding
+
+2. **TypeScript Client Regeneration**
+   - Run `npm run openapi` after OpenAPI changes
+
+3. **Task Store** (`frontend/src/lib/stores/taskStore.ts`)
+   - Add `updateTask` function with optimistic update pattern
+   - Update local store after successful API call
+
+4. **i18n Messages** (`frontend/messages/de.json`, `en.json`)
+   - Add `tasks.save_error` message for error toast
+
+5. **UI Integration** (`frontend/src/routes/app/tasks/[[new]]/+page.svelte`)
+   - Connect checkbox to new store function
+   - Optimistic update: immediate local state change
+   - Background save: no loading state, user can continue
+   - Error handling: rollback and show toast on failure
+
+=== Key Decisions
+
+- **PATCH on resource path** (`/tasks/{taskId}`), not on field (`/tasks/{taskId}/done`)
+- **Request body contains fields** to update (JSON Merge Patch pattern, RFC 7396)
+- **Extensible design**: Same endpoint can later update other fields (title, assignedTo, etc.)
+
+Last Updated: December 2025

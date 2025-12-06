@@ -8,17 +8,12 @@
     import {findMember, loadMembers, members} from "$lib/stores/memberStore";
     import {householdState} from "$lib/stores/householdState.svelte";
     import {addInterval, checkIsDone} from "$lib/taskDueCalculator";
+    import {filterTasks, TaskFilterType} from "$lib/taskFilter";
+    import {userState} from "$lib/stores/userState";
     import type {Member} from "../../../../generated-sources/openapi";
 
     const today = new Date().toISOString().split('T')[0];
     let dueDate: string = $state(today);
-
-    const TaskFilter = {
-        ALL: "",
-        ASSIGNED_TO_ME: "assigned_to_me",
-        PENDING: "pending",
-        COMPLETED: "completed"
-    };
 
     let recurrenceUnit: string = $state("days");
     let recurrenceTimes: number = $state(1);
@@ -26,7 +21,8 @@
 
     let isShowNewTaskForm: boolean = $state(page.params.new !== undefined);
 
-    let filter = $state("");
+    let filter: string = $state(TaskFilterType.ALL);
+    const filteredTasks = $derived(filterTasks($tasks, filter as TaskFilterType, $userState?.id));
 
     let isNewTaskRecurring: boolean = $state(false);
 
@@ -152,14 +148,13 @@
         </div>
     {:else}
         <form class="md:hidden">
-            <!--suppress HtmlUnknownAttribute -->
-            <input class="btn btn-sm" type="radio" name="task_filter" group={filter} value={TaskFilter.ALL}
+            <input class="btn btn-sm" type="radio" name="task_filter" bind:group={filter} value={TaskFilterType.ALL}
                    aria-label={m["tasks.filter.all"]()}/>
-            <input class="btn btn-sm" type="radio" name="task_filter" group={filter}
-                   value={TaskFilter.ASSIGNED_TO_ME} aria-label={m["tasks.filter.assigned_to_me"]()}/>
-            <input class="btn btn-sm" type="radio" name="task_filter" group={filter} value={TaskFilter.PENDING}
+            <input class="btn btn-sm" type="radio" name="task_filter" bind:group={filter}
+                   value={TaskFilterType.ASSIGNED_TO_ME} aria-label={m["tasks.filter.assigned_to_me"]()}/>
+            <input class="btn btn-sm" type="radio" name="task_filter" bind:group={filter} value={TaskFilterType.PENDING}
                    aria-label={m["tasks.filter.pending"]()}/>
-            <input class="btn btn-sm" type="radio" name="task_filter" group={filter} value={TaskFilter.COMPLETED}
+            <input class="btn btn-sm" type="radio" name="task_filter" bind:group={filter} value={TaskFilterType.COMPLETED}
                    aria-label={m["tasks.filter.completed"]()}/>
         </form>
     {/if}
@@ -168,14 +163,14 @@
         <div class="border-b-1 border-b-gray-500 p-2 flex justify-between flex-column">
             <h2 class="card-title">{m["tasks.list_title"]()}</h2>
             <form class="filter max-md:hidden">
-                <input class="btn bg-base-300 btn-square" type="reset" onclick={() => filter = TaskFilter.ALL}
+                <input class="btn bg-base-300 btn-square" type="reset" onclick={() => filter = TaskFilterType.ALL}
                        value={m["tasks.filter.all"]()}/>
-                <input class="btn bg-base-300" type="radio" name="task_filter" group={filter}
-                       value={TaskFilter.ASSIGNED_TO_ME} aria-label={m["tasks.filter.assigned_to_me"]()}/>
-                <input class="btn bg-base-300" type="radio" name="task_filter" group={filter}
-                       value={TaskFilter.PENDING} aria-label={m["tasks.filter.pending"]()}/>
-                <input class="btn bg-base-300" type="radio" name="task_filter" group={filter}
-                       value={TaskFilter.COMPLETED} aria-label={m["tasks.filter.completed"]()}/>
+                <input class="btn bg-base-300" type="radio" name="task_filter" bind:group={filter}
+                       value={TaskFilterType.ASSIGNED_TO_ME} aria-label={m["tasks.filter.assigned_to_me"]()}/>
+                <input class="btn bg-base-300" type="radio" name="task_filter" bind:group={filter}
+                       value={TaskFilterType.PENDING} aria-label={m["tasks.filter.pending"]()}/>
+                <input class="btn bg-base-300" type="radio" name="task_filter" bind:group={filter}
+                       value={TaskFilterType.COMPLETED} aria-label={m["tasks.filter.completed"]()}/>
             </form>
         </div>
         <div class="card-body">
@@ -183,11 +178,11 @@
                 {#await loadTasks($householdState.id)}
                     <span class="loading loading-dots"></span>
                 {:then _}
-                    {#if $tasks.length === 0}
+                    {#if filteredTasks.length === 0}
                         <p class="text-base-content/50 text-center">{m["tasks.no_tasks"]()}</p>
                     {:else}
                         <ul class="list bg-base-100 rounded-box shadow-md">
-                            {#each $tasks as task (task.id)}
+                            {#each filteredTasks as task (task.id)}
                                 <li class="list-row items-center">
                                     <div class="list-col-grow">
                                         <div>{task.title}</div>
