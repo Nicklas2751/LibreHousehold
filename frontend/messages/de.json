@@ -149,6 +149,10 @@
       "notes_label": "Notizen",
       "notes_placeholder": "Zusätzliche Notizen...",
       "create_button": "Ausgabe erstellen"
+    },
+    "edit": {
+      "title": "Ausgabe bearbeiten",
+      "save_button": "Änderungen speichern"
     }
   }
 }
