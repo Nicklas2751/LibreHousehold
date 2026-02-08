@@ -72,6 +72,13 @@
     "owed_to_you_card": {
       "title": "Owed to You"
     },
+    "financials": {
+        "title": "Financials",
+        "total_balance_label": "Net Balance",
+        "you_owe": "You owe {name}",
+        "owed_to_you": "{name} owes you",
+        "settled": "Settled"
+    },
     "upcoming_tasks_card": {
       "title": "Upcoming Tasks",
       "no_tasks": "No upcoming tasks",

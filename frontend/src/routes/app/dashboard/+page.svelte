@@ -8,6 +8,15 @@
     import {expenses, loadExpenses} from "$lib/stores/expenseStore";
     import {householdState} from "$lib/stores/householdState.svelte";
     import {filterTasks, TaskFilterType} from "$lib/taskFilter";
+    import {
+        financialSummary,
+        loadFinancialSummary,
+        loadMemberBalances,
+        memberBalances
+    } from "$lib/stores/financialStore";
+    import {loadMembers, members} from "$lib/stores/memberStore";
+    import {userState} from "$lib/stores/userState";
+    import FinancialCard from "$lib/FinancialCard.svelte";
     import type {Expense, Task} from "../../../generated-sources/openapi";
 
     interface DisplayItem {
@@ -35,7 +44,7 @@
         return {
             id: expense.id,
             title: expense.title,
-            subtitle: expense.amount.toLocaleString(),
+            subtitle: expense.amount.toLocaleString() + " €"
         };
     }
 
@@ -60,6 +69,17 @@
             })
             .slice(0, 10);
     });
+
+    $effect(() => {
+        if ($householdState && $userState) {
+            loadFinancialSummary($householdState.id, $userState.id);
+            loadMemberBalances($householdState.id, $userState.id);
+            // Ensure members are loaded for name resolution
+            if ($members.length === 0) {
+                loadMembers($householdState.id);
+            }
+        }
+    });
 </script>
 
 <PageTitle title={m["dashboard.title"]()} />
@@ -71,15 +91,7 @@
         value={countOfUpcomingTasks.toString()}
     />
 
-    <StatCard
-        title={m["dashboard.you_owe_card.title"]()}
-        value="0,00€"
-    />
-
-    <StatCard
-        title={m["dashboard.owed_to_you_card.title"]()}
-        value="0,00€"
-    />
+    <FinancialCard summary={$financialSummary} balances={$memberBalances} />
 
     {#if $householdState}
         {#await loadTasks($householdState.id)}
