@@ -72,6 +72,13 @@
     "owed_to_you_card": {
       "title": "Owed to You"
     },
+    "financials": {
+        "title": "Financials",
+        "total_balance_label": "Net Balance",
+        "you_owe": "You owe {name}",
+        "owed_to_you": "{name} owes you",
+        "settled": "Settled"
+    },
     "upcoming_tasks_card": {
       "title": "Upcoming Tasks",
       "no_tasks": "No upcoming tasks",
@@ -121,6 +128,38 @@
       "recurrence_pattern_times_label": "Every how many units?",
       "next_recurrence_date_label": "With currenct due date {date}, next recurrence will be on {nextDate}.",
       "create_button": "Create Task"
+    }
+  },
+  "expenses": {
+    "title": "Expenses",
+    "create_expense_button": "Add Expense",
+    "list_title": "Expense Overview",
+    "no_expenses": "No expenses yet",
+    "paid_by": "Paid by",
+    "delete_button": "Delete",
+    "delete_confirm": "Do you really want to delete this expense?",
+    "new": {
+      "title": "New Expense",
+      "cancel_button": "Cancel",
+      "expense_title_label": "Description",
+      "expense_title_placeholder": "e.g. Grocery shopping at Lidl",
+      "expense_title_error": "Enter a description with at least three characters.",
+      "amount_label": "Amount",
+      "paid_by_label": "Paid by",
+      "paid_by_select_placeholder": "Select member...",
+      "date_label": "Date",
+      "category_label": "Category",
+      "category_select_placeholder": "Select category...",
+      "no_categories_hint": "No categories available. Create new categories in settings.",
+      "split_between_label": "Split between",
+      "split_between_hint": "Select the members to split the expense between. If none selected, it will be split equally among all members.",
+      "notes_label": "Notes",
+      "notes_placeholder": "Additional notes...",
+      "create_button": "Create Expense"
+    },
+    "edit": {
+      "title": "Edit Expense",
+      "save_button": "Save Changes"
     }
   }
 }

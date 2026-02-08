@@ -20,6 +20,7 @@
     } from '$lib/setupWizardLogic';
     import {goto} from "$app/navigation";
     import {addMember} from "$lib/stores/memberStore";
+    import {updateUserState} from "$lib/stores/userState";
 
     const householdId: string = uuidv4();
     let inviteUrl: string = $state('');
@@ -113,6 +114,7 @@
             household = await householdApi.createHousehold({household: household});
             adminMember = await addMember(householdId, adminMember);
             updateHouseholdState(household);
+            updateUserState(adminMember);
             nextStep();
         } catch (error) {
             console.error(error);

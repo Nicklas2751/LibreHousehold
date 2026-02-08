@@ -5,9 +5,19 @@
     import {goto} from "$app/navigation";
     import PageTitle from "$lib/PageTitle.svelte";
     import {loadTasks, tasks} from "$lib/stores/taskStore";
+    import {expenses, loadExpenses} from "$lib/stores/expenseStore";
     import {householdState} from "$lib/stores/householdState.svelte";
     import {filterTasks, TaskFilterType} from "$lib/taskFilter";
-    import type {Task} from "../../../generated-sources/openapi";
+    import {
+        financialSummary,
+        loadFinancialSummary,
+        loadMemberBalances,
+        memberBalances
+    } from "$lib/stores/financialStore";
+    import {loadMembers, members} from "$lib/stores/memberStore";
+    import {userState} from "$lib/stores/userState";
+    import FinancialCard from "$lib/FinancialCard.svelte";
+    import type {Expense, Task} from "../../../generated-sources/openapi";
 
     interface DisplayItem {
         id: string;
@@ -30,6 +40,24 @@
         };
     }
 
+    function mapExpenseToDisplayItem(expense: Expense): DisplayItem {
+        return {
+            id: expense.id,
+            title: expense.title,
+            subtitle: expense.amount.toLocaleString() + " €"
+        };
+    }
+
+    const recentExpenses = $derived.by(() => {
+        return $expenses
+            .sort((a, b) => {
+                if (!a.date) return 1;
+                if (!b.date) return -1;
+                return new Date(a.date).getTime() - new Date(b.date).getTime();
+            })
+            .slice(0, 10);
+    });
+
     const countOfUpcomingTasks: number = $derived(filterTasks($tasks, TaskFilterType.PENDING, undefined).length);
     const upcomingTasks = $derived.by(() => {
         const pending = filterTasks($tasks, TaskFilterType.PENDING, undefined);
@@ -40,6 +68,17 @@
                 return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
             })
             .slice(0, 10);
+    });
+
+    $effect(() => {
+        if ($householdState && $userState) {
+            loadFinancialSummary($householdState.id, $userState.id);
+            loadMemberBalances($householdState.id, $userState.id);
+            // Ensure members are loaded for name resolution
+            if ($members.length === 0) {
+                loadMembers($householdState.id);
+            }
+        }
     });
 </script>
 
@@ -52,15 +91,7 @@
         value={countOfUpcomingTasks.toString()}
     />
 
-    <StatCard
-        title={m["dashboard.you_owe_card.title"]()}
-        value="0,00€"
-    />
-
-    <StatCard
-        title={m["dashboard.owed_to_you_card.title"]()}
-        value="0,00€"
-    />
+    <FinancialCard summary={$financialSummary} balances={$memberBalances} />
 
     {#if $householdState}
         {#await loadTasks($householdState.id)}
@@ -91,12 +122,33 @@
         />
     {/if}
 
-    <ListCard
-        title={m["dashboard.recent_expenses_card.title"]()}
-        emptyMessage={m["dashboard.recent_expenses_card.no_expenses"]()}
-        viewAllHref="/app/expenses"
-        buttonLabel={m["dashboard.recent_expenses_card.add_button"]()}
-        buttonOnClick={async () => await goto("/app/expenses/new")}
-    />
+    {#if $householdState}
+        {#await loadExpenses($householdState.id)}
+            <div class="card card-border bg-base-200 drop-shadow-xl md:col-span-3">
+                <div class="card-body flex items-center justify-center">
+                    <span class="loading loading-dots"></span>
+                </div>
+            </div>
+        {:then _}
+            <ListCard
+                    title={m["dashboard.recent_expenses_card.title"]()}
+                    items={recentExpenses}
+                    itemMapper={mapExpenseToDisplayItem}
+                    emptyMessage={m["dashboard.recent_expenses_card.no_expenses"]()}
+                    viewAllHref="/app/expenses"
+                    buttonLabel={m["dashboard.recent_expenses_card.add_button"]()}
+                    buttonOnClick={async () => await goto("/app/expenses/new")}
+            />
+        {/await}
+    {:else}
+        <ListCard
+                title={m["dashboard.recent_expenses_card.title"]()}
+                items={[]}
+                emptyMessage={m["dashboard.recent_expenses_card.no_expenses"]()}
+                viewAllHref="/app/expenses"
+                buttonLabel={m["dashboard.recent_expenses_card.add_button"]()}
+                buttonOnClick={async () => await goto("/app/expenses/new")}
+        />
+    {/if}
 
 </div>

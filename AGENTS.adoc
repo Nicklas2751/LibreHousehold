@@ -319,6 +319,63 @@ Make the menu (both mobile and desktop) show the currently displayed page as act
 |`/app/settings` |Settings
 |===
 
+== Current Task: Expenses Feature Implementation
+
+=== Summary
+
+Complete implementation of the Expenses feature including OpenAPI endpoints, stores, and UI pages (mobile + desktop).
+
+=== Implementation Status
+
+[cols="1,2,1"]
+|===
+|Phase |Description |Status
+
+|1 |OpenAPI Kontrakt erweitern (Category + Expense Schemas + Endpoints) |✅ Done
+|2 |TypeScript Generierung (`npm run openapi`) |✅ Done
+|3 |Stores erstellen (categoryStore.ts + expenseStore.ts) |✅ Done
+|4 |Expense Seite erstellen (Form + List Mobile + Desktop) |✅ Done
+|5 |Dashboard Integration (Recent Expenses) |✅ Done
+|6 |i18n Messages (DE + EN) |✅ Done
+|===
+
+=== Implementation Notes
+
+**OpenAPI**:
+- **Category Schema**: id, name, icon (optional)
+- **Expense Schema**: id, title, amount, paidBy, date, categoryId, splitBetween (optional), notes (optional)
+- **ExpenseUpdate Schema**: title, amount, categoryId, notes (all optional)
+- **Endpoints**:
+  - Categories: GET /household/{id}/categories, POST /household/{id}/categories
+  - Expenses: GET, POST, PATCH, DELETE /household/{id}/expenses[/{id}]
+- **Security**: PATCH/DELETE nur für den Ersteller (paidBy) erlaubt, dokumentiert mit 403 Response
+
+**Stores**:
+- **categoryStore**: CategoriesApi mit loadCategories, addCategory, findCategory
+- **expenseStore**: ExpensesApi mit loadExpenses, addExpense, updateExpense, deleteExpense
+
+**Expense Page** (`/app/expenses/[[new]]/+page.svelte`):
+- **Form Fields**: Title, Amount (€), Paid By (Member), Date, Category (Select), Split Between (Checkboxes), Notes
+- **Mobile List**: Card-style items with title, paidBy member, date, amount
+- **Desktop List**: DaisyUI list component with title, paidBy, date, amount
+- **Security**: Edit/Delete buttons nur wenn `expense.paidBy === currentUser.id`
+- **Category Selection**: Simple select, keine Inline-Erstellung (→ Settings später)
+
+**Dashboard Integration**:
+- Recent Expenses ListCard mit letzten 10 Expenses
+- Sortiert nach Datum (neueste zuerst)
+- Zeigt Titel + Betrag
+
+**i18n**:
+- 25+ neue Message Keys für DE + EN
+- Expenses title, create, form labels, placeholders, errors, hints
+- Paraglide automatisch neu kompiliert
+
+**Bundle Size**:
+- expenseStore.js: 7.43 kB
+- expenses page: 31.92 kB
+- Dashboard aktualisiert: 14.60 kB
+
 == Previous Task: Mobile View für Tasks-Seite
 
 === Summary
@@ -526,4 +583,66 @@ Implement a feature to persist the "task done" date when a user marks a task as 
 - **Request body contains fields** to update (JSON Merge Patch pattern, RFC 7396)
 - **Extensible design**: Same endpoint can later update other fields (title, assignedTo, etc.)
 
-Last Updated: December 2025
+== Current Task: T1 - Expense Editing & Deleting
+
+=== Summary
+
+Implement editing and deleting of expenses, including validation logic (mutability check).
+
+=== Implementation Status
+
+[cols="1,2,1"]
+|===
+|Step |Description |Status
+
+|1 |OpenAPI Check (PATCH endpoint validity) |✅ Done
+|2 |Frontend Logic (`isExpenseMutable`, `expenseLogic.ts`) |✅ Done
+|3 |i18n Messages (Edit titles, buttons) |✅ Done
+|4 |UI Implementation (+page.svelte: Edit Mode, Form Pre-fill, List Buttons) |✅ Done
+|5 |Validation & Build |✅ Done
+|===
+
+=== Implementation Notes
+
+*   **Expense Logic**: new file `frontend/src/lib/expenseLogic.ts` for centralizing mutability rules (prepared for Settlement logic).
+*   **Routing**: Used existing route `/app/expenses/[[new]]`. Logic detects if param is 'new' or an ID.
+*   **Accessibility**: Added aria-labels to icon-only buttons.
+*   **Store**: Used `updateExpense` with optimistic updates.
+
+Last Updated: February 2026
+
+== Current Task: T2 - Schulden-Berechnung & Dashboard-Integration
+
+=== Summary
+
+Implement financial overview (debts, net balance) on Dashboard and payment status on Expenses.
+
+=== Implementation Status
+
+[cols="1,2,1"]
+|===
+|Step |Description |Status
+
+|1 |OpenAPI: Add `Financials` schema & endpoint |✅ Done
+|2 |Regenerate API Client |✅ Done
+|3 |Frontend: Create `financialStore.ts` |✅ Done
+|4 |Frontend: Create `FinancialCard.svelte` |✅ Done
+|5 |Frontend: Integrate FinancialCard into Dashboard |✅ Done
+|6 |Frontend: Add status badges to Expense List |⚠️ Disabled (waiting for API)
+|7 |Backend: Implement `DebtCalculator` |⏳ Pending (Env missing)
+|===
+
+=== Implementation Notes
+
+*   **API**:
+    *   Split `GET /household/{id}/financials` into:
+        *   `/summary`: Total `youOwe` and `owedToYou`.
+        *   `/balances`: List of `MemberBalance` relative to user.
+    *   Added `userId` query parameter to all financial endpoints to explicitely select context.
+    *   Moved `userId` (for all) to PATH parameters.
+    *   Replaced `/details` endpoint with `GET /household/{id}/expenses/debts/{payerId}/{debtorId}` to return actual `Expense` objects instead of `DebtItem`.
+*   **Frontend Logic**:
+    *   `FinancialCard`: Updated to use detached summary/balances props.
+    *   `Dashboard`: Now loads `loadFinancialSummary` and `loadMemberBalances` separately.
+    *   `Expense List`: Status badges temporarily removed as the monolithic endpoint was replaced. Re-implementation planned with `/details` integration.
+*   **Backend Note**: Backend directory was found empty. API Spec is ready for implementation by backend team.
