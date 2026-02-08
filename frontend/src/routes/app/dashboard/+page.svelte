@@ -5,9 +5,10 @@
     import {goto} from "$app/navigation";
     import PageTitle from "$lib/PageTitle.svelte";
     import {loadTasks, tasks} from "$lib/stores/taskStore";
+    import {expenses, loadExpenses} from "$lib/stores/expenseStore";
     import {householdState} from "$lib/stores/householdState.svelte";
     import {filterTasks, TaskFilterType} from "$lib/taskFilter";
-    import type {Task} from "../../../generated-sources/openapi";
+    import type {Expense, Task} from "../../../generated-sources/openapi";
 
     interface DisplayItem {
         id: string;
@@ -29,6 +30,24 @@
             isHighlighted: isOverdue
         };
     }
+
+    function mapExpenseToDisplayItem(expense: Expense): DisplayItem {
+        return {
+            id: expense.id,
+            title: expense.title,
+            subtitle: expense.amount.toLocaleString(),
+        };
+    }
+
+    const recentExpenses = $derived.by(() => {
+        return $expenses
+            .sort((a, b) => {
+                if (!a.date) return 1;
+                if (!b.date) return -1;
+                return new Date(a.date).getTime() - new Date(b.date).getTime();
+            })
+            .slice(0, 10);
+    });
 
     const countOfUpcomingTasks: number = $derived(filterTasks($tasks, TaskFilterType.PENDING, undefined).length);
     const upcomingTasks = $derived.by(() => {
@@ -91,12 +110,33 @@
         />
     {/if}
 
-    <ListCard
-        title={m["dashboard.recent_expenses_card.title"]()}
-        emptyMessage={m["dashboard.recent_expenses_card.no_expenses"]()}
-        viewAllHref="/app/expenses"
-        buttonLabel={m["dashboard.recent_expenses_card.add_button"]()}
-        buttonOnClick={async () => await goto("/app/expenses/new")}
-    />
+    {#if $householdState}
+        {#await loadExpenses($householdState.id)}
+            <div class="card card-border bg-base-200 drop-shadow-xl md:col-span-3">
+                <div class="card-body flex items-center justify-center">
+                    <span class="loading loading-dots"></span>
+                </div>
+            </div>
+        {:then _}
+            <ListCard
+                    title={m["dashboard.recent_expenses_card.title"]()}
+                    items={recentExpenses}
+                    itemMapper={mapExpenseToDisplayItem}
+                    emptyMessage={m["dashboard.recent_expenses_card.no_expenses"]()}
+                    viewAllHref="/app/expenses"
+                    buttonLabel={m["dashboard.recent_expenses_card.add_button"]()}
+                    buttonOnClick={async () => await goto("/app/expenses/new")}
+            />
+        {/await}
+    {:else}
+        <ListCard
+                title={m["dashboard.recent_expenses_card.title"]()}
+                items={[]}
+                emptyMessage={m["dashboard.recent_expenses_card.no_expenses"]()}
+                viewAllHref="/app/expenses"
+                buttonLabel={m["dashboard.recent_expenses_card.add_button"]()}
+                buttonOnClick={async () => await goto("/app/expenses/new")}
+        />
+    {/if}
 
 </div>
