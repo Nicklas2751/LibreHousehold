@@ -332,6 +332,287 @@ paths:
             "application/problem+json":
               schema:
                 $ref: '#/components/schemas/Problem'
+
+  /household/{householdId}/categories:
+    get:
+      summary: Get all categories
+      description: Returns all expense categories for the specified household.
+      tags:
+        - categories
+      operationId: getCategories
+      parameters:
+        - name: householdId
+          in: path
+          required: true
+          description: The unique identifier of the household.
+          schema:
+            type: string
+            format: uuid
+            example: "f3ce1a6b-aba1-478d-9f01-ec484f23ce60"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Category"
+        "404":
+          description: No household found with the specified ID.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        default:
+          description: An error occurred - see status code and problem for more information.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+    post:
+      summary: Create a new category
+      description: Creates a new expense category.
+      tags:
+        - categories
+      operationId: createCategory
+      parameters:
+        - name: householdId
+          in: path
+          required: true
+          description: The unique identifier of the household.
+          schema:
+            type: string
+            format: uuid
+            example: "f3ce1a6b-aba1-478d-9f01-ec484f23ce60"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Category"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Category"
+        "400":
+          description: The data for the new category is invalid.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        "404":
+          description: No household found with the specified ID.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        "409":
+          description: The category already exists.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        default:
+          description: An error occurred - see status code and problem for more information.
+          content:
+            "application/problem+json":
+              schema:
+                $ref: '#/components/schemas/Problem'
+
+  /household/{householdId}/expenses:
+    get:
+      summary: Get all expenses
+      description: Returns all expenses for the specified household.
+      tags:
+        - expenses
+      operationId: getExpenses
+      parameters:
+        - name: householdId
+          in: path
+          required: true
+          description: The unique identifier of the household.
+          schema:
+            type: string
+            format: uuid
+            example: "f3ce1a6b-aba1-478d-9f01-ec484f23ce60"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Expense"
+        "404":
+          description: No household found with the specified ID.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        default:
+          description: An error occurred - see status code and problem for more information.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+    post:
+      summary: Create a new expense
+      description: Creates a new expense.
+      tags:
+        - expenses
+      operationId: createExpense
+      parameters:
+        - name: householdId
+          in: path
+          required: true
+          description: The unique identifier of the household.
+          schema:
+            type: string
+            format: uuid
+            example: "f3ce1a6b-aba1-478d-9f01-ec484f23ce60"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Expense"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Expense"
+        "400":
+          description: The data for the new expense is invalid.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        "404":
+          description: No household found with the specified ID.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        default:
+          description: An error occurred - see status code and problem for more information.
+          content:
+            "application/problem+json":
+              schema:
+                $ref: '#/components/schemas/Problem'
+  /household/{householdId}/expenses/{expenseId}:
+    patch:
+      summary: Update an expense
+      description: |
+        Partially updates an expense. Only the fields provided in the request body will be updated.
+        SECURITY: Only the user who created the expense (paidBy) is allowed to update it.
+      tags:
+        - expenses
+      operationId: updateExpense
+      parameters:
+        - name: householdId
+          in: path
+          required: true
+          description: The unique identifier of the household.
+          schema:
+            type: string
+            format: uuid
+            example: "f3ce1a6b-aba1-478d-9f01-ec484f23ce60"
+        - name: expenseId
+          in: path
+          required: true
+          description: The unique identifier of the expense.
+          schema:
+            type: string
+            format: uuid
+            example: "550e8400-e29b-41d4-a716-446655440000"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExpenseUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Expense"
+        "400":
+          description: The data for updating the expense is invalid.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        "403":
+          description: User is not authorized to update this expense.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        "404":
+          description: No expense found with the specified ID.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        default:
+          description: An error occurred - see status code and problem for more information.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+    delete:
+      summary: Delete an expense
+      description: |
+        Deletes an expense.
+        SECURITY: Only the user who created the expense (paidBy) is allowed to delete it.
+      tags:
+        - expenses
+      operationId: deleteExpense
+      parameters:
+        - name: householdId
+          in: path
+          required: true
+          description: The unique identifier of the household.
+          schema:
+            type: string
+            format: uuid
+            example: "f3ce1a6b-aba1-478d-9f01-ec484f23ce60"
+        - name: expenseId
+          in: path
+          required: true
+          description: The unique identifier of the expense.
+          schema:
+            type: string
+            format: uuid
+            example: "550e8400-e29b-41d4-a716-446655440000"
+      responses:
+        "204":
+          description: Expense successfully deleted.
+        "403":
+          description: User is not authorized to delete this expense.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        "404":
+          description: No expense found with the specified ID.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        default:
+          description: An error occurred - see status code and problem for more information.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
 components:
   schemas:
     Problem:
@@ -504,3 +785,123 @@ components:
             The date when the task was completed. Set to null to mark the task as not completed.
       example:
         done: "2024-07-01"
+
+    Category:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: The unique identifier of the category. This must be generated by the client.
+        name:
+          type: string
+          minLength: 2
+          maxLength: 50
+          description: The name of the category.
+        icon:
+          type: string
+          description: Optional icon identifier for the category (e.g., emoji or icon name).
+      example:
+        id: "660e8400-e29b-41d4-a716-446655440001"
+        name: "Groceries"
+        icon: "🛒"
+
+    Expense:
+      type: object
+      required:
+        - id
+        - title
+        - amount
+        - paidBy
+        - date
+        - categoryId
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: The unique identifier of the expense. This must be generated by the client.
+        title:
+          type: string
+          minLength: 3
+          description: The title/description of the expense.
+        amount:
+          type: number
+          format: double
+          minimum: 0.01
+          description: The amount of money spent.
+        paidBy:
+          type: string
+          format: uuid
+          description: The id of the member who paid for the expense.
+        date:
+          type: string
+          format: date
+          description: The date when the expense occurred.
+        categoryId:
+          type: string
+          format: uuid
+          description: The id of the category this expense belongs to.
+        splitBetween:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: |
+            Array of member IDs between whom the expense should be split.
+            If empty or not provided, the expense is split equally among all household members.
+        notes:
+          type: string
+          description: Additional notes about the expense.
+      example:
+        id: "550e8400-e29b-41d4-a716-446655440000"
+        title: "Grocery shopping at Lidl"
+        amount: 45.50
+        paidBy: "7c3a40a8-3f57-4645-8cf5-820a6a8d3613"
+        date: "2024-12-06"
+        categoryId: "660e8400-e29b-41d4-a716-446655440001"
+        splitBetween: ["7c3a40a8-3f57-4645-8cf5-820a6a8d3613", "8d4b51b9-4g68-5756-9dg6-931b7b9e4724"]
+        notes: "Weekly groceries"
+
+    ExpenseUpdate:
+      type: object
+      description: Object containing the fields to update for an expense. All fields are optional.
+      properties:
+        title:
+          type: string
+          minLength: 3
+          description: The title/description of the expense.
+        amount:
+          type: number
+          format: double
+          minimum: 0.01
+          description: The amount of money spent.
+        paidBy:
+          type: string
+          format: uuid
+          description: The id of the member who paid for the expense.
+        date:
+          type: string
+          format: date
+          description: The date when the expense occurred.
+        categoryId:
+          type: string
+          format: uuid
+          description: The id of the category this expense belongs to.
+        splitBetween:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: |
+            Array of member IDs between whom the expense should be split.
+            If empty or not provided, the expense is split equally among all household members.
+        notes:
+          type: string
+          description: Additional notes about the expense.
+      example:
+        title: "Updated grocery shopping"
+        amount: 50.00
+        categoryId: "660e8400-e29b-41d4-a716-446655440001"

@@ -122,5 +122,33 @@
       "next_recurrence_date_label": "Mit dem aktuellen Fälligkeitsdatum {date}, wird die nächste Wiederholung am {nextDate} sein.",
       "create_button": "Aufgabe erstellen"
     }
+  },
+  "expenses": {
+    "title": "Ausgaben",
+    "create_expense_button": "Ausgabe erfassen",
+    "list_title": "Ausgaben-Übersicht",
+    "no_expenses": "Keine Ausgaben vorhanden",
+    "paid_by": "Bezahlt von",
+    "delete_button": "Löschen",
+    "delete_confirm": "Möchten Sie diese Ausgabe wirklich löschen?",
+    "new": {
+      "title": "Neue Ausgabe",
+      "cancel_button": "Abbrechen",
+      "expense_title_label": "Beschreibung",
+      "expense_title_placeholder": "z.B. Einkauf Lidl",
+      "expense_title_error": "Gib eine Beschreibung mit mindestens drei Zeichen ein.",
+      "amount_label": "Betrag",
+      "paid_by_label": "Bezahlt von",
+      "paid_by_select_placeholder": "Mitglied auswählen...",
+      "date_label": "Datum",
+      "category_label": "Kategorie",
+      "category_select_placeholder": "Kategorie wählen...",
+      "no_categories_hint": "Keine Kategorien vorhanden. Erstelle neue Kategorien in den Einstellungen.",
+      "split_between_label": "Aufteilen zwischen",
+      "split_between_hint": "Wähle die Mitglieder aus, zwischen denen die Ausgabe aufgeteilt werden soll. Wenn nichts ausgewählt ist, wird gleichmäßig zwischen allen aufgeteilt.",
+      "notes_label": "Notizen",
+      "notes_placeholder": "Zusätzliche Notizen...",
+      "create_button": "Ausgabe erstellen"
+    }
   }
 }
