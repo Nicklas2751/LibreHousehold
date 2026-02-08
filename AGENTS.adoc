@@ -610,3 +610,39 @@ Implement editing and deleting of expenses, including validation logic (mutabili
 *   **Store**: Used `updateExpense` with optimistic updates.
 
 Last Updated: February 2026
+
+== Current Task: T2 - Schulden-Berechnung & Dashboard-Integration
+
+=== Summary
+
+Implement financial overview (debts, net balance) on Dashboard and payment status on Expenses.
+
+=== Implementation Status
+
+[cols="1,2,1"]
+|===
+|Step |Description |Status
+
+|1 |OpenAPI: Add `Financials` schema & endpoint |✅ Done
+|2 |Regenerate API Client |✅ Done
+|3 |Frontend: Create `financialStore.ts` |✅ Done
+|4 |Frontend: Create `FinancialCard.svelte` |✅ Done
+|5 |Frontend: Integrate FinancialCard into Dashboard |✅ Done
+|6 |Frontend: Add status badges to Expense List |⚠️ Disabled (waiting for API)
+|7 |Backend: Implement `DebtCalculator` |⏳ Pending (Env missing)
+|===
+
+=== Implementation Notes
+
+*   **API**:
+    *   Split `GET /household/{id}/financials` into:
+        *   `/summary`: Total `youOwe` and `owedToYou`.
+        *   `/balances`: List of `MemberBalance` relative to user.
+    *   Added `userId` query parameter to all financial endpoints to explicitely select context.
+    *   Moved `userId` (for all) to PATH parameters.
+    *   Replaced `/details` endpoint with `GET /household/{id}/expenses/debts/{payerId}/{debtorId}` to return actual `Expense` objects instead of `DebtItem`.
+*   **Frontend Logic**:
+    *   `FinancialCard`: Updated to use detached summary/balances props.
+    *   `Dashboard`: Now loads `loadFinancialSummary` and `loadMemberBalances` separately.
+    *   `Expense List`: Status badges temporarily removed as the monolithic endpoint was replaced. Re-implementation planned with `/details` integration.
+*   **Backend Note**: Backend directory was found empty. API Spec is ready for implementation by backend team.

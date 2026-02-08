@@ -320,10 +320,10 @@
                                                 <span class="loading loading-dots loading-xs"></span>
                                             {:then member}
                                                 {#if member}
-                                                    <span class="text-xs uppercase font-semibold opacity-60">
-                                                        {m["expenses.paid_by"]()} {member.name}
-                                                    </span>
-                                                {/if}
+                                            <span class="text-xs uppercase font-semibold opacity-60 flex items-center gap-1">
+                                                {m["expenses.paid_by"]()} {member.name}
+                                            </span>
+                                        {/if}
                                             {/await}
                                             <span class="text-xs text-base-content/60">
                                                 {new Date(expense.date).toLocaleDateString('de-DE')}

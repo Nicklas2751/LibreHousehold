@@ -333,6 +333,138 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
 
+  /household/{householdId}/financials/{userId}/summary:
+    get:
+      summary: Get financial summary
+      description: Retrieves the total amounts the specified user owes and is owed.
+      tags:
+        - financials
+      operationId: getFinancialSummary
+      parameters:
+        - name: householdId
+          in: path
+          required: true
+          description: The unique identifier of the household.
+          schema:
+            type: string
+            format: uuid
+            example: "f3ce1a6b-aba1-478d-9f01-ec484f23ce60"
+        - name: userId
+          in: path
+          required: true
+          description: The unique identifier of the user for whom the summary is requested.
+          schema:
+            type: string
+            format: uuid
+            example: "7c3a40a8-3f57-4645-8cf5-820a6a8d3613"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinancialSummary"
+        "404":
+          description: No household found.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        default:
+          description: Error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
+  /household/{householdId}/financials/{userId}/balances:
+    get:
+      summary: Get balances per member
+      description: Retrieves the balance for each member relative to the specified user.
+      tags:
+        - financials
+      operationId: getMemberBalances
+      parameters:
+        - name: householdId
+          in: path
+          required: true
+          description: The unique identifier of the household.
+          schema:
+            type: string
+            format: uuid
+            example: "f3ce1a6b-aba1-478d-9f01-ec484f23ce60"
+        - name: userId
+          in: path
+          required: true
+          description: The unique identifier of the user for whom the balances are requested.
+          schema:
+            type: string
+            format: uuid
+            example: "7c3a40a8-3f57-4645-8cf5-820a6a8d3613"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MemberBalance"
+        default:
+          description: Error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
+  /household/{householdId}/expenses/debts/{payerId}/{debtorId}:
+    get:
+      summary: Get expenses forming a debt
+      description: |
+        Retrieves all expenses paid by `payerId` where `debtorId` is involved (either explicitly in `splitBetween` or implicitly if `splitBetween` is empty).
+        This helps understanding why `debtorId` owes money to `payerId`.
+        It should only return expenses that are not yet fully reimbursed (though partial reimbursement tracking is TBD).
+      tags:
+        - expenses
+      operationId: getDebtorExpenses
+      parameters:
+        - name: householdId
+          in: path
+          required: true
+          description: The unique identifier of the household.
+          schema:
+            type: string
+            format: uuid
+        - name: payerId
+          in: path
+          required: true
+          description: The unique identifier of the user who paid.
+          schema:
+            type: string
+            format: uuid
+        - name: debtorId
+          in: path
+          required: true
+          description: The unique identifier of the user who owes money for these expenses.
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Expense"
+        default:
+          description: Error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
   /household/{householdId}/categories:
     get:
       summary: Get all categories
@@ -947,3 +1079,33 @@ components:
         title: "Updated grocery shopping"
         amount: 50.00
         categoryId: "660e8400-e29b-41d4-a716-446655440001"
+
+    FinancialSummary:
+      type: object
+      required:
+        - youOwe
+        - owedToYou
+      properties:
+        youOwe:
+          type: number
+          format: double
+          description: Total amount the current user owes to others.
+        owedToYou:
+          type: number
+          format: double
+          description: Total amount others owe to the current user.
+
+    MemberBalance:
+      type: object
+      required:
+        - memberId
+        - balance
+      properties:
+        memberId:
+          type: string
+          format: uuid
+          description: The ID of the other member.
+        balance:
+          type: number
+          format: double
+          description: The balance with this member. Positive means they owe the current user, negative means current user owes them.

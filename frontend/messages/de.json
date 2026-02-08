@@ -72,6 +72,13 @@
     "owed_to_you_card": {
       "title": "Dir wird geschuldet"
     },
+    "financials": {
+        "title": "Finanzen",
+        "total_balance_label": "Gesamtbilanz",
+        "you_owe": "Du schuldest {name}",
+        "owed_to_you": "{name} schuldet dir",
+        "settled": "Ausgeglichen"
+    },
     "upcoming_tasks_card": {
       "title": "Anstehende Aufgaben",
       "no_tasks": "Keine anstehenden Aufgaben",
