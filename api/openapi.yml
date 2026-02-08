@@ -505,6 +505,48 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
   /household/{householdId}/expenses/{expenseId}:
+    get:
+      summary: Get a specific expense
+      description: Retrieves a specific expense.
+      tags:
+        - expenses
+      operationId: getExpense
+      parameters:
+        - name: householdId
+          in: path
+          required: true
+          description: The unique identifier of the household.
+          schema:
+            type: string
+            format: uuid
+            example: "f3ce1a6b-aba1-478d-9f01-ec484f23ce60"
+        - name: expenseId
+          in: path
+          required: true
+          description: The unique identifier of the expense.
+          schema:
+            type: string
+            format: uuid
+            example: "550e8400-e29b-41d4-a716-446655440000"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Expense"
+        "404":
+          description: No expense found with the specified ID.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        default:
+          description: An error occurred - see status code and problem for more information.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
     patch:
       summary: Update an expense
       description: |

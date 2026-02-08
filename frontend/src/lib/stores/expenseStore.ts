@@ -43,6 +43,15 @@ export async function updateExpense(
     }
 }
 
+export async function findExpense(householdId: string, expenseId: string): Promise<Expense | undefined> {
+    try {
+        return await api.getExpense({householdId, expenseId});
+    } catch (error) {
+        console.error("Failed to find expense:", error);
+        return undefined;
+    }
+}
+
 export async function deleteExpense(householdId: string, expenseId: string): Promise<void> {
     await api.deleteExpense({householdId, expenseId});
     await loadExpenses(householdId);
@@ -63,4 +72,3 @@ export async function deleteExpense(householdId: string, expenseId: string): Pro
         console.error("Failed to delete expense:", error);
     }
 }
-

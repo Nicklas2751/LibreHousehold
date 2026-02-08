@@ -149,6 +149,10 @@
       "notes_label": "Notes",
       "notes_placeholder": "Additional notes...",
       "create_button": "Create Expense"
+    },
+    "edit": {
+      "title": "Edit Expense",
+      "save_button": "Save Changes"
     }
   }
 }

@@ -583,4 +583,30 @@ Implement a feature to persist the "task done" date when a user marks a task as 
 - **Request body contains fields** to update (JSON Merge Patch pattern, RFC 7396)
 - **Extensible design**: Same endpoint can later update other fields (title, assignedTo, etc.)
 
-Last Updated: December 2025
+== Current Task: T1 - Expense Editing & Deleting
+
+=== Summary
+
+Implement editing and deleting of expenses, including validation logic (mutability check).
+
+=== Implementation Status
+
+[cols="1,2,1"]
+|===
+|Step |Description |Status
+
+|1 |OpenAPI Check (PATCH endpoint validity) |✅ Done
+|2 |Frontend Logic (`isExpenseMutable`, `expenseLogic.ts`) |✅ Done
+|3 |i18n Messages (Edit titles, buttons) |✅ Done
+|4 |UI Implementation (+page.svelte: Edit Mode, Form Pre-fill, List Buttons) |✅ Done
+|5 |Validation & Build |✅ Done
+|===
+
+=== Implementation Notes
+
+*   **Expense Logic**: new file `frontend/src/lib/expenseLogic.ts` for centralizing mutability rules (prepared for Settlement logic).
+*   **Routing**: Used existing route `/app/expenses/[[new]]`. Logic detects if param is 'new' or an ID.
+*   **Accessibility**: Added aria-labels to icon-only buttons.
+*   **Store**: Used `updateExpense` with optimistic updates.
+
+Last Updated: February 2026
