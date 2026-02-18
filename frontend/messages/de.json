@@ -77,6 +77,8 @@
         "total_balance_label": "Gesamtbilanz",
         "you_owe": "Du schuldest {name}",
         "owed_to_you": "{name} schuldet dir",
+        "pending_outgoing": "Ausstehend an {name}",
+        "pending_incoming": "Ausstehend von {name}",
         "settled": "Ausgeglichen",
         "settle_button": "Begleichen"
     },

@@ -6,9 +6,9 @@
     import {householdState} from "$lib/stores/householdState.svelte";
     import {userState} from "$lib/stores/userState";
     import {createReimbursement} from "$lib/stores/reimbursementStore";
-    import {loadMembers, members} from "$lib/stores/memberStore";
+    import {findMember, loadMembers, members} from "$lib/stores/memberStore";
     import {loadDebtorExpenses} from "$lib/stores/expenseStore";
-    import type {Expense} from "../../../../../generated-sources/openapi";
+    import type {Expense, Member} from "../../../../generated-sources/openapi";
 
     let creditorId = $state("");
     let amount = $state(0.0);

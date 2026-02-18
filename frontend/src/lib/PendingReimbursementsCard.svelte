@@ -6,6 +6,7 @@
     import {userState} from "$lib/stores/userState";
     import {fade} from "svelte/transition";
     import type {Member, Reimbursement} from "../generated-sources/openapi";
+    import {loadFinancialSummary, loadMemberBalances} from "$lib/stores/financialStore";
 
     // Filter logic: reimbursements where I am the creditor and status is PENDING
     const pendingReimbursements = $derived(
@@ -24,14 +25,18 @@
     }
 
     async function handleConfirm(reimbursement: Reimbursement) {
-        if ($householdState) {
+        if ($householdState && $userState) {
             await updateReimbursement($householdState.id, reimbursement.id, {status: 'CONFIRMED'});
+            await loadFinancialSummary($householdState.id, $userState.id);
+            await loadMemberBalances($householdState.id, $userState.id);
         }
     }
 
     async function handleReject(reimbursement: Reimbursement) {
-        if ($householdState) {
+        if ($householdState && $userState) {
             await updateReimbursement($householdState.id, reimbursement.id, {status: 'REJECTED'});
+            await loadFinancialSummary($householdState.id, $userState.id);
+            await loadMemberBalances($householdState.id, $userState.id);
         }
     }
 </script>

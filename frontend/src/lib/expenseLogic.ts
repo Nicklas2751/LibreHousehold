@@ -15,8 +15,7 @@ import type {Expense} from "../generated-sources/openapi";
  * @returns true if the expense can be modified, false otherwise.
  */
 export function isExpenseMutable(expense: Expense): boolean {
-    // TODO: T3 - Implement Settlement check logic here based on T2 debt calculation results
-    return true;
+    return (expense as any).isMutable ?? true;
 }
 
 

@@ -1176,6 +1176,13 @@ components:
         notes:
           type: string
           description: Additional notes about the expense.
+        isMutable:
+          type: boolean
+          readOnly: true
+          description: |
+            Indicates if the expense can still be edited or deleted.
+            An expense becomes immutable once it is covered (fully or partially) by a confirmed or pending reimbursement.
+            This value is calculated by the backend.
       example:
         id: "550e8400-e29b-41d4-a716-446655440000"
         title: "Grocery shopping at Lidl"
@@ -1256,6 +1263,10 @@ components:
           type: number
           format: double
           description: The balance with this member. Positive means they owe the current user, negative means current user owes them.
+        pendingBalance:
+          type: number
+          format: double
+          description: The amount that is pending confirmation (e.g., user paid but not confirmed yet). Positive means pending incoming payment, negative means pending outgoing payment.
 
     Reimbursement:
       type: object

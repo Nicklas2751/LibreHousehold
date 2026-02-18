@@ -320,8 +320,8 @@
                                                 <span class="loading loading-dots loading-xs"></span>
                                             {:then member}
                                                 {#if member}
-                                            <span class="text-xs uppercase font-semibold opacity-60 flex items-center gap-1">
-                                                {m["expenses.paid_by"]()} {member.name}
+                                            <span class="text-xs font-semibold opacity-60 flex items-center gap-1">
+                                                {member.name}
                                             </span>
                                         {/if}
                                             {/await}
@@ -350,4 +350,7 @@
         </div>
     </div>
 </div>
+
+
+
 
