@@ -77,6 +77,8 @@
         "total_balance_label": "Net Balance",
         "you_owe": "You owe {name}",
         "owed_to_you": "{name} owes you",
+        "pending_outgoing": "Pending to {name}",
+        "pending_incoming": "Pending from {name}",
         "settled": "Settled",
         "settle_button": "Settle Up"
     },
