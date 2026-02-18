@@ -638,11 +638,13 @@ Implement financial overview (debts, net balance) on Dashboard and payment statu
     *   Split `GET /household/{id}/financials` into:
         *   `/summary`: Total `youOwe` and `owedToYou`.
         *   `/balances`: List of `MemberBalance` relative to user.
+        *   `/details`: (Planned) detailed expense items.
     *   Added `userId` query parameter to all financial endpoints to explicitely select context.
     *   Moved `userId` (for all) to PATH parameters.
     *   Replaced `/details` endpoint with `GET /household/{id}/expenses/debts/{payerId}/{debtorId}` to return actual `Expense` objects instead of `DebtItem`.
+    *   Added Reimbursements API (`GET/POST /household/{id}/reimbursements`, `PATCH .../{id}`).
 *   **Frontend Logic**:
     *   `FinancialCard`: Updated to use detached summary/balances props.
     *   `Dashboard`: Now loads `loadFinancialSummary` and `loadMemberBalances` separately.
-    *   `Expense List`: Status badges temporarily removed as the monolithic endpoint was replaced. Re-implementation planned with `/details` integration.
-*   **Backend Note**: Backend directory was found empty. API Spec is ready for implementation by backend team.
+    *   `Reimbursement Store`: Added `reimbursementStore.ts`.
+    *   `Settle Button`: Added to FinancialCard, redirecting to `/app/reimbursements/settle` (Page TBD).

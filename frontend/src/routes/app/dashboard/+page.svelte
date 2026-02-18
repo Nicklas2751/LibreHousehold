@@ -14,9 +14,11 @@
         loadMemberBalances,
         memberBalances
     } from "$lib/stores/financialStore";
+    import {loadReimbursements} from "$lib/stores/reimbursementStore";
     import {loadMembers, members} from "$lib/stores/memberStore";
     import {userState} from "$lib/stores/userState";
     import FinancialCard from "$lib/FinancialCard.svelte";
+    import PendingReimbursementsCard from "$lib/PendingReimbursementsCard.svelte";
     import type {Expense, Task} from "../../../generated-sources/openapi";
 
     interface DisplayItem {
@@ -74,6 +76,7 @@
         if ($householdState && $userState) {
             loadFinancialSummary($householdState.id, $userState.id);
             loadMemberBalances($householdState.id, $userState.id);
+            loadReimbursements($householdState.id);
             // Ensure members are loaded for name resolution
             if ($members.length === 0) {
                 loadMembers($householdState.id);
@@ -92,6 +95,7 @@
     />
 
     <FinancialCard summary={$financialSummary} balances={$memberBalances} />
+    <PendingReimbursementsCard />
 
     {#if $householdState}
         {#await loadTasks($householdState.id)}
