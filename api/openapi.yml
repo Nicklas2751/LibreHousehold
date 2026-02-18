@@ -17,6 +17,8 @@ tags:
     description: Operations related to households
   - name: tasks
     description: Operations related to tasks
+  - name: reimbursements
+    description: Operations related to reimbursements
 paths:
   /household:
     post:
@@ -674,7 +676,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
         default:
-          description: An error occurred - see status code and problem for more information.
+          description: An error occurred - see the status code and problem for more information.
           content:
             application/problem+json:
               schema:
@@ -782,6 +784,151 @@ paths:
                 $ref: '#/components/schemas/Problem'
         default:
           description: An error occurred - see status code and problem for more information.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
+  /household/{householdId}/reimbursements:
+    get:
+      summary: Get reimbursements
+      description: |
+        Retrieves a list of reimbursements.
+        Useful for checking pending incoming payments or history.
+      tags:
+        - reimbursements
+      operationId: getReimbursements
+      parameters:
+        - name: householdId
+          in: path
+          required: true
+          description: The unique identifier of the household.
+          schema:
+            type: string
+            format: uuid
+        - name: creditorId
+          in: query
+          description: Filter by the user who receives the money.
+          schema:
+            type: string
+            format: uuid
+        - name: debtorId
+          in: query
+          description: Filter by the user who paid the money (debtor).
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          description: Filter by status.
+          schema:
+            type: string
+            enum: [PENDING, CONFIRMED, REJECTED]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Reimbursement"
+        default:
+          description: Error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+    post:
+      summary: Create a reimbursement
+      description: |
+        Creates a new reimbursement record. Usually created by the debtor to indicate they have paid.
+      tags:
+        - reimbursements
+      operationId: createReimbursement
+      parameters:
+        - name: householdId
+          in: path
+          required: true
+          description: The unique identifier of the household.
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReimbursementCreate"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Reimbursement"
+        "400":
+          description: Invalid data.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        default:
+          description: Error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
+  /household/{householdId}/reimbursements/{reimbursementId}:
+    patch:
+      summary: Update a reimbursement
+      description: |
+        Update the status of a reimbursement (e.g., CONFIRM or REJECT).
+        SECURITY: Only the creditor should be allowed to CONFIRM or REJECT.
+      tags:
+        - reimbursements
+      operationId: updateReimbursement
+      parameters:
+        - name: householdId
+          in: path
+          required: true
+          description: The unique identifier of the household.
+          schema:
+            type: string
+            format: uuid
+        - name: reimbursementId
+          in: path
+          required: true
+          description: The unique identifier of the reimbursement.
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReimbursementUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Reimbursement"
+        "403":
+          description: Not authorized to update this reimbursement.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        "404":
+          description: Reimbursement not found.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        default:
+          description: Error
           content:
             application/problem+json:
               schema:
@@ -1109,3 +1256,88 @@ components:
           type: number
           format: double
           description: The balance with this member. Positive means they owe the current user, negative means current user owes them.
+
+    Reimbursement:
+      type: object
+      required:
+        - id
+        - amount
+        - creditorId
+        - debtorId
+        - status
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: The unique identifier of the reimbursement. This must be generated by the client.
+        amount:
+          type: number
+          format: double
+          minimum: 0.01
+          description: The amount of money to be reimbursed.
+        creditorId:
+          type: string
+          format: uuid
+          description: The id of the member who is to receive the reimbursement.
+        debtorId:
+          type: string
+          format: uuid
+          description: The id of the member who owes the reimbursement.
+        status:
+          type: string
+          enum: [PENDING, CONFIRMED, REJECTED]
+          description: The status of the reimbursement.
+        notes:
+          type: string
+          description: Optional notes about the reimbursement.
+      example:
+        id: "123e4567-e89b-12d3-a456-426614174000"
+        amount: 20.00
+        creditorId: "7c3a40a8-3f57-4645-8cf5-820a6a8d3613"
+        debtorId: "8d4b51b9-4g68-5756-9dg6-931b7b9e4724"
+        status: "PENDING"
+        notes: "Reimbursement for dinner"
+
+    ReimbursementCreate:
+      type: object
+      required:
+        - amount
+        - creditorId
+        - debtorId
+      properties:
+        amount:
+          type: number
+          format: double
+          minimum: 0.01
+          description: The amount of money to be reimbursed.
+        creditorId:
+          type: string
+          format: uuid
+          description: The id of the member who is to receive the reimbursement.
+        debtorId:
+          type: string
+          format: uuid
+          description: The id of the member who owes the reimbursement.
+        notes:
+          type: string
+          description: Optional notes about the reimbursement.
+      example:
+        amount: 20.00
+        creditorId: "7c3a40a8-3f57-4645-8cf5-820a6a8d3613"
+        debtorId: "8d4b51b9-4g68-5756-9dg6-931b7b9e4724"
+        notes: "Reimbursement for dinner"
+
+    ReimbursementUpdate:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [PENDING, CONFIRMED, REJECTED]
+          description: The status of the reimbursement.
+        notes:
+          type: string
+          description: Optional notes about the reimbursement.
+      example:
+        status: "CONFIRMED"
+        notes: "Payment received"
+

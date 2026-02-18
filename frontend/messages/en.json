@@ -77,7 +77,8 @@
         "total_balance_label": "Net Balance",
         "you_owe": "You owe {name}",
         "owed_to_you": "{name} owes you",
-        "settled": "Settled"
+        "settled": "Settled",
+        "settle_button": "Settle Up"
     },
     "upcoming_tasks_card": {
       "title": "Upcoming Tasks",
@@ -93,6 +94,13 @@
       "title": "Debts Overview",
       "no_debts": "No debts to display",
       "add_button": "Add Expense"
+    },
+    "pending_reimbursements_card": {
+        "title": "Pending Settlements",
+        "no_pending": "No pending settlements.",
+        "incoming_text": "{name} wants to settle {amount}",
+        "confirm_button": "Confirm",
+        "reject_button": "Reject"
     },
     "view_all": "View all"
   },
@@ -161,5 +169,16 @@
       "title": "Edit Expense",
       "save_button": "Save Changes"
     }
+  },
+  "settle": {
+    "title": "Settle Debts",
+    "cancel_button": "Cancel",
+    "paying_label": "Paying {name}",
+    "total_amount_label": "Total Amount",
+    "details_label": "Details (Expenses included in this debt)",
+    "no_details": "No detailed expenses found.",
+    "confirm_payment_button": "Mark as Paid",
+    "disclaimer": "This action does not transfer actual money. Please ensure you have transferred the amount via bank transfer or cash."
   }
+
 }

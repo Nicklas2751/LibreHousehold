@@ -1,22 +1,25 @@
 import {writable} from 'svelte/store';
-import {Configuration, type Expense, ExpensesApi, type ExpenseUpdate} from '../../generated-sources/openapi';
+import {Configuration, type Expense, ExpensesApi, type ExpenseUpdate} from "../../generated-sources/openapi";
 import {addToast} from "$lib/stores/toastStore";
 import {Toast} from "$lib/toast";
+
+export const expenses = writable<Expense[]>([]);
 
 const apiConfig = new Configuration({basePath: '/api'});
 const api = new ExpensesApi(apiConfig);
 
-export const expenses = writable<Expense[]>([]);
-
-export async function loadExpenses(householdId: string): Promise<void> {
+export const loadExpenses = async (householdId: string): Promise<void> => {
     const result = await api.getExpenses({householdId});
     expenses.set(result);
-}
+};
 
-export async function addExpense(householdId: string, expense: Expense): Promise<Expense> {
+export const loadDebtorExpenses = async (householdId: string, payerId: string, debtorId: string): Promise<Expense[]> => {
+    return await api.getDebtorExpenses({householdId, payerId, debtorId});
+};
+
+export const addExpense = async (householdId: string, expense: Expense): Promise<void> => {
     let savedExpense = await api.createExpense({householdId: householdId, expense: expense});
     expenses.update((all) => [savedExpense, ...all]);
-    return savedExpense;
 }
 
 export async function updateExpense(

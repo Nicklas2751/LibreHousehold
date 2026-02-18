@@ -3,6 +3,7 @@
     import {findMember, members} from '$lib/stores/memberStore';
     import {householdState} from "$lib/stores/householdState.svelte";
     import type {FinancialSummary, Member, MemberBalance} from '../generated-sources/openapi';
+    import {goto} from "$app/navigation";
 
     let {summary, balances}: { summary: FinancialSummary | null, balances: MemberBalance[] } = $props();
 
@@ -16,6 +17,22 @@
                 return findMember($householdState.id, memberId);
             }
         }
+    }
+
+    function getMemberName(id: string): string {
+        const member = $members.find(m => m.id === id);
+        return member ? member.name : '';
+    }
+
+    async function handleSettleClick(balance: MemberBalance) {
+        // Navigate to settlement page or open modal with payerId (user) and debtorId (current user is payer if balance negative?)
+        // Wait, logic:
+        // if balance.balance < 0: "You owe X". Current user is Debtor. X is Creditor.
+        // Route parameter names are tricky. Let's use a clear URL structure.
+        // /app/settlement?creditorId=...&amount=...
+        const creditorId = balance.memberId;
+        const amount = Math.abs(balance.balance); // The amount to pay
+        await goto(`/app/reimbursements/settle?creditorId=${creditorId}&amount=${amount}`);
     }
 </script>
 
@@ -53,9 +70,16 @@
                                 {/await}
                             {/if}
                         </span>
-                        <span class="font-bold" class:text-success={balance.balance > 0} class:text-error={balance.balance < 0}>
-                            {Math.abs(balance.balance).toFixed(2)} €
-                        </span>
+                        <div class="flex items-center gap-2">
+                            <span class="font-bold" class:text-success={balance.balance > 0} class:text-error={balance.balance < 0}>
+                                {Math.abs(balance.balance).toFixed(2)} €
+                            </span>
+                            {#if balance.balance < -0.001}
+                                <button class="btn btn-xs btn-outline btn-error" onclick={() => handleSettleClick(balance)}>
+                                    {m["dashboard.financials.settle_button"]()}
+                                </button>
+                            {/if}
+                        </div>
                         </li>
                     {/if}
                 {/each}
@@ -70,6 +94,3 @@
         {/if}
     </div>
 </div>
-
-
-
