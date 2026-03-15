@@ -111,6 +111,91 @@ export default function() {
             response.data = newMember;
         }
 
+        // --- FINANCIALS MOCKS ---
+
+        // Mock: Financial Summary
+        if (request.operationId === 'getFinancialSummary') {
+             response.data = {
+                 youOwe: 45.50,
+                 owedToYou: 120.00
+             };
+        }
+
+        // Mock: Member Balances
+        if (request.operationId === 'getMemberBalances') {
+            const balances = [];
+            // Schuldet mir was (Pending)
+            if (otherUserIds.length > 0) {
+                balances.push({
+                    memberId: otherUserIds[0],
+                    balance: 50.00, // Er schuldet mir 50
+                    pendingBalance: 20.00 // Er hat 20 schon "bezahlt" (Pending confirmation)
+                });
+            }
+            // Ich schulde ihm was
+            if (otherUserIds.length > 1) {
+                balances.push({
+                    memberId: otherUserIds[1],
+                    balance: -45.50, // Ich schulde 45.50
+                    pendingBalance: 0
+                });
+            }
+            response.data = balances;
+        }
+
+        // Mock: Get Reimbursements
+        if (request.operationId === 'getReimbursements') {
+            const list = [];
+            // Case 1: Jemand hat mir Geld geschickt, ich muss bestätigen (Incoming Pending)
+            if (otherUserIds.length > 0) {
+                list.push({
+                    id: '11111111-2222-3333-4444-555555555555',
+                    amount: 20.00,
+                    creditorId: myUserId,        // Ich kriege das Geld
+                    debtorId: otherUserIds[0],   // Er schuldet es
+                    status: 'PENDING',
+                    timestamp: new Date().toISOString(),
+                    notes: 'Pizza von gestern'
+                });
+            }
+            
+            // Case 2: Abgeschlossene Zahlung
+            if (otherUserIds.length > 1) {
+                list.push({
+                    id: '66666666-7777-8888-9999-aaaaaaaaaaaa',
+                    amount: 15.00,
+                    creditorId: otherUserIds[1], // Er kriegt Geld
+                    debtorId: myUserId,          // Ich habe bezahlt
+                    status: 'CONFIRMED',
+                    timestamp: new Date(Date.now() - 86400000).toISOString(),
+                    notes: 'Kino Tickets'
+                });
+            }
+
+            response.data = list;
+        }
+
+        // Mock: Update Reimbursement (Confirm/Reject)
+        if (request.operationId === 'updateReimbursement') {
+            // Wir lesen die ID aus dem Pfad (mockapi macht das intern über path parameters oft automatisch, 
+            // aber wir müssen sicherstellen, dass wir was zurückgeben)
+            
+            // Default verhalten: Wir nehmen an es klappt und geben das aktualisierte Objekt zurück
+            const updated = request.body || {};
+            
+            // Falls status im Body ist, übernehmen wir ihn
+             response.data = {
+                id: request.path.reimbursementId || '11111111-2222-3333-4444-555555555555', // Fallback ID
+                amount: 20.00,
+                creditorId: myUserId,
+                debtorId: otherUserIds[0],
+                status: updated.status || 'CONFIRMED', 
+                timestamp: new Date().toISOString(),
+                notes: 'Updated via Mock'
+            };
+        }
+
+
         // Example: List Tasks (Manual override to ensure distribution)
         if (request.operationId === 'getTasks') {
              const tasks = [];
@@ -162,5 +247,3 @@ export default function() {
     });
 
 };
-
-// Reload trigger 12350
