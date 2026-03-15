@@ -13,7 +13,7 @@
     const countOfUpcomingTasks: number = $derived(filterTasks($tasks, TaskFilterType.PENDING, undefined).length);
 </script>
 
-<div class="dock md:hidden">
+<div class="dock static md:hidden">
     <button class:dock-active={page.url.pathname === '/app/dashboard'} onclick={ async () => await goto("/app/dashboard")}>
         <HomeIcon/>
         <span class="dock-label">{m["menu.dashboard"]()}</span>
@@ -39,7 +39,7 @@
         <span class="dock-label">{m["menu.settings"]()}</span>
     </button>
 </div>
-<div class="max-sm:hidden fixed bottom-0 w-screen flex justify-around">
+<div class="max-sm:hidden w-full flex justify-around bg-base-200">
     <ul class="menu bg-base-200 menu-horizontal rounded-box ">
         <li>
             <a class:menu-active={page.url.pathname === '/app/dashboard'} href="/app/dashboard">

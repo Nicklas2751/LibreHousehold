@@ -14,7 +14,7 @@
     }: Props = $props();
 </script>
 
-<div class="flex justify-between mt-5 ml-5 mr-5">
+<div class="flex justify-between mt-5 ml-5 mr-5 md:mt-2">
     <PageTitle margin={false} title={title}/>
     <button class="btn btn-primary" onclick={buttonOnClick}>{buttonText}</button>
 </div>

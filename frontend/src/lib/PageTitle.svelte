@@ -10,4 +10,4 @@
     }: Props = $props();
 </script>
 
-<h2 class={`text-xl font-bold ${margin ? "mt-5 ml-5" : ""}`}>{title}</h2>
+<h2 class={`text-xl font-bold ${margin ? "mt-5 md:mt-2 ml-5" : ""}`}>{title}</h2>

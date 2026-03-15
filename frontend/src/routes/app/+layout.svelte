@@ -4,10 +4,11 @@
     let {children} = $props();
 </script>
 
-<AppMenu/>
-
-<div class="md:flex md:justify-around [padding-bottom:calc(4rem+env(safe-area-inset-bottom))] overflow-y-auto overflow-x-hidden">
-    <div class="md:max-w-[1200px] md:min-w-[1200px]">
-        {@render children()}
+<div class="h-dvh flex flex-col">
+    <div class="flex-1 overflow-y-auto overflow-x-hidden md:flex md:justify-around text-base-content [padding-bottom:env(safe-area-inset-bottom)]">
+        <div class="md:max-w-[1200px] md:min-w-[1200px] w-full">
+            {@render children()}
+        </div>
     </div>
+    <AppMenu/>
 </div>
