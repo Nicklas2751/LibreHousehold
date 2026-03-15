@@ -125,6 +125,11 @@ LibreHousehold/
 
 The project is in **active development** (Work in Progress). The architecture is defined, but implementation is ongoing.
 
+== Completed Features (Archive)
+*   **T1 - Expense Editing & Deleting**: Implemented.
+*   **T2 - Schulden-Berechnung**: Implemented (Frontend + Mock Backend).
+*   **T3 - Settlement**: Implemented (Frontend + Mock Backend).
+
 == Important Notes for AI Assistants
 
 1. **Maintainability is Priority**: Code should be understandable for open-source contributions
@@ -629,7 +634,7 @@ Implement financial overview (debts, net balance) on Dashboard and payment statu
 |4 |Frontend: Create `FinancialCard.svelte` |✅ Done
 |5 |Frontend: Integrate FinancialCard into Dashboard |✅ Done
 |6 |Frontend: Add status badges to Expense List |⚠️ Disabled (waiting for API)
-|7 |Backend: Implement `DebtCalculator` |⏳ Pending (Env missing)
+|7 |Backend: Implement `DebtCalculator` |⏳ Pending (Env missing) - Mock API Implemented
 |===
 
 === Implementation Notes

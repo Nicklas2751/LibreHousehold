@@ -225,7 +225,7 @@
     </div>
 
     <div id="task-list-desktop" class="max-md:hidden card card-border bg-base-200 drop-shadow-xl mt-10">
-        <div class="border-b-1 border-b-gray-500 p-2 flex justify-between flex-column">
+        <div class="border-b border-b-gray-500 p-2 flex justify-between flex-column">
             <h2 class="card-title">{m["tasks.list_title"]()}</h2>
             <form class="filter max-md:hidden">
                 <input class="btn bg-base-300 btn-square" type="reset" onclick={() => filter = TaskFilterType.ALL}
