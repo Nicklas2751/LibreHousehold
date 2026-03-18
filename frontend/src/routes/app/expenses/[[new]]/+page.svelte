@@ -250,7 +250,7 @@
     {/if}
 
     <!-- Mobile Expense List -->
-    <div class="md:hidden px-5 pb-20">
+    <div class="md:hidden pb-10">
         {#if $householdState}
             {#await loadExpenses($householdState.id)}
                 <div class="flex justify-center items-center h-64">
@@ -262,8 +262,8 @@
                 {:else}
                     <ul class="space-y-2 mt-4">
                         {#each $expenses as expense (expense.id)}
-                            <li class="bg-base-200 rounded-lg p-3">
-                                <div class="flex justify-between items-start">
+                            <li class="bg-base-200 rounded-lg p-3 flex items-center gap-3">
+                                <div class="flex-1">
                                     <div class="flex-1">
                                         <span class="font-medium">{expense.title}</span>
                                         <p class="text-xs text-base-content/60">
@@ -300,7 +300,6 @@
     <!-- Desktop Expense List -->
     <div id="expense-list-desktop" class="max-md:hidden card card-border bg-base-200 drop-shadow-xl mt-10">
         <div class="border-b border-b-gray-500 p-2 flex justify-between flex-column">
-            <h2 class="card-title">{m["expenses.list_title"]()}</h2>
         </div>
         <div class="card-body">
             {#if $householdState}

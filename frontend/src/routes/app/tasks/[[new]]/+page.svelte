@@ -201,7 +201,7 @@
                                             <span class="loading loading-dots loading-xs"></span>
                                         {:then member}
                                             {#if member}
-                                                <span class="text-xs uppercase font-semibold opacity-60">{member.name}</span>
+                                                <span class="text-xs font-semibold opacity-60">{member.name}</span>
                                             {/if}
                                         {/await}
                                     {/if}
@@ -226,7 +226,6 @@
 
     <div id="task-list-desktop" class="max-md:hidden card card-border bg-base-200 drop-shadow-xl mt-10">
         <div class="border-b border-b-gray-500 p-2 flex justify-between flex-column">
-            <h2 class="card-title">{m["tasks.list_title"]()}</h2>
             <form class="filter max-md:hidden">
                 <input class="btn bg-base-300 btn-square" type="reset" onclick={() => filter = TaskFilterType.ALL}
                        value={m["tasks.filter.all"]()}/>
@@ -260,7 +259,7 @@
                                                     <span class="loading loading-dots loading-xs"></span>
                                                 {:then member}
                                                     {#if member}
-                                                        <span class="text-xs uppercase font-semibold opacity-60">{member.name}</span>
+                                                        <span class="text-xs font-semibold opacity-60">{member.name}</span>
                                                     {/if}
                                                 {/await}
                                             {/if}

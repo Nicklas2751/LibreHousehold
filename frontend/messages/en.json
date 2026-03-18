@@ -109,7 +109,6 @@
   "tasks": {
     "title": "Tasks",
     "create_task_button": "Create Task",
-    "list_title": "Task List",
     "no_tasks": "No tasks available. Create one to get started!",
     "filter": {
       "all": "All",
