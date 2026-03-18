@@ -108,8 +108,7 @@
   },
   "tasks": {
     "title": "Aufgaben",
-    "create_task_button": "Erstelle deine erste Aufgabe",
-    "list_title": "Aufgabenliste",
+    "create_task_button": "Aufgabe erstellen",
     "no_tasks": "Keine Aufgaben verfügbar. Erstellen eine um loszulegen!",
     "filter": {
       "all": "Alle",
