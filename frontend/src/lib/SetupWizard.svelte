@@ -200,6 +200,6 @@
                 </button>
             {/if}
         </div>
-        <button class="btn rounded-lg btn-primary w-full p-6" onclick={ async () => await goto("/app/dashboard")}>{m['setup.finish_step.close_setup_button']()}</button>
+        <button class="btn rounded-lg btn-primary w-full p-6" onclick={() => goto("/app/dashboard")}>{m['setup.finish_step.close_setup_button']()}</button>
     {/if}
 </div>
