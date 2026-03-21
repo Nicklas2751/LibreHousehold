@@ -79,182 +79,131 @@
     }
 </script>
 
-<PageTitleActionBar title={isShowNewTaskForm ? m["tasks.new.title"]() : m["tasks.title"]()}
-                    buttonText={isShowNewTaskForm ? m["tasks.new.cancel_button"]() : m["tasks.create_task_button"]()}
-                    buttonOnClick={async () => isShowNewTaskForm ? await goto("/app/tasks") : await goto("/app/tasks/new")}/>
+<div class="md:h-full md:flex md:flex-col">
+    <div class="shrink-0">
+        <PageTitleActionBar title={isShowNewTaskForm ? m["tasks.new.title"]() : m["tasks.title"]()}
+                            buttonText={isShowNewTaskForm ? m["tasks.new.cancel_button"]() : m["tasks.create_task_button"]()}
+                            buttonOnClick={async () => isShowNewTaskForm ? await goto("/app/tasks") : await goto("/app/tasks/new")}/>
+    </div>
 
-<div class="p-5">
-    {#if isShowNewTaskForm}
-        <div class="card card-border bg-base-200 drop-shadow-xl mt-10">
-            <form class="card-body grid md:grid-cols-2 md:gap-x-4" onsubmit={createTask}>
+    <div class="p-5 md:flex-1 md:min-h-0 md:flex md:flex-col md:overflow-hidden">
+        {#if isShowNewTaskForm}
+            <div class="card card-border bg-base-200 drop-shadow-xl mt-10">
+                <form class="card-body grid md:grid-cols-2 md:gap-x-4" onsubmit={createTask}>
 
-                <fieldset class="fieldset">
-                    <legend class="fieldset-legend">{m["tasks.new.task_title_label"]()} *</legend>
-                    <input name="newTaskTitle" type="text" class="input validator w-full"
-                           placeholder={m["tasks.new.task_title_placeholder"]()}
-                           minlength="3"
-                           required/>
-                    <div class="validator-hint hidden">{m['tasks.new.task_title_error']()}</div>
-                </fieldset>
-
-                <fieldset class="fieldset">
-                    <legend class="fieldset-legend">{m["tasks.new.assigned_to_label"]()}</legend>
-                    {#if $householdState}
-                        {#await loadMembers($householdState.id)}
-                            <span class="loading loading-dots"></span>
-                        {:then _}
-                            <select name="newTaskAssignedTo" class="select w-full">
-                                <option selected>{m["tasks.new.assigned_to_select_placeholder"]()}</option>
-                                {#each $members as member (member.id)}
-                                    <option value={member.id}>{member.name}</option>
-                                {/each}
-                            </select>
-                        {/await}
-                    {/if}
-                </fieldset>
-
-                <fieldset class="fieldset md:col-span-2">
-                    <legend class="fieldset-legend">{m["tasks.new.description_label"]()}</legend>
-                    <textarea name="newTaskDescription" class="textarea h-24 w-full"
-                              placeholder={m["tasks.new.description_placeholder"]()}></textarea>
-                </fieldset>
-
-                <fieldset class="fieldset">
-                    <legend class="fieldset-legend">{m["tasks.new.due_date_label"]()} *</legend>
-                    <input type="date" name="newTaskDueDate" class="input validator w-full" min={today}
-                           defaultValue={dueDate} required/>
-                    <div class="validator-hint hidden">{m['tasks.new.due_date_error']()}</div>
-                </fieldset>
-
-                <fieldset class="fieldset bg-base-100 border-base-300 rounded-box w-64 border p-4">
-                    <legend class="fieldset-legend">{m["tasks.new.recurring_label"]()}</legend>
-                    <input type="checkbox" name="newTaskIsRecurring" class="toggle" bind:checked={isNewTaskRecurring}/>
-                </fieldset>
-
-                {#if isNewTaskRecurring}
                     <fieldset class="fieldset">
-                        <legend class="fieldset-legend">{m["tasks.new.recurrence_pattern_times_label"]()} *</legend>
-                        <input type="number" name="newTaskRecurrenceTimes" class="input validator w-full" min="1"
-                               step="1" bind:value={recurrenceTimes} defaultValue={recurrenceTimes} required/>
+                        <legend class="fieldset-legend">{m["tasks.new.task_title_label"]()} *</legend>
+                        <input name="newTaskTitle" type="text" class="input validator w-full"
+                               placeholder={m["tasks.new.task_title_placeholder"]()}
+                               minlength="3"
+                               required/>
+                        <div class="validator-hint hidden">{m['tasks.new.task_title_error']()}</div>
+                    </fieldset>
+
+                    <fieldset class="fieldset">
+                        <legend class="fieldset-legend">{m["tasks.new.assigned_to_label"]()}</legend>
+                        {#if $householdState}
+                            {#await loadMembers($householdState.id)}
+                                <span class="loading loading-dots"></span>
+                            {:then _}
+                                <select name="newTaskAssignedTo" class="select w-full">
+                                    <option selected>{m["tasks.new.assigned_to_select_placeholder"]()}</option>
+                                    {#each $members as member (member.id)}
+                                        <option value={member.id}>{member.name}</option>
+                                    {/each}
+                                </select>
+                            {/await}
+                        {/if}
+                    </fieldset>
+
+                    <fieldset class="fieldset md:col-span-2">
+                        <legend class="fieldset-legend">{m["tasks.new.description_label"]()}</legend>
+                        <textarea name="newTaskDescription" class="textarea h-24 w-full"
+                                  placeholder={m["tasks.new.description_placeholder"]()}></textarea>
+                    </fieldset>
+
+                    <fieldset class="fieldset">
+                        <legend class="fieldset-legend">{m["tasks.new.due_date_label"]()} *</legend>
+                        <input type="date" name="newTaskDueDate" class="input validator w-full" min={today}
+                               value={dueDate} required/>
                         <div class="validator-hint hidden">{m['tasks.new.due_date_error']()}</div>
                     </fieldset>
 
-                    <fieldset class="fieldset">
-                        <legend class="fieldset-legend">{m["tasks.new.recurrence_pattern_label"]()} *</legend>
-                        <select name="newTaskRecurrenceUnit" class="select w-full" bind:value={recurrenceUnit} required>
-                            <option value="days">{m["tasks.new.recurrence_pattern_days"]()}</option>
-                            <option value="weeks">{m["tasks.new.recurrence_pattern_weeks"]()}</option>
-                            <option value="months">{m["tasks.new.recurrence_pattern_months"]()}</option>
-                            <option value="years">{m["tasks.new.recurrence_pattern_years"]()}</option>
-                        </select>
+                    <fieldset class="fieldset bg-base-100 border-base-300 rounded-box w-64 border p-4">
+                        <legend class="fieldset-legend">{m["tasks.new.recurring_label"]()}</legend>
+                        <input type="checkbox" name="newTaskIsRecurring" class="toggle" bind:checked={isNewTaskRecurring}/>
                     </fieldset>
 
-                    <p>{m["tasks.new.next_recurrence_date_label"]({
-                        date: new Date(dueDate).toLocaleDateString(),
-                        nextDate: nextRecurrenceDate
-                    })}</p>
-                {/if}
+                    {#if isNewTaskRecurring}
+                        <fieldset class="fieldset">
+                            <legend class="fieldset-legend">{m["tasks.new.recurrence_pattern_times_label"]()} *</legend>
+                            <input type="number" name="newTaskRecurrenceTimes" class="input validator w-full" min="1"
+                                   step="1" bind:value={recurrenceTimes} required/>
+                            <div class="validator-hint hidden">{m['tasks.new.due_date_error']()}</div>
+                        </fieldset>
 
-                <button type="submit" class="btn btn-primary">{m['tasks.new.create_button']()}</button>
+                        <fieldset class="fieldset">
+                            <legend class="fieldset-legend">{m["tasks.new.recurrence_pattern_label"]()} *</legend>
+                            <select name="newTaskRecurrenceUnit" class="select w-full" bind:value={recurrenceUnit} required>
+                                <option value="days">{m["tasks.new.recurrence_pattern_days"]()}</option>
+                                <option value="weeks">{m["tasks.new.recurrence_pattern_weeks"]()}</option>
+                                <option value="months">{m["tasks.new.recurrence_pattern_months"]()}</option>
+                                <option value="years">{m["tasks.new.recurrence_pattern_years"]()}</option>
+                            </select>
+                        </fieldset>
+
+                        <p>{m["tasks.new.next_recurrence_date_label"]({
+                            date: new Date(dueDate).toLocaleDateString(),
+                            nextDate: nextRecurrenceDate
+                        })}</p>
+                    {/if}
+
+                    <button type="submit" class="btn btn-primary">{m['tasks.new.create_button']()}</button>
+                </form>
+            </div>
+        {:else}
+            <form class="md:hidden">
+                <input class="btn btn-sm" type="radio" name="task_filter" bind:group={filter} value={TaskFilterType.ALL}
+                       aria-label={m["tasks.filter.all"]()}/>
+                <input class="btn btn-sm" type="radio" name="task_filter" bind:group={filter}
+                       value={TaskFilterType.ASSIGNED_TO_ME} aria-label={m["tasks.filter.assigned_to_me"]()}/>
+                <input class="btn btn-sm" type="radio" name="task_filter" bind:group={filter} value={TaskFilterType.PENDING}
+                       aria-label={m["tasks.filter.pending"]()}/>
+                <input class="btn btn-sm" type="radio" name="task_filter" bind:group={filter} value={TaskFilterType.COMPLETED}
+                       aria-label={m["tasks.filter.completed"]()}/>
             </form>
-        </div>
-    {:else}
-        <form class="md:hidden">
-            <input class="btn btn-sm" type="radio" name="task_filter" bind:group={filter} value={TaskFilterType.ALL}
-                   aria-label={m["tasks.filter.all"]()}/>
-            <input class="btn btn-sm" type="radio" name="task_filter" bind:group={filter}
-                   value={TaskFilterType.ASSIGNED_TO_ME} aria-label={m["tasks.filter.assigned_to_me"]()}/>
-            <input class="btn btn-sm" type="radio" name="task_filter" bind:group={filter} value={TaskFilterType.PENDING}
-                   aria-label={m["tasks.filter.pending"]()}/>
-            <input class="btn btn-sm" type="radio" name="task_filter" bind:group={filter} value={TaskFilterType.COMPLETED}
-                   aria-label={m["tasks.filter.completed"]()}/>
-        </form>
-    {/if}
+        {/if}
 
-    <!-- Mobile Task List -->
-    <MobileItemList
-            loadItems={loadTasks}
-            items={filteredTasks}
-            noItemsMessage={m["tasks.no_tasks"]()}
-    >
-    {#snippet singleItemView(task)}
-        <div class="flex justify-between items-center gap-4">
-                                        <span class="font-medium"
-                                              class:text-secondary={isTaskOverdue(task)}>
-                                            {task.title}
-                                        </span>
-            {#if task.dueDate}
+        <!-- Mobile Task List -->
+        <MobileItemList
+                loadItems={loadTasks}
+                items={filteredTasks}
+                noItemsMessage={m["tasks.no_tasks"]()}
+        >
+        {#snippet singleItemView(task)}
+            <div class="flex justify-between items-center gap-4">
+                                            <span class="font-medium"
+                                                  class:text-secondary={isTaskOverdue(task)}>
+                                                {task.title}
+                                            </span>
+                {#if task.dueDate}
                                             <span class="text-sm whitespace-nowrap"
                                                   class:text-secondary={isTaskOverdue(task)}>
                                                 {new Date(task.dueDate).toLocaleDateString('de-DE')}
                                             </span>
-            {/if}
-        </div>
-        {#if task.assignedTo}
-            {#await getMember(task.assignedTo)}
-                <span class="loading loading-dots loading-xs"></span>
-            {:then member}
-                {#if member}
-                    <span class="text-xs font-semibold opacity-60">{member.name}</span>
-                {/if}
-            {/await}
-        {/if}
-    {/snippet}
-    {#snippet singleItemActions(task)}
-        <input type="checkbox" bind:checked={
-            () => checkIsDone(task),
-            (checked) => {
-                if ($householdState) {
-                    updateTaskDoneStatus($householdState.id, task.id, checked ? new Date() : null);
-                }
-            }
-        } class="checkbox"/>
-    {/snippet}
-    </MobileItemList>
-
-    <DesktopItemList
-            loadItems={loadTasks}
-            items={filteredTasks}
-            noItemsMessage={m["tasks.no_tasks"]()}
-    >
-        {#snippet header()}
-            <form class="filter max-md:hidden">
-                <input class="btn bg-base-300 btn-square" type="reset" onclick={() => filter = TaskFilterType.ALL}
-                       value={m["tasks.filter.all"]()}/>
-                <input class="btn bg-base-300" type="radio" name="task_filter" bind:group={filter}
-                       value={TaskFilterType.ASSIGNED_TO_ME} aria-label={m["tasks.filter.assigned_to_me"]()}/>
-                <input class="btn bg-base-300" type="radio" name="task_filter" bind:group={filter}
-                       value={TaskFilterType.PENDING} aria-label={m["tasks.filter.pending"]()}/>
-                <input class="btn bg-base-300" type="radio" name="task_filter" bind:group={filter}
-                       value={TaskFilterType.COMPLETED} aria-label={m["tasks.filter.completed"]()}/>
-            </form>
-        {/snippet}
-
-        {#snippet itemContent(task)}
-            <div class="flex flex-col">
-                <span class="font-medium"
-                      class:text-secondary={isTaskOverdue(task)}>
-                    {task.title}
-                </span>
-                {#if task.assignedTo}
-                    {#await getMember(task.assignedTo)}
-                        <span class="loading loading-dots loading-xs"></span>
-                    {:then member}
-                        {#if member}
-                            <span class="text-xs font-semibold opacity-60">{member.name}</span>
-                        {/if}
-                    {/await}
                 {/if}
             </div>
-            {#if task.dueDate}
-                <span class="text-sm whitespace-nowrap"
-                      class:text-secondary={isTaskOverdue(task)}>
-                    {new Date(task.dueDate).toLocaleDateString('de-DE')}
-                </span>
+            {#if task.assignedTo}
+                {#await getMember(task.assignedTo)}
+                    <span class="loading loading-dots loading-xs"></span>
+                {:then member}
+                    {#if member}
+                        <span class="text-xs font-semibold opacity-60">{member.name}</span>
+                    {/if}
+                {/await}
             {/if}
         {/snippet}
-
-        {#snippet itemActions(task)}
+        {#snippet singleItemActions(task)}
             <input type="checkbox" bind:checked={
                 () => checkIsDone(task),
                 (checked) => {
@@ -264,5 +213,60 @@
                 }
             } class="checkbox"/>
         {/snippet}
-    </DesktopItemList>
+        </MobileItemList>
+
+        <DesktopItemList
+                loadItems={loadTasks}
+                items={filteredTasks}
+                noItemsMessage={m["tasks.no_tasks"]()}
+        >
+            {#snippet header()}
+                <form class="filter max-md:hidden">
+                    <input class="btn bg-base-300 btn-square" type="reset" onclick={() => filter = TaskFilterType.ALL}
+                           value={m["tasks.filter.all"]()}/>
+                    <input class="btn bg-base-300" type="radio" name="task_filter" bind:group={filter}
+                           value={TaskFilterType.ASSIGNED_TO_ME} aria-label={m["tasks.filter.assigned_to_me"]()}/>
+                    <input class="btn bg-base-300" type="radio" name="task_filter" bind:group={filter}
+                           value={TaskFilterType.PENDING} aria-label={m["tasks.filter.pending"]()}/>
+                    <input class="btn bg-base-300" type="radio" name="task_filter" bind:group={filter}
+                           value={TaskFilterType.COMPLETED} aria-label={m["tasks.filter.completed"]()}/>
+                </form>
+            {/snippet}
+
+            {#snippet itemContent(task)}
+                <div class="flex flex-col">
+                    <span class="font-medium"
+                          class:text-secondary={isTaskOverdue(task)}>
+                        {task.title}
+                    </span>
+                    {#if task.assignedTo}
+                        {#await getMember(task.assignedTo)}
+                            <span class="loading loading-dots loading-xs"></span>
+                        {:then member}
+                            {#if member}
+                                <span class="text-xs font-semibold opacity-60">{member.name}</span>
+                            {/if}
+                        {/await}
+                    {/if}
+                </div>
+                {#if task.dueDate}
+                    <span class="text-sm whitespace-nowrap"
+                          class:text-secondary={isTaskOverdue(task)}>
+                        {new Date(task.dueDate).toLocaleDateString('de-DE')}
+                    </span>
+                {/if}
+            {/snippet}
+
+            {#snippet itemActions(task)}
+                <input type="checkbox" bind:checked={
+                () => checkIsDone(task),
+                (checked) => {
+                    if ($householdState) {
+                        updateTaskDoneStatus($householdState.id, task.id, checked ? new Date() : null);
+                    }
+                }
+            } class="checkbox"/>
+            {/snippet}
+        </DesktopItemList>
+    </div>
 </div>
