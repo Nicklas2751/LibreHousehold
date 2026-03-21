@@ -142,187 +142,191 @@
     }
 </script>
 
-<PageTitleActionBar title={isShowForm ? (expenseToEdit ? m["expenses.edit.title"]() : m["expenses.new.title"]()) : m["expenses.title"]()}
-                    buttonText={isShowForm ? m["expenses.new.cancel_button"]() : m["expenses.create_expense_button"]()}
-                    buttonOnClick={async () => isShowForm ? await goto("/app/expenses") : await goto("/app/expenses/new")}/>
+<div class="md:h-full md:flex md:flex-col">
+    <div class="shrink-0">
+        <PageTitleActionBar title={isShowForm ? (expenseToEdit ? m["expenses.edit.title"]() : m["expenses.new.title"]()) : m["expenses.title"]()}
+                            buttonText={isShowForm ? m["expenses.new.cancel_button"]() : m["expenses.create_expense_button"]()}
+                            buttonOnClick={async () => isShowForm ? await goto("/app/expenses") : await goto("/app/expenses/new")}/>
+    </div>
 
-<div class="p-5">
-    {#if isShowForm}
-        <div class="card card-border bg-base-200 drop-shadow-xl mt-10">
-            <form class="card-body grid md:grid-cols-2 md:gap-x-4" onsubmit={saveExpense}>
+    <div class="p-5 md:flex-1 md:min-h-0 md:flex md:flex-col md:overflow-hidden">
+        {#if isShowForm}
+            <div class="card card-border bg-base-200 drop-shadow-xl mt-10">
+                <form class="card-body grid md:grid-cols-2 md:gap-x-4" onsubmit={saveExpense}>
 
-                <fieldset class="fieldset md:col-span-2">
-                    <legend class="fieldset-legend">{m["expenses.new.expense_title_label"]()} *</legend>
-                    <input name="expenseTitle" type="text" class="input validator w-full"
-                           placeholder={m["expenses.new.expense_title_placeholder"]()}
-                           minlength="3"
-                           value={expenseToEdit?.title ?? ''}
-                           required/>
-                    <div class="validator-hint hidden">{m['expenses.new.expense_title_error']()}</div>
-                </fieldset>
+                    <fieldset class="fieldset md:col-span-2">
+                        <legend class="fieldset-legend">{m["expenses.new.expense_title_label"]()} *</legend>
+                        <input name="expenseTitle" type="text" class="input validator w-full"
+                               placeholder={m["expenses.new.expense_title_placeholder"]()}
+                               minlength="3"
+                               value={expenseToEdit?.title ?? ''}
+                               required/>
+                        <div class="validator-hint hidden">{m['expenses.new.expense_title_error']()}</div>
+                    </fieldset>
 
-                <fieldset class="fieldset">
-                    <legend class="fieldset-legend">{m["expenses.new.amount_label"]()} *</legend>
-                    <label class="input input-bordered flex items-center gap-2">
-                        <input name="amount" type="number" step="0.01" min="0.01" class="grow" required
-                               value={expenseToEdit?.amount ?? ''}/>
-                        <span class="text-base-content/60">€</span>
-                    </label>
-                </fieldset>
+                    <fieldset class="fieldset">
+                        <legend class="fieldset-legend">{m["expenses.new.amount_label"]()} *</legend>
+                        <label class="input input-bordered flex items-center gap-2">
+                            <input name="amount" type="number" step="0.01" min="0.01" class="grow" required
+                                   value={expenseToEdit?.amount ?? ''}/>
+                            <span class="text-base-content/60">€</span>
+                        </label>
+                    </fieldset>
 
-                <fieldset class="fieldset">
-                    <legend class="fieldset-legend">{m["expenses.new.date_label"]()} *</legend>
-                    <input type="date" name="date" class="input w-full" max={today}
-                           value={date} required/>
-                </fieldset>
+                    <fieldset class="fieldset">
+                        <legend class="fieldset-legend">{m["expenses.new.date_label"]()} *</legend>
+                        <input type="date" name="date" class="input w-full" max={today}
+                               value={date} required/>
+                    </fieldset>
 
-                <fieldset class="fieldset">
-                    <legend class="fieldset-legend">{m["expenses.new.paid_by_label"]()} *</legend>
-                    {#if $householdState}
-                        {#await loadMembers($householdState.id)}
-                            <span class="loading loading-dots"></span>
-                        {:then _}
-                            <select name="paidBy" class="select w-full" required>
-                                <option value="" selected={!expenseToEdit?.paidBy && !$userState?.id}>{m["expenses.new.paid_by_select_placeholder"]()}</option>
-                                {#each $members as member (member.id)}
-                                    <option value={member.id}
-                                            selected={member.id === (expenseToEdit?.paidBy ?? $userState?.id)}>
-                                        {member.name}
-                                    </option>
-                                {/each}
-                            </select>
-                        {/await}
-                    {/if}
-                </fieldset>
+                    <fieldset class="fieldset">
+                        <legend class="fieldset-legend">{m["expenses.new.paid_by_label"]()} *</legend>
+                        {#if $householdState}
+                            {#await loadMembers($householdState.id)}
+                                <span class="loading loading-dots"></span>
+                            {:then _}
+                                <select name="paidBy" class="select w-full" required>
+                                    <option value="" selected={!expenseToEdit?.paidBy && !$userState?.id}>{m["expenses.new.paid_by_select_placeholder"]()}</option>
+                                    {#each $members as member (member.id)}
+                                        <option value={member.id}
+                                                selected={member.id === (expenseToEdit?.paidBy ?? $userState?.id)}>
+                                            {member.name}
+                                        </option>
+                                    {/each}
+                                </select>
+                            {/await}
+                        {/if}
+                    </fieldset>
 
-                <fieldset class="fieldset">
-                    <legend class="fieldset-legend">{m["expenses.new.category_label"]()} *</legend>
-                    {#if $householdState}
-                        {#await loadCategories($householdState.id)}
-                            <span class="loading loading-dots"></span>
-                        {:then _}
-                            <select name="categoryId" class="select w-full" required>
-                                <option value="" selected={!expenseToEdit?.categoryId}>{m["expenses.new.category_select_placeholder"]()}</option>
-                                {#each $categories as category (category.id)}
-                                    <option value={category.id} selected={category.id === expenseToEdit?.categoryId}>
-                                        {#if category.icon}{category.icon} {/if}{category.name}
-                                    </option>
-                                {/each}
-                            </select>
-                            {#if $categories.length === 0}
-                                <div class="text-xs text-base-content/60 mt-1">
-                                    {m["expenses.new.no_categories_hint"]()}
+                    <fieldset class="fieldset">
+                        <legend class="fieldset-legend">{m["expenses.new.category_label"]()} *</legend>
+                        {#if $householdState}
+                            {#await loadCategories($householdState.id)}
+                                <span class="loading loading-dots"></span>
+                            {:then _}
+                                <select name="categoryId" class="select w-full" required>
+                                    <option value="" selected={!expenseToEdit?.categoryId}>{m["expenses.new.category_select_placeholder"]()}</option>
+                                    {#each $categories as category (category.id)}
+                                        <option value={category.id} selected={category.id === expenseToEdit?.categoryId}>
+                                            {#if category.icon}{category.icon} {/if}{category.name}
+                                        </option>
+                                    {/each}
+                                </select>
+                                {#if $categories.length === 0}
+                                    <div class="text-xs text-base-content/60 mt-1">
+                                        {m["expenses.new.no_categories_hint"]()}
+                                    </div>
+                                {/if}
+                            {/await}
+                        {/if}
+                    </fieldset>
+
+                    <fieldset class="fieldset md:col-span-2">
+                        <legend class="fieldset-legend">{m["expenses.new.split_between_label"]()}</legend>
+                        <p class="text-xs text-base-content/60 mb-2">{m["expenses.new.split_between_hint"]()}</p>
+                        {#if $householdState}
+                            {#await loadMembers($householdState.id)}
+                                <span class="loading loading-dots"></span>
+                            {:then _}
+                                <div class="flex flex-wrap gap-3">
+                                    {#each $members as member (member.id)}
+                                        <label class="cursor-pointer label gap-2">
+                                            <input type="checkbox" name="splitBetween" value={member.id} class="checkbox checkbox-sm"
+                                                   checked={expenseToEdit?.splitBetween ? expenseToEdit.splitBetween.includes(member.id) : false}/>
+                                            <span class="label-text">{member.name}</span>
+                                        </label>
+                                    {/each}
                                 </div>
+                            {/await}
+                        {/if}
+                    </fieldset>
+
+                    <fieldset class="fieldset md:col-span-2">
+                        <legend class="fieldset-legend">{m["expenses.new.notes_label"]()}</legend>
+                        <textarea name="notes" class="textarea h-24 w-full"
+                                  placeholder={m["expenses.new.notes_placeholder"]()}>{expenseToEdit?.notes ?? ''}</textarea>
+                    </fieldset>
+
+                    <button type="submit" class="btn btn-primary">
+                        {expenseToEdit ? m['expenses.edit.save_button']() : m['expenses.new.create_button']()}
+                    </button>
+                </form>
+            </div>
+        {/if}
+
+        <!-- Mobile Expense List -->
+        <MobileItemList
+                loadItems={loadExpenses}
+                items={$expenses}
+                noItemsMessage={m["tasks.no_tasks"]()}
+        >
+            {#snippet singleItemView(expense)}
+                <div class="flex-1">
+                    <span class="font-medium">{expense.title}</span>
+                    <p class="text-xs text-base-content/60">
+                        {#await getMember(expense.paidBy)}
+                            <span class="loading loading-dots loading-xs"></span>
+                        {:then member}
+                            {#if member}
+                                {member.name}
                             {/if}
                         {/await}
-                    {/if}
-                </fieldset>
+                        • {new Date(expense.date).toLocaleDateString('de-DE')}
+                    </p>
+                </div>
+                <span class="font-bold">{expense.amount.toFixed(2)}€</span>
+            {/snippet}
+            {#snippet singleItemActions(expense)}
+                {#if canEditExpense(expense)}
+                    <div class="flex gap-2 mt-2">
+                        <button class="btn btn-xs btn-ghost" onclick={() => handleEditClick(expense.id)} aria-label={m["expenses.edit.title"]()}>
+                            <EditIcon/>
+                        </button>
+                        <button class="btn btn-xs btn-error" onclick={() => handleDeleteExpense(expense.id)} aria-label={m["expenses.delete_button"]()}>
+                            <BinIcon/>
+                        </button>
+                    </div>
+                {/if}
+            {/snippet}
+        </MobileItemList>
 
-                <fieldset class="fieldset md:col-span-2">
-                    <legend class="fieldset-legend">{m["expenses.new.split_between_label"]()}</legend>
-                    <p class="text-xs text-base-content/60 mb-2">{m["expenses.new.split_between_hint"]()}</p>
-                    {#if $householdState}
-                        {#await loadMembers($householdState.id)}
-                            <span class="loading loading-dots"></span>
-                        {:then _}
-                            <div class="flex flex-wrap gap-3">
-                                {#each $members as member (member.id)}
-                                    <label class="cursor-pointer label gap-2">
-                                        <input type="checkbox" name="splitBetween" value={member.id} class="checkbox checkbox-sm"
-                                               checked={expenseToEdit?.splitBetween ? expenseToEdit.splitBetween.includes(member.id) : false}/>
-                                        <span class="label-text">{member.name}</span>
-                                    </label>
-                                {/each}
-                            </div>
-                        {/await}
-                    {/if}
-                </fieldset>
-
-                <fieldset class="fieldset md:col-span-2">
-                    <legend class="fieldset-legend">{m["expenses.new.notes_label"]()}</legend>
-                    <textarea name="notes" class="textarea h-24 w-full"
-                              placeholder={m["expenses.new.notes_placeholder"]()}>{expenseToEdit?.notes ?? ''}</textarea>
-                </fieldset>
-
-                <button type="submit" class="btn btn-primary">
-                    {expenseToEdit ? m['expenses.edit.save_button']() : m['expenses.new.create_button']()}
-                </button>
-            </form>
-        </div>
-    {/if}
-
-    <!-- Mobile Expense List -->
-    <MobileItemList
-            loadItems={loadExpenses}
-            items={$expenses}
-            noItemsMessage={m["tasks.no_tasks"]()}
-    >
-        {#snippet singleItemView(expense)}
-            <div class="flex-1">
-                <span class="font-medium">{expense.title}</span>
-                <p class="text-xs text-base-content/60">
+        <!-- Desktop Expense List -->
+        <DesktopItemList
+                loadItems={loadExpenses}
+                items={$expenses}
+                noItemsMessage={m["expenses.no_expenses"]()}
+        >
+            {#snippet itemContent(expense)}
+                <div class="flex flex-col">
+                    <span class="font-medium">{expense.title}</span>
                     {#await getMember(expense.paidBy)}
                         <span class="loading loading-dots loading-xs"></span>
                     {:then member}
                         {#if member}
-                            {member.name}
+                            <span class="text-xs font-semibold opacity-60 flex items-center gap-1">
+                                    {member.name}
+                            </span>
                         {/if}
                     {/await}
-                    • {new Date(expense.date).toLocaleDateString('de-DE')}
-                </p>
-            </div>
-            <span class="font-bold">{expense.amount.toFixed(2)}€</span>
-        {/snippet}
-        {#snippet singleItemActions(expense)}
-            {#if canEditExpense(expense)}
-                <div class="flex gap-2 mt-2">
-                    <button class="btn btn-xs btn-ghost" onclick={() => handleEditClick(expense.id)} aria-label={m["expenses.edit.title"]()}>
-                        <EditIcon/>
-                    </button>
-                    <button class="btn btn-xs btn-error" onclick={() => handleDeleteExpense(expense.id)} aria-label={m["expenses.delete_button"]()}>
-                        <BinIcon/>
-                    </button>
+                    <span class="text-xs text-base-content/60">
+                        {new Date(expense.date).toLocaleDateString('de-DE')}
+                    </span>
                 </div>
-            {/if}
-        {/snippet}
-    </MobileItemList>
-
-    <!-- Desktop Expense List -->
-    <DesktopItemList
-            loadItems={loadExpenses}
-            items={$expenses}
-            noItemsMessage={m["expenses.no_expenses"]()}
-    >
-        {#snippet itemContent(expense)}
-            <div class="flex flex-col">
-                <span class="font-medium">{expense.title}</span>
-                {#await getMember(expense.paidBy)}
-                    <span class="loading loading-dots loading-xs"></span>
-                {:then member}
-                    {#if member}
-                        <span class="text-xs font-semibold opacity-60 flex items-center gap-1">
-                                {member.name}
-                        </span>
-                    {/if}
-                {/await}
-                <span class="text-xs text-base-content/60">
-                    {new Date(expense.date).toLocaleDateString('de-DE')}
-                </span>
-            </div>
-            <span class="font-bold text-lg">{expense.amount.toFixed(2)}€</span>
-        {/snippet}
-        {#snippet itemActions(expense)}
-            {#if canEditExpense(expense)}
-                <div class="flex items-center gap-2">
-                    <button class="btn btn-sm btn-ghost" onclick={() => handleEditClick(expense.id)} aria-label={m["expenses.edit.title"]()}>
-                        <EditIcon/>
-                    </button>
-                    <button class="btn btn-sm btn-ghost text-error" onclick={() => handleDeleteExpense(expense.id)} aria-label={m["expenses.delete_button"]()}>
-                        <BinIcon/>
-                    </button>
-                </div>
-            {/if}
-        {/snippet}
-    </DesktopItemList>
+                <span class="font-bold text-lg">{expense.amount.toFixed(2)}€</span>
+            {/snippet}
+            {#snippet itemActions(expense)}
+                {#if canEditExpense(expense)}
+                    <div class="flex items-center gap-2">
+                        <button class="btn btn-sm btn-ghost" onclick={() => handleEditClick(expense.id)} aria-label={m["expenses.edit.title"]()}>
+                            <EditIcon/>
+                        </button>
+                        <button class="btn btn-sm btn-ghost text-error" onclick={() => handleDeleteExpense(expense.id)} aria-label={m["expenses.delete_button"]()}>
+                            <BinIcon/>
+                        </button>
+                    </div>
+                {/if}
+            {/snippet}
+        </DesktopItemList>
+    </div>
 </div>
 

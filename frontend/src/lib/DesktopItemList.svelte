@@ -21,13 +21,14 @@
     }: Props = $props();
 </script>
 
-<div class="max-md:hidden card card-border bg-base-200 drop-shadow-xl mt-10">
-    <div class="border-b border-b-gray-500 p-2 flex justify-between flex-column min-h-[53px]">
-        {#if header}
+<div class="max-md:hidden card card-border bg-base-200 drop-shadow-xl mt-2 h-full flex flex-col overflow-hidden">
+    {#if header}
+        <div class="border-b border-b-gray-500 p-2 flex justify-between flex-column min-h-[53px]">
             {@render header()}
-        {/if}
-    </div>
-    <div class="card-body">
+        </div>
+    {/if}
+
+    <div class="card-body overflow-y-auto min-h-0">
         {#if $householdState}
             {#await loadItems($householdState.id)}
                 <div class="flex justify-center items-center h-64">
@@ -52,4 +53,3 @@
         {/if}
     </div>
 </div>
-
