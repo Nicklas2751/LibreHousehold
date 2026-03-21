@@ -20,6 +20,8 @@
     import {EditIcon} from "@indaco/svelte-iconoir/edit";
     import {BinIcon} from "@indaco/svelte-iconoir/bin";
     import {isExpenseMutable} from "$lib/expenseLogic";
+    import MobileItemList from "$lib/MobileItemList.svelte";
+    import DesktopItemList from "$lib/DesktopItemList.svelte";
 
     const today = new Date().toISOString().split('T')[0];
     let date: string = $state(today);
@@ -250,106 +252,77 @@
     {/if}
 
     <!-- Mobile Expense List -->
-    <div class="md:hidden pb-10">
-        {#if $householdState}
-            {#await loadExpenses($householdState.id)}
-                <div class="flex justify-center items-center h-64">
-                    <span class="loading loading-dots"></span>
+    <MobileItemList
+            loadItems={loadExpenses}
+            items={$expenses}
+            noItemsMessage={m["tasks.no_tasks"]()}
+    >
+        {#snippet singleItemView(expense)}
+            <div class="flex-1">
+                <span class="font-medium">{expense.title}</span>
+                <p class="text-xs text-base-content/60">
+                    {#await getMember(expense.paidBy)}
+                        <span class="loading loading-dots loading-xs"></span>
+                    {:then member}
+                        {#if member}
+                            {member.name}
+                        {/if}
+                    {/await}
+                    • {new Date(expense.date).toLocaleDateString('de-DE')}
+                </p>
+            </div>
+            <span class="font-bold">{expense.amount.toFixed(2)}€</span>
+        {/snippet}
+        {#snippet singleItemActions(expense)}
+            {#if canEditExpense(expense)}
+                <div class="flex gap-2 mt-2">
+                    <button class="btn btn-xs btn-ghost" onclick={() => handleEditClick(expense.id)} aria-label={m["expenses.edit.title"]()}>
+                        <EditIcon/>
+                    </button>
+                    <button class="btn btn-xs btn-error" onclick={() => handleDeleteExpense(expense.id)} aria-label={m["expenses.delete_button"]()}>
+                        <BinIcon/>
+                    </button>
                 </div>
-            {:then _}
-                {#if $expenses.length === 0}
-                    <p class="text-base-content/50 text-center mt-10">{m["expenses.no_expenses"]()}</p>
-                {:else}
-                    <ul class="space-y-2 mt-4">
-                        {#each $expenses as expense (expense.id)}
-                            <li class="bg-base-200 rounded-lg p-3 flex items-center gap-3">
-                                <div class="flex-1">
-                                    <div class="flex-1">
-                                        <span class="font-medium">{expense.title}</span>
-                                        <p class="text-xs text-base-content/60">
-                                            {#await getMember(expense.paidBy)}
-                                                <span class="loading loading-dots loading-xs"></span>
-                                            {:then member}
-                                                {#if member}
-                                                    {member.name}
-                                                {/if}
-                                            {/await}
-                                            • {new Date(expense.date).toLocaleDateString('de-DE')}
-                                        </p>
-                                    </div>
-                                    <span class="font-bold">{expense.amount.toFixed(2)}€</span>
-                                </div>
-                                {#if canEditExpense(expense)}
-                                    <div class="flex gap-2 mt-2">
-                                        <button class="btn btn-xs btn-ghost" onclick={() => handleEditClick(expense.id)} aria-label={m["expenses.edit.title"]()}>
-                                            <EditIcon/>
-                                        </button>
-                                        <button class="btn btn-xs btn-error" onclick={() => handleDeleteExpense(expense.id)} aria-label={m["expenses.delete_button"]()}>
-                                            <BinIcon/>
-                                        </button>
-                                    </div>
-                                {/if}
-                            </li>
-                        {/each}
-                    </ul>
-                {/if}
-            {/await}
-        {/if}
-    </div>
+            {/if}
+        {/snippet}
+    </MobileItemList>
 
     <!-- Desktop Expense List -->
-    <div id="expense-list-desktop" class="max-md:hidden card card-border bg-base-200 drop-shadow-xl mt-10">
-        <div class="border-b border-b-gray-500 p-2 flex justify-between flex-column">
-        </div>
-        <div class="card-body">
-            {#if $householdState}
-                {#await loadExpenses($householdState.id)}
-                    <span class="loading loading-dots"></span>
-                {:then _}
-                    {#if $expenses.length === 0}
-                        <p class="text-base-content/50 text-center">{m["expenses.no_expenses"]()}</p>
-                    {:else}
-                        <ul class="list bg-base-100 rounded-box shadow-md">
-                            {#each $expenses as expense (expense.id)}
-                                <li class="list-row items-center">
-                                    <div class="list-col-grow flex justify-between items-center gap-4">
-                                        <div class="flex flex-col">
-                                            <span class="font-medium">{expense.title}</span>
-                                            {#await getMember(expense.paidBy)}
-                                                <span class="loading loading-dots loading-xs"></span>
-                                            {:then member}
-                                                {#if member}
-                                            <span class="text-xs font-semibold opacity-60 flex items-center gap-1">
-                                                {member.name}
-                                            </span>
-                                        {/if}
-                                            {/await}
-                                            <span class="text-xs text-base-content/60">
-                                                {new Date(expense.date).toLocaleDateString('de-DE')}
-                                            </span>
-                                        </div>
-                                        <div class="flex items-center gap-3">
-                                            <span class="font-bold text-lg">{expense.amount.toFixed(2)}€</span>
-                                            {#if canEditExpense(expense)}
-                                                <button class="btn btn-sm btn-ghost" onclick={() => handleEditClick(expense.id)} aria-label={m["expenses.edit.title"]()}>
-                                                    <EditIcon/>
-                                                </button>
-                                                <button class="btn btn-sm btn-ghost text-error" onclick={() => handleDeleteExpense(expense.id)} aria-label={m["expenses.delete_button"]()}>
-                                                    <BinIcon/>
-                                                </button>
-                                            {/if}
-                                        </div>
-                                    </div>
-                                </li>
-                            {/each}
-                        </ul>
+    <DesktopItemList
+            loadItems={loadExpenses}
+            items={$expenses}
+            noItemsMessage={m["expenses.no_expenses"]()}
+    >
+        {#snippet itemContent(expense)}
+            <div class="flex flex-col">
+                <span class="font-medium">{expense.title}</span>
+                {#await getMember(expense.paidBy)}
+                    <span class="loading loading-dots loading-xs"></span>
+                {:then member}
+                    {#if member}
+                        <span class="text-xs font-semibold opacity-60 flex items-center gap-1">
+                                {member.name}
+                        </span>
                     {/if}
                 {/await}
+                <span class="text-xs text-base-content/60">
+                    {new Date(expense.date).toLocaleDateString('de-DE')}
+                </span>
+            </div>
+            <span class="font-bold text-lg">{expense.amount.toFixed(2)}€</span>
+        {/snippet}
+        {#snippet itemActions(expense)}
+            {#if canEditExpense(expense)}
+                <div class="flex items-center gap-2">
+                    <button class="btn btn-sm btn-ghost" onclick={() => handleEditClick(expense.id)} aria-label={m["expenses.edit.title"]()}>
+                        <EditIcon/>
+                    </button>
+                    <button class="btn btn-sm btn-ghost text-error" onclick={() => handleDeleteExpense(expense.id)} aria-label={m["expenses.delete_button"]()}>
+                        <BinIcon/>
+                    </button>
+                </div>
             {/if}
-        </div>
-    </div>
+        {/snippet}
+    </DesktopItemList>
 </div>
-
-
-
 

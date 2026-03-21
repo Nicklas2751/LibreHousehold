@@ -11,6 +11,8 @@
     import {filterTasks, TaskFilterType} from "$lib/taskFilter";
     import {userState} from "$lib/stores/userState";
     import type {Member, Task} from "../../../../generated-sources/openapi";
+    import MobileItemList from "$lib/MobileItemList.svelte";
+    import DesktopItemList from "$lib/DesktopItemList.svelte";
 
     const today = new Date().toISOString().split('T')[0];
     let dueDate: string = $state(today);
@@ -170,62 +172,52 @@
     {/if}
 
     <!-- Mobile Task List -->
-    <div class="md:hidden pb-10">
-        {#if $householdState}
-            {#await loadTasks($householdState.id)}
-                <div class="flex justify-center items-center h-64">
-                    <span class="loading loading-dots"></span>
-                </div>
-            {:then _}
-                {#if filteredTasks.length === 0}
-                    <p class="text-base-content/50 text-center mt-10">{m["tasks.no_tasks"]()}</p>
-                {:else}
-                    <ul class="space-y-2 mt-4">
-                        {#each filteredTasks as task (task.id)}
-                            <li class="bg-base-200 rounded-lg p-3 flex items-center gap-3">
-                                <div class="flex-1">
-                                    <div class="flex justify-between items-center gap-4">
+    <MobileItemList
+            loadItems={loadTasks}
+            items={filteredTasks}
+            noItemsMessage={m["tasks.no_tasks"]()}
+    >
+    {#snippet singleItemView(task)}
+        <div class="flex justify-between items-center gap-4">
                                         <span class="font-medium"
                                               class:text-secondary={isTaskOverdue(task)}>
                                             {task.title}
                                         </span>
-                                        {#if task.dueDate}
+            {#if task.dueDate}
                                             <span class="text-sm whitespace-nowrap"
                                                   class:text-secondary={isTaskOverdue(task)}>
                                                 {new Date(task.dueDate).toLocaleDateString('de-DE')}
                                             </span>
-                                        {/if}
-                                    </div>
-                                    {#if task.assignedTo}
-                                        {#await getMember(task.assignedTo)}
-                                            <span class="loading loading-dots loading-xs"></span>
-                                        {:then member}
-                                            {#if member}
-                                                <span class="text-xs font-semibold opacity-60">{member.name}</span>
-                                            {/if}
-                                        {/await}
-                                    {/if}
-                                </div>
-                                <input type="checkbox"
-                                       bind:checked={
-                                           () => checkIsDone(task),
-                                           (checked) => {
-                                               if ($householdState) {
-                                                   updateTaskDoneStatus($householdState.id, task.id, checked ? new Date() : null);
-                                               }
-                                           }
-                                       }
-                                       class="checkbox"/>
-                            </li>
-                        {/each}
-                    </ul>
+            {/if}
+        </div>
+        {#if task.assignedTo}
+            {#await getMember(task.assignedTo)}
+                <span class="loading loading-dots loading-xs"></span>
+            {:then member}
+                {#if member}
+                    <span class="text-xs font-semibold opacity-60">{member.name}</span>
                 {/if}
             {/await}
         {/if}
-    </div>
+    {/snippet}
+    {#snippet singleItemActions(task)}
+        <input type="checkbox" bind:checked={
+            () => checkIsDone(task),
+            (checked) => {
+                if ($householdState) {
+                    updateTaskDoneStatus($householdState.id, task.id, checked ? new Date() : null);
+                }
+            }
+        } class="checkbox"/>
+    {/snippet}
+    </MobileItemList>
 
-    <div id="task-list-desktop" class="max-md:hidden card card-border bg-base-200 drop-shadow-xl mt-10">
-        <div class="border-b border-b-gray-500 p-2 flex justify-between flex-column">
+    <DesktopItemList
+            loadItems={loadTasks}
+            items={filteredTasks}
+            noItemsMessage={m["tasks.no_tasks"]()}
+    >
+        {#snippet header()}
             <form class="filter max-md:hidden">
                 <input class="btn bg-base-300 btn-square" type="reset" onclick={() => filter = TaskFilterType.ALL}
                        value={m["tasks.filter.all"]()}/>
@@ -236,55 +228,41 @@
                 <input class="btn bg-base-300" type="radio" name="task_filter" bind:group={filter}
                        value={TaskFilterType.COMPLETED} aria-label={m["tasks.filter.completed"]()}/>
             </form>
-        </div>
-        <div class="card-body">
-            {#if $householdState}
-                {#await loadTasks($householdState.id)}
-                    <span class="loading loading-dots"></span>
-                {:then _}
-                    {#if filteredTasks.length === 0}
-                        <p class="text-base-content/50 text-center">{m["tasks.no_tasks"]()}</p>
-                    {:else}
-                        <ul class="list bg-base-100 rounded-box shadow-md">
-                            {#each filteredTasks as task (task.id)}
-                                <li class="list-row items-center">
-                                    <div class="list-col-grow flex justify-between items-center gap-4">
-                                        <div class="flex flex-col">
-                                            <span class="font-medium"
-                                                  class:text-secondary={isTaskOverdue(task)}>
-                                                {task.title}
-                                            </span>
-                                            {#if task.assignedTo}
-                                                {#await getMember(task.assignedTo)}
-                                                    <span class="loading loading-dots loading-xs"></span>
-                                                {:then member}
-                                                    {#if member}
-                                                        <span class="text-xs font-semibold opacity-60">{member.name}</span>
-                                                    {/if}
-                                                {/await}
-                                            {/if}
-                                        </div>
-                                        {#if task.dueDate}
-                                            <span class="text-sm whitespace-nowrap"
-                                                  class:text-secondary={isTaskOverdue(task)}>
-                                                {new Date(task.dueDate).toLocaleDateString('de-DE')}
-                                            </span>
-                                        {/if}
-                                    </div>
-                                    <input type="checkbox" bind:checked={
-                                        () => checkIsDone(task),
-                                        (checked) => {
-                                            if ($householdState) {
-                                                updateTaskDoneStatus($householdState.id, task.id, checked ? new Date() : null);
-                                            }
-                                        }
-                                    } class="checkbox"/>
-                                </li>
-                            {/each}
-                        </ul>
-                    {/if}
-                {/await}
+        {/snippet}
+
+        {#snippet itemContent(task)}
+            <div class="flex flex-col">
+                <span class="font-medium"
+                      class:text-secondary={isTaskOverdue(task)}>
+                    {task.title}
+                </span>
+                {#if task.assignedTo}
+                    {#await getMember(task.assignedTo)}
+                        <span class="loading loading-dots loading-xs"></span>
+                    {:then member}
+                        {#if member}
+                            <span class="text-xs font-semibold opacity-60">{member.name}</span>
+                        {/if}
+                    {/await}
+                {/if}
+            </div>
+            {#if task.dueDate}
+                <span class="text-sm whitespace-nowrap"
+                      class:text-secondary={isTaskOverdue(task)}>
+                    {new Date(task.dueDate).toLocaleDateString('de-DE')}
+                </span>
             {/if}
-        </div>
-    </div>
+        {/snippet}
+
+        {#snippet itemActions(task)}
+            <input type="checkbox" bind:checked={
+                () => checkIsDone(task),
+                (checked) => {
+                    if ($householdState) {
+                        updateTaskDoneStatus($householdState.id, task.id, checked ? new Date() : null);
+                    }
+                }
+            } class="checkbox"/>
+        {/snippet}
+    </DesktopItemList>
 </div>
