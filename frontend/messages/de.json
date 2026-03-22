@@ -210,5 +210,120 @@
     "no_details": "Keine Detail-Ausgaben gefunden.",
     "confirm_payment_button": "Als bezahlt markieren",
     "disclaimer": "Diese Aktion führt keine echte Zahlung durch. Bitte stelle sicher, dass du den Betrag per Überweisung oder Bar gezahlt hast."
+  },
+  "settings": {
+    "back": "Zurück zu Einstellungen",
+    "appearance": {
+      "title": "Erscheinungsbild",
+      "dark_mode_label": "Dunkelmodus"
+    },
+    "language": {
+      "title": "Sprache",
+      "select_label": "Sprache auswählen"
+    },
+    "user": {
+      "title": "Nutzerprofil",
+      "description": "Name, E-Mail und Passwort ändern",
+      "profile": {
+        "title": "Profil",
+        "name_label": "Anzeigename",
+        "email_label": "E-Mail-Adresse",
+        "save_button": "Speichern",
+        "save_success": "Profil gespeichert.",
+        "save_error": "Fehler beim Speichern des Profils."
+      },
+      "password": {
+        "title": "Passwort ändern",
+        "old_label": "Aktuelles Passwort",
+        "new_label": "Neues Passwort",
+        "confirm_label": "Neues Passwort bestätigen",
+        "mismatch": "Die Passwörter stimmen nicht überein.",
+        "save_button": "Passwort ändern",
+        "save_success": "Passwort erfolgreich geändert.",
+        "wrong_password": "Das aktuelle Passwort ist falsch.",
+        "save_error": "Fehler beim Ändern des Passworts."
+      },
+      "danger": {
+        "title": "Gefahrenzone",
+        "description": "Das Löschen deines Accounts kann nicht rückgängig gemacht werden.",
+        "delete_button": "Account löschen",
+        "delete_error": "Fehler beim Löschen des Accounts."
+      },
+      "delete_modal": {
+        "title": "Account wirklich löschen?",
+        "owner_notice": "Du bist der Eigentümer dieses Haushalts. Bitte wähle, was mit dem Haushalt passieren soll:",
+        "transfer_label": "Eigentümerschaft übertragen an:",
+        "transfer_select_label": "Mitglied auswählen",
+        "transfer_placeholder": "Mitglied auswählen...",
+        "delete_household_label": "Haushalt ebenfalls löschen",
+        "delete_household_hint": "Alle Daten des Haushalts werden unwiderruflich gelöscht.",
+        "confirm_text": "Dein Account wird unwiderruflich gelöscht. Bist du sicher?",
+        "cancel": "Abbrechen",
+        "confirm": "Account löschen"
+      }
+    },
+    "household": {
+      "title": "Haushalt",
+      "description": "Mitglieder, Einladungslink und Name verwalten",
+      "invite": {
+        "title": "Einladungslink",
+        "description": "Teile diesen Link, um neue Mitglieder einzuladen.",
+        "share_text": "Tritt meinem LibreHousehold-Haushalt bei!",
+        "copy_button": "Link kopieren",
+        "share_button": "Link teilen",
+        "regenerate_button": "Neuen Link erzeugen",
+        "copied_toast": "Link kopiert!",
+        "regenerated_toast": "Neuer Einladungslink erstellt.",
+        "shared_toast": "Link geteilt!",
+        "regenerate_error": "Fehler beim Erzeugen des Einladungslinks."
+      },
+      "name": {
+        "title": "Haushaltsname",
+        "label": "Name",
+        "save_button": "Speichern",
+        "save_success": "Haushaltsname gespeichert.",
+        "save_error": "Fehler beim Speichern des Haushaltsnamens."
+      },
+      "members": {
+        "title": "Mitglieder",
+        "remove_aria": "Mitglied entfernen",
+        "remove_error": "Fehler beim Entfernen des Mitglieds.",
+        "remove_modal": {
+          "title": "Mitglied entfernen?",
+          "text": "{name} wird aus dem Haushalt entfernt.",
+          "cancel": "Abbrechen",
+          "confirm": "Entfernen"
+        }
+      },
+      "transfer": {
+        "title": "Eigentümerschaft übertragen",
+        "description": "Übertrage die Eigentümerschaft an ein anderes Mitglied. Du verlierst danach diese Berechtigung.",
+        "select_label": "Neuen Eigentümer auswählen",
+        "placeholder": "Mitglied auswählen...",
+        "button": "Übertragen",
+        "success": "Eigentümerschaft übertragen.",
+        "error": "Fehler beim Übertragen der Eigentümerschaft.",
+        "modal": {
+          "title": "Eigentümerschaft übertragen?",
+          "text": "{name} wird neuer Eigentümer des Haushalts.",
+          "hint": "Du verlierst damit deine Administratorrechte.",
+          "cancel": "Abbrechen",
+          "confirm": "Jetzt übertragen"
+        }
+      },
+      "danger": {
+        "title": "Gefahrenzone",
+        "description": "Das Löschen des Haushalts ist unwiderruflich. Alle Daten gehen verloren.",
+        "delete_button": "Haushalt löschen",
+        "delete_error": "Fehler beim Löschen des Haushalts.",
+        "modal": {
+          "title": "Haushalt wirklich löschen?",
+          "text": "Alle Daten – Aufgaben, Ausgaben, Mitglieder – werden permanent gelöscht.",
+          "confirm_label": "Gib den Haushaltnamen zur Bestätigung ein: {name}",
+          "cancel": "Abbrechen",
+          "confirm": "Haushalt löschen"
+        }
+      }
+    }
   }
 }

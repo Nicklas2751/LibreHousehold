@@ -210,6 +210,120 @@
     "no_details": "No detailed expenses found.",
     "confirm_payment_button": "Mark as Paid",
     "disclaimer": "This action does not transfer actual money. Please ensure you have transferred the amount via bank transfer or cash."
+  },
+  "settings": {
+    "back": "Back to Settings",
+    "appearance": {
+      "title": "Appearance",
+      "dark_mode_label": "Dark mode"
+    },
+    "language": {
+      "title": "Language",
+      "select_label": "Select language"
+    },
+    "user": {
+      "title": "User Profile",
+      "description": "Change name, email and password",
+      "profile": {
+        "title": "Profile",
+        "name_label": "Display name",
+        "email_label": "Email address",
+        "save_button": "Save",
+        "save_success": "Profile saved.",
+        "save_error": "Failed to save profile."
+      },
+      "password": {
+        "title": "Change Password",
+        "old_label": "Current password",
+        "new_label": "New password",
+        "confirm_label": "Confirm new password",
+        "mismatch": "Passwords do not match.",
+        "save_button": "Change password",
+        "save_success": "Password changed successfully.",
+        "wrong_password": "The current password is incorrect.",
+        "save_error": "Failed to change password."
+      },
+      "danger": {
+        "title": "Danger Zone",
+        "description": "Deleting your account cannot be undone.",
+        "delete_button": "Delete account",
+        "delete_error": "Failed to delete account."
+      },
+      "delete_modal": {
+        "title": "Really delete account?",
+        "owner_notice": "You are the owner of this household. Please choose what should happen to the household:",
+        "transfer_label": "Transfer ownership to:",
+        "transfer_select_label": "Select member",
+        "transfer_placeholder": "Select member...",
+        "delete_household_label": "Also delete the household",
+        "delete_household_hint": "All household data will be permanently deleted.",
+        "confirm_text": "Your account will be permanently deleted. Are you sure?",
+        "cancel": "Cancel",
+        "confirm": "Delete account"
+      }
+    },
+    "household": {
+      "title": "Household",
+      "description": "Manage members, invite link and name",
+      "invite": {
+        "title": "Invite Link",
+        "description": "Share this link to invite new members.",
+        "share_text": "Join my LibreHousehold!",
+        "copy_button": "Copy link",
+        "share_button": "Share link",
+        "regenerate_button": "Generate new link",
+        "copied_toast": "Link copied!",
+        "regenerated_toast": "New invite link created.",
+        "shared_toast": "Link shared!",
+        "regenerate_error": "Failed to generate invite link."
+      },
+      "name": {
+        "title": "Household Name",
+        "label": "Name",
+        "save_button": "Save",
+        "save_success": "Household name saved.",
+        "save_error": "Failed to save household name."
+      },
+      "members": {
+        "title": "Members",
+        "remove_aria": "Remove member",
+        "remove_error": "Failed to remove member.",
+        "remove_modal": {
+          "title": "Remove member?",
+          "text": "{name} will be removed from the household.",
+          "cancel": "Cancel",
+          "confirm": "Remove"
+        }
+      },
+      "transfer": {
+        "title": "Transfer Ownership",
+        "description": "Transfer ownership to another member. You will lose admin rights afterwards.",
+        "select_label": "Select new owner",
+        "placeholder": "Select member...",
+        "button": "Transfer",
+        "success": "Ownership transferred.",
+        "error": "Failed to transfer ownership.",
+        "modal": {
+          "title": "Transfer ownership?",
+          "text": "{name} will become the new household owner.",
+          "hint": "You will lose your admin rights after this.",
+          "cancel": "Cancel",
+          "confirm": "Transfer now"
+        }
+      },
+      "danger": {
+        "title": "Danger Zone",
+        "description": "Deleting the household is irreversible. All data will be lost.",
+        "delete_button": "Delete household",
+        "delete_error": "Failed to delete household.",
+        "modal": {
+          "title": "Really delete household?",
+          "text": "All data – tasks, expenses, members – will be permanently deleted.",
+          "confirm_label": "Enter the household name to confirm: {name}",
+          "cancel": "Cancel",
+          "confirm": "Delete household"
+        }
+      }
+    }
   }
-
 }

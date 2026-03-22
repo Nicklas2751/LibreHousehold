@@ -218,7 +218,13 @@ export const functionName = async (
 ## Integration Points
 
 - **API Client:** Imported from `$lib/api` or generated sources
-- **Mock Server:** Configured in `api/mokapi.js`. If adding new API endpoints, update the mock to return realistic fake data.
+- **Mock Server:** Configured in `api/mokapi.js`. **`api/mokapi.js` is off-limits — do not modify it unless the user explicitly asks you to.**
+
+## State Management Rules
+
+- **No localStorage/sessionStorage writes in frontend code.** State is intentionally kept in-memory only (Svelte stores/runes). Do not persist state to localStorage or sessionStorage.
+- **Use Paraglide's `setLocale()`** for language changes — never write the language to localStorage manually.
+- Theme changes are applied via `document.documentElement.setAttribute('data-theme', ...)` only.
 
 ## Important Frontend Files
 

@@ -34,7 +34,7 @@
         <span class="dock-label">{m["menu.statistics"]()}</span>
     </button>
 
-    <button class:dock-active={page.url.pathname === '/app/settings'} onclick={ async () => await goto("/app/settings")}>
+    <button class:dock-active={page.url.pathname.startsWith('/app/settings')} onclick={ async () => await goto("/app/settings")}>
         <SettingsIcon/>
         <span class="dock-label">{m["menu.settings"]()}</span>
     </button>
@@ -67,7 +67,7 @@
             </a>
         </li>
         <li>
-            <a class:menu-active={page.url.pathname === '/app/settings'} href="/app/settings">
+            <a class:menu-active={page.url.pathname.startsWith('/app/settings')} href="/app/settings">
                 <SettingsIcon/>
                 {m["menu.settings"]()}
             </a>

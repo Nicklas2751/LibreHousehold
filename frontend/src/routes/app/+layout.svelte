@@ -1,5 +1,9 @@
 <script lang="ts">
     import AppMenu from "$lib/AppMenu.svelte";
+    import { browser } from '$app/environment';
+    import { initSettings } from '$lib/stores/settingsStore';
+
+    if (browser) initSettings();
 
     let {children} = $props();
 </script>
