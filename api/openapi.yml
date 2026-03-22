@@ -1236,7 +1236,7 @@ components:
         paidBy: "7c3a40a8-3f57-4645-8cf5-820a6a8d3613"
         date: "2024-12-06"
         categoryId: "660e8400-e29b-41d4-a716-446655440001"
-        splitBetween: ["7c3a40a8-3f57-4645-8cf5-820a6a8d3613", "8d4b51b9-4g68-5756-9dg6-931b7b9e4724"]
+        splitBetween: ["7c3a40a8-3f57-4645-8cf5-820a6a8d3613", "8d4b51b9-4f68-5756-9df6-931b7b9e4724"]
         notes: "Weekly groceries"
 
     ExpenseUpdate:
@@ -1351,7 +1351,7 @@ components:
         id: "123e4567-e89b-12d3-a456-426614174000"
         amount: 20.00
         creditorId: "7c3a40a8-3f57-4645-8cf5-820a6a8d3613"
-        debtorId: "8d4b51b9-4g68-5756-9dg6-931b7b9e4724"
+        debtorId: "8d4b51b9-4f68-5756-9df6-931b7b9e4724"
         status: "PENDING"
         notes: "Reimbursement for dinner"
 
@@ -1381,7 +1381,7 @@ components:
       example:
         amount: 20.00
         creditorId: "7c3a40a8-3f57-4645-8cf5-820a6a8d3613"
-        debtorId: "8d4b51b9-4g68-5756-9dg6-931b7b9e4724"
+        debtorId: "8d4b51b9-4f68-5756-9df6-931b7b9e4724"
         notes: "Reimbursement for dinner"
 
     ReimbursementUpdate:
@@ -1563,7 +1563,7 @@ components:
             memberName: "Alice"
             total: 312.40
             avgPerMonth: 312.40
-          - memberId: "8d4b51b9-4g68-5756-9dg6-931b7b9e4724"
+          - memberId: "8d4b51b9-4f68-5756-9df6-931b7b9e4724"
             memberName: "Bob"
             total: 246.30
             avgPerMonth: 246.30
@@ -1572,7 +1572,7 @@ components:
             memberName: "Alice"
             done: 8
             open: 3
-          - memberId: "8d4b51b9-4g68-5756-9dg6-931b7b9e4724"
+          - memberId: "8d4b51b9-4f68-5756-9df6-931b7b9e4724"
             memberName: "Bob"
             done: 5
             open: 7

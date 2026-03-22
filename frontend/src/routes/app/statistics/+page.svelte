@@ -1,5 +1,4 @@
 <script lang="ts">
-    import { onMount } from 'svelte';
     import { m } from '$lib/paraglide/messages.js';
     import PageTitle from '$lib/PageTitle.svelte';
     import { householdState } from '$lib/stores/householdState.svelte';
@@ -39,12 +38,6 @@
         }
     });
 
-    onMount(() => {
-        if ($householdState) {
-            loadStatistics($householdState.id, period);
-        }
-    });
-
     const data = $derived($statistics);
 
     const totalCatExp = $derived(
@@ -77,7 +70,7 @@
 <div class="h-full overflow-y-auto p-4 space-y-6">
     <div class="flex flex-wrap items-center justify-between gap-3">
         <PageTitle title={m['statistics.title']()} />
-        <select class="select select-bordered" bind:value={period}>
+        <select class="select select-bordered" aria-label={m['statistics.period_label']()} bind:value={period}>
             {#each periods as p (p.key)}
                 <option value={p.key}>{p.label}</option>
             {/each}
@@ -90,7 +83,7 @@
         </div>
     {:else if $statisticsError}
         <div class="alert alert-error">
-            <span>{$statisticsError}</span>
+            <span>{m['statistics.error']()}</span>
         </div>
     {:else if data}
         <!-- Summary stats -->
@@ -137,7 +130,7 @@
                                 <p class="text-xs text-base-content/60">{m['statistics.member_expenses_label']()}</p>
                                 <p class="text-2xl font-bold text-primary">{member.total.toFixed(2)} €</p>
                                 {#if isMultiMonth}
-                                    <p class="text-xs text-base-content/50">Ø {member.avgPerMonth.toFixed(2)} € / M</p>
+                                    <p class="text-xs text-base-content/50">Ø {member.avgPerMonth.toFixed(2)} € {m['statistics.per_month_suffix']()}</p>
                                 {/if}
                             </div>
                             {#if tasks}
@@ -190,7 +183,7 @@
                                 </span>
                             </div>
                             {#if isMultiMonth}
-                                <div class="pl-5 text-xs text-base-content/50">Ø {cat.avgPerMonth.toFixed(2)} € / Monat</div>
+                                <div class="pl-5 text-xs text-base-content/50">Ø {cat.avgPerMonth.toFixed(2)} € {m['statistics.per_month_suffix']()}</div>
                             {/if}
                         {/each}
                     </div>

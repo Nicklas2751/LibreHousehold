@@ -11,7 +11,7 @@ export type StatisticsPeriod = typeof GetStatisticsPeriodEnum[keyof typeof GetSt
 
 export const statistics = writable<StatisticsResponse | null>(null);
 export const statisticsLoading = writable<boolean>(false);
-export const statisticsError = writable<string | null>(null);
+export const statisticsError = writable<boolean>(false);
 
 const apiConfig = new Configuration({ basePath: '/api' });
 const api = new StatisticsApi(apiConfig);
@@ -21,12 +21,12 @@ export const loadStatistics = async (
     period: StatisticsPeriod
 ): Promise<void> => {
     statisticsLoading.set(true);
-    statisticsError.set(null);
+    statisticsError.set(false);
     try {
         const result = await api.getStatistics({ householdId, period });
         statistics.set(result);
     } catch (e) {
-        statisticsError.set('Statistiken konnten nicht geladen werden.');
+        statisticsError.set(true);
         console.error('Failed to load statistics:', e);
     } finally {
         statisticsLoading.set(false);

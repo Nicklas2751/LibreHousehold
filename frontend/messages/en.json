@@ -78,6 +78,7 @@
     "categories_count": "Categories",
     "categories_with_expenses": "with expenses",
     "avg_per_month": "Avg / month",
+    "per_month_suffix": "/ month",
     "expenses_by_category": "Expenses by category",
     "category_total": "total",
     "member_expenses_label": "Expenses",
