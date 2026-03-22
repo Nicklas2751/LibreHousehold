@@ -61,6 +61,31 @@
     "statistics": "Statistiken",
     "settings": "Einstellungen"
   },
+  "statistics": {
+    "title": "Statistiken",
+    "period_label": "Zeitraum",
+    "periods": {
+      "last_7_days": "Letzte 7 Tage",
+      "last_14_days": "Letzte 14 Tage",
+      "this_month": "Dieser Monat",
+      "last_3_months": "Letzte 3 Monate",
+      "last_6_months": "Letztes halbes Jahr",
+      "this_year": "Dieses Jahr",
+      "last_year": "Letztes Jahr"
+    },
+    "total_expenses": "Ausgaben gesamt",
+    "tasks_done": "Aufgaben erledigt",
+    "categories_count": "Kategorien",
+    "categories_with_expenses": "mit Ausgaben",
+    "avg_per_month": "Ø / Monat",
+    "expenses_by_category": "Ausgaben nach Kategorie",
+    "category_total": "gesamt",
+    "member_expenses_label": "Ausgaben",
+    "tasks_done_label": "erledigt",
+    "tasks_open_label": "offen",
+    "loading": "Statistiken werden geladen…",
+    "error": "Statistiken konnten nicht geladen werden."
+  },
   "dashboard": {
     "title": "Dashboard",
     "task_due_card": {
