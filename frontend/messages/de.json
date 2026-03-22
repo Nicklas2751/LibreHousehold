@@ -78,6 +78,7 @@
     "categories_count": "Kategorien",
     "categories_with_expenses": "mit Ausgaben",
     "avg_per_month": "Ø / Monat",
+    "per_month_suffix": "/ Monat",
     "expenses_by_category": "Ausgaben nach Kategorie",
     "category_total": "gesamt",
     "member_expenses_label": "Ausgaben",
