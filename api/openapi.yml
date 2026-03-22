@@ -19,6 +19,8 @@ tags:
     description: Operations related to tasks
   - name: reimbursements
     description: Operations related to reimbursements
+  - name: statistics
+    description: Aggregated statistics for a household over a given time period
 paths:
   /household:
     post:
@@ -934,6 +936,50 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
 
+  /household/{householdId}/statistics:
+    get:
+      summary: Get statistics for a household
+      description: Returns aggregated statistics for the household over the specified time period, including expense breakdowns by category and member, and task completion counts per member.
+      tags:
+        - statistics
+      operationId: getStatistics
+      parameters:
+        - name: householdId
+          in: path
+          required: true
+          description: The unique identifier of the household.
+          schema:
+            type: string
+            format: uuid
+            example: "f3ce1a6b-aba1-478d-9f01-ec484f23ce60"
+        - name: period
+          in: query
+          required: true
+          description: The time period for the statistics.
+          schema:
+            type: string
+            enum: [LAST_7_DAYS, LAST_14_DAYS, THIS_MONTH, LAST_3_MONTHS, LAST_6_MONTHS, THIS_YEAR, LAST_YEAR]
+            example: "THIS_MONTH"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatisticsResponse"
+        "404":
+          description: Household not found.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        default:
+          description: An error occurred - see the status code and problem for more information.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
 components:
   schemas:
     Problem:
@@ -1352,3 +1398,181 @@ components:
         status: "CONFIRMED"
         notes: "Payment received"
 
+    StatisticsPeriod:
+      type: string
+      enum: [LAST_7_DAYS, LAST_14_DAYS, THIS_MONTH, LAST_3_MONTHS, LAST_6_MONTHS, THIS_YEAR, LAST_YEAR]
+      description: The time period covered by the statistics.
+      example: "THIS_MONTH"
+
+    ExpenseStatsByCategory:
+      type: object
+      required:
+        - categoryId
+        - categoryName
+        - total
+        - avgPerMonth
+      properties:
+        categoryId:
+          type: string
+          format: uuid
+          description: The unique identifier of the category.
+          example: "660e8400-e29b-41d4-a716-446655440001"
+        categoryName:
+          type: string
+          description: The display name of the category.
+          example: "Lebensmittel"
+        categoryIcon:
+          type: string
+          description: Optional icon identifier of the category (e.g., emoji).
+          example: "🛒"
+        total:
+          type: number
+          format: double
+          description: Total amount spent in this category during the period.
+          example: 245.80
+        avgPerMonth:
+          type: number
+          format: double
+          description: Average amount spent per month in this category. Equals total for single-month periods.
+          example: 61.45
+
+    ExpenseStatsByMember:
+      type: object
+      required:
+        - memberId
+        - memberName
+        - total
+        - avgPerMonth
+      properties:
+        memberId:
+          type: string
+          format: uuid
+          description: The unique identifier of the member.
+          example: "7c3a40a8-3f57-4645-8cf5-820a6a8d3613"
+        memberName:
+          type: string
+          description: The display name of the member.
+          example: "Alice"
+        total:
+          type: number
+          format: double
+          description: Total amount spent by this member during the period.
+          example: 312.40
+        avgPerMonth:
+          type: number
+          format: double
+          description: Average amount spent per month by this member. Equals total for single-month periods.
+          example: 104.13
+
+    TaskStatsByMember:
+      type: object
+      required:
+        - memberId
+        - memberName
+        - done
+        - open
+      properties:
+        memberId:
+          type: string
+          format: uuid
+          description: The unique identifier of the member.
+          example: "7c3a40a8-3f57-4645-8cf5-820a6a8d3613"
+        memberName:
+          type: string
+          description: The display name of the member.
+          example: "Alice"
+        done:
+          type: integer
+          minimum: 0
+          description: Number of tasks completed by this member during the period.
+          example: 8
+        open:
+          type: integer
+          minimum: 0
+          description: Number of tasks currently open and assigned to this member.
+          example: 3
+
+    StatisticsResponse:
+      type: object
+      required:
+        - period
+        - periodStart
+        - periodEnd
+        - totalExpenses
+        - avgExpensesPerMonth
+        - expensesByCategory
+        - expensesByMember
+        - tasksByMember
+      properties:
+        period:
+          $ref: "#/components/schemas/StatisticsPeriod"
+        periodStart:
+          type: string
+          format: date
+          description: Start date of the statistics period (inclusive).
+          example: "2025-03-01"
+        periodEnd:
+          type: string
+          format: date
+          description: End date of the statistics period (inclusive).
+          example: "2025-03-31"
+        totalExpenses:
+          type: number
+          format: double
+          description: Total expenses across all members and categories during the period.
+          example: 558.70
+        avgExpensesPerMonth:
+          type: number
+          format: double
+          description: Average total expenses per month. Equals totalExpenses for single-month periods.
+          example: 186.23
+        expensesByCategory:
+          type: array
+          description: Expense breakdown per category, sorted by total descending.
+          items:
+            $ref: "#/components/schemas/ExpenseStatsByCategory"
+        expensesByMember:
+          type: array
+          description: Expense breakdown per member, sorted by total descending.
+          items:
+            $ref: "#/components/schemas/ExpenseStatsByMember"
+        tasksByMember:
+          type: array
+          description: Task completion counts per member, sorted by done descending.
+          items:
+            $ref: "#/components/schemas/TaskStatsByMember"
+      example:
+        period: "THIS_MONTH"
+        periodStart: "2025-03-01"
+        periodEnd: "2025-03-31"
+        totalExpenses: 558.70
+        avgExpensesPerMonth: 558.70
+        expensesByCategory:
+          - categoryId: "660e8400-e29b-41d4-a716-446655440001"
+            categoryName: "Lebensmittel"
+            categoryIcon: "🛒"
+            total: 245.80
+            avgPerMonth: 245.80
+          - categoryId: "660e8400-e29b-41d4-a716-446655440002"
+            categoryName: "Haushalt"
+            categoryIcon: "🏠"
+            total: 120.00
+            avgPerMonth: 120.00
+        expensesByMember:
+          - memberId: "7c3a40a8-3f57-4645-8cf5-820a6a8d3613"
+            memberName: "Alice"
+            total: 312.40
+            avgPerMonth: 312.40
+          - memberId: "8d4b51b9-4g68-5756-9dg6-931b7b9e4724"
+            memberName: "Bob"
+            total: 246.30
+            avgPerMonth: 246.30
+        tasksByMember:
+          - memberId: "7c3a40a8-3f57-4645-8cf5-820a6a8d3613"
+            memberName: "Alice"
+            done: 8
+            open: 3
+          - memberId: "8d4b51b9-4g68-5756-9dg6-931b7b9e4724"
+            memberName: "Bob"
+            done: 5
+            open: 7

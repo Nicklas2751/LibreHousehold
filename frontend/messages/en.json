@@ -61,6 +61,31 @@
     "statistics": "Statistics",
     "settings": "Settings"
   },
+  "statistics": {
+    "title": "Statistics",
+    "period_label": "Period",
+    "periods": {
+      "last_7_days": "Last 7 days",
+      "last_14_days": "Last 14 days",
+      "this_month": "This month",
+      "last_3_months": "Last 3 months",
+      "last_6_months": "Last 6 months",
+      "this_year": "This year",
+      "last_year": "Last year"
+    },
+    "total_expenses": "Total expenses",
+    "tasks_done": "Tasks completed",
+    "categories_count": "Categories",
+    "categories_with_expenses": "with expenses",
+    "avg_per_month": "Avg / month",
+    "expenses_by_category": "Expenses by category",
+    "category_total": "total",
+    "member_expenses_label": "Expenses",
+    "tasks_done_label": "done",
+    "tasks_open_label": "open",
+    "loading": "Loading statistics…",
+    "error": "Could not load statistics."
+  },
   "dashboard": {
     "title": "Dashboard",
     "task_due_card": {
