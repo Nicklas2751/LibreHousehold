@@ -1,5 +1,8 @@
 {
   "$schema": "https://inlang.com/schema/inlang-message-format",
+  "common": {
+    "currency_symbol": "€"
+  },
   "subtitle": "Simplify household management",
   "welcome": {
     "title": "Welcome to LibreHousehold",
@@ -78,6 +81,7 @@
     "categories_count": "Categories",
     "categories_with_expenses": "with expenses",
     "avg_per_month": "Avg / month",
+    "avg_abbrev": "Avg.",
     "per_month_suffix": "/ month",
     "expenses_by_category": "Expenses by category",
     "category_total": "total",
