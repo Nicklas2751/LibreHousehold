@@ -192,6 +192,84 @@ paths:
             "application/problem+json":
               schema:
                 $ref: '#/components/schemas/Problem'
+    patch:
+      summary: Update a member's profile
+      description: Updates the display name and/or email address of a household member.
+      tags:
+        - household
+      operationId: updateMember
+      parameters:
+        - name: householdId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: memberId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MemberUpdate'
+      responses:
+        "200":
+          description: Member updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Member'
+        "404":
+          description: Member not found.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        default:
+          description: An error occurred.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+    delete:
+      summary: Remove a member from the household
+      description: Removes the specified member from the household. Can only be performed by the household admin.
+      tags:
+        - household
+      operationId: removeMember
+      parameters:
+        - name: householdId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: memberId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Member removed.
+        "404":
+          description: Member not found.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        default:
+          description: An error occurred.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
 
   /household/{householdId}/tasks:
     get:
@@ -980,6 +1058,285 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
 
+  /household/{householdId}:
+    patch:
+      summary: Update household settings
+      description: Updates the name of an existing household.
+      tags:
+        - household
+      operationId: updateHousehold
+      parameters:
+        - name: householdId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HouseholdUpdate'
+      responses:
+        "200":
+          description: Household updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Household'
+        "404":
+          description: Household not found.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        default:
+          description: An error occurred.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+    delete:
+      summary: Delete a household
+      description: Permanently deletes the household and all associated data.
+      tags:
+        - household
+      operationId: deleteHousehold
+      parameters:
+        - name: householdId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Household deleted.
+        "404":
+          description: Household not found.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        default:
+          description: An error occurred.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
+  /household/{householdId}/invite:
+    post:
+      summary: Generate a new invite link
+      description: Invalidates the current invite token and generates a new invite URL for the household.
+      tags:
+        - household
+      operationId: generateInviteLink
+      parameters:
+        - name: householdId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: New invite URL generated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InviteResponse'
+        "404":
+          description: Household not found.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        default:
+          description: An error occurred.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
+  /household/{householdId}/admin:
+    put:
+      summary: Transfer household ownership
+      description: Transfers the household admin role to another member. The current admin loses their admin rights.
+      tags:
+        - household
+      operationId: transferOwnership
+      parameters:
+        - name: householdId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransferOwnershipRequest'
+      responses:
+        "200":
+          description: Ownership transferred.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Household'
+        "404":
+          description: Household or member not found.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        default:
+          description: An error occurred.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
+
+  /household/{householdId}/members/{memberId}/password:
+    put:
+      summary: Change a member's password
+      description: Changes the password for the specified member. Requires the current password for verification.
+      tags:
+        - household
+      operationId: changePassword
+      parameters:
+        - name: householdId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: memberId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordChangeRequest'
+      responses:
+        "204":
+          description: Password changed.
+        "403":
+          description: Old password is incorrect.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        "404":
+          description: Member not found.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        default:
+          description: An error occurred.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
+  /household/{householdId}/members/{memberId}/account:
+    delete:
+      summary: Delete own account
+      description: Permanently deletes the member's own account. If the member is the household admin, ownership must be transferred or the household deleted beforehand.
+      tags:
+        - household
+      operationId: deleteAccount
+      parameters:
+        - name: householdId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: memberId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Account deleted.
+        "409":
+          description: Member is still the household admin.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        "404":
+          description: Member not found.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        default:
+          description: An error occurred.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
+  /household/{householdId}/members/{memberId}/preferences:
+    patch:
+      summary: Save user preferences
+      description: Persists the user's theme and language preferences on the server so they are restored on next login.
+      tags:
+        - household
+      operationId: updatePreferences
+      parameters:
+        - name: householdId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: memberId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserPreferences'
+      responses:
+        "200":
+          description: Preferences saved.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPreferences'
+        "404":
+          description: Member not found.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        default:
+          description: An error occurred.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
 components:
   schemas:
     Problem:
@@ -1576,3 +1933,74 @@ components:
             memberName: "Bob"
             done: 5
             open: 7
+
+    HouseholdUpdate:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          minLength: 3
+          example: "Mustermann Family"
+
+    InviteResponse:
+      type: object
+      required:
+        - inviteUrl
+      properties:
+        inviteUrl:
+          type: string
+          format: uri
+          example: "https://app.example.com/invite/f3ce1a6b-aba1-478d-9f01-ec484f23ce60"
+
+    TransferOwnershipRequest:
+      type: object
+      required:
+        - memberId
+      properties:
+        memberId:
+          type: string
+          format: uuid
+          description: The ID of the member to transfer ownership to.
+          example: "7c3a40a8-3f57-4645-8cf5-820a6a8d3613"
+
+    MemberUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          example: "Jane Doe"
+        email:
+          type: string
+          format: email
+          example: "jane.doe@example.com"
+
+    PasswordChangeRequest:
+      type: object
+      required:
+        - oldPassword
+        - newPassword
+      properties:
+        oldPassword:
+          type: string
+          format: password
+          example: "oldSecurePassword123"
+        newPassword:
+          type: string
+          format: password
+          minLength: 8
+          example: "newSecurePassword456"
+
+    UserPreferences:
+      type: object
+      properties:
+        theme:
+          type: string
+          enum: [light, dark]
+          example: "dark"
+        language:
+          type: string
+          enum: [en, de]
+          example: "de"
