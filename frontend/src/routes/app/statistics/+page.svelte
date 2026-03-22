@@ -90,9 +90,9 @@
         <div class="stats stats-vertical sm:stats-horizontal shadow w-full">
             <div class="stat">
                 <div class="stat-title">{m['statistics.total_expenses']()}</div>
-                <div class="stat-value text-primary">{data.totalExpenses.toFixed(2)} €</div>
+                <div class="stat-value text-primary">{data.totalExpenses.toFixed(2)} {m['common.currency_symbol']()}</div>
                 {#if isMultiMonth}
-                    <div class="stat-desc">Ø {data.avgExpensesPerMonth.toFixed(2)} € / {m['statistics.avg_per_month']()}</div>
+                    <div class="stat-desc">{m['statistics.avg_abbrev']()} {data.avgExpensesPerMonth.toFixed(2)} {m['common.currency_symbol']()} {m['statistics.per_month_suffix']()}</div>
                 {:else}
                     <div class="stat-desc">{periodLabel}</div>
                 {/if}
@@ -128,9 +128,9 @@
                         <div class="flex items-center justify-between">
                             <div>
                                 <p class="text-xs text-base-content/60">{m['statistics.member_expenses_label']()}</p>
-                                <p class="text-2xl font-bold text-primary">{member.total.toFixed(2)} €</p>
+                                <p class="text-2xl font-bold text-primary">{member.total.toFixed(2)} {m['common.currency_symbol']()}</p>
                                 {#if isMultiMonth}
-                                    <p class="text-xs text-base-content/50">Ø {member.avgPerMonth.toFixed(2)} € {m['statistics.per_month_suffix']()}</p>
+                                    <p class="text-xs text-base-content/50">{m['statistics.avg_abbrev']()} {member.avgPerMonth.toFixed(2)} {m['common.currency_symbol']()} {m['statistics.per_month_suffix']()}</p>
                                 {/if}
                             </div>
                             {#if tasks}
@@ -167,7 +167,7 @@
                     <div class="relative shrink-0 w-40 h-40">
                         <div class="w-full h-full rounded-full" style="background: {pieGradient}"></div>
                         <div class="absolute inset-[20%] rounded-full bg-base-200 flex flex-col items-center justify-center">
-                            <span class="text-xs font-bold leading-tight">{totalCatExp.toFixed(0)} €</span>
+                            <span class="text-xs font-bold leading-tight">{totalCatExp.toFixed(0)} {m['common.currency_symbol']()}</span>
                             <span class="text-xs text-base-content/50 leading-tight">{m['statistics.category_total']()}</span>
                         </div>
                     </div>
@@ -177,13 +177,13 @@
                                 <div class="w-3 h-3 rounded-full shrink-0" style="background: {sliceColors[i % sliceColors.length]}"></div>
                                 {#if cat.categoryIcon}<span class="mr-1">{cat.categoryIcon}</span>{/if}
                                 <span class="flex-1 text-sm">{cat.categoryName}</span>
-                                <span class="text-sm font-semibold">{cat.total.toFixed(2)} €</span>
+                                <span class="text-sm font-semibold">{cat.total.toFixed(2)} {m['common.currency_symbol']()}</span>
                                 <span class="text-xs text-base-content/50 w-10 text-right">
                                     {totalCatExp > 0 ? ((cat.total / totalCatExp) * 100).toFixed(0) : 0}%
                                 </span>
                             </div>
                             {#if isMultiMonth}
-                                <div class="pl-5 text-xs text-base-content/50">Ø {cat.avgPerMonth.toFixed(2)} € {m['statistics.per_month_suffix']()}</div>
+                                <div class="pl-5 text-xs text-base-content/50">{m['statistics.avg_abbrev']()} {cat.avgPerMonth.toFixed(2)} {m['common.currency_symbol']()} {m['statistics.per_month_suffix']()}</div>
                             {/if}
                         {/each}
                     </div>
