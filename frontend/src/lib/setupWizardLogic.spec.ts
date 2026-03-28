@@ -1,16 +1,16 @@
-import {beforeEach, describe, expect, it, vi} from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-    calculateNextStep,
-    calculateTargetStep,
-    canGoBackToStep,
-    canProceedToNextStep,
-    checkCanBrowserShareInviteLink,
-    createInviteLinkShareData,
-    generateHouseholdNameInitials,
-    generateInviteUrl,
-    isValidAdminName,
-    isValidEmail,
-    isValidHouseholdName
+	calculateNextStep,
+	calculateTargetStep,
+	canGoBackToStep,
+	canProceedToNextStep,
+	checkCanBrowserShareInviteLink,
+	createInviteLinkShareData,
+	generateHouseholdNameInitials,
+	generateInviteUrl,
+	isValidAdminName,
+	isValidEmail,
+	isValidHouseholdName
 } from './setupWizardLogic';
 
 describe('setupWizardLogic', () => {
@@ -424,4 +424,3 @@ describe('setupWizardLogic', () => {
 	// Note: readFileAsDataURL tests are omitted here because they require browser APIs (FileReader)
 	// These should be tested in a browser environment using Svelte component tests or E2E tests
 });
-

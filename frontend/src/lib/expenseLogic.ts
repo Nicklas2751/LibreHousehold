@@ -1,4 +1,4 @@
-import type {Expense} from "../generated-sources/openapi";
+import type { Expense } from '../generated-sources/openapi';
 
 /**
  * Checks if an expense is mutable (can be edited or deleted).
@@ -15,7 +15,5 @@ import type {Expense} from "../generated-sources/openapi";
  * @returns true if the expense can be modified, false otherwise.
  */
 export function isExpenseMutable(expense: Expense): boolean {
-    return (expense as any).isMutable ?? true;
+	return (expense as Expense & { isMutable?: boolean }).isMutable ?? true;
 }
-
-

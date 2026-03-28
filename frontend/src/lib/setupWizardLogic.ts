@@ -12,7 +12,10 @@ export function generateHouseholdNameInitials(householdName: string): string {
 		return '+';
 	}
 	// Filter out empty strings from split to handle multiple spaces
-	const words = householdName.trim().split(' ').filter(word => word.length > 0);
+	const words = householdName
+		.trim()
+		.split(' ')
+		.filter((word) => word.length > 0);
 	if (words.length >= 2) {
 		return words[0].charAt(0) + words[1].charAt(0);
 	}
@@ -89,9 +92,9 @@ export function checkCanBrowserShareInviteLink(shareData: ShareData): boolean {
  * Generates the invite URL based on base URL and household ID
  */
 export function generateInviteUrl(baseUrl: string, householdId: string): string {
-    if (baseUrl.endsWith('/')) {
-        baseUrl = baseUrl.slice(0, -1);
-    }
+	if (baseUrl.endsWith('/')) {
+		baseUrl = baseUrl.slice(0, -1);
+	}
 	return `${baseUrl}/invite/${householdId}`;
 }
 
@@ -140,4 +143,3 @@ export function readFileAsDataURL(file: File): Promise<string> {
 		reader.readAsDataURL(file);
 	});
 }
-

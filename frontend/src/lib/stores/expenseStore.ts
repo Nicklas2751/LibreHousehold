@@ -1,77 +1,89 @@
-import {writable} from 'svelte/store';
-import {Configuration, type Expense, ExpensesApi, type ExpenseUpdate} from "../../generated-sources/openapi";
-import {addToast} from "$lib/stores/toastStore";
-import {Toast} from "$lib/toast";
+import { writable } from 'svelte/store';
+import {
+	Configuration,
+	type Expense,
+	ExpensesApi,
+	type ExpenseUpdate
+} from '../../generated-sources/openapi';
+import { addToast } from '$lib/stores/toastStore';
+import { Toast } from '$lib/toast';
 
 export const expenses = writable<Expense[]>([]);
 
-const apiConfig = new Configuration({basePath: '/api'});
+const apiConfig = new Configuration({ basePath: '/api' });
 const api = new ExpensesApi(apiConfig);
 
 export const loadExpenses = async (householdId: string): Promise<void> => {
-    const result = await api.getExpenses({householdId});
-    expenses.set(result);
+	const result = await api.getExpenses({ householdId });
+	expenses.set(result);
 };
 
-export const loadDebtorExpenses = async (householdId: string, payerId: string, debtorId: string): Promise<Expense[]> => {
-    return await api.getDebtorExpenses({householdId, payerId, debtorId});
+export const loadDebtorExpenses = async (
+	householdId: string,
+	payerId: string,
+	debtorId: string
+): Promise<Expense[]> => {
+	return await api.getDebtorExpenses({ householdId, payerId, debtorId });
 };
 
 export const addExpense = async (householdId: string, expense: Expense): Promise<void> => {
-    let savedExpense = await api.createExpense({householdId: householdId, expense: expense});
-    expenses.update((all) => [savedExpense, ...all]);
-}
+	const savedExpense = await api.createExpense({ householdId: householdId, expense: expense });
+	expenses.update((all) => [savedExpense, ...all]);
+};
 
 export async function updateExpense(
-    householdId: string,
-    expenseId: string,
-    expenseUpdate: ExpenseUpdate
+	householdId: string,
+	expenseId: string,
+	expenseUpdate: ExpenseUpdate
 ): Promise<void> {
-    // Optimistic update: Update the store immediately
-    let previousExpenses: Expense[] = [];
-    expenses.update((all) => {
-        previousExpenses = [...all];
-        return all.map((expense) =>
-            expense.id === expenseId ? {...expense, ...expenseUpdate} : expense
-        );
-    });
+	// Optimistic update: Update the store immediately
+	let previousExpenses: Expense[] = [];
+	expenses.update((all) => {
+		previousExpenses = [...all];
+		return all.map((expense) =>
+			expense.id === expenseId ? { ...expense, ...expenseUpdate } : expense
+		);
+	});
 
-    try {
-        await api.updateExpense({householdId, expenseId, expenseUpdate});
-    } catch (error) {
-        // Rollback on error
-        expenses.set(previousExpenses);
-        addToast(new Toast("Failed to update expense", "error", 5000));
-        console.error("Failed to update expense:", error);
-    }
+	try {
+		await api.updateExpense({ householdId, expenseId, expenseUpdate });
+	} catch (error) {
+		// Rollback on error
+		expenses.set(previousExpenses);
+		addToast(new Toast('Failed to update expense', 'error', 5000));
+		console.error('Failed to update expense:', error);
+	}
 }
 
-export async function findExpense(householdId: string, expenseId: string): Promise<Expense | undefined> {
-    try {
-        return await api.getExpense({householdId, expenseId});
-    } catch (error) {
-        console.error("Failed to find expense:", error);
-        return undefined;
-    }
+export async function findExpense(
+	householdId: string,
+	expenseId: string
+): Promise<Expense | undefined> {
+	try {
+		return await api.getExpense({ householdId, expenseId });
+	} catch (error) {
+		console.error('Failed to find expense:', error);
+		return undefined;
+	}
 }
 
 export async function deleteExpense(householdId: string, expenseId: string): Promise<void> {
-    await api.deleteExpense({householdId, expenseId});
-    await loadExpenses(householdId);
+	await api.deleteExpense({ householdId, expenseId });
+	await loadExpenses(householdId);
 
-    // Optimistic update: Update the store immediately
-    let previousExpenses: Expense[] = [];
-    expenses.update((all) => {
-        previousExpenses = [...all];
-        return all.filter((expense) => expense.id !== expenseId);
-    });
+	// Optimistic update: Update the store immediately
+	let previousExpenses: Expense[] = [];
+	expenses.update((all) => {
+		previousExpenses = [...all];
+		return all.filter((expense) => expense.id !== expenseId);
+	});
 
-    try {
-        await api.deleteExpense({householdId, expenseId});
-    } catch (error) {
-        // Rollback on error
-        expenses.set(previousExpenses);
-        addToast(new Toast("Failed to delete expense", "error", 5000));
-        console.error("Failed to delete expense:", error);
-    }
+	try {
+		await api.deleteExpense({ householdId, expenseId });
+	} catch (error) {
+		// Rollback on error
+		expenses.set(previousExpenses);
+		addToast(new Toast('Failed to delete expense', 'error', 5000));
+		console.error('Failed to delete expense:', error);
+	}
 }

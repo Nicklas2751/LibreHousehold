@@ -1,8 +1,8 @@
-import {defineConfig} from 'vitest/config';
-import {paraglideVitePlugin} from '@inlang/paraglide-js';
+import { defineConfig } from 'vitest/config';
+import { paraglideVitePlugin } from '@inlang/paraglide-js';
 import tailwindcss from '@tailwindcss/vite';
-import {sveltekit} from '@sveltejs/kit/vite';
-import {playwright} from '@vitest/browser-playwright';
+import { sveltekit } from '@sveltejs/kit/vite';
+import { playwright } from '@vitest/browser-playwright';
 
 export default defineConfig({
 	plugins: [
@@ -11,19 +11,19 @@ export default defineConfig({
 		paraglideVitePlugin({
 			project: './project.inlang',
 			outdir: './src/lib/paraglide',
-			strategy: ["url", "preferredLanguage", "baseLocale"] //"localStorage",
+			strategy: ['url', 'preferredLanguage', 'baseLocale'] //"localStorage",
 		})
 	],
-    server: {
-        cors: { origin: /^https?:\/\/(?:(?:[^:]+\.)?localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/ },
-        proxy: {
-            '/api': {
-                target: 'http://localhost:80',
-                changeOrigin: true,
-                rewrite: (path) => path.replace(/^\/api/, '')
-            }
-        }
-    },
+	server: {
+		cors: { origin: /^https?:\/\/(?:(?:[^:]+\.)?localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/ },
+		proxy: {
+			'/api': {
+				target: 'http://localhost:80',
+				changeOrigin: true,
+				rewrite: (path) => path.replace(/^\/api/, '')
+			}
+		}
+	},
 	test: {
 		expect: { requireAssertions: true },
 		projects: [

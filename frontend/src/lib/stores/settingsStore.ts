@@ -13,43 +13,45 @@ export const theme = writable<Theme>('light');
 export const language = writable<Language>('en');
 
 function applyTheme(t: Theme) {
-    document.documentElement.setAttribute('data-theme', t);
+	document.documentElement.setAttribute('data-theme', t);
 }
 
 function detectInitialTheme(): Theme {
-    const attr = document.documentElement.getAttribute('data-theme') as Theme | null;
-    if (attr === 'light' || attr === 'dark') return attr;
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+	const attr = document.documentElement.getAttribute('data-theme') as Theme | null;
+	if (attr === 'light' || attr === 'dark') return attr;
+	return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
 
 export function initSettings() {
-    const t = detectInitialTheme();
-    const l = getLocale() as Language ?? 'en';
+	const t = detectInitialTheme();
+	const l = (getLocale() as Language) ?? 'en';
 
-    theme.set(t);
-    language.set(l);
+	theme.set(t);
+	language.set(l);
 }
 
 function syncToApi(t: Theme, l: Language) {
-    const household = get(householdState);
-    const user = get(userState);
-    if (!household?.id || !user?.id) return;
+	const household = get(householdState);
+	const user = get(userState);
+	if (!household?.id || !user?.id) return;
 
-    api.updatePreferences({
-        householdId: household.id,
-        memberId: user.id,
-        userPreferences: { theme: t, language: l }
-    }).catch(() => {});
+	api
+		.updatePreferences({
+			householdId: household.id,
+			memberId: user.id,
+			userPreferences: { theme: t, language: l }
+		})
+		.catch(() => {});
 }
 
 export function setTheme(t: Theme) {
-    theme.set(t);
-    applyTheme(t);
-    syncToApi(t, get(language));
+	theme.set(t);
+	applyTheme(t);
+	syncToApi(t, get(language));
 }
 
 export function setLanguage(l: Language) {
-    language.set(l);
-    setLocale(l);
-    syncToApi(get(theme), l);
+	language.set(l);
+	setLocale(l);
+	syncToApi(get(theme), l);
 }
