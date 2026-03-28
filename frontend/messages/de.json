@@ -1,329 +1,329 @@
 {
-  "$schema": "https://inlang.com/schema/inlang-message-format",
-  "common": {
-    "currency_symbol": "€"
-  },
-  "subtitle": "Haushaltsverwaltung vereinfachen",
-  "welcome": {
-    "title": "Willkommen bei LibreHousehold",
-    "text": "Lass uns deinen Haushalt einrichten, um dir bei der Verwaltung von Aufgaben und Ausgaben zu helfen.",
-    "feature_cards": {
-      "card_1": {
-        "title": "Verwalte Aufgaben",
-        "description": "Weise Haushaltsaufgaben einfach zu und verfolge sie."
-      },
-      "card_2": {
-        "title": "Verfolge gemeinsame Ausgaben",
-        "description": "Teile Kosten und sieh, wer wem was schuldet."
-      },
-      "card_3": {
-        "title": "Ausgabenstatistiken anzeigen",
-        "description": "Analysiere die Ausgabengewohnheiten deines Haushalts im Laufe der Zeit."
-      }
-    },
-    "setup_button": "Registrieren",
-    "login_button": "Anmelden"
-  },
-  "setup": {
-    "create_step": {
-      "title": "Erstelle deinen Haushalt",
-      "text": "Gib deinem Haushalt einen Namen und lade optional ein Bild hoch.",
-      "household_name_label": "Haushaltsname",
-      "household_name_placeholder": "z.B., Die Müllers",
-      "household_name_error": "Gib einen Haushaltsnamen mit mindestens drei Zeichen ein.",
-      "back_button": "Zurück",
-      "continue_button": "Weiter"
-    },
-    "create_account_step": {
-      "title": "Richte dein Konto ein",
-      "text": "Als Ersteller bist du der Administrator deines Haushalts.",
-      "admin_name_label": "Dein Name",
-      "admin_name_placeholder": "z.B., Max Mustermann",
-      "admin_name_error": "Gib einen Namen mit mindestens drei Zeichen ein.",
-      "admin_email_label": "Deine E-Mail",
-      "admin_email_placeholder": "z.B., max.mustermann@example.org",
-      "admin_email_error": "Gib eine gültige E-Mail-Adresse ein.",
-      "back_button": "Zurück",
-      "continue_button": "Weiter"
-    },
-    "finish_step": {
-      "title": "Alles erledigt!",
-      "invite_text": "Lade andere zu deinem Haushalt ein:",
-      "invite_link_copied_toast": "Einladungslink in die Zwischenablage kopiert",
-      "invite_link_shared_toast": "Einladungslink geteilt",
-      "invite_link_cant_shared_toast": "Einladungslink kann nicht geteilt werden: {error}",
-      "invite_link_share_text": "Trete meinem Haushalt bei LibreHousehold bei",
-      "finish_button": "Einrichtung abschließen",
-      "close_setup_button": "Zum Dashboard gehen"
-    }
-  },
-  "menu": {
-    "dashboard": "Dashboard",
-    "tasks": "Aufgaben",
-    "expenses": "Ausgaben",
-    "statistics": "Statistiken",
-    "settings": "Einstellungen"
-  },
-  "statistics": {
-    "title": "Statistiken",
-    "period_label": "Zeitraum",
-    "periods": {
-      "last_7_days": "Letzte 7 Tage",
-      "last_14_days": "Letzte 14 Tage",
-      "this_month": "Dieser Monat",
-      "last_3_months": "Letzte 3 Monate",
-      "last_6_months": "Letztes halbes Jahr",
-      "this_year": "Dieses Jahr",
-      "last_year": "Letztes Jahr"
-    },
-    "total_expenses": "Ausgaben gesamt",
-    "tasks_done": "Aufgaben erledigt",
-    "categories_count": "Kategorien",
-    "categories_with_expenses": "mit Ausgaben",
-    "avg_per_month": "Ø / Monat",
-    "avg_abbrev": "Ø",
-    "per_month_suffix": "/ Monat",
-    "expenses_by_category": "Ausgaben nach Kategorie",
-    "category_total": "gesamt",
-    "member_expenses_label": "Ausgaben",
-    "tasks_done_label": "erledigt",
-    "tasks_open_label": "offen",
-    "loading": "Statistiken werden geladen…",
-    "error": "Statistiken konnten nicht geladen werden."
-  },
-  "dashboard": {
-    "title": "Dashboard",
-    "task_due_card": {
-      "title": "Bald fällige Aufgaben"
-    },
-    "you_owe_card": {
-      "title": "Du schuldest"
-    },
-    "owed_to_you_card": {
-      "title": "Dir wird geschuldet"
-    },
-    "financials": {
-        "title": "Finanzen",
-        "total_balance_label": "Gesamtbilanz",
-        "you_owe": "Du schuldest {name}",
-        "owed_to_you": "{name} schuldet dir",
-        "pending_outgoing": "Ausstehend an {name}",
-        "pending_incoming": "Ausstehend von {name}",
-        "settled": "Ausgeglichen",
-        "settle_button": "Begleichen"
-    },
-    "upcoming_tasks_card": {
-      "title": "Anstehende Aufgaben",
-      "no_tasks": "Keine anstehenden Aufgaben",
-      "create_button": "Aufgaben erstellen"
-    },
-    "recent_expenses_card": {
-      "title": "Kürzliche Ausgaben",
-      "no_expenses": "Keine kürzlichen Ausgaben",
-      "add_button": "Ausgabe hinzufügen"
-    },
-    "debts_overview_card": {
-      "title": "Schulden Übersicht",
-      "no_debts": "Keine Schulden zum Anzeigen",
-      "add_button": "Ausgabe hinzufügen"
-    },
-    "pending_reimbursements_card": {
-        "title": "Ausstehende Zahlungen",
-        "no_pending": "Keine ausstehenden Zahlungen.",
-        "incoming_text": "{name} möchte {amount} begleichen",
-        "confirm_button": "Bestätigen",
-        "reject_button": "Ablehnen"
-    },
-    "view_all": "Alle anzeigen"
-  },
-  "tasks": {
-    "title": "Aufgaben",
-    "create_task_button": "Aufgabe erstellen",
-    "no_tasks": "Keine Aufgaben verfügbar. Erstellen eine um loszulegen!",
-    "filter": {
-      "all": "Alle",
-      "assigned_to_me": "Meine",
-      "completed": "Abgeschlossen",
-      "pending": "Ausstehend"
-    },
-    "new": {
-      "title": "Neue Aufgabe erstellen",
-      "cancel_button": "Abbrechen",
-      "task_title_label": "Aufgabentitel",
-      "task_title_placeholder": "z.B., Müll rausbringen",
-      "task_title_error": "Gib einen Aufgabentitel mit mindestens drei Zeichen ein.",
-      "assigned_to_label": "Zugewiesen an",
-      "assigned_to_placeholder": "Wähle ein Haushaltsmitglied",
-      "description_label": "Beschreibung",
-      "description_placeholder": "z.B., Bitte bring den Müll raus bevor du gehst.",
-      "due_date_label": "Fälligkeitsdatum",
-      "due_date_error": "Gib ein Fälligkeitsdatum ein, dass entweder heute ist oder in der Zukunft liegt.",
-      "recurring_label": "Wiederkehrende Aufgabe?",
-      "recurrence_pattern_label": "Wiederholungseinheit",
-      "recurrence_pattern_days": "Tage",
-      "recurrence_pattern_weeks": "Wochen",
-      "recurrence_pattern_months": "Monate",
-      "recurrence_pattern_years": "Jahre",
-      "recurrence_pattern_times_label": "Alle wie viele Einheiten?",
-      "next_recurrence_date_label": "Mit dem aktuellen Fälligkeitsdatum {date}, wird die nächste Wiederholung am {nextDate} sein.",
-      "create_button": "Aufgabe erstellen"
-    }
-  },
-  "expenses": {
-    "title": "Ausgaben",
-    "create_expense_button": "Ausgabe erfassen",
-    "list_title": "Ausgaben-Übersicht",
-    "no_expenses": "Keine Ausgaben vorhanden",
-    "paid_by": "Bezahlt von",
-    "delete_button": "Löschen",
-    "delete_confirm": "Möchten Sie diese Ausgabe wirklich löschen?",
-    "new": {
-      "title": "Neue Ausgabe",
-      "cancel_button": "Abbrechen",
-      "expense_title_label": "Beschreibung",
-      "expense_title_placeholder": "z.B. Einkauf Lidl",
-      "expense_title_error": "Gib eine Beschreibung mit mindestens drei Zeichen ein.",
-      "amount_label": "Betrag",
-      "paid_by_label": "Bezahlt von",
-      "paid_by_select_placeholder": "Mitglied auswählen...",
-      "date_label": "Datum",
-      "category_label": "Kategorie",
-      "category_select_placeholder": "Kategorie wählen...",
-      "no_categories_hint": "Keine Kategorien vorhanden. Erstelle neue Kategorien in den Einstellungen.",
-      "split_between_label": "Aufteilen zwischen",
-      "split_between_hint": "Wähle die Mitglieder aus, zwischen denen die Ausgabe aufgeteilt werden soll. Wenn nichts ausgewählt ist, wird gleichmäßig zwischen allen aufgeteilt.",
-      "notes_label": "Notizen",
-      "notes_placeholder": "Zusätzliche Notizen...",
-      "create_button": "Ausgabe erstellen"
-    },
-    "edit": {
-      "title": "Ausgabe bearbeiten",
-      "save_button": "Änderungen speichern"
-    }
-  },
-  "settle": {
-    "title": "Schulden begleichen",
-    "cancel_button": "Abbrechen",
-    "paying_label": "Zahlung an {name}",
-    "total_amount_label": "Gesamtbetrag",
-    "details_label": "Details (Enthaltene Ausgaben)",
-    "no_details": "Keine Detail-Ausgaben gefunden.",
-    "confirm_payment_button": "Als bezahlt markieren",
-    "disclaimer": "Diese Aktion führt keine echte Zahlung durch. Bitte stelle sicher, dass du den Betrag per Überweisung oder Bar gezahlt hast."
-  },
-  "settings": {
-    "back": "Zurück zu Einstellungen",
-    "appearance": {
-      "title": "Erscheinungsbild",
-      "dark_mode_label": "Dunkelmodus"
-    },
-    "language": {
-      "title": "Sprache",
-      "select_label": "Sprache auswählen"
-    },
-    "user": {
-      "title": "Nutzerprofil",
-      "description": "Name, E-Mail und Passwort ändern",
-      "profile": {
-        "title": "Profil",
-        "name_label": "Anzeigename",
-        "email_label": "E-Mail-Adresse",
-        "save_button": "Speichern",
-        "save_success": "Profil gespeichert.",
-        "save_error": "Fehler beim Speichern des Profils."
-      },
-      "password": {
-        "title": "Passwort ändern",
-        "old_label": "Aktuelles Passwort",
-        "new_label": "Neues Passwort",
-        "confirm_label": "Neues Passwort bestätigen",
-        "mismatch": "Die Passwörter stimmen nicht überein.",
-        "save_button": "Passwort ändern",
-        "save_success": "Passwort erfolgreich geändert.",
-        "wrong_password": "Das aktuelle Passwort ist falsch.",
-        "save_error": "Fehler beim Ändern des Passworts."
-      },
-      "danger": {
-        "title": "Gefahrenzone",
-        "description": "Das Löschen deines Accounts kann nicht rückgängig gemacht werden.",
-        "delete_button": "Account löschen",
-        "delete_error": "Fehler beim Löschen des Accounts."
-      },
-      "delete_modal": {
-        "title": "Account wirklich löschen?",
-        "owner_notice": "Du bist der Eigentümer dieses Haushalts. Bitte wähle, was mit dem Haushalt passieren soll:",
-        "transfer_label": "Eigentümerschaft übertragen an:",
-        "transfer_select_label": "Mitglied auswählen",
-        "transfer_placeholder": "Mitglied auswählen...",
-        "delete_household_label": "Haushalt ebenfalls löschen",
-        "delete_household_hint": "Alle Daten des Haushalts werden unwiderruflich gelöscht.",
-        "confirm_text": "Dein Account wird unwiderruflich gelöscht. Bist du sicher?",
-        "cancel": "Abbrechen",
-        "confirm": "Account löschen"
-      }
-    },
-    "household": {
-      "title": "Haushalt",
-      "description": "Mitglieder, Einladungslink und Name verwalten",
-      "invite": {
-        "title": "Einladungslink",
-        "description": "Teile diesen Link, um neue Mitglieder einzuladen.",
-        "share_text": "Tritt meinem LibreHousehold-Haushalt bei!",
-        "copy_button": "Link kopieren",
-        "share_button": "Link teilen",
-        "regenerate_button": "Neuen Link erzeugen",
-        "copied_toast": "Link kopiert!",
-        "regenerated_toast": "Neuer Einladungslink erstellt.",
-        "shared_toast": "Link geteilt!",
-        "regenerate_error": "Fehler beim Erzeugen des Einladungslinks."
-      },
-      "name": {
-        "title": "Haushaltsname",
-        "label": "Name",
-        "save_button": "Speichern",
-        "save_success": "Haushaltsname gespeichert.",
-        "save_error": "Fehler beim Speichern des Haushaltsnamens."
-      },
-      "members": {
-        "title": "Mitglieder",
-        "remove_aria": "Mitglied entfernen",
-        "remove_error": "Fehler beim Entfernen des Mitglieds.",
-        "remove_modal": {
-          "title": "Mitglied entfernen?",
-          "text": "{name} wird aus dem Haushalt entfernt.",
-          "cancel": "Abbrechen",
-          "confirm": "Entfernen"
-        }
-      },
-      "transfer": {
-        "title": "Eigentümerschaft übertragen",
-        "description": "Übertrage die Eigentümerschaft an ein anderes Mitglied. Du verlierst danach diese Berechtigung.",
-        "select_label": "Neuen Eigentümer auswählen",
-        "placeholder": "Mitglied auswählen...",
-        "button": "Übertragen",
-        "success": "Eigentümerschaft übertragen.",
-        "error": "Fehler beim Übertragen der Eigentümerschaft.",
-        "modal": {
-          "title": "Eigentümerschaft übertragen?",
-          "text": "{name} wird neuer Eigentümer des Haushalts.",
-          "hint": "Du verlierst damit deine Administratorrechte.",
-          "cancel": "Abbrechen",
-          "confirm": "Jetzt übertragen"
-        }
-      },
-      "danger": {
-        "title": "Gefahrenzone",
-        "description": "Das Löschen des Haushalts ist unwiderruflich. Alle Daten gehen verloren.",
-        "delete_button": "Haushalt löschen",
-        "delete_error": "Fehler beim Löschen des Haushalts.",
-        "modal": {
-          "title": "Haushalt wirklich löschen?",
-          "text": "Alle Daten – Aufgaben, Ausgaben, Mitglieder – werden permanent gelöscht.",
-          "confirm_label": "Gib den Haushaltnamen zur Bestätigung ein: {name}",
-          "cancel": "Abbrechen",
-          "confirm": "Haushalt löschen"
-        }
-      }
-    }
-  }
+	"$schema": "https://inlang.com/schema/inlang-message-format",
+	"common": {
+		"currency_symbol": "€"
+	},
+	"subtitle": "Haushaltsverwaltung vereinfachen",
+	"welcome": {
+		"title": "Willkommen bei LibreHousehold",
+		"text": "Lass uns deinen Haushalt einrichten, um dir bei der Verwaltung von Aufgaben und Ausgaben zu helfen.",
+		"feature_cards": {
+			"card_1": {
+				"title": "Verwalte Aufgaben",
+				"description": "Weise Haushaltsaufgaben einfach zu und verfolge sie."
+			},
+			"card_2": {
+				"title": "Verfolge gemeinsame Ausgaben",
+				"description": "Teile Kosten und sieh, wer wem was schuldet."
+			},
+			"card_3": {
+				"title": "Ausgabenstatistiken anzeigen",
+				"description": "Analysiere die Ausgabengewohnheiten deines Haushalts im Laufe der Zeit."
+			}
+		},
+		"setup_button": "Registrieren",
+		"login_button": "Anmelden"
+	},
+	"setup": {
+		"create_step": {
+			"title": "Erstelle deinen Haushalt",
+			"text": "Gib deinem Haushalt einen Namen und lade optional ein Bild hoch.",
+			"household_name_label": "Haushaltsname",
+			"household_name_placeholder": "z.B., Die Müllers",
+			"household_name_error": "Gib einen Haushaltsnamen mit mindestens drei Zeichen ein.",
+			"back_button": "Zurück",
+			"continue_button": "Weiter"
+		},
+		"create_account_step": {
+			"title": "Richte dein Konto ein",
+			"text": "Als Ersteller bist du der Administrator deines Haushalts.",
+			"admin_name_label": "Dein Name",
+			"admin_name_placeholder": "z.B., Max Mustermann",
+			"admin_name_error": "Gib einen Namen mit mindestens drei Zeichen ein.",
+			"admin_email_label": "Deine E-Mail",
+			"admin_email_placeholder": "z.B., max.mustermann@example.org",
+			"admin_email_error": "Gib eine gültige E-Mail-Adresse ein.",
+			"back_button": "Zurück",
+			"continue_button": "Weiter"
+		},
+		"finish_step": {
+			"title": "Alles erledigt!",
+			"invite_text": "Lade andere zu deinem Haushalt ein:",
+			"invite_link_copied_toast": "Einladungslink in die Zwischenablage kopiert",
+			"invite_link_shared_toast": "Einladungslink geteilt",
+			"invite_link_cant_shared_toast": "Einladungslink kann nicht geteilt werden: {error}",
+			"invite_link_share_text": "Trete meinem Haushalt bei LibreHousehold bei",
+			"finish_button": "Einrichtung abschließen",
+			"close_setup_button": "Zum Dashboard gehen"
+		}
+	},
+	"menu": {
+		"dashboard": "Dashboard",
+		"tasks": "Aufgaben",
+		"expenses": "Ausgaben",
+		"statistics": "Statistiken",
+		"settings": "Einstellungen"
+	},
+	"statistics": {
+		"title": "Statistiken",
+		"period_label": "Zeitraum",
+		"periods": {
+			"last_7_days": "Letzte 7 Tage",
+			"last_14_days": "Letzte 14 Tage",
+			"this_month": "Dieser Monat",
+			"last_3_months": "Letzte 3 Monate",
+			"last_6_months": "Letztes halbes Jahr",
+			"this_year": "Dieses Jahr",
+			"last_year": "Letztes Jahr"
+		},
+		"total_expenses": "Ausgaben gesamt",
+		"tasks_done": "Aufgaben erledigt",
+		"categories_count": "Kategorien",
+		"categories_with_expenses": "mit Ausgaben",
+		"avg_per_month": "Ø / Monat",
+		"avg_abbrev": "Ø",
+		"per_month_suffix": "/ Monat",
+		"expenses_by_category": "Ausgaben nach Kategorie",
+		"category_total": "gesamt",
+		"member_expenses_label": "Ausgaben",
+		"tasks_done_label": "erledigt",
+		"tasks_open_label": "offen",
+		"loading": "Statistiken werden geladen…",
+		"error": "Statistiken konnten nicht geladen werden."
+	},
+	"dashboard": {
+		"title": "Dashboard",
+		"task_due_card": {
+			"title": "Bald fällige Aufgaben"
+		},
+		"you_owe_card": {
+			"title": "Du schuldest"
+		},
+		"owed_to_you_card": {
+			"title": "Dir wird geschuldet"
+		},
+		"financials": {
+			"title": "Finanzen",
+			"total_balance_label": "Gesamtbilanz",
+			"you_owe": "Du schuldest {name}",
+			"owed_to_you": "{name} schuldet dir",
+			"pending_outgoing": "Ausstehend an {name}",
+			"pending_incoming": "Ausstehend von {name}",
+			"settled": "Ausgeglichen",
+			"settle_button": "Begleichen"
+		},
+		"upcoming_tasks_card": {
+			"title": "Anstehende Aufgaben",
+			"no_tasks": "Keine anstehenden Aufgaben",
+			"create_button": "Aufgaben erstellen"
+		},
+		"recent_expenses_card": {
+			"title": "Kürzliche Ausgaben",
+			"no_expenses": "Keine kürzlichen Ausgaben",
+			"add_button": "Ausgabe hinzufügen"
+		},
+		"debts_overview_card": {
+			"title": "Schulden Übersicht",
+			"no_debts": "Keine Schulden zum Anzeigen",
+			"add_button": "Ausgabe hinzufügen"
+		},
+		"pending_reimbursements_card": {
+			"title": "Ausstehende Zahlungen",
+			"no_pending": "Keine ausstehenden Zahlungen.",
+			"incoming_text": "{name} möchte {amount} begleichen",
+			"confirm_button": "Bestätigen",
+			"reject_button": "Ablehnen"
+		},
+		"view_all": "Alle anzeigen"
+	},
+	"tasks": {
+		"title": "Aufgaben",
+		"create_task_button": "Aufgabe erstellen",
+		"no_tasks": "Keine Aufgaben verfügbar. Erstellen eine um loszulegen!",
+		"filter": {
+			"all": "Alle",
+			"assigned_to_me": "Meine",
+			"completed": "Abgeschlossen",
+			"pending": "Ausstehend"
+		},
+		"new": {
+			"title": "Neue Aufgabe erstellen",
+			"cancel_button": "Abbrechen",
+			"task_title_label": "Aufgabentitel",
+			"task_title_placeholder": "z.B., Müll rausbringen",
+			"task_title_error": "Gib einen Aufgabentitel mit mindestens drei Zeichen ein.",
+			"assigned_to_label": "Zugewiesen an",
+			"assigned_to_placeholder": "Wähle ein Haushaltsmitglied",
+			"description_label": "Beschreibung",
+			"description_placeholder": "z.B., Bitte bring den Müll raus bevor du gehst.",
+			"due_date_label": "Fälligkeitsdatum",
+			"due_date_error": "Gib ein Fälligkeitsdatum ein, dass entweder heute ist oder in der Zukunft liegt.",
+			"recurring_label": "Wiederkehrende Aufgabe?",
+			"recurrence_pattern_label": "Wiederholungseinheit",
+			"recurrence_pattern_days": "Tage",
+			"recurrence_pattern_weeks": "Wochen",
+			"recurrence_pattern_months": "Monate",
+			"recurrence_pattern_years": "Jahre",
+			"recurrence_pattern_times_label": "Alle wie viele Einheiten?",
+			"next_recurrence_date_label": "Mit dem aktuellen Fälligkeitsdatum {date}, wird die nächste Wiederholung am {nextDate} sein.",
+			"create_button": "Aufgabe erstellen"
+		}
+	},
+	"expenses": {
+		"title": "Ausgaben",
+		"create_expense_button": "Ausgabe erfassen",
+		"list_title": "Ausgaben-Übersicht",
+		"no_expenses": "Keine Ausgaben vorhanden",
+		"paid_by": "Bezahlt von",
+		"delete_button": "Löschen",
+		"delete_confirm": "Möchten Sie diese Ausgabe wirklich löschen?",
+		"new": {
+			"title": "Neue Ausgabe",
+			"cancel_button": "Abbrechen",
+			"expense_title_label": "Beschreibung",
+			"expense_title_placeholder": "z.B. Einkauf Lidl",
+			"expense_title_error": "Gib eine Beschreibung mit mindestens drei Zeichen ein.",
+			"amount_label": "Betrag",
+			"paid_by_label": "Bezahlt von",
+			"paid_by_select_placeholder": "Mitglied auswählen...",
+			"date_label": "Datum",
+			"category_label": "Kategorie",
+			"category_select_placeholder": "Kategorie wählen...",
+			"no_categories_hint": "Keine Kategorien vorhanden. Erstelle neue Kategorien in den Einstellungen.",
+			"split_between_label": "Aufteilen zwischen",
+			"split_between_hint": "Wähle die Mitglieder aus, zwischen denen die Ausgabe aufgeteilt werden soll. Wenn nichts ausgewählt ist, wird gleichmäßig zwischen allen aufgeteilt.",
+			"notes_label": "Notizen",
+			"notes_placeholder": "Zusätzliche Notizen...",
+			"create_button": "Ausgabe erstellen"
+		},
+		"edit": {
+			"title": "Ausgabe bearbeiten",
+			"save_button": "Änderungen speichern"
+		}
+	},
+	"settle": {
+		"title": "Schulden begleichen",
+		"cancel_button": "Abbrechen",
+		"paying_label": "Zahlung an {name}",
+		"total_amount_label": "Gesamtbetrag",
+		"details_label": "Details (Enthaltene Ausgaben)",
+		"no_details": "Keine Detail-Ausgaben gefunden.",
+		"confirm_payment_button": "Als bezahlt markieren",
+		"disclaimer": "Diese Aktion führt keine echte Zahlung durch. Bitte stelle sicher, dass du den Betrag per Überweisung oder Bar gezahlt hast."
+	},
+	"settings": {
+		"back": "Zurück zu Einstellungen",
+		"appearance": {
+			"title": "Erscheinungsbild",
+			"dark_mode_label": "Dunkelmodus"
+		},
+		"language": {
+			"title": "Sprache",
+			"select_label": "Sprache auswählen"
+		},
+		"user": {
+			"title": "Nutzerprofil",
+			"description": "Name, E-Mail und Passwort ändern",
+			"profile": {
+				"title": "Profil",
+				"name_label": "Anzeigename",
+				"email_label": "E-Mail-Adresse",
+				"save_button": "Speichern",
+				"save_success": "Profil gespeichert.",
+				"save_error": "Fehler beim Speichern des Profils."
+			},
+			"password": {
+				"title": "Passwort ändern",
+				"old_label": "Aktuelles Passwort",
+				"new_label": "Neues Passwort",
+				"confirm_label": "Neues Passwort bestätigen",
+				"mismatch": "Die Passwörter stimmen nicht überein.",
+				"save_button": "Passwort ändern",
+				"save_success": "Passwort erfolgreich geändert.",
+				"wrong_password": "Das aktuelle Passwort ist falsch.",
+				"save_error": "Fehler beim Ändern des Passworts."
+			},
+			"danger": {
+				"title": "Gefahrenzone",
+				"description": "Das Löschen deines Accounts kann nicht rückgängig gemacht werden.",
+				"delete_button": "Account löschen",
+				"delete_error": "Fehler beim Löschen des Accounts."
+			},
+			"delete_modal": {
+				"title": "Account wirklich löschen?",
+				"owner_notice": "Du bist der Eigentümer dieses Haushalts. Bitte wähle, was mit dem Haushalt passieren soll:",
+				"transfer_label": "Eigentümerschaft übertragen an:",
+				"transfer_select_label": "Mitglied auswählen",
+				"transfer_placeholder": "Mitglied auswählen...",
+				"delete_household_label": "Haushalt ebenfalls löschen",
+				"delete_household_hint": "Alle Daten des Haushalts werden unwiderruflich gelöscht.",
+				"confirm_text": "Dein Account wird unwiderruflich gelöscht. Bist du sicher?",
+				"cancel": "Abbrechen",
+				"confirm": "Account löschen"
+			}
+		},
+		"household": {
+			"title": "Haushalt",
+			"description": "Mitglieder, Einladungslink und Name verwalten",
+			"invite": {
+				"title": "Einladungslink",
+				"description": "Teile diesen Link, um neue Mitglieder einzuladen.",
+				"share_text": "Tritt meinem LibreHousehold-Haushalt bei!",
+				"copy_button": "Link kopieren",
+				"share_button": "Link teilen",
+				"regenerate_button": "Neuen Link erzeugen",
+				"copied_toast": "Link kopiert!",
+				"regenerated_toast": "Neuer Einladungslink erstellt.",
+				"shared_toast": "Link geteilt!",
+				"regenerate_error": "Fehler beim Erzeugen des Einladungslinks."
+			},
+			"name": {
+				"title": "Haushaltsname",
+				"label": "Name",
+				"save_button": "Speichern",
+				"save_success": "Haushaltsname gespeichert.",
+				"save_error": "Fehler beim Speichern des Haushaltsnamens."
+			},
+			"members": {
+				"title": "Mitglieder",
+				"remove_aria": "Mitglied entfernen",
+				"remove_error": "Fehler beim Entfernen des Mitglieds.",
+				"remove_modal": {
+					"title": "Mitglied entfernen?",
+					"text": "{name} wird aus dem Haushalt entfernt.",
+					"cancel": "Abbrechen",
+					"confirm": "Entfernen"
+				}
+			},
+			"transfer": {
+				"title": "Eigentümerschaft übertragen",
+				"description": "Übertrage die Eigentümerschaft an ein anderes Mitglied. Du verlierst danach diese Berechtigung.",
+				"select_label": "Neuen Eigentümer auswählen",
+				"placeholder": "Mitglied auswählen...",
+				"button": "Übertragen",
+				"success": "Eigentümerschaft übertragen.",
+				"error": "Fehler beim Übertragen der Eigentümerschaft.",
+				"modal": {
+					"title": "Eigentümerschaft übertragen?",
+					"text": "{name} wird neuer Eigentümer des Haushalts.",
+					"hint": "Du verlierst damit deine Administratorrechte.",
+					"cancel": "Abbrechen",
+					"confirm": "Jetzt übertragen"
+				}
+			},
+			"danger": {
+				"title": "Gefahrenzone",
+				"description": "Das Löschen des Haushalts ist unwiderruflich. Alle Daten gehen verloren.",
+				"delete_button": "Haushalt löschen",
+				"delete_error": "Fehler beim Löschen des Haushalts.",
+				"modal": {
+					"title": "Haushalt wirklich löschen?",
+					"text": "Alle Daten – Aufgaben, Ausgaben, Mitglieder – werden permanent gelöscht.",
+					"confirm_label": "Gib den Haushaltnamen zur Bestätigung ein: {name}",
+					"cancel": "Abbrechen",
+					"confirm": "Haushalt löschen"
+				}
+			}
+		}
+	}
 }

@@ -1,329 +1,329 @@
 {
-  "$schema": "https://inlang.com/schema/inlang-message-format",
-  "common": {
-    "currency_symbol": "€"
-  },
-  "subtitle": "Simplify household management",
-  "welcome": {
-    "title": "Welcome to LibreHousehold",
-    "text": "Let's set up your household to help you manage tasks and expenses.",
-    "feature_cards": {
-      "card_1": {
-        "title": "Manage Tasks",
-        "description": "Easily assign and track household chores."
-      },
-      "card_2": {
-        "title": "Track shared expenses",
-        "description": "Split costs and see who owes what."
-      },
-      "card_3": {
-        "title": "View spending statistics",
-        "description": "Analyze your household's spending habits over time."
-      }
-    },
-    "setup_button": "Setup",
-    "login_button": "Login"
-  },
-  "setup": {
-    "create_step": {
-      "title": "Create your household",
-      "text": "Give your household a name and optionally upload an image.",
-      "household_name_label": "Household Name",
-      "household_name_placeholder": "e.g., The Smiths",
-      "household_name_error": "Enter a household name with at least three characters.",
-      "back_button": "Back",
-      "continue_button": "Continue"
-    },
-    "create_account_step": {
-      "title": "Set up your account",
-      "text": "As the creator, you'll be the admin of your household.",
-      "admin_name_label": "Your Name",
-      "admin_name_placeholder": "e.g., John Doe",
-      "admin_name_error": "Enter a name with at least three characters.",
-      "admin_email_label": "Your email",
-      "admin_email_placeholder": "e.g., john.doe@example.org",
-      "admin_email_error": "Enter a valid mail address.",
-      "back_button": "Back",
-      "continue_button": "Continue"
-    },
-    "finish_step": {
-      "title": "You're all set!",
-      "invite_text": "Invite others to your household:",
-      "invite_link_copied_toast": "Invite link copied to clipboard",
-      "invite_link_shared_toast": "Invite link shared",
-      "invite_link_cant_shared_toast": "Invite link cannot be shared: {error}",
-      "invite_link_share_text": "Join my Household on LibreHousehold",
-      "finish_button": "Finish setup",
-      "close_setup_button": "Go to Dashboard"
-    }
-  },
-  "menu": {
-    "dashboard": "Dashboard",
-    "tasks": "Tasks",
-    "expenses": "Expenses",
-    "statistics": "Statistics",
-    "settings": "Settings"
-  },
-  "statistics": {
-    "title": "Statistics",
-    "period_label": "Period",
-    "periods": {
-      "last_7_days": "Last 7 days",
-      "last_14_days": "Last 14 days",
-      "this_month": "This month",
-      "last_3_months": "Last 3 months",
-      "last_6_months": "Last 6 months",
-      "this_year": "This year",
-      "last_year": "Last year"
-    },
-    "total_expenses": "Total expenses",
-    "tasks_done": "Tasks completed",
-    "categories_count": "Categories",
-    "categories_with_expenses": "with expenses",
-    "avg_per_month": "Avg / month",
-    "avg_abbrev": "Avg.",
-    "per_month_suffix": "/ month",
-    "expenses_by_category": "Expenses by category",
-    "category_total": "total",
-    "member_expenses_label": "Expenses",
-    "tasks_done_label": "done",
-    "tasks_open_label": "open",
-    "loading": "Loading statistics…",
-    "error": "Could not load statistics."
-  },
-  "dashboard": {
-    "title": "Dashboard",
-    "task_due_card": {
-      "title": "Tasks Due soon"
-    },
-    "you_owe_card": {
-      "title": "You Owe"
-    },
-    "owed_to_you_card": {
-      "title": "Owed to You"
-    },
-    "financials": {
-        "title": "Financials",
-        "total_balance_label": "Net Balance",
-        "you_owe": "You owe {name}",
-        "owed_to_you": "{name} owes you",
-        "pending_outgoing": "Pending to {name}",
-        "pending_incoming": "Pending from {name}",
-        "settled": "Settled",
-        "settle_button": "Settle Up"
-    },
-    "upcoming_tasks_card": {
-      "title": "Upcoming Tasks",
-      "no_tasks": "No upcoming tasks",
-      "create_button": "Create Tasks"
-    },
-    "recent_expenses_card": {
-      "title": "Recent Expenses",
-      "no_expenses": "No recent expenses",
-      "add_button": "Add Expense"
-    },
-    "debts_overview_card": {
-      "title": "Debts Overview",
-      "no_debts": "No debts to display",
-      "add_button": "Add Expense"
-    },
-    "pending_reimbursements_card": {
-        "title": "Pending Settlements",
-        "no_pending": "No pending settlements.",
-        "incoming_text": "{name} wants to settle {amount}",
-        "confirm_button": "Confirm",
-        "reject_button": "Reject"
-    },
-    "view_all": "View all"
-  },
-  "tasks": {
-    "title": "Tasks",
-    "create_task_button": "Create Task",
-    "no_tasks": "No tasks available. Create one to get started!",
-    "filter": {
-      "all": "All",
-      "assigned_to_me": "Assigned to me",
-      "completed": "Completed",
-      "pending": "Pending"
-    },
-    "new": {
-      "title": "New Task",
-      "cancel_button": "Cancel",
-      "task_title_label": "Task Title",
-      "task_title_placeholder": "e.g., Clean the kitchen",
-      "task_title_error": "Enter a task title with at least three characters.",
-      "assigned_to_label": "Assign to",
-      "assigned_to_select_placeholder": "Select a household member",
-      "description_label": "Description",
-      "description_placeholder": "e.g., Remember to clean the fridge and mop the floor.",
-      "due_date_label": "Due Date",
-      "due_date_error": "Select a due date, which is today or in the future.",
-      "recurring_label": "Recurring task?",
-      "recurrence_pattern_label": "Recurrence Unit",
-      "recurrence_pattern_days": "Days",
-      "recurrence_pattern_weeks": "Weeks",
-      "recurrence_pattern_months": "Monhts",
-      "recurrence_pattern_years": "Years",
-      "recurrence_pattern_times_label": "Every how many units?",
-      "next_recurrence_date_label": "With currenct due date {date}, next recurrence will be on {nextDate}.",
-      "create_button": "Create Task"
-    }
-  },
-  "expenses": {
-    "title": "Expenses",
-    "create_expense_button": "Add Expense",
-    "list_title": "Expense Overview",
-    "no_expenses": "No expenses yet",
-    "paid_by": "Paid by",
-    "delete_button": "Delete",
-    "delete_confirm": "Do you really want to delete this expense?",
-    "new": {
-      "title": "New Expense",
-      "cancel_button": "Cancel",
-      "expense_title_label": "Description",
-      "expense_title_placeholder": "e.g. Grocery shopping at Lidl",
-      "expense_title_error": "Enter a description with at least three characters.",
-      "amount_label": "Amount",
-      "paid_by_label": "Paid by",
-      "paid_by_select_placeholder": "Select member...",
-      "date_label": "Date",
-      "category_label": "Category",
-      "category_select_placeholder": "Select category...",
-      "no_categories_hint": "No categories available. Create new categories in settings.",
-      "split_between_label": "Split between",
-      "split_between_hint": "Select the members to split the expense between. If none selected, it will be split equally among all members.",
-      "notes_label": "Notes",
-      "notes_placeholder": "Additional notes...",
-      "create_button": "Create Expense"
-    },
-    "edit": {
-      "title": "Edit Expense",
-      "save_button": "Save Changes"
-    }
-  },
-  "settle": {
-    "title": "Settle Debts",
-    "cancel_button": "Cancel",
-    "paying_label": "Paying {name}",
-    "total_amount_label": "Total Amount",
-    "details_label": "Details (Expenses included in this debt)",
-    "no_details": "No detailed expenses found.",
-    "confirm_payment_button": "Mark as Paid",
-    "disclaimer": "This action does not transfer actual money. Please ensure you have transferred the amount via bank transfer or cash."
-  },
-  "settings": {
-    "back": "Back to Settings",
-    "appearance": {
-      "title": "Appearance",
-      "dark_mode_label": "Dark mode"
-    },
-    "language": {
-      "title": "Language",
-      "select_label": "Select language"
-    },
-    "user": {
-      "title": "User Profile",
-      "description": "Change name, email and password",
-      "profile": {
-        "title": "Profile",
-        "name_label": "Display name",
-        "email_label": "Email address",
-        "save_button": "Save",
-        "save_success": "Profile saved.",
-        "save_error": "Failed to save profile."
-      },
-      "password": {
-        "title": "Change Password",
-        "old_label": "Current password",
-        "new_label": "New password",
-        "confirm_label": "Confirm new password",
-        "mismatch": "Passwords do not match.",
-        "save_button": "Change password",
-        "save_success": "Password changed successfully.",
-        "wrong_password": "The current password is incorrect.",
-        "save_error": "Failed to change password."
-      },
-      "danger": {
-        "title": "Danger Zone",
-        "description": "Deleting your account cannot be undone.",
-        "delete_button": "Delete account",
-        "delete_error": "Failed to delete account."
-      },
-      "delete_modal": {
-        "title": "Really delete account?",
-        "owner_notice": "You are the owner of this household. Please choose what should happen to the household:",
-        "transfer_label": "Transfer ownership to:",
-        "transfer_select_label": "Select member",
-        "transfer_placeholder": "Select member...",
-        "delete_household_label": "Also delete the household",
-        "delete_household_hint": "All household data will be permanently deleted.",
-        "confirm_text": "Your account will be permanently deleted. Are you sure?",
-        "cancel": "Cancel",
-        "confirm": "Delete account"
-      }
-    },
-    "household": {
-      "title": "Household",
-      "description": "Manage members, invite link and name",
-      "invite": {
-        "title": "Invite Link",
-        "description": "Share this link to invite new members.",
-        "share_text": "Join my LibreHousehold!",
-        "copy_button": "Copy link",
-        "share_button": "Share link",
-        "regenerate_button": "Generate new link",
-        "copied_toast": "Link copied!",
-        "regenerated_toast": "New invite link created.",
-        "shared_toast": "Link shared!",
-        "regenerate_error": "Failed to generate invite link."
-      },
-      "name": {
-        "title": "Household Name",
-        "label": "Name",
-        "save_button": "Save",
-        "save_success": "Household name saved.",
-        "save_error": "Failed to save household name."
-      },
-      "members": {
-        "title": "Members",
-        "remove_aria": "Remove member",
-        "remove_error": "Failed to remove member.",
-        "remove_modal": {
-          "title": "Remove member?",
-          "text": "{name} will be removed from the household.",
-          "cancel": "Cancel",
-          "confirm": "Remove"
-        }
-      },
-      "transfer": {
-        "title": "Transfer Ownership",
-        "description": "Transfer ownership to another member. You will lose admin rights afterwards.",
-        "select_label": "Select new owner",
-        "placeholder": "Select member...",
-        "button": "Transfer",
-        "success": "Ownership transferred.",
-        "error": "Failed to transfer ownership.",
-        "modal": {
-          "title": "Transfer ownership?",
-          "text": "{name} will become the new household owner.",
-          "hint": "You will lose your admin rights after this.",
-          "cancel": "Cancel",
-          "confirm": "Transfer now"
-        }
-      },
-      "danger": {
-        "title": "Danger Zone",
-        "description": "Deleting the household is irreversible. All data will be lost.",
-        "delete_button": "Delete household",
-        "delete_error": "Failed to delete household.",
-        "modal": {
-          "title": "Really delete household?",
-          "text": "All data – tasks, expenses, members – will be permanently deleted.",
-          "confirm_label": "Enter the household name to confirm: {name}",
-          "cancel": "Cancel",
-          "confirm": "Delete household"
-        }
-      }
-    }
-  }
+	"$schema": "https://inlang.com/schema/inlang-message-format",
+	"common": {
+		"currency_symbol": "€"
+	},
+	"subtitle": "Simplify household management",
+	"welcome": {
+		"title": "Welcome to LibreHousehold",
+		"text": "Let's set up your household to help you manage tasks and expenses.",
+		"feature_cards": {
+			"card_1": {
+				"title": "Manage Tasks",
+				"description": "Easily assign and track household chores."
+			},
+			"card_2": {
+				"title": "Track shared expenses",
+				"description": "Split costs and see who owes what."
+			},
+			"card_3": {
+				"title": "View spending statistics",
+				"description": "Analyze your household's spending habits over time."
+			}
+		},
+		"setup_button": "Setup",
+		"login_button": "Login"
+	},
+	"setup": {
+		"create_step": {
+			"title": "Create your household",
+			"text": "Give your household a name and optionally upload an image.",
+			"household_name_label": "Household Name",
+			"household_name_placeholder": "e.g., The Smiths",
+			"household_name_error": "Enter a household name with at least three characters.",
+			"back_button": "Back",
+			"continue_button": "Continue"
+		},
+		"create_account_step": {
+			"title": "Set up your account",
+			"text": "As the creator, you'll be the admin of your household.",
+			"admin_name_label": "Your Name",
+			"admin_name_placeholder": "e.g., John Doe",
+			"admin_name_error": "Enter a name with at least three characters.",
+			"admin_email_label": "Your email",
+			"admin_email_placeholder": "e.g., john.doe@example.org",
+			"admin_email_error": "Enter a valid mail address.",
+			"back_button": "Back",
+			"continue_button": "Continue"
+		},
+		"finish_step": {
+			"title": "You're all set!",
+			"invite_text": "Invite others to your household:",
+			"invite_link_copied_toast": "Invite link copied to clipboard",
+			"invite_link_shared_toast": "Invite link shared",
+			"invite_link_cant_shared_toast": "Invite link cannot be shared: {error}",
+			"invite_link_share_text": "Join my Household on LibreHousehold",
+			"finish_button": "Finish setup",
+			"close_setup_button": "Go to Dashboard"
+		}
+	},
+	"menu": {
+		"dashboard": "Dashboard",
+		"tasks": "Tasks",
+		"expenses": "Expenses",
+		"statistics": "Statistics",
+		"settings": "Settings"
+	},
+	"statistics": {
+		"title": "Statistics",
+		"period_label": "Period",
+		"periods": {
+			"last_7_days": "Last 7 days",
+			"last_14_days": "Last 14 days",
+			"this_month": "This month",
+			"last_3_months": "Last 3 months",
+			"last_6_months": "Last 6 months",
+			"this_year": "This year",
+			"last_year": "Last year"
+		},
+		"total_expenses": "Total expenses",
+		"tasks_done": "Tasks completed",
+		"categories_count": "Categories",
+		"categories_with_expenses": "with expenses",
+		"avg_per_month": "Avg / month",
+		"avg_abbrev": "Avg.",
+		"per_month_suffix": "/ month",
+		"expenses_by_category": "Expenses by category",
+		"category_total": "total",
+		"member_expenses_label": "Expenses",
+		"tasks_done_label": "done",
+		"tasks_open_label": "open",
+		"loading": "Loading statistics…",
+		"error": "Could not load statistics."
+	},
+	"dashboard": {
+		"title": "Dashboard",
+		"task_due_card": {
+			"title": "Tasks Due soon"
+		},
+		"you_owe_card": {
+			"title": "You Owe"
+		},
+		"owed_to_you_card": {
+			"title": "Owed to You"
+		},
+		"financials": {
+			"title": "Financials",
+			"total_balance_label": "Net Balance",
+			"you_owe": "You owe {name}",
+			"owed_to_you": "{name} owes you",
+			"pending_outgoing": "Pending to {name}",
+			"pending_incoming": "Pending from {name}",
+			"settled": "Settled",
+			"settle_button": "Settle Up"
+		},
+		"upcoming_tasks_card": {
+			"title": "Upcoming Tasks",
+			"no_tasks": "No upcoming tasks",
+			"create_button": "Create Tasks"
+		},
+		"recent_expenses_card": {
+			"title": "Recent Expenses",
+			"no_expenses": "No recent expenses",
+			"add_button": "Add Expense"
+		},
+		"debts_overview_card": {
+			"title": "Debts Overview",
+			"no_debts": "No debts to display",
+			"add_button": "Add Expense"
+		},
+		"pending_reimbursements_card": {
+			"title": "Pending Settlements",
+			"no_pending": "No pending settlements.",
+			"incoming_text": "{name} wants to settle {amount}",
+			"confirm_button": "Confirm",
+			"reject_button": "Reject"
+		},
+		"view_all": "View all"
+	},
+	"tasks": {
+		"title": "Tasks",
+		"create_task_button": "Create Task",
+		"no_tasks": "No tasks available. Create one to get started!",
+		"filter": {
+			"all": "All",
+			"assigned_to_me": "Assigned to me",
+			"completed": "Completed",
+			"pending": "Pending"
+		},
+		"new": {
+			"title": "New Task",
+			"cancel_button": "Cancel",
+			"task_title_label": "Task Title",
+			"task_title_placeholder": "e.g., Clean the kitchen",
+			"task_title_error": "Enter a task title with at least three characters.",
+			"assigned_to_label": "Assign to",
+			"assigned_to_select_placeholder": "Select a household member",
+			"description_label": "Description",
+			"description_placeholder": "e.g., Remember to clean the fridge and mop the floor.",
+			"due_date_label": "Due Date",
+			"due_date_error": "Select a due date, which is today or in the future.",
+			"recurring_label": "Recurring task?",
+			"recurrence_pattern_label": "Recurrence Unit",
+			"recurrence_pattern_days": "Days",
+			"recurrence_pattern_weeks": "Weeks",
+			"recurrence_pattern_months": "Monhts",
+			"recurrence_pattern_years": "Years",
+			"recurrence_pattern_times_label": "Every how many units?",
+			"next_recurrence_date_label": "With currenct due date {date}, next recurrence will be on {nextDate}.",
+			"create_button": "Create Task"
+		}
+	},
+	"expenses": {
+		"title": "Expenses",
+		"create_expense_button": "Add Expense",
+		"list_title": "Expense Overview",
+		"no_expenses": "No expenses yet",
+		"paid_by": "Paid by",
+		"delete_button": "Delete",
+		"delete_confirm": "Do you really want to delete this expense?",
+		"new": {
+			"title": "New Expense",
+			"cancel_button": "Cancel",
+			"expense_title_label": "Description",
+			"expense_title_placeholder": "e.g. Grocery shopping at Lidl",
+			"expense_title_error": "Enter a description with at least three characters.",
+			"amount_label": "Amount",
+			"paid_by_label": "Paid by",
+			"paid_by_select_placeholder": "Select member...",
+			"date_label": "Date",
+			"category_label": "Category",
+			"category_select_placeholder": "Select category...",
+			"no_categories_hint": "No categories available. Create new categories in settings.",
+			"split_between_label": "Split between",
+			"split_between_hint": "Select the members to split the expense between. If none selected, it will be split equally among all members.",
+			"notes_label": "Notes",
+			"notes_placeholder": "Additional notes...",
+			"create_button": "Create Expense"
+		},
+		"edit": {
+			"title": "Edit Expense",
+			"save_button": "Save Changes"
+		}
+	},
+	"settle": {
+		"title": "Settle Debts",
+		"cancel_button": "Cancel",
+		"paying_label": "Paying {name}",
+		"total_amount_label": "Total Amount",
+		"details_label": "Details (Expenses included in this debt)",
+		"no_details": "No detailed expenses found.",
+		"confirm_payment_button": "Mark as Paid",
+		"disclaimer": "This action does not transfer actual money. Please ensure you have transferred the amount via bank transfer or cash."
+	},
+	"settings": {
+		"back": "Back to Settings",
+		"appearance": {
+			"title": "Appearance",
+			"dark_mode_label": "Dark mode"
+		},
+		"language": {
+			"title": "Language",
+			"select_label": "Select language"
+		},
+		"user": {
+			"title": "User Profile",
+			"description": "Change name, email and password",
+			"profile": {
+				"title": "Profile",
+				"name_label": "Display name",
+				"email_label": "Email address",
+				"save_button": "Save",
+				"save_success": "Profile saved.",
+				"save_error": "Failed to save profile."
+			},
+			"password": {
+				"title": "Change Password",
+				"old_label": "Current password",
+				"new_label": "New password",
+				"confirm_label": "Confirm new password",
+				"mismatch": "Passwords do not match.",
+				"save_button": "Change password",
+				"save_success": "Password changed successfully.",
+				"wrong_password": "The current password is incorrect.",
+				"save_error": "Failed to change password."
+			},
+			"danger": {
+				"title": "Danger Zone",
+				"description": "Deleting your account cannot be undone.",
+				"delete_button": "Delete account",
+				"delete_error": "Failed to delete account."
+			},
+			"delete_modal": {
+				"title": "Really delete account?",
+				"owner_notice": "You are the owner of this household. Please choose what should happen to the household:",
+				"transfer_label": "Transfer ownership to:",
+				"transfer_select_label": "Select member",
+				"transfer_placeholder": "Select member...",
+				"delete_household_label": "Also delete the household",
+				"delete_household_hint": "All household data will be permanently deleted.",
+				"confirm_text": "Your account will be permanently deleted. Are you sure?",
+				"cancel": "Cancel",
+				"confirm": "Delete account"
+			}
+		},
+		"household": {
+			"title": "Household",
+			"description": "Manage members, invite link and name",
+			"invite": {
+				"title": "Invite Link",
+				"description": "Share this link to invite new members.",
+				"share_text": "Join my LibreHousehold!",
+				"copy_button": "Copy link",
+				"share_button": "Share link",
+				"regenerate_button": "Generate new link",
+				"copied_toast": "Link copied!",
+				"regenerated_toast": "New invite link created.",
+				"shared_toast": "Link shared!",
+				"regenerate_error": "Failed to generate invite link."
+			},
+			"name": {
+				"title": "Household Name",
+				"label": "Name",
+				"save_button": "Save",
+				"save_success": "Household name saved.",
+				"save_error": "Failed to save household name."
+			},
+			"members": {
+				"title": "Members",
+				"remove_aria": "Remove member",
+				"remove_error": "Failed to remove member.",
+				"remove_modal": {
+					"title": "Remove member?",
+					"text": "{name} will be removed from the household.",
+					"cancel": "Cancel",
+					"confirm": "Remove"
+				}
+			},
+			"transfer": {
+				"title": "Transfer Ownership",
+				"description": "Transfer ownership to another member. You will lose admin rights afterwards.",
+				"select_label": "Select new owner",
+				"placeholder": "Select member...",
+				"button": "Transfer",
+				"success": "Ownership transferred.",
+				"error": "Failed to transfer ownership.",
+				"modal": {
+					"title": "Transfer ownership?",
+					"text": "{name} will become the new household owner.",
+					"hint": "You will lose your admin rights after this.",
+					"cancel": "Cancel",
+					"confirm": "Transfer now"
+				}
+			},
+			"danger": {
+				"title": "Danger Zone",
+				"description": "Deleting the household is irreversible. All data will be lost.",
+				"delete_button": "Delete household",
+				"delete_error": "Failed to delete household.",
+				"modal": {
+					"title": "Really delete household?",
+					"text": "All data – tasks, expenses, members – will be permanently deleted.",
+					"confirm_label": "Enter the household name to confirm: {name}",
+					"cancel": "Cancel",
+					"confirm": "Delete household"
+				}
+			}
+		}
+	}
 }

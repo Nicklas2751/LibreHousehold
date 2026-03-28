@@ -1,5 +1,5 @@
 <script>
-    import WelcomeScreen from "$lib/WelcomeScreen.svelte";
+	import WelcomeScreen from '$lib/WelcomeScreen.svelte';
 </script>
 
-<WelcomeScreen/>
+<WelcomeScreen />

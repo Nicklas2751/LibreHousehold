@@ -1,6 +1,11 @@
-import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
-import {addInterval, checkIsDone, getLastDueDate, getNextDueDateAfterToday} from './taskDueCalculator';
-import type {Task} from '../generated-sources/openapi';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+	addInterval,
+	checkIsDone,
+	getLastDueDate,
+	getNextDueDateAfterToday
+} from './taskDueCalculator';
+import type { Task } from '../generated-sources/openapi';
 
 describe('taskDueCalculator', () => {
 	beforeEach(() => {
@@ -91,7 +96,7 @@ describe('taskDueCalculator', () => {
 			const task: Task = {
 				id: '1',
 				title: 'Test Task',
-				dueDate: undefined as any,
+				dueDate: undefined as unknown as Date,
 				recurring: true,
 				recurrenceUnit: 'days',
 				recurrenceInterval: 1
@@ -258,7 +263,7 @@ describe('taskDueCalculator', () => {
 			const task: Task = {
 				id: '1',
 				title: 'Test Task',
-				dueDate: undefined as any,
+				dueDate: undefined as unknown as Date,
 				recurring: true,
 				recurrenceUnit: 'days',
 				recurrenceInterval: 1
