@@ -29,6 +29,10 @@
 		buttonOnClick,
 		itemMapper
 	}: Props = $props();
+
+	function toDisplayItem(item: T): DisplayItem {
+		return itemMapper ? itemMapper(item) : (item as unknown as DisplayItem);
+	}
 </script>
 
 <div class={`card bg-base-200 drop-shadow-xl card-border ${colSpan}`}>
@@ -47,7 +51,7 @@
 		{:else}
 			<div class="space-y-2">
 				{#each items as item (item.id)}
-					{@const displayItem = itemMapper ? itemMapper(item) : item}
+					{@const displayItem = toDisplayItem(item)}
 					<div
 						class="flex items-center justify-between gap-4 rounded-lg bg-base-100 p-2"
 						class:text-secondary={displayItem.isHighlighted}

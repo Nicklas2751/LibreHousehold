@@ -14,7 +14,8 @@
 		"lint": "prettier --check . && eslint .",
 		"test:unit": "vitest",
 		"test": "npm run test:unit -- --run",
-		"openapi": "rm -rf src/generated-sources/openapi; npx @openapitools/openapi-generator-cli generate -i ../api/openapi.yml -g typescript-fetch -o src/generated-sources/openapi --additional-properties=supportsES6=true,modelPropertyNaming=original"
+		"openapi": "rm -rf src/generated-sources/openapi; npx @openapitools/openapi-generator-cli generate -i ../api/openapi.yml -g typescript-fetch -o src/generated-sources/openapi --additional-properties=supportsES6=true,modelPropertyNaming=original",
+		"paraglide": "paraglide-js compile --project ./project.inlang --outdir ./src/lib/paraglide"
 	},
 	"devDependencies": {
 		"@castlenine/svelte-qrcode": "^2.3.0",

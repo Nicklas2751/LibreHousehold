@@ -64,6 +64,9 @@ jobs:
       - name: Generate OpenAPI sources
         run: npm run openapi
 
+      - name: Generate Paraglide sources
+        run: npm run paraglide
+
       - name: Lint
         run: npm run lint
 
