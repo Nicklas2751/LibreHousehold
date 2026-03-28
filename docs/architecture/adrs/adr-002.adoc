@@ -1,15 +1,15 @@
-:jbake-title: ADR 002: Kotlin as backend language
+:jbake-title: ADR 002: Java as backend language
 :jbake-type: page_toc
 :jbake-status: published
 :jbake-menu: adrs
 :jbake-order: 2
 
 [[adr-002]]
-= ADR 002: Kotlin as backend language
+= ADR 002: Java as backend language
 
 == Context
 
-We need to choose a programming language for our backend services. Since the app will be open source we need to choose a language that is widely used and has a good community support xref:../chapters/01_introduction_and_goals.adoc#QG4[(QG4)]. We also want to choose a language that is easy to learn and has a good tooling support. As xref:../chapters/01_introduction_and_goals.adoc#QG3[QG3] describes, we want to make it easy for users to host the app themselves. Therefore, we need to choose a language that is easy to deploy and has a good support for containerization.
+We need to choose a programming language for our backend services. Since the app will be open source we need to choose a language that is widely used and has good community support xref:../chapters/01_introduction_and_goals.adoc#QG4[(QG4)]. We also want to choose a language that is easy to learn and has good tooling support. As xref:../chapters/01_introduction_and_goals.adoc#QG3[QG3] describes, we want to make it easy for users to host the app themselves. Therefore, we need to choose a language that is easy to deploy and has good support for containerization.
 
 == Considered Options
 
@@ -17,14 +17,19 @@ Java; Kotlin; Python; JavaScript (Node.js)
 
 == Decision Outcome
 
-Kotlin is the chosen programming language for our backend services. Kotlin is a modern programming language that is fully interoperable with Java. It has a concise syntax and a good tooling support. Kotlin is also easy to learn for developers who are familiar with Java or other C-style languages. Furthermore, Kotlin has a good support for coroutines, which makes it easy to write asynchronous code. It's resource consumption is comparable to Java, and way better than Python or JavaScript (Node.js). Kotlin can be easily deployed in Docker containers, which makes it easy for users to host the app themselves. Java is used more widely than Kotlin but the maintainer and author of this document is experienced with Java and wants to use this project to get more familiar with Kotlin.
+Java is the chosen programming language for our backend services. It has a concise syntax and a good tooling support. Java is also easy to learn for developers who are familiar with C-style languages. Its resource consumption is comparable to Kotlin, and way better than Python or JavaScript (Node.js). Java can be easily deployed in Docker containers, which makes it easy for users to host the app themselves. Java is used more widely than Kotlin.
 
 == Consequences
 
 **Negative:**
 
-- Kotlin is not as widely used as Java, which might make it harder to find developers who are familiar with the language.
+- Java is often considered more verbose than modern alternatives like Kotlin, which can lead to more boilerplate code.
 
 **Positive:**
 
-- Kotlins reputation of being a more modern and concise language than Java might attract developers who are looking for a more enjoyable programming experience.
+- Java is extremely widely used, making it much easier to find developers who are familiar with the language.
+- The vast ecosystem, mature tooling, and strong community support provide reliable solutions for almost any problem.
+
+== Changes
+
+In the initial version of this document, Kotlin was chosen because the author wanted to gain experience with it. However, after using Kotlin in another project and experiencing its syntax differences, the author (who will also be the lead developer) decided to switch to Java. Specifically, features like Kotlin's handling of generics felt less intuitive, and its inherent benefits could not be fully leveraged in combination with the Spring framework.

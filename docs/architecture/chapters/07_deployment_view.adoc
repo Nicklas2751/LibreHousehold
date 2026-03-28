@@ -36,7 +36,7 @@ The LibreHousehold system is deployed using a simple container-based architectur
 - Low resource requirements
 
 ===== Backend Container
-**Technology:** Kotlin Spring Boot Application in Docker Container
+**Technology:** Java Spring Boot Application in Docker Container
 
 **Responsibilities:**
 - REST API for all business logic
@@ -96,7 +96,7 @@ Can be either a (cloud) hosted database service or a containerized database inst
 |Software Module |Infrastructure Element |Deployment Artifact
 
 |Frontend PWA |Nginx Container |Static files (HTML, JS, CSS)
-|Backend API |Backend Container |Docker Image (Kotlin JAR)
+|Backend API |Backend Container |Docker Image (Java JAR)
 |Web Server |Nginx Container |Nginx configuration
 |E-Mail Service |External SMTP Server |SMTP configuration
 |===

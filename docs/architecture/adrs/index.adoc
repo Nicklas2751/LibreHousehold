@@ -4,7 +4,7 @@
 :jbake-menu: adrs
 
 === xref:adr-001.adoc[ADR 001: Split Front- and Backend]
-=== xref:adr-002.adoc[ADR 002: Kotlin as backend language]
+=== xref:adr-002.adoc[ADR 002: Java as backend language]
 === xref:adr-003.adoc[ADR 003: Modular division based on subject]
 === xref:adr-004.adoc[ADR 004: Modular Monolith (Modulith) as architecture style]
 === xref:adr-005.adoc[ADR 005: Spring Boot as backend framework]
