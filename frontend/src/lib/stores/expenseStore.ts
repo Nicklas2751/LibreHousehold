@@ -68,10 +68,7 @@ export async function findExpense(
 }
 
 export async function deleteExpense(householdId: string, expenseId: string): Promise<void> {
-	await api.deleteExpense({ householdId, expenseId });
-	await loadExpenses(householdId);
-
-	// Optimistic update: Update the store immediately
+	// Optimistic update: remove from store immediately
 	let previousExpenses: Expense[] = [];
 	expenses.update((all) => {
 		previousExpenses = [...all];

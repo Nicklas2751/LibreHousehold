@@ -1,4 +1,4 @@
-import { writable } from 'svelte/store';
+import { get, writable } from 'svelte/store';
 import { CategoriesApi, type Category, Configuration } from '../../generated-sources/openapi';
 
 const apiConfig = new Configuration({ basePath: '/api' });
@@ -21,15 +21,10 @@ export async function findCategory(
 	householdId: string,
 	categoryId: string
 ): Promise<Category | undefined> {
-	let found: Category | undefined;
-	categories.subscribe((cats) => {
-		found = cats.find((c) => c.id === categoryId);
-	})();
+	let found = get(categories).find((c) => c.id === categoryId);
 	if (!found) {
 		await loadCategories(householdId);
-		categories.subscribe((cats) => {
-			found = cats.find((c) => c.id === categoryId);
-		})();
+		found = get(categories).find((c) => c.id === categoryId);
 	}
 	return found;
 }

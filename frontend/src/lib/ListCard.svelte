@@ -36,7 +36,7 @@
 </script>
 
 <div class={`card bg-base-200 drop-shadow-xl card-border ${colSpan}`}>
-	<div class="flex-column flex justify-between border-b-1 border-b-gray-500 p-2">
+	<div class="flex-column flex justify-between border-b border-b-gray-500 p-2">
 		<h2 class="card-title">{title}</h2>
 		<a href={viewAllHref} class="text-primary">{m['dashboard.view_all']()}</a>
 	</div>

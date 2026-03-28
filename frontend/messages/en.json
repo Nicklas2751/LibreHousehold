@@ -162,10 +162,10 @@
 			"recurrence_pattern_label": "Recurrence Unit",
 			"recurrence_pattern_days": "Days",
 			"recurrence_pattern_weeks": "Weeks",
-			"recurrence_pattern_months": "Monhts",
+			"recurrence_pattern_months": "Months",
 			"recurrence_pattern_years": "Years",
 			"recurrence_pattern_times_label": "Every how many units?",
-			"next_recurrence_date_label": "With currenct due date {date}, next recurrence will be on {nextDate}.",
+			"next_recurrence_date_label": "With current due date {date}, next recurrence will be on {nextDate}.",
 			"create_button": "Create Task"
 		}
 	},
