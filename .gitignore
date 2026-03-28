@@ -103,4 +103,4 @@ hs_err_pid*
 replay_pid*
 build/
 .gradle
-.agent-plans/
+.agent-plans/*.DS_Store
