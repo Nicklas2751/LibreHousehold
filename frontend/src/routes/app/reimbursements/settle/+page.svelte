@@ -6,7 +6,7 @@
 	import { householdState } from '$lib/stores/householdState.svelte';
 	import { userState } from '$lib/stores/userState';
 	import { createReimbursement } from '$lib/stores/reimbursementStore';
-	import { loadMembers, members } from '$lib/stores/memberStore';
+	import { findMember, loadMembers, members } from '$lib/stores/memberStore';
 	import { loadDebtorExpenses } from '$lib/stores/expenseStore';
 	import type { Expense } from '../../../../generated-sources/openapi';
 
@@ -32,9 +32,16 @@
 		}
 	});
 
-	let creditorName = $derived.by(() => {
-		const m = $members.find((mem) => mem.id === creditorId);
-		return m ? m.name : 'Unknown';
+	let creditorName = $state('Unknown');
+	$effect(() => {
+		const found = $members.find((mem) => mem.id === creditorId);
+		if (found) {
+			creditorName = found.name;
+		} else if (creditorId && $householdState) {
+			findMember($householdState.id, creditorId).then((member) => {
+				if (member) creditorName = member.name;
+			});
+		}
 	});
 
 	async function handleSettle() {

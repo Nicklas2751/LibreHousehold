@@ -301,7 +301,7 @@
 		<MobileItemList
 			loadItems={loadExpenses}
 			items={$expenses}
-			noItemsMessage={m['tasks.no_tasks']()}
+			noItemsMessage={m['expenses.no_expenses']()}
 		>
 			{#snippet singleItemView(expense)}
 				<div class="flex-1">
