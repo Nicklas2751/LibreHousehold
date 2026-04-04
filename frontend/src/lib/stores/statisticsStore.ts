@@ -1,12 +1,12 @@
 import { writable } from 'svelte/store';
 import {
 	Configuration,
+	GetStatisticsPeriodEnum,
 	StatisticsApi,
-	type StatisticsResponse,
-	GetStatisticsPeriodEnum
+	type StatisticsResponse
 } from '../../generated-sources/openapi';
 
-export { GetStatisticsPeriodEnum };
+export { GetStatisticsPeriodEnum } from '../../generated-sources/openapi';
 export type StatisticsPeriod =
 	(typeof GetStatisticsPeriodEnum)[keyof typeof GetStatisticsPeriodEnum];
 
