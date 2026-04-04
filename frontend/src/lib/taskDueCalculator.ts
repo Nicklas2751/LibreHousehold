@@ -26,11 +26,11 @@ export function getLastDueDate(task: Task): Date | undefined {
 	}
 
 	// Calculate all due dates until we reach or pass today
-	// @ts-ignore TS2345
+	// @ts-expect-error TS2345
 	let nextDueDate = addInterval(currentDueDate, task.recurrenceUnit, task.recurrenceInterval);
 	while (nextDueDate <= today) {
 		currentDueDate = nextDueDate;
-		// @ts-ignore TS2345
+		// @ts-expect-error TS2345
 		nextDueDate = addInterval(nextDueDate, task.recurrenceUnit, task.recurrenceInterval);
 	}
 
@@ -55,7 +55,7 @@ export function getNextDueDateAfterToday(task: Task): Date | undefined {
 
 	// Calculate all due dates until we find one after today
 	while (currentDueDate <= today) {
-		// @ts-ignore TS2345
+		// @ts-expect-error TS2345
 		currentDueDate = addInterval(currentDueDate, task.recurrenceUnit, task.recurrenceInterval);
 	}
 
