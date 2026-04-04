@@ -36,7 +36,10 @@
   </scm>
   <properties>
     <java.version>25</java.version>
+    <start-class>eu.wiegandt.librehousehold.LibrehouseholdApplication</start-class>
     <spring-modulith.version>2.0.5</spring-modulith.version>
+    <jackson-databind-nullable.version>0.2.8</jackson-databind-nullable.version>
+    <jsr305.version>3.0.2</jsr305.version>
   </properties>
   <dependencyManagement>
     <dependencies>
@@ -116,6 +119,24 @@
       <groupId>org.springframework.modulith</groupId>
       <artifactId>spring-modulith-runtime</artifactId>
       <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.dataformat</groupId>
+      <artifactId>jackson-dataformat-yaml</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.datatype</groupId>
+      <artifactId>jackson-datatype-jsr310</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.openapitools</groupId>
+      <artifactId>jackson-databind-nullable</artifactId>
+      <version>${jackson-databind-nullable.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.google.code.findbugs</groupId>
+      <artifactId>jsr305</artifactId>
+      <version>${jsr305.version}</version>
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
@@ -215,6 +236,34 @@
             <goals>
               <goal>sort</goal>
             </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.openapitools</groupId>
+        <artifactId>openapi-generator-maven-plugin</artifactId>
+        <version>7.19.0</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>generate</goal>
+            </goals>
+            <configuration>
+              <inputSpec>${project.basedir}/../api/openapi.yml</inputSpec>
+              <generatorName>spring</generatorName>
+              <configOptions>
+                <apiPackage>eu.wiegandt.librehousehold.api</apiPackage>
+                <modelPackage>eu.wiegandt.librehousehold.model</modelPackage>
+                <configPackage>eu.wiegandt.librehousehold.config</configPackage>
+                <annotationLibrary>none</annotationLibrary>
+                <documentationProvider>none</documentationProvider>
+                <useBeanValidation>true</useBeanValidation>
+                <useSpringBoot4>true</useSpringBoot4>
+                <useJackson3>true</useJackson3>
+                <useJakartaEe>true</useJakartaEe>
+                <useOptional>true</useOptional>
+              </configOptions>
+            </configuration>
           </execution>
         </executions>
       </plugin>
