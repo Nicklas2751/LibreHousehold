@@ -29,7 +29,7 @@ LibreHousehold is a **Modular Monolith** designed for household management. It e
 
 - **Frontend:** SvelteKit 5 application (SPA/PWA)
 - **API:** Defined in `api/openapi.yml`
-- **Backend:** Kotlin-based modular monolith (currently still WIP / mostly empty)
+- **Backend:** Java-based modular monolith (currently still WIP / mostly empty)
 - **Documentation:** Arc42/AsciiDoc architecture documentation handled by `docToolchain`
 - **External System:** E-Mail server for notifications
 
@@ -43,8 +43,8 @@ LibreHousehold is a **Modular Monolith** designed for household management. It e
 
 #### Backend Technology (ADR-002)
 
-- **Language:** Kotlin
-- **Reason:** Modern, Java-interoperable, good coroutine support, better performance than Python/Node.js
+- **Language:** Java 25
+- **Reason:** Familiarity, better ecosystem alignment with Spring, strong community support, easy containerization
 - **Container:** Docker support for easy hosting (QG3)
 
 #### Architecture Style (ADR-004)
@@ -82,7 +82,7 @@ LibreHousehold is a **Modular Monolith** designed for household management. It e
 #### High-Level Structure
 
 - **Frontend:** Progressive Web App (PWA) with TypeScript
-- **Backend:** Kotlin-based Modular Monolith
+- **Backend:** Java-based Modular Monolith
 - **External Systems:** E-Mail server for notifications
 
 #### Modules (Frontend & Backend)
@@ -106,33 +106,54 @@ LibreHousehold is a **Modular Monolith** designed for household management. It e
 
 ## Critical Workflows
 
-All frontend commands must be run from the `frontend/` directory.
-
 ### Development
 
+**Frontend:**
+Run all frontend commands from the `frontend/` directory:
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
 
+**Backend:**
+Run all backend commands from the `backend/` directory using the maven wrapper:
+```bash
+cd backend
+./mvnw spring-boot:run
+```
+*(Testcontainers is configured to spin up PostgreSQL and Grafana automatically during development and tests).*
+
 ### API Updates
 
-When `api/openapi.yml` changes, regenerate the client code:
+When `api/openapi.yml` changes, regenerate the API clients:
 
+**Frontend:**
 ```bash
 cd frontend
 npm run openapi
 ```
-
 This cleans `frontend/src/generated-sources/openapi` and regenerates it.
+
+**Backend:**
+```bash
+cd backend
+./mvnw clean compile
+```
+This regenerates the API interfaces and models into `backend/target/generated-sources/openapi`. **Do not edit these generated Java files manually.**
 
 ### Testing & Quality
 
-- **Unit Tests:** `npm run test:unit` (Vitest)
+**Frontend (`frontend/`):**
+- **Unit Tests:** `npm run test:unit` (Vitest). Run tests with `npm run test`
 - **Linting:** `npm run lint` (ESLint + Prettier)
 - **Formatting:** `npm run format`
 - **Type Check:** `npm run check`
+- **Translating:** Run `npm run paraglide` after updating/adding keys in `messages/de.json` or `messages/en.json`
+
+**Backend (`backend/`):**
+- **Tests:** `./mvnw test` (JUnit 5, Testcontainers)
+- **Format:** `./mvnw sortpom:sort` (for `pom.xml`)
 
 ## Development Context
 
@@ -140,7 +161,7 @@ This cleans `frontend/src/generated-sources/openapi` and regenerates it.
 
 ```text
 LibreHousehold/
-├── backend/           # Kotlin backend (modular monolith)
+├── backend/           # Java backend (modular monolith, Spring Boot)
 ├── frontend/          # TypeScript PWA
 ├── docs/
 │   └── architecture/  # Arc42 architecture documentation
@@ -162,7 +183,9 @@ LibreHousehold/
 
 ### Backend
 
-- **Language:** Kotlin
+- **Language:** Java 25
+- **Framework:** Spring Boot 4 + Spring Modulith
+- **Database:** PostgreSQL with Flyway and Spring Data JDBC
 - **Architecture:** Modular Monolith (Modulith)
 - **Deployment:** Docker container
 - **Security:** Argon2id for password hashing (ADR-009)
@@ -174,7 +197,7 @@ LibreHousehold/
 - **Framework:** SvelteKit 5
 - **State Management:** Svelte stores plus Svelte 5 Runes
 - **i18n:** Paraglide (`$lib/paraglide/messages.js`)
-- **Styling:** DaisyUI + Tailwind CSS
+- **Styling:** DaisyUI 5 + Tailwind CSS 4
 - **OpenAPI Client:** Generated TypeScript client under `src/generated-sources/openapi`
 
 ### External Integrations
@@ -240,7 +263,7 @@ export const functionName = async (
 
 - `frontend/`: Main web application
 - `api/`: OpenAPI specifications and mock server data
-- `backend/`: Kotlin backend
+- `backend/`: Java 25 backend
 - `docs/`: Architecture documentation (AsciiDoc)
 - `build/`: Build artifacts (for example the microsite)
 
