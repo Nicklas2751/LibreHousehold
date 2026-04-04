@@ -1,5 +1,5 @@
-import { writable, get } from 'svelte/store';
-import { setLocale, getLocale } from '$lib/paraglide/runtime.js';
+import { get, writable } from 'svelte/store';
+import { getLocale, setLocale } from '$lib/paraglide/runtime.js';
 import { Configuration, HouseholdApi } from '../../generated-sources/openapi';
 import { householdState } from './householdState.svelte';
 import { userState } from './userState';
@@ -13,13 +13,13 @@ export const theme = writable<Theme>('light');
 export const language = writable<Language>('en');
 
 function applyTheme(t: Theme) {
-	document.documentElement.setAttribute('data-theme', t);
+	document.documentElement.dataset.theme = t;
 }
 
 function detectInitialTheme(): Theme {
-	const attr = document.documentElement.getAttribute('data-theme') as Theme | null;
+	const attr = document.documentElement.dataset.theme as Theme | null;
 	if (attr === 'light' || attr === 'dark') return attr;
-	return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+	return globalThis.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
 
 export function initSettings() {
