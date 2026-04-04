@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="SonarLintProjectSettings">
+    <option name="bindingEnabled" value="true" />
+    <option name="fileExclusions">
+      <list>
+        <option value="DIRECTORY:frontend/node_modules" />
+        <option value="DIRECTORY:frontend/src/generated-sources" />
+        <option value="DIRECTORY:frontend/project.inlang" />
+        <option value="GLOB:frontend/.svelte-kit/**" />
+        <option value="DIRECTORY:frontend/.svelte-kit/output/server/chunks" />
+        <option value="DIRECTORY:frontend/.svelte-kit/output/server" />
+        <option value="DIRECTORY:frontend/.svelte-kit/output" />
+      </list>
+    </option>
+    <option name="projectKey" value="LibreHousehold_Frontend" />
+    <option name="serverId" value="SonarCloud" />
+  </component>
+</project>
