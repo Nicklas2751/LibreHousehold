@@ -22,18 +22,18 @@ tags:
   - name: statistics
     description: Aggregated statistics for a household over a given time period
 paths:
-  /household:
+  /household/setup:
     post:
-      summary: Create a new household
-      description: Creates a new household and sends a mail to the specified email address for the admin of the household.
+      summary: Setup a new household
+      description: Creates a new household together with its first admin member in a single operation.
       tags:
         - household
-      operationId: createHousehold
+      operationId: setupHousehold
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/Household"
+              $ref: "#/components/schemas/HouseholdSetup"
       responses:
         "200":
           description: OK
@@ -42,7 +42,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Household"
         "400":
-          description: The data for the new household is invalid.
+          description: The data for the new household or member is invalid.
           content:
             application/problem+json:
               schema:
@@ -1435,6 +1435,9 @@ components:
           type: string
           format: base64
           description: A base64 encoded image representing the member's avatar.
+        isAdmin:
+          type: boolean
+          description: Indicates if the member is an admin of the household.
       example:
         id: "7c3a40a8-3f57-4645-8cf5-820a6a8d3613"
         name: "John Doe"
@@ -1933,6 +1936,17 @@ components:
             memberName: "Bob"
             done: 5
             open: 7
+
+    HouseholdSetup:
+      type: object
+      required:
+        - household
+        - member
+      properties:
+        household:
+          $ref: "#/components/schemas/Household"
+        member:
+          $ref: "#/components/schemas/Member"
 
     HouseholdUpdate:
       type: object
