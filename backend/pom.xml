@@ -281,6 +281,7 @@
                 <useJakartaEe>true</useJakartaEe>
                 <useOptional>true</useOptional>
                 <delegatePattern>true</delegatePattern>
+                <useTags>true</useTags>
               </configOptions>
             </configuration>
           </execution>
