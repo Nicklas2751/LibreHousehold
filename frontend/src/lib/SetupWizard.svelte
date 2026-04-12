@@ -9,6 +9,7 @@
 	import {
 		Configuration,
 		type Household,
+		type HouseholdSetup,
 		HouseholdApi,
 		type Member
 	} from '../generated-sources/openapi';
@@ -24,7 +25,6 @@
 		readFileAsDataURL
 	} from '$lib/setupWizardLogic';
 	import { goto } from '$app/navigation';
-	import { addMember } from '$lib/stores/memberStore';
 	import { updateUserState } from '$lib/stores/userState';
 
 	const householdId: string = uuidv4();
@@ -108,22 +108,23 @@
 		const apiConfig = new Configuration({ basePath: '/api' });
 		const householdApi = new HouseholdApi(apiConfig);
 
-		let adminMember: Member = {
+		const adminMember: Member = {
 			id: uuidv4(),
 			name: adminName,
-			email: adminEmail
+			email: adminEmail,
+			isAdmin: true
 		};
-		let household: Household = {
+		const household: Household = {
 			id: householdId,
 			name: householdName,
 			image: householdImage,
 			admin: adminMember.id
 		};
+		const householdSetup: HouseholdSetup = { household, member: adminMember };
 
 		try {
-			household = await householdApi.createHousehold({ household: household });
-			adminMember = await addMember(householdId, adminMember);
-			updateHouseholdState(household);
+			const createdHousehold = await householdApi.setupHousehold({ householdSetup });
+			updateHouseholdState(createdHousehold);
 			updateUserState(adminMember);
 			nextStep();
 		} catch (error) {
