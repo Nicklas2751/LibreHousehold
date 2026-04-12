@@ -13,14 +13,30 @@ servers:
   - url: http://localhost
     description: Local development mokapi server
 tags:
-  - name: household
-    description: Operations related to households
-  - name: tasks
-    description: Operations related to tasks
+  - name: expenses
+    description: Operations related to expenses
+  - name: financials
+    description: Operations related to financials
   - name: reimbursements
     description: Operations related to reimbursements
+
+  - name: tasks
+    description: Operations related to tasks
+  - name: usersettings
+    description: Operations related to usersettings
+  - name: appsettings
+    description: Operations related to appsettings
+
+  - name: household
+    description: Operations related to households
+  - name: members
+    description: Operations related to members
+
+  - name: administration
+    description: Operations related to administration
   - name: statistics
     description: Aggregated statistics for a household over a given time period
+
 paths:
   /household/setup:
     post:
@@ -552,7 +568,7 @@ paths:
       summary: Get all categories
       description: Returns all expense categories for the specified household.
       tags:
-        - categories
+        - household
       operationId: getCategories
       parameters:
         - name: householdId
@@ -903,7 +919,7 @@ paths:
           description: Filter by status.
           schema:
             type: string
-            enum: [PENDING, CONFIRMED, REJECTED]
+            enum: [ PENDING, CONFIRMED, REJECTED ]
       responses:
         "200":
           description: OK
@@ -1036,7 +1052,7 @@ paths:
           description: The time period for the statistics.
           schema:
             type: string
-            enum: [LAST_7_DAYS, LAST_14_DAYS, THIS_MONTH, LAST_3_MONTHS, LAST_6_MONTHS, THIS_YEAR, LAST_YEAR]
+            enum: [ LAST_7_DAYS, LAST_14_DAYS, THIS_MONTH, LAST_3_MONTHS, LAST_6_MONTHS, THIS_YEAR, LAST_YEAR ]
             example: "THIS_MONTH"
       responses:
         "200":
@@ -1206,7 +1222,7 @@ paths:
       summary: Change a member's password
       description: Changes the password for the specified member. Requires the current password for verification.
       tags:
-        - household
+        - usersettings
       operationId: changePassword
       parameters:
         - name: householdId
@@ -1254,7 +1270,7 @@ paths:
       summary: Delete own account
       description: Permanently deletes the member's own account. If the member is the household admin, ownership must be transferred or the household deleted beforehand.
       tags:
-        - household
+        - usersettings
       operationId: deleteAccount
       parameters:
         - name: householdId
@@ -1296,7 +1312,7 @@ paths:
       summary: Save user preferences
       description: Persists the user's theme and language preferences on the server so they are restored on next login.
       tags:
-        - household
+        - usersettings
       operationId: updatePreferences
       parameters:
         - name: householdId
@@ -1596,7 +1612,7 @@ components:
         paidBy: "7c3a40a8-3f57-4645-8cf5-820a6a8d3613"
         date: "2024-12-06"
         categoryId: "660e8400-e29b-41d4-a716-446655440001"
-        splitBetween: ["7c3a40a8-3f57-4645-8cf5-820a6a8d3613", "8d4b51b9-4f68-5756-9df6-931b7b9e4724"]
+        splitBetween: [ "7c3a40a8-3f57-4645-8cf5-820a6a8d3613", "8d4b51b9-4f68-5756-9df6-931b7b9e4724" ]
         notes: "Weekly groceries"
 
     ExpenseUpdate:
@@ -1702,7 +1718,7 @@ components:
           description: The id of the member who owes the reimbursement.
         status:
           type: string
-          enum: [PENDING, CONFIRMED, REJECTED]
+          enum: [ PENDING, CONFIRMED, REJECTED ]
           description: The status of the reimbursement.
         notes:
           type: string
@@ -1749,7 +1765,7 @@ components:
       properties:
         status:
           type: string
-          enum: [PENDING, CONFIRMED, REJECTED]
+          enum: [ PENDING, CONFIRMED, REJECTED ]
           description: The status of the reimbursement.
         notes:
           type: string
@@ -1760,7 +1776,7 @@ components:
 
     StatisticsPeriod:
       type: string
-      enum: [LAST_7_DAYS, LAST_14_DAYS, THIS_MONTH, LAST_3_MONTHS, LAST_6_MONTHS, THIS_YEAR, LAST_YEAR]
+      enum: [ LAST_7_DAYS, LAST_14_DAYS, THIS_MONTH, LAST_3_MONTHS, LAST_6_MONTHS, THIS_YEAR, LAST_YEAR ]
       description: The time period covered by the statistics.
       example: "THIS_MONTH"
 
@@ -2012,9 +2028,9 @@ components:
       properties:
         theme:
           type: string
-          enum: [light, dark]
+          enum: [ light, dark ]
           example: "dark"
         language:
           type: string
-          enum: [en, de]
+          enum: [ en, de ]
           example: "de"
