@@ -1,0 +1,21 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Lint OpenAPI" type="docker-deploy" factoryName="docker-image" server-name="Docker">
+    <deployment type="docker-image">
+      <settings>
+        <option name="imageTag" value="stoplight/spectral" />
+        <option name="command" value="lint -v /tmp/openapi.yml --ruleset /tmp/.spectral.yaml" />
+        <option name="containerName" value="spectral_lint" />
+        <option name="volumeBindings">
+          <list>
+            <DockerVolumeBindingImpl>
+              <option name="containerPath" value="/tmp" />
+              <option name="hostPath" value="$PROJECT_DIR$/api" />
+              <option name="readOnly" value="true" />
+            </DockerVolumeBindingImpl>
+          </list>
+        </option>
+      </settings>
+    </deployment>
+    <method v="2" />
+  </configuration>
+</component>
