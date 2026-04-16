@@ -25,6 +25,12 @@ npm run dev
 npm run dev -- --open
 ```
 
+To develop without a running backend, start the mock API server (requires Docker, run from the repository root):
+
+```sh
+docker run --rm -v ./api:/tmp:ro -p 80:80 -p 8080:8080 mokapi/mokapi --Providers.File.Directory=/tmp
+```
+
 ## Building
 
 To create a production version of your app:

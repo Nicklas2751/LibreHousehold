@@ -24,6 +24,17 @@ Its code is built to be easily understandable and maintainable.
 - Easy to host yourself
 - Easy to contribute
 
+== Development
+
+=== Lint OpenAPI Specification
+
+The OpenAPI specification can be validated with https://stoplight.io/open-source/spectral[Spectral] via Docker (run from the repository root):
+
+[source,bash]
+----
+docker run --rm -v ./api:/tmp:ro stoplight/spectral lint -v /tmp/openapi.yml --ruleset /tmp/.spectral.yaml
+----
+
 == Software Architecture Overview
 
 An overview of the software architecture can be found in the https://librehousehold.wiegandt.eu[Architecture Overview].

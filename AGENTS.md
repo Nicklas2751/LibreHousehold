@@ -4,24 +4,8 @@ This document is the canonical AI-assistant reference for LibreHousehold and sho
 
 ## Project Overview
 
-LibreHousehold is a free and open-source software project for managing household expenses and tasks. The project is still in active development.
-
-### Main Goals
-
-- Completely free
-- No ads
-- Modern user interface
-- Easy to use
-- Easy to self-host
-- Easy to contribute
-
-### Main Features
-
-- Create households and invite other house-/flatmates
-- Track and share expenses with your mates
-- Create and manage tasks
-- Work offline and sync later
-- Responsive design for mobile and desktop
+See [README.adoc](README.adoc) for the project description, goals, and feature list.
+See [Arc42 Chapter 1](docs/architecture/chapters/01_introduction_and_goals.adoc) for the quality goals (QG1–QG4).
 
 ## Architecture Big Picture
 
@@ -33,40 +17,8 @@ LibreHousehold is a **Modular Monolith** designed for household management. It e
 - **Documentation:** Arc42/AsciiDoc architecture documentation handled by `docToolchain`
 - **External System:** E-Mail server for notifications
 
-### Architecture Decisions (ADRs)
-
-#### Frontend & Backend Separation (ADR-001)
-
-- **Decision:** Split Frontend/Backend with API communication
-- **Reason:** Simplicity, understandability, maintainability (QG4)
-- **Technologies:** Separate applications with best-fitting technologies each
-
-#### Backend Technology (ADR-002)
-
-- **Language:** Java 25
-- **Reason:** Familiarity, better ecosystem alignment with Spring, strong community support, easy containerization
-- **Container:** Docker support for easy hosting (QG3)
-
-#### Architecture Style (ADR-004)
-
-- **Style:** Modular Monolith (Modulith)
-- **Reason:** Combination of monolith simplicity and microservice modularity
-- **Advantage:** Modules can be extracted to microservices later
-
-#### Frontend Technology (ADR-006)
-
-- **Technology:** Progressive Web App (PWA)
-- **Reason:** Cross-platform, no app store costs, easy to host
-- **Language:** TypeScript (ADR-008) for type safety and maintainability
-
-### Quality Goals
-
-| ID | Quality Goal | Motivation |
-| --- | --- | --- |
-| QG1 | Easy to learn (Learnability) | Users should be able to use the app without reading a manual or getting training |
-| QG2 | Secure (Security) | Expenses are sensitive data - integrity and confidentiality are important |
-| QG3 | Easy to host (Flexibility) | Technical users should be able to host the app themselves without much effort |
-| QG4 | Maintainable (Maintainability) | Code should be understandable and modifiable for open-source contributions |
+Architecture decisions are documented in [`docs/architecture/adrs/`](docs/architecture/adrs/).
+System actors and module responsibilities are documented in [Arc42 Chapter 3](docs/architecture/chapters/03_context_and_scope.adoc) and [Arc42 Chapter 5](docs/architecture/chapters/05_building_block_view.adoc).
 
 ### Data & State Flow
 
@@ -76,33 +28,6 @@ LibreHousehold is a **Modular Monolith** designed for household management. It e
    - Uses **Svelte 5 Runes** (`.svelte.ts` files like `householdState.svelte.ts`) for reactive global state.
    - Traditional stores are also present; verify whether they should be migrated to Runes.
 4. **Mocking:** `api/mokapi.js` provides a fake backend for frontend development.
-
-### System Architecture
-
-#### High-Level Structure
-
-- **Frontend:** Progressive Web App (PWA) with TypeScript
-- **Backend:** Java-based Modular Monolith
-- **External Systems:** E-Mail server for notifications
-
-#### Modules (Frontend & Backend)
-
-| Module | Responsibility |
-| --- | --- |
-| Expenses | Managing expenses (CRUD operations) |
-| Tasks | Managing tasks (CRUD operations) |
-| User Settings | User-specific settings, changing login data |
-| App Settings | Frontend-specific settings (frontend only) |
-| Household | Creating/managing households, inviting/removing users |
-| Setup | Initial application setup for administrators |
-| Administration | Application management, user management, system settings |
-| Notifications | Sending/displaying notifications, configuration |
-
-#### Actors
-
-- **User:** Normal users of the app for household/expense management
-- **Administrator:** Hosts and manages an app instance
-- **E-Mail Server:** External system for email delivery
 
 ## Critical Workflows
 
