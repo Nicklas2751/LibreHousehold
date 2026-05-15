@@ -10,7 +10,7 @@
             <DockerVolumeBindingImpl>
               <option name="containerPath" value="/tmp" />
               <option name="hostPath" value="$PROJECT_DIR$/api" />
-              <option name="readOnly" value="true" />
+              <option name="readOnly" value="$TESTCONTAINERS_RYUK_DISABLED$" />
             </DockerVolumeBindingImpl>
           </list>
         </option>

@@ -11,9 +11,15 @@ import java.util.Optional;
 @Component
 public class HouseholdApiDelegateImpl implements HouseholdApiDelegate {
 
+    private final HouseholdSetupService householdSetupService;
+
+    HouseholdApiDelegateImpl(HouseholdSetupService householdSetupService) {
+        this.householdSetupService = householdSetupService;
+    }
+
     @Override
     public ResponseEntity<Household> setupHousehold(Optional<HouseholdSetup> householdSetup) {
-        var setup = householdSetup.orElseThrow(() -> new HouseholdSetupIsRequiredException());
-        return HouseholdApiDelegate.super.setupHousehold(householdSetup);
+        var setup = householdSetup.orElseThrow(HouseholdSetupIsRequiredException::new);
+        return ResponseEntity.ok(householdSetupService.setupHousehold(setup));
     }
 }

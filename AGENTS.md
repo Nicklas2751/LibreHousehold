@@ -243,6 +243,27 @@ export const functionName = async (
 
 ## Findings & Notes
 
+### Spring Data JDBC Records mit client-generierten UUIDs
+
+Entities als Records mit client-generierten UUIDs müssen `Persistable<UUID>` implementieren und `isNew() = true` zurückgeben, da Spring Data JDBC sonst anhand der nicht-null UUID ein UPDATE statt eines INSERT ausführt — das bei leerer Tabelle lautlos scheitert.
+
+Da Records unveränderlich sind, darf `save()` nur für neue Entities verwendet werden. Updates werden über explizite `@Modifying @Query`-Methoden im Repository abgewickelt:
+
+```java
+@Modifying
+@Query("UPDATE household SET name = :name WHERE id = :id")
+void updateName(@Param("id") UUID id, @Param("name") String name);
+```
+
+### Open Design Questions: Account & Email Model
+
+The following architectural questions need a decision before user management is implemented:
+
+- **Email uniqueness scope**: Currently `member.email` is globally unique (system-wide UNIQUE constraint). It needs to be decided whether uniqueness should be system-wide or per-household.
+- **Account–Household relationship**: Should a user account be tied to one specific household, or can a single account belong to multiple households?
+- **Missing endpoint**: An endpoint is needed to check whether a given e-mail address is already registered before household setup — otherwise the client gets a generic 409 with no actionable information.
+- **Existing accounts**: It is unresolved whether a user with an existing account should be able to set up a new household or whether accounts are inherently household-scoped.
+
 ### Task Schema
 
 The `Task` schema has a `done` field (date format) that either contains a date or is `null`.

@@ -9,7 +9,7 @@
           <list>
             <DockerPortBindingImpl>
               <option name="containerPort" value="80" />
-              <option name="hostPort" value="80" />
+              <option name="hostPort" value="8090" />
             </DockerPortBindingImpl>
             <DockerPortBindingImpl>
               <option name="containerPort" value="8080" />
@@ -22,7 +22,7 @@
             <DockerVolumeBindingImpl>
               <option name="containerPath" value="/tmp" />
               <option name="hostPath" value="$PROJECT_DIR$/api" />
-              <option name="readOnly" value="true" />
+              <option name="readOnly" value="$TESTCONTAINERS_RYUK_DISABLED$" />
             </DockerVolumeBindingImpl>
           </list>
         </option>
