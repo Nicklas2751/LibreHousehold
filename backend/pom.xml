@@ -4,7 +4,7 @@
   <parent>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
-    <version>4.0.5</version>
+    <version>4.0.6</version>
     <relativePath></relativePath>
     <!-- lookup parent from repository -->
   </parent>
@@ -37,7 +37,7 @@
   <properties>
     <java.version>25</java.version>
     <start-class>eu.wiegandt.librehousehold.LibrehouseholdApplication</start-class>
-    <spring-modulith.version>2.0.5</spring-modulith.version>
+    <spring-modulith.version>2.0.6</spring-modulith.version>
     <jackson-databind-nullable.version>0.2.8</jackson-databind-nullable.version>
     <jsr305.version>3.0.2</jsr305.version>
     <mapstruct.version>1.6.3</mapstruct.version>
@@ -241,6 +241,11 @@
                   <artifactId>spring-boot-configuration-processor</artifactId>
                 </path>
               </annotationProcessorPaths>
+              <compilerArgs>
+                <arg>-Amapstruct.defaultComponentModel=spring</arg>
+                <arg>-Amapstruct.unmappedTargetPolicy=ERROR</arg>
+                <arg>-Amapstruct.unmappedSourcePolicy=WARN</arg>
+              </compilerArgs>
             </configuration>
           </execution>
         </executions>
@@ -269,10 +274,13 @@
             <configuration>
               <inputSpec>${project.basedir}/../api/openapi.yml</inputSpec>
               <generatorName>spring</generatorName>
+              <!-- Disable generation of wrongly discovered test class. See: https://github.com/OpenAPITools/openapi-generator/issues/13677 -->
+              <ignoreFileOverride>${project.basedir}/.openapi-generator-ignore</ignoreFileOverride>
               <configOptions>
                 <apiPackage>eu.wiegandt.librehousehold.api</apiPackage>
                 <modelPackage>eu.wiegandt.librehousehold.model</modelPackage>
                 <configPackage>eu.wiegandt.librehousehold.config</configPackage>
+
                 <annotationLibrary>none</annotationLibrary>
                 <documentationProvider>none</documentationProvider>
                 <useBeanValidation>true</useBeanValidation>
