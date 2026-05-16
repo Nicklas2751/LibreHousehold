@@ -12,6 +12,8 @@ servers:
     description: The production server for LibreHousehold API
   - url: http://localhost
     description: Local development mokapi server
+  - url: http://localhost:8080/v1
+    description: Local started backend server
 tags:
   - name: expenses
     description: Operations related to expenses

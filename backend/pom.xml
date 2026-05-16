@@ -36,7 +36,6 @@
   </scm>
   <properties>
     <java.version>25</java.version>
-    <start-class>eu.wiegandt.librehousehold.LibrehouseholdApplication</start-class>
     <spring-modulith.version>2.0.6</spring-modulith.version>
     <jackson-databind-nullable.version>0.2.8</jackson-databind-nullable.version>
     <jsr305.version>3.0.2</jsr305.version>
