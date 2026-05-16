@@ -38,16 +38,27 @@ Run all frontend commands from the `frontend/` directory:
 ```bash
 cd frontend
 npm install
-npm run dev
+npm run dev                                        # uses mokapi (default)
+VITE_API_URL=http://localhost:8080/v1 npm run dev  # uses local Spring backend
 ```
 
+The `VITE_API_URL` env var controls the API proxy target. It is parsed at dev-server startup to set the proxy host and path prefix.
+
 **Backend:**
-Run all backend commands from the `backend/` directory using the maven wrapper:
+Run all backend commands from the `backend/` directory using the maven wrapper.
+
+For local development with PostgreSQL and Grafana LGTM (observability) in containers:
+```bash
+cd backend
+./mvnw spring-boot:test-run -Dspring-boot.run.main-class=eu.wiegandt.librehousehold.TestLibrehouseholdApplication
+```
+This starts `TestLibrehouseholdApplication`, which uses Testcontainers to automatically spin up PostgreSQL and Grafana LGTM. No manual DB setup required.
+
+For a plain start without containers (requires an external DB):
 ```bash
 cd backend
 ./mvnw spring-boot:run
 ```
-*(Testcontainers is configured to spin up PostgreSQL and Grafana automatically during development and tests).*
 
 ### API Updates
 

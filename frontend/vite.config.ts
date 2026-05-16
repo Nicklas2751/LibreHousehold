@@ -4,6 +4,10 @@ import tailwindcss from '@tailwindcss/vite';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { playwright } from '@vitest/browser-playwright';
 
+const apiUrl = new URL(process.env.VITE_API_URL ?? 'http://localhost');
+const apiProxyTarget = `${apiUrl.protocol}//${apiUrl.host}`;
+const apiProxyPrefix = apiUrl.pathname === '/' ? '' : apiUrl.pathname;
+
 export default defineConfig({
 	plugins: [
 		tailwindcss(),
@@ -18,9 +22,9 @@ export default defineConfig({
 		cors: { origin: /^https?:\/\/(?:(?:[^:]+\.)?localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/ },
 		proxy: {
 			'/api': {
-				target: 'http://localhost:80',
+				target: apiProxyTarget,
 				changeOrigin: true,
-				rewrite: (path) => path.replace(/^\/api/, '')
+				rewrite: (path) => path.replace(/^\/api/, apiProxyPrefix)
 			}
 		}
 	},
