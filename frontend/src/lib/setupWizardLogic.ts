@@ -89,13 +89,13 @@ export function checkCanBrowserShareInviteLink(shareData: ShareData): boolean {
 }
 
 /**
- * Generates the invite URL based on base URL and household ID
+ * Generates the invite URL based on base URL and invite token
  */
-export function generateInviteUrl(baseUrl: string, householdId: string): string {
+export function generateInviteUrl(baseUrl: string, token: string): string {
 	if (baseUrl.endsWith('/')) {
 		baseUrl = baseUrl.slice(0, -1);
 	}
-	return `${baseUrl}/invite/${householdId}`;
+	return `${baseUrl}/invite/${token}`;
 }
 
 /**

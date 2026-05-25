@@ -254,32 +254,32 @@ describe('setupWizardLogic', () => {
 	describe('generateInviteUrl', () => {
 		it('should generate correct invite URL', () => {
 			const baseUrl = 'https://example.com';
-			const householdId = '12345';
-			const result = generateInviteUrl(baseUrl, householdId);
+			const token = '12345';
+			const result = generateInviteUrl(baseUrl, token);
 
 			expect(result).toBe('https://example.com/invite/12345');
 		});
 
 		it('should handle base URL with trailing slash', () => {
 			const baseUrl = 'https://example.com/';
-			const householdId = '12345';
-			const result = generateInviteUrl(baseUrl, householdId);
+			const token = '12345';
+			const result = generateInviteUrl(baseUrl, token);
 
 			expect(result).toBe('https://example.com/invite/12345');
 		});
 
 		it('should handle localhost URLs', () => {
 			const baseUrl = 'http://localhost:3000';
-			const householdId = 'abc-123';
-			const result = generateInviteUrl(baseUrl, householdId);
+			const token = 'abc-123';
+			const result = generateInviteUrl(baseUrl, token);
 
 			expect(result).toBe('http://localhost:3000/invite/abc-123');
 		});
 
-		it('should handle UUID household IDs', () => {
+		it('should handle UUID tokens', () => {
 			const baseUrl = 'https://example.com';
-			const householdId = '550e8400-e29b-41d4-a716-446655440000';
-			const result = generateInviteUrl(baseUrl, householdId);
+			const token = '550e8400-e29b-41d4-a716-446655440000';
+			const result = generateInviteUrl(baseUrl, token);
 
 			expect(result).toBe('https://example.com/invite/550e8400-e29b-41d4-a716-446655440000');
 		});
