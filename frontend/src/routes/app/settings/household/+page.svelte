@@ -41,8 +41,12 @@
 
 	const daysRemaining = $derived.by(() => {
 		if (!inviteValidUntil) return 0;
-		const todayMs = new Date().setHours(0, 0, 0, 0);
-		return Math.max(0, Math.ceil((inviteValidUntil.getTime() - todayMs) / (1000 * 60 * 60 * 24)));
+		// inviteValidUntil is parsed from a date-only ISO string → UTC midnight.
+		// Math.floor(Date.now() / ms_per_day) * ms_per_day gives UTC midnight of today,
+		// so both sides are timezone-consistent without constructing a new Date.
+		const msPerDay = 1000 * 60 * 60 * 24;
+		const todayUtcMs = Math.floor(Date.now() / msPerDay) * msPerDay;
+		return Math.max(0, Math.ceil((inviteValidUntil.getTime() - todayUtcMs) / msPerDay));
 	});
 
 	const isExpired = $derived(!inviteValidUntil || daysRemaining <= 0);
