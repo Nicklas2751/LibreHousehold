@@ -3,7 +3,6 @@
 	import { CopyIcon } from '@indaco/svelte-iconoir/copy';
 	import { addToast } from '$lib/stores/toastStore';
 	import { Toast } from '$lib/toast';
-	import { onMount } from 'svelte';
 	import { QRCode } from '@castlenine/svelte-qrcode';
 	import { ShareIosIcon } from '@indaco/svelte-iconoir/share-ios';
 	import {
@@ -36,11 +35,6 @@
 	let householdImage: string = $state('');
 	let adminName: string = $state('');
 	let adminEmail: string = $state('');
-
-	onMount(() => {
-		const baseUrl = `${window.location.protocol}//${window.location.host}`;
-		inviteUrl = generateInviteUrl(baseUrl, householdId);
-	});
 
 	function nextStep() {
 		step = calculateNextStep(step, maxSteps);
@@ -123,8 +117,10 @@
 		const householdSetup: HouseholdSetup = { household, member: adminMember };
 
 		try {
-			const createdHousehold = await householdApi.setupHousehold({ householdSetup });
-			updateHouseholdState(createdHousehold);
+			const response = await householdApi.setupHousehold({ householdSetup });
+			const baseUrl = `${window.location.protocol}//${window.location.host}`;
+			inviteUrl = generateInviteUrl(baseUrl, response.inviteToken);
+			updateHouseholdState(response.household);
 			updateUserState(adminMember);
 			nextStep();
 		} catch (error) {
