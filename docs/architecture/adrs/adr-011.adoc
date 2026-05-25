@@ -1,0 +1,192 @@
+:jbake-title: ADR 011: Cross-Module Communication Strategy
+:jbake-type: page_toc
+:jbake-status: published
+:jbake-menu: adrs
+:jbake-order: 11
+
+[[adr-011]]
+= ADR 011: Cross-Module Communication Strategy
+
+== Context
+
+As the backend grows beyond the initial `household` module, multiple modules (`tasks`, `expenses`, `usersettings`) will need to interact with each other.
+Typical scenarios include:
+
+* A module needs to verify that a referenced aggregate (e.g. a household) exists before accepting a write operation.
+* A module needs to react to a lifecycle event in another module (e.g. clean up tasks when a household is deleted).
+* The `expenses` module needs to expose financial aggregations to the statistics endpoint in `household`.
+
+The modular monolith architecture (xref:adr-004.adoc[ADR 004]) mandates that module boundaries are enforced.
+Modules must not import Spring beans or repositories from other modules directly.
+Each module owns its own database schema; there are no foreign-key constraints across schema boundaries.
+A coherent strategy for cross-module communication prevents ad-hoc coupling and makes module boundaries explicit and verifiable by Spring Modulith.
+
+=== Rejected Approach: Event-Carried State Transfer (local data copies per module)
+
+A DDD-purist approach was considered: each module maintains a local copy of the foreign data it needs.
+For example, the `tasks` module would keep its own `tasks.household` table containing only the fields it uses (`id`, `name`).
+When a household is created or updated, an event is published and each interested module updates its local copy.
+
+This is the correct approach in a *microservices* architecture with separate databases and deployments, because it eliminates runtime dependencies between services.
+In a *modular monolith*, however, the trade-offs are unfavourable:
+
+* *Self-inflicted eventual consistency:* Between the moment a household is created and the moment the event is processed by `tasks`, the data is temporarily inconsistent within the same process and the same database.
+  This complexity is inherent to distributed systems; introducing it here provides no benefit.
+* *Disproportionate synchronisation overhead:* Every change to a shared aggregate (`HouseholdCreated`, `HouseholdUpdated`, `HouseholdDeleted`, `MemberAdded`, `MemberUpdated`, `MemberRemoved`) must be published, consumed, and reconciled in every interested module.
+  This is a large amount of infrastructure for data that is simple and rarely changes.
+* *YAGNI:* The only real justification for local copies is future extraction to microservices (xref:adr-004.adoc[ADR 004]).
+  If that point is ever reached, the extraction itself is the right moment to introduce local copies — with full knowledge of actual load patterns.
+  Building the synchronisation machinery today means buying complexity in advance.
+
+The decision is therefore to accept the tighter coupling that comes with synchronous cross-module queries in exchange for significantly lower implementation complexity.
+
+== Considered Options
+
+* Option A: Domain Events only (reactive)
+* Option B: Named Interfaces only (synchronous)
+* Option C: Hybrid — Named Interfaces for synchronous queries, Domain Events for reactive lifecycle notifications
+
+== Decision Outcome
+
+The project uses a *hybrid approach* (Option C):
+
+* *Synchronous queries* between modules are handled via *Named Interfaces* (Spring Modulith public packages).
+  A module that needs to read data from another module calls a service defined in the target module's public package.
+  The depending module declares this dependency explicitly via `@ApplicationModule(allowedDependencies = "targetModule")` in its `package-info.java`.
+  This coupling is explicit, minimal (interface only, not implementation), compile-time verifiable by Spring Modulith, and accepted as appropriate for a modular monolith.
+
+* *Reactive lifecycle notifications* (side effects that should not block the producing transaction) are handled via *Spring Modulith Domain Events*.
+  The producing module publishes an event using `ApplicationEventPublisher` inside a `@Transactional` method.
+  The consuming module listens with `@ApplicationModuleListener`, which runs asynchronously in a new transaction after the producing transaction has committed.
+  Events are used here because the producer must not need to know which other modules are interested in the change.
+
+* *Intra-module communication* (e.g. between the expense and reimbursement services within the `expenses` module) uses direct Spring bean injection without any restrictions.
+
+== Pros and Cons of the Options
+
+.Overview of the pros and cons of the considered options
+[cols="2a,2a"]
+|===
+|Pros |Cons
+
+2+^s|Option A: Domain Events only
+
+|
+- Maximum decoupling — no compile-time dependency from consumer to producer
+- Trivially extensible: new consumers can be added without touching the producer
+- Spring Modulith Event Publication Registry provides at-least-once delivery guarantees
+|
+- Cross-module validation (e.g. "does this household exist?") is awkward; requires synchronous event-reply or pre-validation duplication
+- Error handling is more complex when the producing transaction depends on cross-module data
+- Control flow is harder to trace
+
+2+^s|Option B: Named Interfaces only
+
+|
+- Simple, explicit, synchronous — easy to reason about
+- Easy to test with standard Mockito mocks
+- Spring Modulith verifies that only the declared public package is accessed
+|
+- Tight coupling for lifecycle reactions: the producer must know all interested consumers
+- Adding a new consumer (e.g. a future `notifications` module) requires modifying the producer
+- Long-running transactions if cleanup cascades through multiple modules synchronously
+
+2+^s|Option C: Hybrid (chosen)
+
+|
+- Each interaction uses the pattern best suited to its nature
+- Synchronous queries are simple, consistent, and easy to handle errors for
+- Lifecycle reactions are decoupled; new consumers can be added without touching the producer
+- Named Interface coupling is accepted as appropriate for a modular monolith; it is the same trade-off that justifies not maintaining local data copies per module
+- Aligns with Spring Modulith's recommended patterns
+|
+- Two patterns must be understood and applied consistently by all developers
+- Requires a clear decision rule so developers know which pattern to apply (see below)
+
+|===
+
+== Decision Rules
+
+The following rules remove ambiguity about which pattern to use:
+
+[cols="1,1,2"]
+|===
+|Scenario |Pattern |Example
+
+|Query: "Does X exist / is it valid?" |Named Interface |`tasks` calls `HouseholdQueryService.exists(id)` before persisting a task
+|Query: "Give me aggregate data from module X" |Named Interface |`household` calls `ExpenseStatisticsService` from `expenses` to assemble the statistics response
+|Notification: "X was deleted" |Domain Event |`HouseholdDeleted` event → `tasks` deletes all tasks for that household
+|Notification: "Status of X changed" |Domain Event |`MemberRemoved` event → `tasks` unassigns open tasks from that member
+|===
+
+== Implementation Guidelines
+
+=== Named Interface (synchronous)
+
+The target module defines a public service interface in its root package.
+Spring Modulith treats the root package of a module as its public API; anything placed there is accessible from other modules.
+
+[source,java]
+----
+// eu.wiegandt.librehousehold.household (root package = public)
+public interface HouseholdQueryService {
+    boolean exists(UUID householdId);
+}
+----
+
+The depending module declares the allowed dependency in its `package-info.java`:
+
+[source,java]
+----
+@ApplicationModule(allowedDependencies = "household")
+package eu.wiegandt.librehousehold.tasks;
+----
+
+=== Domain Event (reactive)
+
+The producing module defines the event record in its root package and publishes it within a `@Transactional` method.
+The event record is the only shared type; the consumer has no compile-time dependency on the producer's implementation.
+
+[source,java]
+----
+// eu.wiegandt.librehousehold.household (root package = public)
+public record HouseholdDeleted(UUID householdId) {}
+
+// Inside a @Transactional service method:
+events.publishEvent(new HouseholdDeleted(householdId));
+----
+
+The consuming module listens without needing to declare a dependency on the producing module, because the event type is defined in the producer's public package which the consumer may reference:
+
+[source,java]
+----
+@ApplicationModuleListener
+void on(HouseholdDeleted event) {
+    taskRepository.deleteByHouseholdId(event.householdId());
+}
+----
+
+=== Database Schema Isolation
+
+Each module owns a dedicated PostgreSQL schema (`household`, `tasks`, `expenses`).
+Foreign-key constraints across schema boundaries are *not used*.
+Referential integrity for cross-module references is ensured by Named Interface queries on write and by `@ApplicationModuleListener` cleanup on delete.
+
+== Consequences
+
+**Positive:**
+
+- Module boundaries are enforced and verified at test time by Spring Modulith.
+- Lifecycle reactions are fully decoupled; a new module can listen to existing events without touching the producer.
+- The accepted coupling through Named Interfaces is intentional, explicit, and minimal.
+- When (if) modules are ever extracted to microservices, Named Interface calls become the clear seams to replace with HTTP/gRPC, and Domain Events become the seams to replace with a message broker — the business logic itself does not change.
+
+**Negative:**
+
+- `tasks` and `expenses` have a compile-time dependency on public interfaces in `household`.
+  This is a conscious trade-off (see _Rejected Approach_ above).
+- Eventual consistency: `@ApplicationModuleListener` runs after the producing transaction commits.
+  In the window between commit and listener execution, data may be transiently inconsistent across module schemas.
+  This is acceptable for lifecycle cleanup but must not be used where immediate consistency is required.
+- The Event Publication Registry requires a dedicated table (`event_publication`) in the database.
+  This table must be created via a Flyway migration to keep schema management consistent.
