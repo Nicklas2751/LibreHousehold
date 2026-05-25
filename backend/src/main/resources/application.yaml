@@ -1,3 +1,7 @@
 spring:
   application:
     name: librehousehold
+
+server:
+  tomcat:
+    max-http-post-size: -1

@@ -285,3 +285,9 @@ The `Task` schema has a `done` field (date format) that either contains a date o
 - `recurrenceUnit`: days, weeks, months, years
 - `recurrenceInterval`: count (minimum `1`)
 - For recurring tasks, the task is considered done only if the done date is after the last due date.
+
+### Pending Backend Implementations
+
+- **Maximale Bildgröße**: `server.tomcat.max-http-post-size` ist bewusst auf unbegrenzt gesetzt (Tomcat-Standard war 2 MB und führte zu stiller Trunkierung großer Base64-Bilder). Eine serverseitige Validierung der maximalen Bildgröße (empfohlen: 5 MB) fehlt noch — per Bean-Validation oder Filter.
+- **Bildtyp-Beschränkung**: Es wird noch nicht geprüft, ob ein hochgeladenes Bild ein valides JPEG/PNG/WebP ist. Magic-Bytes-Prüfung oder MIME-Detection fehlt.
+- **Invite-Link-Erneuerung**: `POST /household/{householdId}/invite` (operationId: `generateInviteLink`) ist in der OpenAPI-Spec und im generierten Delegate vorhanden, aber in `HouseholdApiDelegateImpl` noch nicht implementiert (`NOT_IMPLEMENTED`). Benötigt: Token regenerieren, alten invalidieren, neue URL zurückgeben.

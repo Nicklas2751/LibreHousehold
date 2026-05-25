@@ -13,3 +13,11 @@ CREATE TABLE household
     image    TEXT,
     admin_id UUID NOT NULL UNIQUE REFERENCES member (id)
 );
+
+CREATE TABLE invite
+(
+    id           BIGSERIAL PRIMARY KEY,
+    household_id UUID NOT NULL REFERENCES household (id),
+    token        UUID NOT NULL UNIQUE,
+    valid_until  DATE NOT NULL
+);

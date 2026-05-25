@@ -1,8 +1,8 @@
 package eu.wiegandt.librehousehold.household;
 
 import eu.wiegandt.librehousehold.api.HouseholdApiDelegate;
-import eu.wiegandt.librehousehold.model.Household;
 import eu.wiegandt.librehousehold.model.HouseholdSetup;
+import eu.wiegandt.librehousehold.model.HouseholdSetupResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 
@@ -18,7 +18,7 @@ public class HouseholdApiDelegateImpl implements HouseholdApiDelegate {
     }
 
     @Override
-    public ResponseEntity<Household> setupHousehold(Optional<HouseholdSetup> householdSetup) {
+    public ResponseEntity<HouseholdSetupResponse> setupHousehold(Optional<HouseholdSetup> householdSetup) {
         var setup = householdSetup.orElseThrow(HouseholdSetupIsRequiredException::new);
         return ResponseEntity.ok(householdSetupService.setupHousehold(setup));
     }
