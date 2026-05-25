@@ -1,0 +1,62 @@
+name: Backend Release
+
+on:
+  release:
+    types: [created]
+
+permissions:
+  contents: write
+
+defaults:
+  run:
+    working-directory: backend
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          java-version: '25'
+          distribution: temurin
+          cache: maven
+          cache-dependency-path: backend/pom.xml
+
+      - name: Run tests
+        run: ./mvnw verify
+
+  release:
+    name: Build & Release
+    runs-on: ubuntu-latest
+    needs: [test]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          java-version: '25'
+          distribution: temurin
+          cache: maven
+          cache-dependency-path: backend/pom.xml
+
+      - name: Build
+        run: ./mvnw package -DskipTests
+
+      - name: Package build artifact
+        working-directory: backend
+        run: mv target/librehousehold-*.jar ../backend-${{ github.event.release.tag_name }}.jar
+
+      - name: Upload artifact to release
+        working-directory: ${{ github.workspace }}
+        run: |
+          gh release upload ${{ github.event.release.tag_name }} \
+            backend-${{ github.event.release.tag_name }}.jar
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
