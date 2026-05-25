@@ -1,10 +1,10 @@
 import { get, writable } from 'svelte/store';
 import { getLocale, setLocale } from '$lib/paraglide/runtime.js';
-import { Configuration, HouseholdApi } from '../../generated-sources/openapi';
+import { Configuration, UsersettingsApi } from '../../generated-sources/openapi';
 import { householdState } from './householdState.svelte';
 import { userState } from './userState';
 
-const api = new HouseholdApi(new Configuration({ basePath: '/api' }));
+const api = new UsersettingsApi(new Configuration({ basePath: '/api' }));
 
 export type Theme = 'light' | 'dark';
 export type Language = 'en' | 'de';

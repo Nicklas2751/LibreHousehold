@@ -2,15 +2,20 @@
 	import { UserCircleIcon } from '@indaco/svelte-iconoir/user-circle';
 	import { WarningTriangleIcon } from '@indaco/svelte-iconoir/warning-triangle';
 	import { m } from '$lib/paraglide/messages.js';
-	import { userState, updateUserState } from '$lib/stores/userState';
+	import { updateUserState, userState } from '$lib/stores/userState';
 	import { householdState } from '$lib/stores/householdState.svelte';
-	import { members, loadMembers } from '$lib/stores/memberStore';
+	import { loadMembers, members } from '$lib/stores/memberStore';
 	import { addToast } from '$lib/stores/toastStore';
 	import { Toast } from '$lib/toast';
-	import { Configuration, HouseholdApi } from '../../../../generated-sources/openapi';
+	import {
+		Configuration,
+		HouseholdApi,
+		UsersettingsApi
+	} from '../../../../generated-sources/openapi';
 	import { goto } from '$app/navigation';
 
-	const api = new HouseholdApi(new Configuration({ basePath: '/api' }));
+	const householdApi = new HouseholdApi(new Configuration({ basePath: '/api' }));
+	const userSettingsApi = new UsersettingsApi(new Configuration({ basePath: '/api' }));
 
 	const householdId = $derived($householdState?.id ?? '');
 	const memberId = $derived($userState?.id ?? '');
@@ -36,7 +41,7 @@
 	async function saveProfile() {
 		profileSaving = true;
 		try {
-			const updated = await api.updateMember({
+			const updated = await householdApi.updateMember({
 				householdId,
 				memberId,
 				memberUpdate: { name: displayName, email }
@@ -65,7 +70,7 @@
 		if (passwordMismatch) return;
 		passwordSaving = true;
 		try {
-			await api.changePassword({
+			await userSettingsApi.changePassword({
 				householdId,
 				memberId,
 				passwordChangeRequest: { oldPassword, newPassword }
@@ -95,6 +100,7 @@
 	function openDeleteModal() {
 		deleteModalOpen = true;
 	}
+
 	function closeDeleteModal() {
 		deleteModalOpen = false;
 		transferMemberId = '';
@@ -105,14 +111,14 @@
 		deleteSubmitting = true;
 		try {
 			if (isOwner && !deleteHousehold && transferMemberId) {
-				await api.transferOwnership({
+				await householdApi.transferOwnership({
 					householdId,
 					transferOwnershipRequest: { memberId: transferMemberId }
 				});
 			} else if (isOwner && deleteHousehold) {
-				await api.deleteHousehold({ householdId });
+				await householdApi.deleteHousehold({ householdId });
 			}
-			await api.deleteAccount({ householdId, memberId });
+			await userSettingsApi.deleteAccount({ householdId, memberId });
 			await goto('/');
 		} catch {
 			addToast(new Toast(m['settings.user.danger.delete_error'](), 'error'));
