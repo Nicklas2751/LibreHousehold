@@ -8,7 +8,7 @@
 	import { WarningTriangleIcon } from '@indaco/svelte-iconoir/warning-triangle';
 	import { UserCircleIcon } from '@indaco/svelte-iconoir/user-circle';
 	import { m } from '$lib/paraglide/messages.js';
-	import { householdState, updateHouseholdState } from '$lib/stores/householdState.svelte';
+	import { householdState } from '$lib/stores/householdState.svelte';
 	import { userState } from '$lib/stores/userState';
 	import { members, loadMembers } from '$lib/stores/memberStore';
 	import { addToast } from '$lib/stores/toastStore';
@@ -33,13 +33,38 @@
 	});
 
 	// --- Invite link ---
-	let inviteUrl = $state('');
+	let inviteToken = $state<string | null>(null);
+	let inviteValidUntil = $state<Date | null>(null);
+	let inviteLoading = $state(false);
 
-	// Initialise/update invite URL reactively from store
+	const inviteUrl = $derived(inviteToken ? generateInviteUrl(page.url.origin, inviteToken) : null);
+
+	const daysRemaining = $derived.by(() => {
+		if (!inviteValidUntil) return 0;
+		const todayMs = new Date().setHours(0, 0, 0, 0);
+		return Math.max(0, Math.ceil((inviteValidUntil.getTime() - todayMs) / (1000 * 60 * 60 * 24)));
+	});
+
+	const isExpired = $derived(!inviteValidUntil || daysRemaining <= 0);
+
+	// Load current invite on mount
 	$effect(() => {
-		if ($householdState && !inviteUrl) {
-			inviteUrl = generateInviteUrl(page.url.origin, $householdState.id);
-		}
+		if (!householdId) return;
+		inviteLoading = true;
+		api
+			.getInvite({ householdId })
+			.then((result) => {
+				inviteToken = result.inviteToken;
+				inviteValidUntil = result.inviteValidUntil;
+			})
+			.catch(() => {
+				// 404 means no active invite exists — this is expected, not an error
+				inviteToken = null;
+				inviteValidUntil = null;
+			})
+			.finally(() => {
+				inviteLoading = false;
+			});
 	});
 
 	let generatingInvite = $state(false);
@@ -56,7 +81,8 @@
 		generatingInvite = true;
 		try {
 			const result = await api.generateInviteLink({ householdId });
-			inviteUrl = result.inviteUrl;
+			inviteToken = result.inviteToken;
+			inviteValidUntil = result.inviteValidUntil;
 			addToast(new Toast(m['settings.household.invite.regenerated_toast'](), 'success'));
 		} catch {
 			addToast(new Toast(m['settings.household.invite.regenerate_error'](), 'error'));
@@ -66,12 +92,14 @@
 	}
 
 	function copyInviteLink() {
+		if (!inviteUrl) return;
 		navigator.clipboard.writeText(inviteUrl).then(() => {
 			addToast(new Toast(m['settings.household.invite.copied_toast'](), 'success'));
 		});
 	}
 
 	async function shareInviteLink() {
+		if (!inviteUrl) return;
 		const data = createInviteLinkShareData(inviteUrl, m['settings.household.invite.share_text']());
 		await navigator.share(data);
 	}
@@ -87,11 +115,11 @@
 	async function saveName() {
 		nameSaving = true;
 		try {
-			const updated = await api.updateHousehold({
+			await api.updateHousehold({
 				householdId,
 				householdUpdate: { name: householdName }
 			});
-			updateHouseholdState(updated);
+			householdState.update((s) => (s ? { ...s, name: householdName } : s));
 			addToast(new Toast(m['settings.household.name.save_success'](), 'success'));
 		} catch {
 			addToast(new Toast(m['settings.household.name.save_error'](), 'error'));
@@ -142,11 +170,11 @@
 	async function confirmTransfer() {
 		transferSubmitting = true;
 		try {
-			const updated = await api.transferOwnership({
+			await api.transferOwnership({
 				householdId,
 				transferOwnershipRequest: { memberId: transferToId }
 			});
-			updateHouseholdState(updated);
+			householdState.update((s) => (s ? { ...s, admin: transferToId } : s));
 			transferModalOpen = false;
 			transferToId = '';
 			addToast(new Toast(m['settings.household.transfer.success'](), 'success'));
@@ -186,13 +214,22 @@
 				{m['settings.household.invite.description']()}
 			</p>
 
-			{#if inviteUrl}
-				<div class="mb-3 flex justify-center">
+			{#if inviteLoading}
+				<div class="flex justify-center py-4">
+					<span class="loading loading-sm loading-spinner"></span>
+				</div>
+			{:else if inviteUrl && !isExpired}
+				<div class="mb-2 flex justify-center">
 					{#key inviteUrl}
 						<div class="h-40 w-40">
 							<QRCode isResponsive={true} data={inviteUrl} />
 						</div>
 					{/key}
+				</div>
+				<div class="mb-3 flex justify-center">
+					<span class="badge badge-sm badge-success">
+						{m['settings.household.invite.valid_days_hint']({ days: daysRemaining })}
+					</span>
 				</div>
 				<div class="join w-full">
 					<input type="text" class="input join-item w-full text-xs" value={inviteUrl} readonly />
@@ -213,6 +250,10 @@
 						<CopyIcon />
 					</button>
 				</div>
+			{:else}
+				<p class="mb-3 text-sm text-base-content/50 italic">
+					{m['settings.household.invite.expired_message']()}
+				</p>
 			{/if}
 
 			<button
@@ -365,7 +406,13 @@
 				</button>
 			</div>
 		</div>
-		<div class="modal-backdrop" onclick={closeRemoveMemberModal}></div>
+		<div
+			class="modal-backdrop"
+			role="button"
+			tabindex="-1"
+			onclick={closeRemoveMemberModal}
+			onkeydown={(e) => e.key === 'Escape' && closeRemoveMemberModal()}
+		></div>
 	</div>
 {/if}
 
@@ -399,7 +446,13 @@
 				</button>
 			</div>
 		</div>
-		<div class="modal-backdrop" onclick={closeTransferModal}></div>
+		<div
+			class="modal-backdrop"
+			role="button"
+			tabindex="-1"
+			onclick={closeTransferModal}
+			onkeydown={(e) => e.key === 'Escape' && closeTransferModal()}
+		></div>
 	</div>
 {/if}
 
@@ -446,9 +499,17 @@
 		</div>
 		<div
 			class="modal-backdrop"
+			role="button"
+			tabindex="-1"
 			onclick={() => {
 				deleteModalOpen = false;
 				deleteConfirmName = '';
+			}}
+			onkeydown={(e) => {
+				if (e.key === 'Escape') {
+					deleteModalOpen = false;
+					deleteConfirmName = '';
+				}
 			}}
 		></div>
 	</div>

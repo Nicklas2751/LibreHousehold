@@ -41,7 +41,7 @@ class HouseholdSetupService {
                     UUID.randomUUID(),
                     LocalDate.now().plusDays(INVITE_VALIDITY_DAYS)
             ));
-            return new HouseholdSetupResponse(householdSetupMapper.toApiModel(savedHousehold), invite.token());
+            return new HouseholdSetupResponse(householdSetupMapper.toApiModel(savedHousehold), invite.token(), invite.validUntil());
         } catch (DataIntegrityViolationException e) {
             throw new HouseholdAlreadyExistsException();
         }

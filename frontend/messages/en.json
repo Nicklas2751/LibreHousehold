@@ -275,7 +275,10 @@
 				"copied_toast": "Link copied!",
 				"regenerated_toast": "New invite link created.",
 				"shared_toast": "Link shared!",
-				"regenerate_error": "Failed to generate invite link."
+				"regenerate_error": "Failed to generate invite link.",
+				"valid_days_hint": "Valid for {days} more day(s)",
+				"expired_message": "No valid invite link available.",
+				"load_error": "Failed to load invite link."
 			},
 			"name": {
 				"title": "Household Name",

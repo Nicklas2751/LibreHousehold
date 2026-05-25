@@ -10,13 +10,13 @@ Das Frontend ist vollständig ausgebaut und arbeitet mit einem Mock-Backend. Das
 
 ---
 
-## Aktueller Stand (Ausgangslage)
+## Aktueller Stand
 
 | Modul | Status |
 |---|---|
 | `household/` (Setup) | ✅ Implementiert |
-| `household/` (CRUD, Invite, Admin) | ❌ `501 Not Implemented` |
-| `household/` (Members) | ❌ `501 Not Implemented` |
+| `household/` (CRUD, Invite, Admin) | ✅ Implementiert |
+| `household/` (Members) | ❌ Noch nicht begonnen |
 | `tasks/` | ❌ Modul leer |
 | `expenses/` (inkl. Reimbursements) | ❌ Modul leer |
 
@@ -24,57 +24,47 @@ Das Frontend ist vollständig ausgebaut und arbeitet mit einem Mock-Backend. Das
 
 ## Abschnitt 0 — Modul-Kommunikations-Analyse ✅
 
-**Warum zuerst?**
-Die spätere Implementierung von `tasks/`, `expenses/` und `household/` wird Situationen erzeugen, in denen Module Daten anderer Module benötigen — z.B. muss `expenses/` wissen, ob ein Haushalt existiert, oder `tasks/` braucht keine echte FK-Referenz auf `member`, muss aber sinnvoll auf Löschungen reagieren. Diese Entscheidung jetzt zu treffen verhindert, dass jeder Abschnitt eine eigene Ad-hoc-Lösung erfindet.
+**Ergebnis:** ADR-011 dokumentiert das Kommunikationsmuster.
 
-**Was wird analysiert und entschieden?**
+| Szenario | Muster |
+|---|---|
+| Synchrone Abfrage (z.B. „Existiert Haushalt X?") | **Named Interface** im Root-Package des Zielmoduls |
+| Reaktion auf Lifecycle-Event (z.B. „Haushalt gelöscht") | **Domain Event** (`ApplicationEventPublisher` + `@ApplicationModuleListener`) |
 
-Folgende Optionen für modul-übergreifende Kommunikation stehen zur Verfügung und müssen bewertet werden:
+Event-Carried State Transfer (lokale Datenkopien pro Modul) wurde bewusst abgelehnt — zu viel Overhead für einen Monolithen. Stärkere Kopplung durch Named Interfaces wird akzeptiert; sie ist explizit und von Spring Modulith verifizierbar.
 
-| Option | Beschreibung | Geeignet für |
-|---|---|---|
-| **Spring Application Events** | Synchrones/asynchrones Eventing via `ApplicationEventPublisher`. Einfach, kein Framework-Overhead. | Zustandsänderungen, die andere Module informieren sollen (z.B. Household gelöscht → Tasks aufräumen) |
-| **Spring Modulith Events** | `@ApplicationModuleListener`, mit Transaktionssicherheit und optionaler Externalisierung. Modulith-native Lösung. | Wie Application Events, aber mit Modulith-Garantien (at-least-once, Event-Tabelle) |
-| **Explizite Public-API-Interfaces** | Modul A definiert ein Interface in seinem `public`-Package; Modul B injiziert dieses Interface. Klare, testbare Schnittstelle. | Synchrone Abfragen, z.B. „Existiert dieser Haushalt?" |
-| **Keine Java-Grenze, nur DB-Constraint** | DB-FK auf anderes Schema. Module kennen sich auf Java-Ebene nicht, die DB erzwingt die Integrität. | **Wird hier ausgeschlossen** — jedes Modul bekommt sein eigenes DB-Schema, keine modul-übergreifenden FKs |
-| **Denormalisierung / Kopieren** | IDs werden als einfache UUIDs ohne Constraint gespeichert; Konsistenz liegt in der Applikationslogik. | Als Fallback wenn Kopplung bewusst locker sein soll |
-
-**Ergebnis dieses Abschnitts:**
-- Eine schriftliche Entscheidung (ADR) welche Kommunikationsform in welcher Situation verwendet wird
-- Klärung: Reagieren Module reaktiv (Events) oder imperativ (Interface-Call) auf Änderungen in anderen Modulen?
-- Konkret für den vorliegenden Plan: Wie kommuniziert `tasks/` mit `household/`, wie `expenses/` mit `household/` und `tasks/`, wie `expenses/` intern zwischen Expenses und Reimbursements?
+Modul-übergreifende DB-FKs sind verboten. Jedes Modul bekommt ein eigenes PostgreSQL-Schema.
 
 **UI-Fortschritt:** Keiner — reine Architektur-Entscheidung.
 
-**Abhängigkeiten:** Keine.
-
 ---
 
-## Abschnitt 1 — Household-Verwaltung (Kern-CRUD + Invite-Erneuerung)
+## Abschnitt 1 — Household-Verwaltung (Kern-CRUD + Invite) ✅
 
-**Warum jetzt?**
-Direkterweiterung des einzigen bereits implementierten Moduls. Alle vier Endpunkte liegen im selben Modul, keine neuen Modul-Grenzen, höchste Dichte pro Aufwand. Der Invite-Link-Endpunkt (`POST /household/{id}/invite`) ist in `AGENTS.md` explizit als fehlend markiert.
-
-**Was wird implementiert?**
-- `PATCH /household/{id}` — Haushaltsname ändern
-- `DELETE /household/{id}` — Haushalt löschen (Cascade-Logik via Events aus Abschnitt 0)
+**Was wurde implementiert:**
+- `GET /household/{id}/invite` — aktuellen Invite-Token abrufen
+- `PATCH /household/{id}` — Haushaltsname ändern (204 No Content)
+- `DELETE /household/{id}` — Haushalt löschen (inkl. Invite-Cascade via `HouseholdDeleted`-Event)
 - `POST /household/{id}/invite` — Invite-Token invalidieren und neu generieren
-- `PUT /household/{id}/admin` — Admin-Rolle atomar übertragen
+- `PUT /household/{id}/admin` — Admin-Rolle atomar übertragen (204 No Content)
 
-**OpenAPI-Anpassung (vor Backend-Implementierung):**
-- `HouseholdSetupResponse` bekommt ein neues Feld `inviteValidUntil` (date-Format)
-- `InviteResponse` bekommt ebenfalls `inviteValidUntil`
-- Das Backend befüllt dieses Feld aus der `InviteEntity.validUntil`
+**OpenAPI-Änderungen:**
+- `HouseholdSetupResponse` hat jetzt `inviteValidUntil` (date)
+- `InviteResponse` enthält `inviteToken` (UUID) + `inviteValidUntil` (date) statt URL
+- `PATCH /household/{id}` und `PUT /household/{id}/admin` geben 204 zurück (kein Body)
 
-**Frontend-Ergänzung (im gleichen Abschnitt):**
-Die Household-Settings-Seite (`/app/settings/household`) zeigt den Invite-Token nur noch dann an, wenn er gültig ist. Konkret:
+**Design-Entscheidungen:**
+- Keine unnötigen Vor-SELECTs: `updateName`, `updateAdminId` und `deleteHouseholdById` geben `int` (betroffene Zeilen) zurück — 0 wirft direkt `HouseholdNotFoundException`
+- `regenerateInvite` nutzt FK-Violation-Catching statt `existsById`-Vorprüfung
+- `HouseholdManagementService` hat keine Abhängigkeit mehr zum `HouseholdSetupMapper`
+
+**Frontend-Ergänzung:**
+- Household-Settings lädt den Invite-Token per `GET /household/{id}/invite`
 - Gültiger Token: QR-Code + URL + Hinweis „Gültig noch X Tage"
-- Abgelaufener Token: Kein Code, stattdessen Meldung „Kein gültiger Invite-Link vorhanden" + Button zum Neu-Generieren
-- Relevant: Die Anzeige nutzt `inviteValidUntil` aus der API-Response; eine eigene API zum Abrufen des aktuellen Tokens ist ebenfalls nötig oder wird über das Household-Objekt gelöst — das ist Teil der Implementierungsentscheidung in diesem Abschnitt
+- Abgelaufener/fehlender Token: Meldung + Button zum Neu-Generieren
+- Lokale State-Updates nach `saveName()` und `confirmTransfer()` (kein Rückgabewert mehr)
 
 **UI-Fortschritt:** Household-Settings vollständig funktional. Invite-Token-Anzeige mit Gültigkeitsstatus. Haushaltsname ändern, Admin übertragen, Haushalt löschen.
-
-**Abhängigkeiten:** Abschnitt 0 (Kommunikationsmuster für Delete-Cascade entschieden).
 
 ---
 
@@ -85,7 +75,7 @@ Members sind ein Cross-Cutting-Concern: Tasks brauchen "assignedTo", Expenses br
 
 ### ADR-Voranalyse: Email-Eindeutigkeit und Account-Haushalt-Modell
 
-Vor der Implementierung muss eine Architekturentscheidung getroffen werden. Hier sind die Abwägungen:
+Vor der Implementierung muss eine Architekturentscheidung getroffen werden:
 
 #### Option A: Email global eindeutig, ein Account = ein Haushalt (aktueller Stand)
 
@@ -94,41 +84,24 @@ Vor der Implementierung muss eine Architekturentscheidung getroffen werden. Hier
 | Vorteile | Nachteile |
 |---|---|
 | Einfachstes Datenbankschema (bestehende Migration passt) | Nutzer mit mehreren Haushalten nicht möglich |
-| Klare 1-zu-1-Beziehung: Login-Identität = Household-Mitglied | Realitätsfern für viele Use Cases (WG wechseln, Familien + Freundeskreis) |
-| Kein Konzept eines separaten „Account"-Objekts notwendig | Beim Household löschen geht die gesamte Identität verloren |
-| Weniger Komplexität in Auth (kein Account-Lookup nötig) | Email-Änderung eines Members ist gleichzeitig eine globale Identitätsänderung |
-| Passt gut zur aktuellen `admin_id UNIQUE`-Constraint | `member.email` ist nach außen sichtbar → Datenschutzrisiko bei Mehrfachnutzung |
+| Klare 1-zu-1-Beziehung: Login-Identität = Household-Mitglied | Beim Household löschen geht die gesamte Identität verloren |
+| Kein Konzept eines separaten „Account"-Objekts notwendig | Email-Änderung = globale Identitätsänderung |
 
-**Architekturauswirkung:** Minimale Änderung. Das bestehende Schema (`V1`) bleibt unberührt. Member-Management ist rein haushaltsintern.
+**Architekturauswirkung:** Minimale Änderung. Schema `V1` bleibt unberührt.
 
 #### Option B: Email global eindeutig, ein Account kann mehreren Haushalten angehören
 
-**Datenmodell:** Separates `account`-Objekt (mit Email + Passwort). `household_member`-Join-Tabelle verbindet Account mit Household und definiert dort die Rolle (Admin/Member). Der `member` wird zum „Profil innerhalb eines Haushalts" (Name, Avatar, haushaltsspezifische Rolle).
+**Datenmodell:** Separates `account`-Objekt. `household_member`-Join-Tabelle verbindet Account mit Household. Der `member` wird zum „Profil innerhalb eines Haushalts".
 
 | Vorteile | Nachteile |
 |---|---|
-| Realistischer für echte Nutzer (WG, Familie, Verein) | Erheblich komplexeres Datenbankschema |
-| Ein Login für alle Haushalte | „Account"-Konzept braucht eigenes Modul oder Erweiterung von `household/` |
-| Account-Löschung und Household-Verlassen sind unabhängige Operationen | `PATCH /members/{id}` muss zwischen Profil- und Account-Änderungen unterscheiden |
-| Email-Änderung betrifft Login, nicht haushaltsspezifische Daten | Auth wird erheblich komplexer (welcher Haushalt ist aktiv?) |
-| Vorbereitung für Auth ist strukturell sauber | Flyway-Migration muss die bestehende `member`-Tabelle umbenennen/aufteilen |
-| Passt zu den offenen Design-Fragen in `AGENTS.md` | Höherer Aufwand jetzt, obwohl Auth ausgeklammert ist |
+| Realistischer für echte Nutzer (WG wechseln, Familie + Freundeskreis) | Erheblich komplexeres Datenbankschema |
+| Ein Login für alle Haushalte | Auth wird erheblich komplexer (welcher Haushalt ist aktiv?) |
+| Account-Löschung und Household-Verlassen sind unabhängige Operationen | Flyway-Migration muss bestehende `member`-Tabelle umbenennen/aufteilen |
 
-**Architekturauswirkung:** Neue Flyway-Migration, neues `account`-Konzept, Join-Tabelle. Das bestehende `member`-Objekt bleibt als „Haushaltsprofil" erhalten, verweist aber auf einen `account`. Die `admin_id`-FK müsste auf `account_id` umgebaut werden.
+**Architekturauswirkung:** Neue Flyway-Migration, neues `account`-Konzept, Join-Tabelle.
 
-#### Option C: Email haushaltsbezogen eindeutig (kein globales Account-Konzept)
-
-**Datenmodell:** `member.email` ist eindeutig pro Household, nicht global. Kein separates Account-Objekt.
-
-| Vorteile | Nachteile |
-|---|---|
-| Einfacher als Option B | Dieselbe Person kann sich mit derselben Email in mehreren Haushalten anmelden |
-| Haushaltsisolation ist maximal | Kein einheitlicher Login möglich |
-| Gut für reine „Haushaltslisten"-Use-Cases | Inkonsistente Identität — schwer mit Auth zu vereinbaren |
-
-**Architekturauswirkung:** Kleiner Eingriff (UNIQUE-Constraint auf `(household_id, email)` statt global). Aber langfristig eine Sackgasse bei späterer Auth-Einführung.
-
-**Empfehlung:** Option A oder B. Option C scheidet aus. Die Entscheidung zwischen A und B beeinflusst maßgeblich, wie Auth später gebaut wird — auch wenn Auth jetzt ausgeklammert ist.
+**Empfehlung:** Option A oder B — C (email per-household eindeutig) scheidet aus (Sackgasse bei Auth).
 
 ---
 
@@ -151,11 +124,11 @@ Members bleiben Teil des `household/`-Moduls.
 ## Abschnitt 3 — Tasks (vollständiger Zyklus)
 
 **Warum jetzt?**
-Tasks sind das einfachste Feature mit eigenem Modul, hohem Alltagsnutzen und nur drei Endpunkten. Das `tasks/`-Modul ist leer und kann als erstes vollständiges Modul-Beispiel für das vereinbarte Kommunikationsmuster aus Abschnitt 0 dienen.
+Tasks sind das einfachste Feature mit eigenem Modul, hohem Alltagsnutzen und nur drei Endpunkten. Das `tasks/`-Modul ist leer und kann als erstes vollständiges Modul-Beispiel für das vereinbarte Kommunikationsmuster dienen.
 
 **Was wird implementiert?**
 - Neues Modul `tasks/` mit eigenem DB-Schema: Entity, Repository, Mapper, Service, ApiDelegateImpl
-- Flyway-Migration: `task`-Tabelle **im Schema `tasks`** (kein FK zu `household` oder `member` auf DB-Ebene — Integrität über Applikationslogik und ggf. Events)
+- Flyway-Migration: `task`-Tabelle im Schema `tasks` (kein FK zu `household` oder `member` auf DB-Ebene)
   - Felder: `id` (UUID), `household_id` (UUID, kein FK), `assigned_to` (UUID, kein FK), `title`, `due_date`, `done`, `recurring`, `recurrence_unit`, `recurrence_interval`
 - `GET /household/{id}/tasks` — alle Tasks eines Haushalts
 - `POST /household/{id}/tasks` — Task erstellen (client-generierte UUID)
@@ -173,14 +146,13 @@ Tasks sind das einfachste Feature mit eigenem Modul, hohem Alltagsnutzen und nur
 ## Abschnitt 4 — Kategorien + Expenses + Reimbursements + Financials
 
 **Warum zusammen?**
-Expenses und Reimbursements sind inhaltlich und fachlich eng verbunden: Reimbursements referenzieren Expenses, die `isMutable`-Logik von Expenses hängt vom Reimbursement-Status ab. Ein gemeinsames Modul `expenses/` vermeidet künstliche Modul-Grenzen innerhalb einer eng gekoppelten Domäne.
+Expenses und Reimbursements sind inhaltlich eng verbunden: Reimbursements referenzieren Expenses, die `isMutable`-Logik hängt vom Reimbursement-Status ab. Ein gemeinsames Modul `expenses/` vermeidet künstliche Modul-Grenzen.
 
 **Was wird implementiert?**
 - Neues Modul `expenses/` mit eigenem DB-Schema (`expenses`)
-- Flyway-Migrationen:
-  - `category`-Tabelle, `expense`-Tabelle, `reimbursement`-Tabelle (alle ohne FK zu anderen Schemas)
+- Flyway-Migrationen: `category`-, `expense`-, `reimbursement`-Tabellen (alle ohne FK zu anderen Schemas)
 - Endpunkte: Kategorien, Expenses (CRUD), Reimbursements (CRUD + Status), Financials (Summary + Balances)
-- `isMutable`-Aktivierung als interne Modullogik (kein Modul-Grenz-Problem)
+- `isMutable`-Aktivierung als interne Modullogik
 - **Expense-Statistics im gleichen Modul:** `totalExpenses`, `avgExpensesPerMonth`, `expensesByCategory`, `expensesByMember`
 
 **UI-Fortschritt:** Expenses-Seite + Settle-Seite vollständig funktional. Dashboard-Financial-Card zeigt echte Salden.
@@ -223,10 +195,10 @@ Statistics sind ein reines Read-Aggregat. Da Tasks und Expenses ihre eigenen Sta
 ## Querschnittsthemen
 
 ### DB-Schema-Strategie
-Jedes Modul bekommt ein eigenes PostgreSQL-Schema (`household`, `tasks`, `expenses`). Keine modul-übergreifenden FK-Constraints. Fremd-IDs (z.B. `household_id` in `tasks`) werden als einfache UUIDs ohne DB-FK gespeichert.
+Jedes Modul bekommt ein eigenes PostgreSQL-Schema (`household`, `tasks`, `expenses`). Keine modul-übergreifenden FK-Constraints. Fremd-IDs (z.B. `household_id` in `tasks`) werden als einfache UUIDs ohne DB-FK gespeichert. Konsistenz über Applikationslogik und/oder Events.
 
 ### Records und Updates
-Alle Updates über explizite `@Modifying @Query`-Methoden im Repository. `save()` nur für neue Entities (gemäß `AGENTS.md`-Muster).
+Alle Updates über explizite `@Modifying @Query`-Methoden im Repository, die `int` (betroffene Zeilen) zurückgeben. `save()` nur für neue Entities. Rückgabewert 0 → `*NotFoundException` werfen.
 
 ### TDD-Rhythmus pro Abschnitt
 1. `*ApiDelegateImplTest` (Unit, Mockito)
@@ -237,12 +209,12 @@ Alle Updates über explizite `@Modifying @Query`-Methoden im Repository. `save()
 
 ## Reihenfolge auf einen Blick
 
-| # | Abschnitt | Modul | Freigeschaltete UI / Ergebnis |
-|---|---|---|---|
-| 0 | Modul-Kommunikations-Analyse | — | ADR: Kommunikationsmuster |
-| 1 | Household-CRUD + Invite + Frontend-Gültigkeit | `household/` (vollst.) | Household-Settings, Invite-Gültigkeit |
-| 2 | Member-Verwaltung + ADR Account-Modell | `household/` (Members) | Settings (Profil), alle Dropdowns |
-| 3 | Tasks (inkl. Task-Statistics) | `tasks/` (neu, eigenes Schema) | Tasks, Dashboard-Tasks |
-| 4 | Kategorien + Expenses + Reimbursements + Financials | `expenses/` (neu, eigenes Schema) | Expenses, Settle, Dashboard-Finanzen |
-| 5 | Statistics-Endpunkt (Aggregation) | Kein neues Modul | Statistics-Seite |
-| 6 | User Settings | `usersettings/` (neu) | User-Settings |
+| # | Abschnitt | Modul | Status | Freigeschaltete UI / Ergebnis |
+|---|---|---|---|---|
+| 0 | Modul-Kommunikations-Analyse | — | ✅ | ADR-011: Kommunikationsmuster |
+| 1 | Household-CRUD + Invite + Frontend-Gültigkeit | `household/` | ✅ | Household-Settings, Invite-Gültigkeit |
+| 2 | Member-Verwaltung + ADR Account-Modell | `household/` (Members) | ⬜ | Settings (Profil), alle Dropdowns |
+| 3 | Tasks (inkl. Task-Statistics) | `tasks/` (neu) | ⬜ | Tasks, Dashboard-Tasks |
+| 4 | Kategorien + Expenses + Reimbursements + Financials | `expenses/` (neu) | ⬜ | Expenses, Settle, Dashboard-Finanzen |
+| 5 | Statistics-Endpunkt (Aggregation) | Kein neues Modul | ⬜ | Statistics-Seite |
+| 6 | User Settings | `usersettings/` (neu) | ⬜ | User-Settings |
