@@ -275,7 +275,10 @@
 				"copied_toast": "Link kopiert!",
 				"regenerated_toast": "Neuer Einladungslink erstellt.",
 				"shared_toast": "Link geteilt!",
-				"regenerate_error": "Fehler beim Erzeugen des Einladungslinks."
+				"regenerate_error": "Fehler beim Erzeugen des Einladungslinks.",
+				"valid_days_hint": "Gültig noch {days} Tag(e)",
+				"expired_message": "Kein gültiger Einladungslink vorhanden.",
+				"load_error": "Fehler beim Laden des Einladungslinks."
 			},
 			"name": {
 				"title": "Haushaltsname",

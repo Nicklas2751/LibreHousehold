@@ -1097,12 +1097,8 @@ paths:
             schema:
               $ref: '#/components/schemas/HouseholdUpdate'
       responses:
-        "200":
+        "204":
           description: Household updated.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Household'
         "404":
           description: Household not found.
           content:
@@ -1145,9 +1141,41 @@ paths:
                 $ref: '#/components/schemas/Problem'
 
   /household/{householdId}/invite:
+    get:
+      summary: Get current invite link
+      description: Returns the active invite token and its expiry date. Returns 404 if no active invite exists for this household.
+      tags:
+        - household
+      operationId: getInvite
+      parameters:
+        - name: householdId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Active invite info returned.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InviteResponse'
+        "404":
+          description: Household not found or no active invite exists.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        default:
+          description: An error occurred.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
     post:
       summary: Generate a new invite link
-      description: Invalidates the current invite token and generates a new invite URL for the household.
+      description: Invalidates the current invite token and generates a new one.
       tags:
         - household
       operationId: generateInviteLink
@@ -1160,7 +1188,7 @@ paths:
             format: uuid
       responses:
         "200":
-          description: New invite URL generated.
+          description: New invite token generated.
           content:
             application/json:
               schema:
@@ -1199,12 +1227,8 @@ paths:
             schema:
               $ref: '#/components/schemas/TransferOwnershipRequest'
       responses:
-        "200":
+        "204":
           description: Ownership transferred.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Household'
         "404":
           description: Household or member not found.
           content:
@@ -1971,6 +1995,7 @@ components:
       required:
         - household
         - inviteToken
+        - inviteValidUntil
       properties:
         household:
           $ref: '#/components/schemas/Household'
@@ -1979,6 +2004,11 @@ components:
           format: uuid
           description: Token to build the invite URL. The frontend constructs the full URL using this token and the current host.
           example: "f3ce1a6b-aba1-478d-9f01-ec484f23ce60"
+        inviteValidUntil:
+          type: string
+          format: date
+          description: The date until which the invite token is valid.
+          example: "2026-06-01"
 
     HouseholdUpdate:
       type: object
@@ -1993,12 +2023,19 @@ components:
     InviteResponse:
       type: object
       required:
-        - inviteUrl
+        - inviteToken
+        - inviteValidUntil
       properties:
-        inviteUrl:
+        inviteToken:
           type: string
-          format: uri
-          example: "https://app.example.com/invite/f3ce1a6b-aba1-478d-9f01-ec484f23ce60"
+          format: uuid
+          description: Token to build the invite URL. The frontend constructs the full URL using this token and the current host.
+          example: "f3ce1a6b-aba1-478d-9f01-ec484f23ce60"
+        inviteValidUntil:
+          type: string
+          format: date
+          description: The date until which the invite token is valid.
+          example: "2026-06-01"
 
     TransferOwnershipRequest:
       type: object
