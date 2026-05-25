@@ -12,6 +12,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 
+import java.time.LocalDate;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.instancio.Select.field;
@@ -29,6 +31,9 @@ class HouseholdSetupServiceIT {
 
     @Autowired
     private MemberRepository memberRepository;
+
+    @Autowired
+    private InviteRepository inviteRepository;
 
     @Autowired
     private HouseholdSetupMapper householdSetupMapper;
@@ -126,5 +131,39 @@ class HouseholdSetupServiceIT {
         // when / then
         assertThatThrownBy(() -> service.setupHousehold(new HouseholdSetup(conflictingHousehold, newMember)))
                 .isInstanceOf(HouseholdAlreadyExistsException.class);
+    }
+
+    @Test
+    void setupHousehold_validSetup_inviteTokenStoredInDatabase() {
+        // given
+        var member = Instancio.create(Member.class);
+        var household = Instancio.of(Household.class)
+                .set(field(Household::getAdmin), member.getId())
+                .create();
+
+        // when
+        var result = service.setupHousehold(new HouseholdSetup(household, member));
+
+        // then
+        assertThat(inviteRepository.findAll())
+                .anyMatch(invite -> invite.token().equals(result.getInviteToken()));
+    }
+
+    @Test
+    void setupHousehold_validSetup_inviteValidForSevenDays() {
+        // given
+        var member = Instancio.create(Member.class);
+        var household = Instancio.of(Household.class)
+                .set(field(Household::getAdmin), member.getId())
+                .create();
+        var expectedValidUntil = LocalDate.now().plusDays(7);
+
+        // when
+        var result = service.setupHousehold(new HouseholdSetup(household, member));
+
+        // then
+        assertThat(inviteRepository.findAll())
+                .anyMatch(invite -> invite.token().equals(result.getInviteToken())
+                        && invite.validUntil().equals(expectedValidUntil));
     }
 }

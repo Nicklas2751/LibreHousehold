@@ -15,10 +15,13 @@ import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
 
+import java.time.LocalDate;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.instancio.Select.field;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.*;
 
 @ExtendWith({MockitoExtension.class, InstancioExtension.class})
@@ -29,6 +32,9 @@ class HouseholdSetupServiceTest {
 
     @Mock
     private MemberRepository memberRepository;
+
+    @Mock
+    private InviteRepository inviteRepository;
 
     @Spy
     private HouseholdSetupMapper householdSetupMapper = Mappers.getMapper(HouseholdSetupMapper.class);
@@ -61,6 +67,7 @@ class HouseholdSetupServiceTest {
                     .create();
             var expectedMemberEntity = memberMapper.toMemberEntity(member);
             doReturn(Instancio.create(HouseholdEntity.class)).when(householdRepository).save(any(HouseholdEntity.class));
+            doReturn(Instancio.create(InviteEntity.class)).when(inviteRepository).save(any(InviteEntity.class));
 
             // when
             service.setupHousehold(new HouseholdSetup(household, member));
@@ -73,6 +80,7 @@ class HouseholdSetupServiceTest {
         void validSetup_savesMemberBeforeSavingHousehold() {
             // given
             doReturn(Instancio.create(HouseholdEntity.class)).when(householdRepository).save(any(HouseholdEntity.class));
+            doReturn(Instancio.create(InviteEntity.class)).when(inviteRepository).save(any(InviteEntity.class));
 
             // when
             service.setupHousehold(buildSetup());
@@ -90,15 +98,71 @@ class HouseholdSetupServiceTest {
             var household = Instancio.of(Household.class)
                     .set(field(Household::getAdmin), member.getId())
                     .create();
-            var savedHouseholdEntity = householdSetupMapper.toHouseholdEntity(household);
-            var expectedResult = householdSetupMapper.toApiModel(savedHouseholdEntity);
+            var savedHouseholdEntity = Instancio.create(HouseholdEntity.class);
+            var expectedHousehold = householdSetupMapper.toApiModel(savedHouseholdEntity);
             doReturn(savedHouseholdEntity).when(householdRepository).save(any(HouseholdEntity.class));
+            doReturn(Instancio.create(InviteEntity.class)).when(inviteRepository).save(any(InviteEntity.class));
 
             // when
             var result = service.setupHousehold(new HouseholdSetup(household, member));
 
             // then
-            assertThat(result).isEqualTo(expectedResult);
+            assertThat(result.getHousehold()).isEqualTo(expectedHousehold);
+        }
+
+        @Test
+        void validSetup_inviteTokenIsPersisted() {
+            // given
+            doReturn(Instancio.create(HouseholdEntity.class)).when(householdRepository).save(any(HouseholdEntity.class));
+            doReturn(Instancio.create(InviteEntity.class)).when(inviteRepository).save(any(InviteEntity.class));
+
+            // when
+            service.setupHousehold(buildSetup());
+
+            // then
+            verify(inviteRepository).save(argThat(invite -> invite.token() != null));
+        }
+
+        @Test
+        void validSetup_inviteLinkedToSavedHousehold() {
+            // given
+            var savedHousehold = Instancio.create(HouseholdEntity.class);
+            doReturn(savedHousehold).when(householdRepository).save(any(HouseholdEntity.class));
+            doReturn(Instancio.create(InviteEntity.class)).when(inviteRepository).save(any(InviteEntity.class));
+
+            // when
+            service.setupHousehold(buildSetup());
+
+            // then
+            verify(inviteRepository).save(argThat(invite -> invite.householdId().equals(savedHousehold.id())));
+        }
+
+        @Test
+        void validSetup_inviteValidForSevenDays() {
+            // given
+            doReturn(Instancio.create(HouseholdEntity.class)).when(householdRepository).save(any(HouseholdEntity.class));
+            doReturn(Instancio.create(InviteEntity.class)).when(inviteRepository).save(any(InviteEntity.class));
+            var expectedValidUntil = LocalDate.now().plusDays(7);
+
+            // when
+            service.setupHousehold(buildSetup());
+
+            // then
+            verify(inviteRepository).save(argThat(invite -> invite.validUntil().equals(expectedValidUntil)));
+        }
+
+        @Test
+        void validSetup_inviteTokenReturnedInResponse() {
+            // given
+            doReturn(Instancio.create(HouseholdEntity.class)).when(householdRepository).save(any(HouseholdEntity.class));
+            var savedInvite = Instancio.create(InviteEntity.class);
+            doReturn(savedInvite).when(inviteRepository).save(any(InviteEntity.class));
+
+            // when
+            var result = service.setupHousehold(buildSetup());
+
+            // then
+            assertThat(result.getInviteToken()).isEqualTo(savedInvite.token());
         }
     }
 

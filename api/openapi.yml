@@ -58,7 +58,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Household"
+                $ref: "#/components/schemas/HouseholdSetupResponse"
         "400":
           description: The data for the new household or member is invalid.
           content:
@@ -1965,6 +1965,20 @@ components:
           $ref: "#/components/schemas/Household"
         member:
           $ref: "#/components/schemas/Member"
+
+    HouseholdSetupResponse:
+      type: object
+      required:
+        - household
+        - inviteToken
+      properties:
+        household:
+          $ref: '#/components/schemas/Household'
+        inviteToken:
+          type: string
+          format: uuid
+          description: Token to build the invite URL. The frontend constructs the full URL using this token and the current host.
+          example: "f3ce1a6b-aba1-478d-9f01-ec484f23ce60"
 
     HouseholdUpdate:
       type: object

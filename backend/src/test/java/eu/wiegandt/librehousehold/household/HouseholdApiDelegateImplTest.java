@@ -1,7 +1,7 @@
 package eu.wiegandt.librehousehold.household;
 
-import eu.wiegandt.librehousehold.model.Household;
 import eu.wiegandt.librehousehold.model.HouseholdSetup;
+import eu.wiegandt.librehousehold.model.HouseholdSetupResponse;
 import org.instancio.Instancio;
 import org.instancio.junit.InstancioExtension;
 import org.junit.jupiter.api.Nested;
@@ -43,8 +43,8 @@ class HouseholdApiDelegateImplTest {
         void validSetup_delegatesToServiceAndReturns200() {
             // given
             var setup = Instancio.create(HouseholdSetup.class);
-            var household = Instancio.create(Household.class);
-            doReturn(household).when(householdSetupService).setupHousehold(setup);
+            var response = Instancio.create(HouseholdSetupResponse.class);
+            doReturn(response).when(householdSetupService).setupHousehold(setup);
 
             // when
             var result = householdApiDelegate.setupHousehold(Optional.of(setup));
@@ -52,7 +52,7 @@ class HouseholdApiDelegateImplTest {
             // then
             verify(householdSetupService).setupHousehold(setup);
             assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
-            assertThat(result.getBody()).isEqualTo(household);
+            assertThat(result.getBody()).isEqualTo(response);
         }
     }
 }
