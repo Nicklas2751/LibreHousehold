@@ -606,7 +606,7 @@ paths:
       summary: Create a new category
       description: Creates a new expense category.
       tags:
-        - categories
+        - household
       operationId: createCategory
       parameters:
         - name: householdId
