@@ -286,6 +286,23 @@ The `Task` schema has a `done` field (date format) that either contains a date o
 - `recurrenceInterval`: count (minimum `1`)
 - For recurring tasks, the task is considered done only if the done date is after the last due date.
 
+### Cross-Module Communication (ADR-011)
+
+Entschieden in [ADR-011](docs/architecture/adrs/adr-011.adoc). Kurzfassung:
+
+| Szenario | Muster |
+|---|---|
+| Synchrone Abfrage: „Existiert Haushalt X?" | **Named Interface** im Root-Package des Zielmoduls |
+| Synchrone Abfrage: „Gib mir Aggregatdaten aus Modul X" | **Named Interface** |
+| Reaktion auf Lifecycle-Event: „Haushalt wurde gelöscht" | **Domain Event** (`ApplicationEventPublisher` + `@ApplicationModuleListener`) |
+| Reaktion auf Statusänderung: „Member wurde entfernt" | **Domain Event** |
+
+**Bewusst abgelehnter Ansatz: lokale Datenkopien pro Modul (Event-Carried State Transfer).** Das wäre DDD-theoretisch reiner, erzeugt aber im Modular Monolith selbst-erzeugten Eventual-Consistency-Aufwand und unverhältnismäßigen Synchronisations-Overhead ohne echten Mehrwert. Die stärkere Kopplung durch Named Interfaces wird akzeptiert — sie ist explizit, minimal und von Spring Modulith verifizierbar.
+
+**Modul-übergreifende DB-FKs sind verboten.** Jedes Modul hat ein eigenes PostgreSQL-Schema (`household`, `tasks`, `expenses`). Fremd-IDs werden als einfache UUIDs ohne DB-FK gespeichert.
+
+**Event Publication Registry:** Die `event_publication`-Tabelle muss per Flyway-Migration angelegt werden — Spring Modulith würde sie sonst per Schema-Autogenerierung anlegen, was mit Flyway-only-Betrieb kollidiert.
+
 ### Pending Backend Implementations
 
 - **Maximale Bildgröße**: `server.tomcat.max-http-post-size` ist bewusst auf unbegrenzt gesetzt (Tomcat-Standard war 2 MB und führte zu stiller Trunkierung großer Base64-Bilder). Eine serverseitige Validierung der maximalen Bildgröße (empfohlen: 5 MB) fehlt noch — per Bean-Validation oder Filter.
