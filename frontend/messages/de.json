@@ -211,6 +211,19 @@
 		"confirm_payment_button": "Als bezahlt markieren",
 		"disclaimer": "Diese Aktion führt keine echte Zahlung durch. Bitte stelle sicher, dass du den Betrag per Überweisung oder Bar gezahlt hast."
 	},
+	"invite": {
+		"title": "Haushalt beitreten",
+		"household_hint": "Du wirst dem Haushalt \"{name}\" beitreten.",
+		"name_label": "Dein Name",
+		"email_label": "Deine E-Mail",
+		"join_button": "Beitreten",
+		"invalid_link": "Dieser Einladungslink ist ungültig oder abgelaufen.",
+		"join_error": "Fehler beim Beitreten. Versuche es erneut.",
+		"email_taken": "Diese E-Mail-Adresse ist bereits registriert.",
+		"success_title": "Erfolgreich beigetreten!",
+		"success_text": "Du bist jetzt Mitglied von \"{name}\".",
+		"success_button": "Zum Dashboard"
+	},
 	"settings": {
 		"back": "Zurück zu Einstellungen",
 		"appearance": {

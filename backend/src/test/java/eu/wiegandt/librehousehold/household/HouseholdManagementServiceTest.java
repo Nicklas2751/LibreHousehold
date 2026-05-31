@@ -30,6 +30,9 @@ class HouseholdManagementServiceTest {
     private HouseholdRepository householdRepository;
 
     @Mock
+    private MemberRepository memberRepository;
+
+    @Mock
     private InviteRepository inviteRepository;
 
     @Mock
@@ -81,7 +84,7 @@ class HouseholdManagementServiceTest {
         }
 
         @Test
-        void householdFound_deletesInvitesBeforeHousehold() {
+        void householdFound_deletesInvitesAndMembersBeforeHousehold() {
             // given
             var householdId = UUID.randomUUID();
             doReturn(1).when(householdRepository).deleteHouseholdById(householdId);
@@ -90,8 +93,9 @@ class HouseholdManagementServiceTest {
             service.deleteHousehold(householdId);
 
             // then
-            var order = inOrder(inviteRepository, householdRepository);
+            var order = inOrder(inviteRepository, memberRepository, householdRepository);
             order.verify(inviteRepository).deleteByHouseholdId(householdId);
+            order.verify(memberRepository).deleteByHouseholdId(householdId);
             order.verify(householdRepository).deleteHouseholdById(householdId);
         }
 
@@ -221,7 +225,7 @@ class HouseholdManagementServiceTest {
             // given
             var householdId = UUID.randomUUID();
             var newAdminId = UUID.randomUUID();
-            doReturn(0).when(householdRepository).updateAdminId(householdId, newAdminId);
+            doReturn(0).when(memberRepository).revokeAdmin(householdId);
 
             // when / then
             assertThatThrownBy(() -> service.transferOwnership(householdId, newAdminId))
@@ -229,17 +233,33 @@ class HouseholdManagementServiceTest {
         }
 
         @Test
-        void householdFound_updatesAdminIdInRepository() {
+        void memberNotFound_throwsMemberNotFoundException() {
             // given
             var householdId = UUID.randomUUID();
             var newAdminId = UUID.randomUUID();
-            doReturn(1).when(householdRepository).updateAdminId(householdId, newAdminId);
+            doReturn(1).when(memberRepository).revokeAdmin(householdId);
+            doReturn(0).when(memberRepository).grantAdmin(newAdminId);
+
+            // when / then
+            assertThatThrownBy(() -> service.transferOwnership(householdId, newAdminId))
+                    .isInstanceOf(MemberNotFoundException.class);
+        }
+
+        @Test
+        void valid_revokesOldAdminAndGrantsNewAdmin() {
+            // given
+            var householdId = UUID.randomUUID();
+            var newAdminId = UUID.randomUUID();
+            doReturn(1).when(memberRepository).revokeAdmin(householdId);
+            doReturn(1).when(memberRepository).grantAdmin(newAdminId);
 
             // when
             service.transferOwnership(householdId, newAdminId);
 
             // then
-            verify(householdRepository).updateAdminId(householdId, newAdminId);
+            var order = inOrder(memberRepository);
+            order.verify(memberRepository).revokeAdmin(householdId);
+            order.verify(memberRepository).grantAdmin(newAdminId);
         }
     }
 }

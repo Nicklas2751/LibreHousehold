@@ -2,7 +2,7 @@
 	import { UserCircleIcon } from '@indaco/svelte-iconoir/user-circle';
 	import { WarningTriangleIcon } from '@indaco/svelte-iconoir/warning-triangle';
 	import { m } from '$lib/paraglide/messages.js';
-	import { updateUserState, userState } from '$lib/stores/userState';
+	import { userState } from '$lib/stores/userState';
 	import { householdState } from '$lib/stores/householdState.svelte';
 	import { loadMembers, members } from '$lib/stores/memberStore';
 	import { addToast } from '$lib/stores/toastStore';
@@ -10,16 +10,18 @@
 	import {
 		Configuration,
 		HouseholdApi,
+		MembersApi,
 		UsersettingsApi
 	} from '../../../../generated-sources/openapi';
 	import { goto } from '$app/navigation';
 
 	const householdApi = new HouseholdApi(new Configuration({ basePath: '/api' }));
+	const membersApi = new MembersApi(new Configuration({ basePath: '/api' }));
 	const userSettingsApi = new UsersettingsApi(new Configuration({ basePath: '/api' }));
 
 	const householdId = $derived($householdState?.id ?? '');
 	const memberId = $derived($userState?.id ?? '');
-	const isOwner = $derived($householdState?.admin === memberId);
+	const isOwner = $derived($userState?.isAdmin === true);
 	const otherMembers = $derived($members.filter((mb) => mb.id !== memberId));
 
 	// Load members if not yet loaded
@@ -41,14 +43,15 @@
 	async function saveProfile() {
 		profileSaving = true;
 		try {
-			const updated = await householdApi.updateMember({
+			await membersApi.updateMember({
 				householdId,
 				memberId,
 				memberUpdate: { name: displayName, email }
 			});
-			updateUserState(updated);
-			// Also update the shared members store so other pages reflect the change
-			members.update((all) => all.map((mb) => (mb.id === updated.id ? updated : mb)));
+			userState.update((s) => (s ? { ...s, name: displayName, email } : s));
+			members.update((all) =>
+				all.map((mb) => (mb.id === memberId ? { ...mb, name: displayName, email } : mb))
+			);
 			addToast(new Toast(m['settings.user.profile.save_success'](), 'success'));
 		} catch {
 			addToast(new Toast(m['settings.user.profile.save_error'](), 'error'));

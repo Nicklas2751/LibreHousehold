@@ -12,6 +12,8 @@ interface InviteRepository extends CrudRepository<InviteEntity, Long> {
 
     Optional<InviteEntity> findByHouseholdId(UUID householdId);
 
+    Optional<InviteEntity> findByToken(UUID token);
+
     @Modifying
     @Query("DELETE FROM invite WHERE household_id = :householdId")
     void deleteByHouseholdId(@Param("householdId") UUID householdId);

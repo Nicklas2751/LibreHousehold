@@ -16,13 +16,16 @@ class HouseholdManagementService {
     private static final int INVITE_VALIDITY_DAYS = 7;
 
     private final HouseholdRepository householdRepository;
+    private final MemberRepository memberRepository;
     private final InviteRepository inviteRepository;
     private final ApplicationEventPublisher eventPublisher;
 
     HouseholdManagementService(HouseholdRepository householdRepository,
+                               MemberRepository memberRepository,
                                InviteRepository inviteRepository,
                                ApplicationEventPublisher eventPublisher) {
         this.householdRepository = householdRepository;
+        this.memberRepository = memberRepository;
         this.inviteRepository = inviteRepository;
         this.eventPublisher = eventPublisher;
     }
@@ -38,6 +41,7 @@ class HouseholdManagementService {
     @Transactional
     void deleteHousehold(UUID householdId) {
         inviteRepository.deleteByHouseholdId(householdId);
+        memberRepository.deleteByHouseholdId(householdId);
         var deletedRows = householdRepository.deleteHouseholdById(householdId);
         if (deletedRows == 0) {
             throw new HouseholdNotFoundException();
@@ -69,9 +73,13 @@ class HouseholdManagementService {
 
     @Transactional
     void transferOwnership(UUID householdId, UUID newAdminId) {
-        var updatedRows = householdRepository.updateAdminId(householdId, newAdminId);
-        if (updatedRows == 0) {
+        var revokedRows = memberRepository.revokeAdmin(householdId);
+        if (revokedRows == 0) {
             throw new HouseholdNotFoundException();
+        }
+        var grantedRows = memberRepository.grantAdmin(newAdminId);
+        if (grantedRows == 0) {
+            throw new MemberNotFoundException();
         }
     }
 

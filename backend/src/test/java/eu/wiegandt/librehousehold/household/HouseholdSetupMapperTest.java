@@ -19,7 +19,6 @@ class HouseholdSetupMapperTest {
     private final HouseholdSetupMapper mapper = Mappers.getMapper(HouseholdSetupMapper.class);
 
     private static final UUID HOUSEHOLD_ID = UUID.fromString("a1b2c3d4-e5f6-7890-abcd-ef1234567890");
-    private static final UUID ADMIN_ID = UUID.fromString("b2c3d4e5-f6a7-8901-bcde-f12345678901");
 
     @Nested
     class toHouseholdEntity {
@@ -27,12 +26,12 @@ class HouseholdSetupMapperTest {
         static Stream<Arguments> inputs() {
             return Stream.of(
                     Arguments.of(
-                            new Household(HOUSEHOLD_ID, "Smith Family", ADMIN_ID).image("base64image"),
-                            new HouseholdEntity(HOUSEHOLD_ID, "Smith Family", "base64image", ADMIN_ID)
+                            new Household(HOUSEHOLD_ID, "Smith Family").image("base64image"),
+                            new HouseholdEntity(HOUSEHOLD_ID, "Smith Family", "base64image")
                     ),
                     Arguments.of(
-                            new Household(HOUSEHOLD_ID, "Smith Family", ADMIN_ID),
-                            new HouseholdEntity(HOUSEHOLD_ID, "Smith Family", null, ADMIN_ID)
+                            new Household(HOUSEHOLD_ID, "Smith Family"),
+                            new HouseholdEntity(HOUSEHOLD_ID, "Smith Family", null)
                     ),
                     Arguments.of(null, null)
             );
@@ -48,24 +47,24 @@ class HouseholdSetupMapperTest {
     @Nested
     class toApiModel {
 
-        static Stream<Arguments> inputs() {
-            return Stream.of(
-                    Arguments.of(
-                            new HouseholdEntity(HOUSEHOLD_ID, "Smith Family", "base64image", ADMIN_ID),
-                            new Household(HOUSEHOLD_ID, "Smith Family", ADMIN_ID).image("base64image")
-                    ),
-                    Arguments.of(
-                            new HouseholdEntity(HOUSEHOLD_ID, "Smith Family", null, ADMIN_ID),
-                            new Household(HOUSEHOLD_ID, "Smith Family", ADMIN_ID)
-                    ),
-                    Arguments.of(null, null)
-            );
+        @Test
+        void entityWithImage_mapsToHousehold() {
+            // given
+            var entity = new HouseholdEntity(HOUSEHOLD_ID, "Smith Family", "base64image");
+            var expected = new Household(HOUSEHOLD_ID, "Smith Family").image("base64image");
+
+            // when / then
+            assertThat(mapper.toApiModel(entity)).isEqualTo(expected);
         }
 
-        @ParameterizedTest
-        @MethodSource("inputs")
-        void input_mapsToApiModel(HouseholdEntity input, Household expected) {
-            assertThat(mapper.toApiModel(input)).isEqualTo(expected);
+        @Test
+        void entityWithoutImage_mapsToHousehold() {
+            // given
+            var entity = new HouseholdEntity(HOUSEHOLD_ID, "Smith Family", null);
+            var expected = new Household(HOUSEHOLD_ID, "Smith Family");
+
+            // when / then
+            assertThat(mapper.toApiModel(entity)).isEqualTo(expected);
         }
     }
 

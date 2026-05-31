@@ -16,5 +16,9 @@ interface MemberMapper {
         return Optional.ofNullable(value);
     }
 
-    MemberEntity toMemberEntity(Member member);
+    default Optional<Boolean> toOptionalBoolean(boolean value) {
+        return Optional.of(value);
+    }
+
+    Member toMember(MemberEntity entity);
 }

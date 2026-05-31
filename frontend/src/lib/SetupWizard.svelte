@@ -111,8 +111,7 @@
 		const household: Household = {
 			id: householdId,
 			name: householdName,
-			image: householdImage,
-			admin: adminMember.id
+			image: householdImage
 		};
 		const householdSetup: HouseholdSetup = { household, member: adminMember };
 

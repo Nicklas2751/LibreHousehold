@@ -246,6 +246,12 @@ export const functionName = async (
 - Test files should be named `*.spec.ts` next to the source file where practical.
 - Run relevant tests as part of validation.
 
+### Mapper-Tests (Java)
+
+- MapStruct-Mapper sind interne Kollaborateure desselben Moduls und werden in Service-Tests **nie** gemockt.
+- Stattdessen die echte Implementierung per `@Spy MemberMapper mapper = Mappers.getMapper(MemberMapper.class)` injizieren — funktioniert mit Mockito `@InjectMocks`.
+- Mapper-Tests (`*MapperTest.java`) prüfen jede public Mapping-Methode in einer eigenen `@Nested`-Klasse. Kein Instancio in Mapper-Tests — Eingabedaten immer explizit konstruieren.
+
 ### Error Handling
 
 - Show toast notifications on errors using the toast store.

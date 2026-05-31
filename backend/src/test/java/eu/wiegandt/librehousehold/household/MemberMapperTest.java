@@ -1,48 +1,17 @@
 package eu.wiegandt.librehousehold.household;
 
-import eu.wiegandt.librehousehold.model.Member;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
 import org.mapstruct.factory.Mappers;
 
 import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 class MemberMapperTest {
 
     private final MemberMapper mapper = Mappers.getMapper(MemberMapper.class);
-
-    private static final UUID MEMBER_ID = UUID.fromString("c3d4e5f6-a7b8-9012-cdef-012345678902");
-
-    @Nested
-    class toMemberEntity {
-
-        static Stream<Arguments> inputs() {
-            return Stream.of(
-                    Arguments.of(
-                            new Member(MEMBER_ID, "Alice", "alice@example.com").avatar("base64avatar"),
-                            new MemberEntity(MEMBER_ID, "Alice", "alice@example.com", "base64avatar")
-                    ),
-                    Arguments.of(
-                            new Member(MEMBER_ID, "Alice", "alice@example.com"),
-                            new MemberEntity(MEMBER_ID, "Alice", "alice@example.com", null)
-                    ),
-                    Arguments.of(null, null)
-            );
-        }
-
-        @ParameterizedTest
-        @MethodSource("inputs")
-        void input_mapsToEntity(Member input, MemberEntity expected) {
-            assertThat(mapper.toMemberEntity(input)).isEqualTo(expected);
-        }
-    }
 
     @Nested
     class fromOptional {
@@ -69,6 +38,47 @@ class MemberMapperTest {
         @Test
         void value_returnsOptionalWithValue() {
             assertThat(mapper.toOptional("value")).contains("value");
+        }
+    }
+
+    @Nested
+    class toOptionalBoolean {
+
+        @Test
+        void trueValue_returnsOptionalWithTrue() {
+            assertThat(mapper.toOptionalBoolean(true)).contains(true);
+        }
+
+        @Test
+        void falseValue_returnsOptionalWithFalse() {
+            assertThat(mapper.toOptionalBoolean(false)).contains(false);
+        }
+    }
+
+    @Nested
+    class toMember {
+
+        @Test
+        void entity_mapsAllFieldsCorrectly() {
+            // given
+            var entity = new MemberEntity(
+                    UUID.fromString("11111111-1111-1111-1111-111111111111"),
+                    "Max Mustermann",
+                    "max@example.com",
+                    "data:image/png;base64,abc",
+                    UUID.fromString("22222222-2222-2222-2222-222222222222"),
+                    true
+            );
+
+            // when
+            var result = mapper.toMember(entity);
+
+            // then
+            assertThat(result.getId()).isEqualTo(entity.id());
+            assertThat(result.getName()).isEqualTo(entity.name());
+            assertThat(result.getEmail()).isEqualTo(entity.email());
+            assertThat(result.getAvatar()).contains(entity.avatar());
+            assertThat(result.getIsAdmin()).contains(true);
         }
     }
 }
