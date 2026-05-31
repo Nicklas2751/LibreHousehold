@@ -25,6 +25,9 @@ class HouseholdApiDelegateImplTest {
     @Mock
     private HouseholdSetupService householdSetupService;
 
+    @Mock
+    private HouseholdManagementService householdManagementService;
+
     @InjectMocks
     private HouseholdApiDelegateImpl householdApiDelegate;
 

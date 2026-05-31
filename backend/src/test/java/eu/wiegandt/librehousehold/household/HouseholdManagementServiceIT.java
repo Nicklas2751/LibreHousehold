@@ -47,9 +47,7 @@ class HouseholdManagementServiceIT {
     @BeforeEach
     void setUp() {
         var member = Instancio.create(Member.class);
-        existingHousehold = Instancio.of(Household.class)
-                .set(field(Household::getAdmin), member.getId())
-                .create();
+        existingHousehold = Instancio.create(Household.class);
         setupService.setupHousehold(new HouseholdSetup(existingHousehold, member));
     }
 
@@ -193,15 +191,18 @@ class HouseholdManagementServiceIT {
 
         @Test
         void householdFound_updatesAdminInDatabase() {
-            // given — persist a second member who will become the new admin
-            var newAdmin = memberRepository.save(Instancio.create(MemberEntity.class));
+            // given — persist a second member in the same household who will become the new admin
+            var newAdmin = memberRepository.save(Instancio.of(MemberEntity.class)
+                    .set(field(MemberEntity::householdId), existingHousehold.getId())
+                    .set(field(MemberEntity::isAdmin), false)
+                    .create());
 
             // when
             managementService.transferOwnership(existingHousehold.getId(), newAdmin.id());
 
             // then
-            assertThat(householdRepository.findById(existingHousehold.getId()))
-                    .hasValueSatisfying(h -> assertThat(h.adminId()).isEqualTo(newAdmin.id()));
+            assertThat(memberRepository.findByHouseholdIdAndIsAdminTrue(existingHousehold.getId()))
+                    .hasValueSatisfying(m -> assertThat(m.id()).isEqualTo(newAdmin.id()));
         }
     }
 }

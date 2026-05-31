@@ -211,6 +211,19 @@
 		"confirm_payment_button": "Mark as Paid",
 		"disclaimer": "This action does not transfer actual money. Please ensure you have transferred the amount via bank transfer or cash."
 	},
+	"invite": {
+		"title": "Join Household",
+		"household_hint": "You will join the household \"{name}\".",
+		"name_label": "Your Name",
+		"email_label": "Your E-Mail",
+		"join_button": "Join",
+		"invalid_link": "This invitation link is invalid or has expired.",
+		"join_error": "Failed to join. Please try again.",
+		"email_taken": "This e-mail address is already registered.",
+		"success_title": "Successfully joined!",
+		"success_text": "You are now a member of \"{name}\".",
+		"success_button": "Go to Dashboard"
+	},
 	"settings": {
 		"back": "Back to Settings",
 		"appearance": {

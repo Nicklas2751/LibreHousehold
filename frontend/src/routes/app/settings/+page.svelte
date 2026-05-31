@@ -7,13 +7,12 @@
 	import { NavArrowRightIcon } from '@indaco/svelte-iconoir/nav-arrow-right';
 	import { m } from '$lib/paraglide/messages.js';
 	import { locales } from '$lib/paraglide/runtime.js';
-	import { householdState } from '$lib/stores/householdState.svelte';
 	import { userState } from '$lib/stores/userState';
 	import { theme, language, setTheme, setLanguage } from '$lib/stores/settingsStore';
 	import type { Language } from '$lib/stores/settingsStore';
 	import PageTitle from '$lib/PageTitle.svelte';
 
-	const isOwner = $derived($householdState?.admin === $userState?.id);
+	const isOwner = $derived($userState?.isAdmin === true);
 
 	function toggleTheme() {
 		setTheme($theme === 'dark' ? 'light' : 'dark');

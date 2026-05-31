@@ -18,30 +18,38 @@ class HouseholdSetupService {
     private final MemberRepository memberRepository;
     private final InviteRepository inviteRepository;
     private final HouseholdSetupMapper householdSetupMapper;
-    private final MemberMapper memberMapper;
 
     HouseholdSetupService(HouseholdRepository householdRepository, MemberRepository memberRepository,
-                          InviteRepository inviteRepository, HouseholdSetupMapper householdSetupMapper,
-                          MemberMapper memberMapper) {
+                          InviteRepository inviteRepository, HouseholdSetupMapper householdSetupMapper) {
         this.householdRepository = householdRepository;
         this.memberRepository = memberRepository;
         this.inviteRepository = inviteRepository;
         this.householdSetupMapper = householdSetupMapper;
-        this.memberMapper = memberMapper;
     }
 
     @Transactional
     HouseholdSetupResponse setupHousehold(HouseholdSetup setup) {
         try {
-            memberRepository.save(memberMapper.toMemberEntity(setup.getMember()));
             var savedHousehold = householdRepository.save(householdSetupMapper.toHouseholdEntity(setup.getHousehold()));
+            memberRepository.save(new MemberEntity(
+                    setup.getMember().getId(),
+                    setup.getMember().getName(),
+                    setup.getMember().getEmail(),
+                    setup.getMember().getAvatar().orElse(null),
+                    savedHousehold.id(),
+                    true
+            ));
             var invite = inviteRepository.save(new InviteEntity(
                     null,
                     savedHousehold.id(),
                     UUID.randomUUID(),
                     LocalDate.now().plusDays(INVITE_VALIDITY_DAYS)
             ));
-            return new HouseholdSetupResponse(householdSetupMapper.toApiModel(savedHousehold), invite.token(), invite.validUntil());
+            return new HouseholdSetupResponse(
+                    householdSetupMapper.toApiModel(savedHousehold),
+                    invite.token(),
+                    invite.validUntil()
+            );
         } catch (DataIntegrityViolationException e) {
             throw new HouseholdAlreadyExistsException();
         }

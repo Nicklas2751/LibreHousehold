@@ -104,3 +104,4 @@ replay_pid*
 build/
 .gradle
 .agent-plans/*.DS_Store
+.playwright-mcp

@@ -1,6 +1,5 @@
 package eu.wiegandt.librehousehold.household;
 
-import eu.wiegandt.librehousehold.model.Household;
 import eu.wiegandt.librehousehold.model.HouseholdSetup;
 import eu.wiegandt.librehousehold.model.Member;
 import org.instancio.Instancio;
@@ -19,7 +18,6 @@ import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.instancio.Select.field;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.*;
@@ -39,9 +37,6 @@ class HouseholdSetupServiceTest {
     @Spy
     private HouseholdSetupMapper householdSetupMapper = Mappers.getMapper(HouseholdSetupMapper.class);
 
-    @Spy
-    private MemberMapper memberMapper = Mappers.getMapper(MemberMapper.class);
-
     @InjectMocks
     private HouseholdSetupService service;
 
@@ -51,6 +46,7 @@ class HouseholdSetupServiceTest {
         @Test
         void dataIntegrityViolationOnSave_throwsHouseholdAlreadyExistsException() {
             // given
+            doReturn(Instancio.create(HouseholdEntity.class)).when(householdRepository).save(any(HouseholdEntity.class));
             doThrow(DataIntegrityViolationException.class).when(memberRepository).save(any(MemberEntity.class));
 
             // when / then
@@ -59,61 +55,43 @@ class HouseholdSetupServiceTest {
         }
 
         @Test
-        void validSetup_savesMemberEntityDerivedFromSetup() {
+        void validSetup_savesMemberWithHouseholdIdFromSavedHouseholdAndIsAdminTrue() {
             // given
-            var member = Instancio.create(Member.class);
-            var household = Instancio.of(Household.class)
-                    .set(field(Household::getAdmin), member.getId())
-                    .create();
-            var expectedMemberEntity = memberMapper.toMemberEntity(member);
-            doReturn(Instancio.create(HouseholdEntity.class)).when(householdRepository).save(any(HouseholdEntity.class));
-            doReturn(Instancio.create(InviteEntity.class)).when(inviteRepository).save(any(InviteEntity.class));
-
-            // when
-            service.setupHousehold(new HouseholdSetup(household, member));
-
-            // then
-            verify(memberRepository).save(expectedMemberEntity);
-        }
-
-        @Test
-        void validSetup_savesMemberBeforeSavingHousehold() {
-            // given
-            doReturn(Instancio.create(HouseholdEntity.class)).when(householdRepository).save(any(HouseholdEntity.class));
+            var savedHousehold = Instancio.create(HouseholdEntity.class);
+            doReturn(savedHousehold).when(householdRepository).save(any(HouseholdEntity.class));
+            doReturn(Instancio.create(MemberEntity.class)).when(memberRepository).save(any(MemberEntity.class));
             doReturn(Instancio.create(InviteEntity.class)).when(inviteRepository).save(any(InviteEntity.class));
 
             // when
             service.setupHousehold(buildSetup());
 
             // then
-            var order = inOrder(memberRepository, householdRepository);
-            order.verify(memberRepository).save(any(MemberEntity.class));
-            order.verify(householdRepository).save(any(HouseholdEntity.class));
+            verify(memberRepository).save(argThat(e ->
+                    e.householdId().equals(savedHousehold.id()) && e.isAdmin()
+            ));
         }
 
         @Test
-        void validSetup_returnsHouseholdWithFieldsFromSetup() {
+        void validSetup_savesHouseholdBeforeMember() {
             // given
-            var member = Instancio.create(Member.class);
-            var household = Instancio.of(Household.class)
-                    .set(field(Household::getAdmin), member.getId())
-                    .create();
-            var savedHouseholdEntity = Instancio.create(HouseholdEntity.class);
-            var expectedHousehold = householdSetupMapper.toApiModel(savedHouseholdEntity);
-            doReturn(savedHouseholdEntity).when(householdRepository).save(any(HouseholdEntity.class));
+            doReturn(Instancio.create(HouseholdEntity.class)).when(householdRepository).save(any(HouseholdEntity.class));
+            doReturn(Instancio.create(MemberEntity.class)).when(memberRepository).save(any(MemberEntity.class));
             doReturn(Instancio.create(InviteEntity.class)).when(inviteRepository).save(any(InviteEntity.class));
 
             // when
-            var result = service.setupHousehold(new HouseholdSetup(household, member));
+            service.setupHousehold(buildSetup());
 
             // then
-            assertThat(result.getHousehold()).isEqualTo(expectedHousehold);
+            var order = inOrder(householdRepository, memberRepository);
+            order.verify(householdRepository).save(any(HouseholdEntity.class));
+            order.verify(memberRepository).save(any(MemberEntity.class));
         }
 
         @Test
         void validSetup_inviteTokenIsPersisted() {
             // given
             doReturn(Instancio.create(HouseholdEntity.class)).when(householdRepository).save(any(HouseholdEntity.class));
+            doReturn(Instancio.create(MemberEntity.class)).when(memberRepository).save(any(MemberEntity.class));
             doReturn(Instancio.create(InviteEntity.class)).when(inviteRepository).save(any(InviteEntity.class));
 
             // when
@@ -128,6 +106,7 @@ class HouseholdSetupServiceTest {
             // given
             var savedHousehold = Instancio.create(HouseholdEntity.class);
             doReturn(savedHousehold).when(householdRepository).save(any(HouseholdEntity.class));
+            doReturn(Instancio.create(MemberEntity.class)).when(memberRepository).save(any(MemberEntity.class));
             doReturn(Instancio.create(InviteEntity.class)).when(inviteRepository).save(any(InviteEntity.class));
 
             // when
@@ -141,6 +120,7 @@ class HouseholdSetupServiceTest {
         void validSetup_inviteValidForSevenDays() {
             // given
             doReturn(Instancio.create(HouseholdEntity.class)).when(householdRepository).save(any(HouseholdEntity.class));
+            doReturn(Instancio.create(MemberEntity.class)).when(memberRepository).save(any(MemberEntity.class));
             doReturn(Instancio.create(InviteEntity.class)).when(inviteRepository).save(any(InviteEntity.class));
             var expectedValidUntil = LocalDate.now().plusDays(7);
 
@@ -155,6 +135,7 @@ class HouseholdSetupServiceTest {
         void validSetup_inviteTokenReturnedInResponse() {
             // given
             doReturn(Instancio.create(HouseholdEntity.class)).when(householdRepository).save(any(HouseholdEntity.class));
+            doReturn(Instancio.create(MemberEntity.class)).when(memberRepository).save(any(MemberEntity.class));
             var savedInvite = Instancio.create(InviteEntity.class);
             doReturn(savedInvite).when(inviteRepository).save(any(InviteEntity.class));
 
@@ -168,9 +149,7 @@ class HouseholdSetupServiceTest {
 
     private HouseholdSetup buildSetup() {
         var member = Instancio.create(Member.class);
-        var household = Instancio.of(Household.class)
-                .set(field(Household::getAdmin), member.getId())
-                .create();
+        var household = Instancio.create(eu.wiegandt.librehousehold.model.Household.class);
         return new HouseholdSetup(household, member);
     }
 }

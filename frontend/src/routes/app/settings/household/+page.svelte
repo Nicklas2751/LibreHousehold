@@ -13,7 +13,7 @@
 	import { members, loadMembers } from '$lib/stores/memberStore';
 	import { addToast } from '$lib/stores/toastStore';
 	import { Toast } from '$lib/toast';
-	import { Configuration, HouseholdApi } from '../../../../generated-sources/openapi';
+	import { Configuration, HouseholdApi, MembersApi } from '../../../../generated-sources/openapi';
 	import {
 		generateInviteUrl,
 		createInviteLinkShareData,
@@ -23,6 +23,7 @@
 	import { goto } from '$app/navigation';
 
 	const api = new HouseholdApi(new Configuration({ basePath: '/api' }));
+	const membersApi = new MembersApi(new Configuration({ basePath: '/api' }));
 
 	const householdId = $derived($householdState?.id ?? '');
 	const otherMembers = $derived($members.filter((mb) => mb.id !== $userState?.id));
@@ -149,7 +150,7 @@
 		if (!memberToRemove) return;
 		removeSubmitting = true;
 		try {
-			await api.removeMember({ householdId, memberId: memberToRemove });
+			await membersApi.removeMember({ householdId, memberId: memberToRemove });
 			members.update((all) => all.filter((mb) => mb.id !== memberToRemove));
 			memberToRemove = null;
 		} catch {
@@ -319,7 +320,7 @@
 							<p class="truncate text-sm font-medium">{member.name}</p>
 							<p class="truncate text-xs text-base-content/50">{member.email}</p>
 						</div>
-						{#if member.id === $householdState?.admin}
+						{#if member.isAdmin}
 							<CrownIcon class="h-4 w-4 shrink-0 text-warning" />
 						{/if}
 						{#if member.id !== $userState?.id}
