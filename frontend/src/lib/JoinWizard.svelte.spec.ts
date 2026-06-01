@@ -101,7 +101,7 @@ describe('JoinWizard', () => {
 		expect(mockGoto).toHaveBeenCalledWith('/app/dashboard');
 	});
 
-	it('409-Fehler — zeigt E-Mail bereits registriert Meldung', async () => {
+	it('409-Fehler — Fehlertext direkt am E-Mail-Feld sichtbar', async () => {
 		mockResolveInvite.mockResolvedValue(validInviteInfo);
 		mockJoinHousehold.mockRejectedValue({ status: 409 });
 

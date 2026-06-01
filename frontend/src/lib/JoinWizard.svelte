@@ -6,13 +6,13 @@
 		Configuration,
 		MembersApi,
 		type InviteInfo,
-		type Member
+		ResponseError
 	} from '../generated-sources/openapi';
 	import { updateHouseholdState } from '$lib/stores/householdState.svelte';
 	import { updateUserState } from '$lib/stores/userState';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
-	import { readFileAsDataURL } from '$lib/setupWizardLogic';
+	import MemberProfileForm from '$lib/MemberProfileForm.svelte';
 
 	interface Props {
 		token: string;
@@ -26,11 +26,7 @@
 	let invalidLink = $state(false);
 	let step = $state(0);
 	let joining = $state(false);
-
-	let memberName = $state('');
-	let memberEmail = $state('');
-	let memberAvatar = $state('');
-	let joinError = $state<string | null>(null);
+	let serverEmailError = $state<string | null>(null);
 
 	onMount(async () => {
 		try {
@@ -40,28 +36,17 @@
 		}
 	});
 
-	async function handleAvatarChange(event: Event) {
-		const target = event.target as HTMLInputElement;
-		const files = target.files;
-		if (files && files.length > 0) {
-			try {
-				memberAvatar = await readFileAsDataURL(files[0]);
-			} catch {
-				console.error('Failed to read avatar file');
-			}
-		}
-	}
-
-	async function join() {
+	async function join(data: { name: string; email: string; avatar: string }) {
 		joining = true;
+		serverEmailError = null;
 		try {
-			const member: Member = await membersApi.joinHousehold({
+			const member = await membersApi.joinHousehold({
 				token,
 				memberRegistration: {
 					id: crypto.randomUUID(),
-					name: memberName,
-					email: memberEmail,
-					avatar: memberAvatar || undefined
+					name: data.name,
+					email: data.email,
+					avatar: data.avatar || undefined
 				}
 			});
 			updateUserState(member);
@@ -73,9 +58,14 @@
 			}
 			step = 1;
 		} catch (err: unknown) {
-			const status = (err as Response)?.status ?? (err as { status?: number })?.status;
+			const status =
+				err instanceof ResponseError
+					? err.response.status
+					: typeof err === 'object' && err !== null && 'status' in err
+						? (err as { status: unknown }).status
+						: undefined;
 			if (status === 409) {
-				joinError = m['invite.email_taken']();
+				serverEmailError = m['invite.email_taken']();
 			} else {
 				addToast(new Toast(m['invite.join_error'](), 'error'));
 			}
@@ -109,56 +99,24 @@
 
 		{#if step === 0}
 			<h2 class="text-xl font-bold text-base-content">{m['invite.title']()}</h2>
-			<p>{m['invite.household_hint']({ name: inviteInfo.householdName })}</p>
-			<label
-				class="m-3 flex h-20 w-20 cursor-pointer items-center justify-center place-self-center rounded-full bg-neutral-content text-center"
-			>
-				{#if memberAvatar}
-					<img
-						src={memberAvatar}
-						alt={memberName}
-						class="h-full w-full rounded-full object-cover"
-					/>
-				{:else}
-					<span class="text-3xl">👤</span>
-				{/if}
-				<input type="file" accept="image/*" class="hidden" onchange={handleAvatarChange} />
-			</label>
-			<form onsubmit={join}>
-				<fieldset class="fieldset">
-					<legend class="fieldset-legend">{m['invite.name_label']()} *</legend>
-					<input
-						type="text"
-						aria-label={m['invite.name_label']()}
-						class="input-bordered validator input w-full"
-						minlength="1"
-						bind:value={memberName}
-						required
-					/>
-				</fieldset>
-				<fieldset class="fieldset">
-					<legend class="fieldset-legend">{m['invite.email_label']()} *</legend>
-					<input
-						type="email"
-						aria-label={m['invite.email_label']()}
-						class="input-bordered validator input w-full"
-						bind:value={memberEmail}
-						required
-					/>
-				</fieldset>
-				{#if joinError}
-					<div class="mt-2 alert alert-error"><span>{joinError}</span></div>
-				{/if}
-				<div class="mt-4 flex justify-between gap-3">
-					<a href="/" class="btn flex-1 btn-outline">{m['setup.create_step.back_button']()}</a>
-					<button type="submit" class="btn flex-1 btn-primary" disabled={joining}>
-						{#if joining}
-							<span class="loading loading-xs loading-spinner"></span>
-						{/if}
-						{m['invite.join_button']()}
-					</button>
-				</div>
-			</form>
+			<MemberProfileForm
+				contextHint={m['invite.household_hint']({ name: inviteInfo.householdName })}
+				nameLabel={m['invite.name_label']()}
+				nameHint={m['invite.name_error']()}
+				namePlaceholder={m['invite.name_placeholder']()}
+				emailLabel={m['invite.email_label']()}
+				emailHint={m['setup.create_account_step.admin_email_error']()}
+				emailPlaceholder={m['invite.email_placeholder']()}
+				backLabel={m['setup.create_step.back_button']()}
+				submitLabel={m['invite.join_button']()}
+				{serverEmailError}
+				onClearEmailError={() => {
+					serverEmailError = null;
+				}}
+				submitting={joining}
+				onformsubmit={join}
+				onback={() => goto('/')}
+			/>
 		{:else if step === 1}
 			<h2 class="text-xl font-bold text-base-content">{m['invite.success_title']()}</h2>
 			<p>{m['invite.success_text']({ name: inviteInfo.householdName })}</p>
