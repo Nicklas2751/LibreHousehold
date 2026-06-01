@@ -29,8 +29,13 @@ class HouseholdSetupService {
 
     @Transactional
     HouseholdSetupResponse setupHousehold(HouseholdSetup setup) {
+        HouseholdEntity savedHousehold;
         try {
-            var savedHousehold = householdRepository.save(householdSetupMapper.toHouseholdEntity(setup.getHousehold()));
+            savedHousehold = householdRepository.save(householdSetupMapper.toHouseholdEntity(setup.getHousehold()));
+        } catch (DataIntegrityViolationException e) {
+            throw new HouseholdAlreadyExistsException();
+        }
+        try {
             memberRepository.save(new MemberEntity(
                     setup.getMember().getId(),
                     setup.getMember().getName(),
@@ -39,19 +44,19 @@ class HouseholdSetupService {
                     savedHousehold.id(),
                     true
             ));
-            var invite = inviteRepository.save(new InviteEntity(
-                    null,
-                    savedHousehold.id(),
-                    UUID.randomUUID(),
-                    LocalDate.now().plusDays(INVITE_VALIDITY_DAYS)
-            ));
-            return new HouseholdSetupResponse(
-                    householdSetupMapper.toApiModel(savedHousehold),
-                    invite.token(),
-                    invite.validUntil()
-            );
         } catch (DataIntegrityViolationException e) {
-            throw new HouseholdAlreadyExistsException();
+            throw new MemberAlreadyExistsException();
         }
+        var invite = inviteRepository.save(new InviteEntity(
+                null,
+                savedHousehold.id(),
+                UUID.randomUUID(),
+                LocalDate.now().plusDays(INVITE_VALIDITY_DAYS)
+        ));
+        return new HouseholdSetupResponse(
+                householdSetupMapper.toApiModel(savedHousehold),
+                invite.token(),
+                invite.validUntil()
+        );
     }
 }
