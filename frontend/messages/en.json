@@ -43,6 +43,7 @@
 			"admin_email_label": "Your email",
 			"admin_email_placeholder": "e.g., john.doe@example.org",
 			"admin_email_error": "Enter a valid mail address.",
+			"setup_error": "Setup failed. Please try again.",
 			"back_button": "Back",
 			"continue_button": "Continue"
 		},
@@ -215,7 +216,10 @@
 		"title": "Join Household",
 		"household_hint": "You will join the household \"{name}\".",
 		"name_label": "Your Name",
+		"name_placeholder": "e.g., John Doe",
+		"name_error": "Enter a name with at least three characters.",
 		"email_label": "Your E-Mail",
+		"email_placeholder": "e.g., john.doe@example.org",
 		"join_button": "Join",
 		"invalid_link": "This invitation link is invalid or has expired.",
 		"join_error": "Failed to join. Please try again.",

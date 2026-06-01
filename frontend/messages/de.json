@@ -43,6 +43,7 @@
 			"admin_email_label": "Deine E-Mail",
 			"admin_email_placeholder": "z.B., max.mustermann@example.org",
 			"admin_email_error": "Gib eine gültige E-Mail-Adresse ein.",
+			"setup_error": "Einrichtung fehlgeschlagen. Bitte erneut versuchen.",
 			"back_button": "Zurück",
 			"continue_button": "Weiter"
 		},
@@ -215,7 +216,10 @@
 		"title": "Haushalt beitreten",
 		"household_hint": "Du wirst dem Haushalt \"{name}\" beitreten.",
 		"name_label": "Dein Name",
+		"name_placeholder": "z.B., Max Mustermann",
+		"name_error": "Gib einen Namen mit mindestens drei Zeichen ein.",
 		"email_label": "Deine E-Mail",
+		"email_placeholder": "z.B., max.mustermann@example.org",
 		"join_button": "Beitreten",
 		"invalid_link": "Dieser Einladungslink ist ungültig oder abgelaufen.",
 		"join_error": "Fehler beim Beitreten. Versuche es erneut.",
