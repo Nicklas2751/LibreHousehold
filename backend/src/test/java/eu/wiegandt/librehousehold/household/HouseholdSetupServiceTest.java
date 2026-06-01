@@ -44,14 +44,24 @@ class HouseholdSetupServiceTest {
     class setupHousehold {
 
         @Test
-        void dataIntegrityViolationOnSave_throwsHouseholdAlreadyExistsException() {
+        void dataIntegrityViolationOnHouseholdSave_throwsHouseholdAlreadyExistsException() {
+            // given
+            doThrow(DataIntegrityViolationException.class).when(householdRepository).save(any(HouseholdEntity.class));
+
+            // when / then
+            assertThatThrownBy(() -> service.setupHousehold(buildSetup()))
+                    .isInstanceOf(HouseholdAlreadyExistsException.class);
+        }
+
+        @Test
+        void dataIntegrityViolationOnMemberSave_throwsMemberAlreadyExistsException() {
             // given
             doReturn(Instancio.create(HouseholdEntity.class)).when(householdRepository).save(any(HouseholdEntity.class));
             doThrow(DataIntegrityViolationException.class).when(memberRepository).save(any(MemberEntity.class));
 
             // when / then
             assertThatThrownBy(() -> service.setupHousehold(buildSetup()))
-                    .isInstanceOf(HouseholdAlreadyExistsException.class);
+                    .isInstanceOf(MemberAlreadyExistsException.class);
         }
 
         @Test

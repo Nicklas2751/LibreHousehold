@@ -16,7 +16,7 @@ Das Frontend ist vollständig ausgebaut und arbeitet mit einem Mock-Backend. Das
 |---|---|
 | `household/` (Setup) | ✅ Implementiert |
 | `household/` (CRUD, Invite, Admin) | ✅ Implementiert |
-| `household/` (Members) | ❌ Noch nicht begonnen |
+| `household/` (Members) | ✅ Implementiert |
 | `tasks/` | ❌ Modul leer |
 | `expenses/` (inkl. Reimbursements) | ❌ Modul leer |
 
@@ -68,54 +68,24 @@ Modul-übergreifende DB-FKs sind verboten. Jedes Modul bekommt ein eigenes Postg
 
 ---
 
-## Abschnitt 2 — Member-Verwaltung + ADR: Account-Modell
+## Abschnitt 2 — Member-Verwaltung + Invite-Join-Flow ✅
 
-**Warum jetzt?**
-Members sind ein Cross-Cutting-Concern: Tasks brauchen "assignedTo", Expenses brauchen "paid by" und "split between", Settings zeigt die Mitgliederliste. Ohne `GET /household/{id}/members` bleibt fast jede Seite mit leeren Dropdowns.
+**Entscheidung:** Option A — `member.email` global eindeutig, 1 Member = 1 Haushalt.
 
-### ADR-Voranalyse: Email-Eindeutigkeit und Account-Haushalt-Modell
+**Was wurde implementiert:**
+- `member.is_admin` (boolean) ersetzt `household.admin_id`; kein zirkulärer FK mehr
+- `GET /household/{householdId}/members` — Mitgliederliste
+- `GET /household/{householdId}/members/{memberId}` — einzelner Member
+- `GET /invite/{token}` — Token zu Haushaltsdaten auflösen (`InviteInfo`)
+- `POST /invite/{token}/join` — Haushalt per Invite-Token beitreten (201 Created)
+- `PATCH /household/{householdId}/members/{memberId}` — Name/E-Mail aktualisieren (204)
+- `DELETE /household/{householdId}/members/{memberId}` — Member entfernen (204, publiziert `MemberRemoved`-Event)
+- `MembersApiDelegateImpl` übernimmt alle member-bezogenen Endpunkte; invite/join-Endpunkte ebenfalls im `members`-Tag
+- `HouseholdRepository.findNameById` — lädt nur den Namen (kein Full-Entity-Load für `InviteInfo`)
+- `Household`-Schema: `admin`-Feld entfernt; Admin-Status ausschließlich über `member.isAdmin`
+- Frontend: `JoinWizard.svelte` + Route `/invite/[token]`; `isOwner`-Prüfung nutzt `$userState?.isAdmin`
 
-Vor der Implementierung muss eine Architekturentscheidung getroffen werden:
-
-#### Option A: Email global eindeutig, ein Account = ein Haushalt (aktueller Stand)
-
-**Datenmodell:** `member.email UNIQUE` systemweit. Ein Member gehört zu genau einem Household.
-
-| Vorteile | Nachteile |
-|---|---|
-| Einfachstes Datenbankschema (bestehende Migration passt) | Nutzer mit mehreren Haushalten nicht möglich |
-| Klare 1-zu-1-Beziehung: Login-Identität = Household-Mitglied | Beim Household löschen geht die gesamte Identität verloren |
-| Kein Konzept eines separaten „Account"-Objekts notwendig | Email-Änderung = globale Identitätsänderung |
-
-**Architekturauswirkung:** Minimale Änderung. Schema `V1` bleibt unberührt.
-
-#### Option B: Email global eindeutig, ein Account kann mehreren Haushalten angehören
-
-**Datenmodell:** Separates `account`-Objekt. `household_member`-Join-Tabelle verbindet Account mit Household. Der `member` wird zum „Profil innerhalb eines Haushalts".
-
-| Vorteile | Nachteile |
-|---|---|
-| Realistischer für echte Nutzer (WG wechseln, Familie + Freundeskreis) | Erheblich komplexeres Datenbankschema |
-| Ein Login für alle Haushalte | Auth wird erheblich komplexer (welcher Haushalt ist aktiv?) |
-| Account-Löschung und Household-Verlassen sind unabhängige Operationen | Flyway-Migration muss bestehende `member`-Tabelle umbenennen/aufteilen |
-
-**Architekturauswirkung:** Neue Flyway-Migration, neues `account`-Konzept, Join-Tabelle.
-
-**Empfehlung:** Option A oder B — C (email per-household eindeutig) scheidet aus (Sackgasse bei Auth).
-
----
-
-**Was wird implementiert (nach ADR-Entscheidung):**
-- Flyway-Migration (je nach Entscheidung ggf. neue Tabellen)
-- `GET /household/{id}/members`
-- `GET /household/{id}/members/{memberId}`
-- `POST /household/{id}/members` (Verknüpfung mit Invite-Token aus Abschnitt 1)
-- `PATCH /household/{id}/members/{memberId}`
-- `DELETE /household/{id}/members/{memberId}`
-
-Members bleiben Teil des `household/`-Moduls.
-
-**UI-Fortschritt:** Mitgliederliste in Settings funktioniert. Alle Dropdowns in Tasks und Expenses bekommen echte Namen. Profil-Seite kann Name/Avatar speichern.
+**UI-Fortschritt:** Mitgliederliste in Settings funktioniert. Invite-Link führt zu Join-Wizard. Profil-Seite kann Name/E-Mail speichern. Admin-Krone über `isAdmin`-Flag.
 
 **Abhängigkeiten:** Abschnitt 0 (Kommunikationsform), Abschnitt 1 (InviteEntity vorhanden).
 
@@ -213,7 +183,7 @@ Alle Updates über explizite `@Modifying @Query`-Methoden im Repository, die `in
 |---|---|---|---|---|
 | 0 | Modul-Kommunikations-Analyse | — | ✅ | ADR-011: Kommunikationsmuster |
 | 1 | Household-CRUD + Invite + Frontend-Gültigkeit | `household/` | ✅ | Household-Settings, Invite-Gültigkeit |
-| 2 | Member-Verwaltung + ADR Account-Modell | `household/` (Members) | ⬜ | Settings (Profil), alle Dropdowns |
+| 2 | Member-Verwaltung + Invite-Join-Flow | `household/` (Members) | ✅ | Settings (Profil), Join-Wizard, alle Dropdowns |
 | 3 | Tasks (inkl. Task-Statistics) | `tasks/` (neu) | ⬜ | Tasks, Dashboard-Tasks |
 | 4 | Kategorien + Expenses + Reimbursements + Financials | `expenses/` (neu) | ⬜ | Expenses, Settle, Dashboard-Finanzen |
 | 5 | Statistics-Endpunkt (Aggregation) | Kein neues Modul | ⬜ | Statistics-Seite |

@@ -87,7 +87,7 @@ class HouseholdSetupServiceIT {
     }
 
     @Test
-    void setupHousehold_duplicateMemberEmail_throwsHouseholdAlreadyExistsException() {
+    void setupHousehold_duplicateMemberEmail_throwsMemberAlreadyExistsException() {
         // given
         var member1 = Instancio.create(Member.class);
         var household1 = Instancio.create(Household.class);
@@ -100,7 +100,7 @@ class HouseholdSetupServiceIT {
 
         // when / then
         assertThatThrownBy(() -> service.setupHousehold(new HouseholdSetup(household2, member2)))
-                .isInstanceOf(HouseholdAlreadyExistsException.class);
+                .isInstanceOf(MemberAlreadyExistsException.class);
     }
 
     @Test
