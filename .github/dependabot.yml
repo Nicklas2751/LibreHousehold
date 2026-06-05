@@ -1,0 +1,37 @@
+version: 2
+updates:
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    cooldown:
+      default-days: 5
+    labels:
+      - "dependencies"
+      - "github-actions"
+    open-pull-requests-limit: 5
+
+  # maven dependencies and plugins
+  - package-ecosystem: "maven"
+    directory: "/backend"
+    schedule:
+      interval: "daily"
+    cooldown:
+      default-days: 5
+    labels:
+      - "dependencies"
+      - "maven"
+    open-pull-requests-limit: 10
+
+  # frontend dependencies and plugins
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "daily"
+    cooldown:
+      default-days: 5
+    labels:
+      - "dependencies"
+      - "npm"
+    open-pull-requests-limit: 10
