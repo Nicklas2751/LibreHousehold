@@ -37,7 +37,7 @@
   <properties>
     <java.version>25</java.version>
     <spring-modulith.version>2.0.6</spring-modulith.version>
-    <jackson-databind-nullable.version>0.2.8</jackson-databind-nullable.version>
+    <jackson-databind-nullable.version>0.2.10</jackson-databind-nullable.version>
     <jsr305.version>3.0.2</jsr305.version>
     <mapstruct.version>1.6.3</mapstruct.version>
     <instancio.version>5.4.0</instancio.version>
