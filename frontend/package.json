@@ -30,7 +30,7 @@
 		"@types/node": "^24",
 		"@vitest/browser": "^4.0.6",
 		"@vitest/browser-playwright": "^4.0.6",
-		"daisyui": "^5.3.10",
+		"daisyui": "^5.5.20",
 		"eslint": "^9.39.0",
 		"eslint-config-prettier": "^10.1.8",
 		"eslint-plugin-svelte": "^3.13.0",
