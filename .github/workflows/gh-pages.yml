@@ -34,7 +34,7 @@ jobs:
           chmod +x dtcw
       - name: Setup Pages
         id: pages
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@v6
       - name: generateSite
         run: ./dtcw generateSite
       - name: Upload artifact
