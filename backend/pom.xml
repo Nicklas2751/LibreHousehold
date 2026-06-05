@@ -40,7 +40,7 @@
     <jackson-databind-nullable.version>0.2.8</jackson-databind-nullable.version>
     <jsr305.version>3.0.2</jsr305.version>
     <mapstruct.version>1.6.3</mapstruct.version>
-    <instancio.version>5.4.0</instancio.version>
+    <instancio.version>5.6.0</instancio.version>
   </properties>
   <dependencyManagement>
     <dependencies>
