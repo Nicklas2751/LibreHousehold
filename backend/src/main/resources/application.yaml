@@ -1,6 +1,9 @@
 spring:
   application:
     name: librehousehold
+  modulith:
+    runtime:
+      flyway-enabled: true
 
 server:
   tomcat:
