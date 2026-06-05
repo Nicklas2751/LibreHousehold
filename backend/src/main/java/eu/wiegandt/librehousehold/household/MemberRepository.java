@@ -5,6 +5,7 @@ import org.springframework.data.jdbc.repository.query.Query;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -32,4 +33,7 @@ interface MemberRepository extends CrudRepository<MemberEntity, UUID> {
     @Modifying
     @Query("UPDATE member SET is_admin = true WHERE id = :memberId")
     int grantAdmin(@Param("memberId") UUID memberId);
+
+    @Query("SELECT id, name FROM member WHERE id IN (:ids)")
+    List<MemberNameProjection> findNamesByIds(@Param("ids") Collection<UUID> ids);
 }

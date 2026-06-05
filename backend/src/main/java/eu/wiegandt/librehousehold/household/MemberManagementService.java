@@ -10,11 +10,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
+import static java.util.stream.Collectors.toMap;
+
 @Service
-class MemberManagementService {
+class MemberManagementService implements MemberQuery {
 
     private final MemberRepository memberRepository;
     private final HouseholdRepository householdRepository;
@@ -97,5 +101,14 @@ class MemberManagementService {
         }
         memberRepository.deleteById(memberId);
         eventPublisher.publishEvent(new MemberRemoved(memberId));
+    }
+
+    @Override
+    public Map<UUID, String> findMemberNamesByIds(Collection<UUID> memberIds) {
+        if (memberIds.isEmpty()) {
+            return Map.of();
+        }
+        return memberRepository.findNamesByIds(memberIds).stream()
+                .collect(toMap(MemberNameProjection::id, MemberNameProjection::name));
     }
 }

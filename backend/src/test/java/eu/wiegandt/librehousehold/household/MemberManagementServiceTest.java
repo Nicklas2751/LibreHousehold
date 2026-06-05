@@ -17,7 +17,9 @@ import org.springframework.dao.DataIntegrityViolationException;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -298,6 +300,36 @@ class MemberManagementServiceTest {
 
             // then
             verify(memberRepository).updateEmail(memberId, "updated@example.com");
+        }
+    }
+
+    @Nested
+    class findMemberNamesByIds {
+
+        @Test
+        void emptyCollection_returnsEmptyMapWithoutQueryingRepository() {
+            // given / when
+            var result = service.findMemberNamesByIds(List.of());
+
+            // then
+            assertThat(result).isEmpty();
+            verify(memberRepository, never()).findNamesByIds(any());
+        }
+
+        @Test
+        void knownIds_returnsNameMap() {
+            // given
+            var id1 = UUID.randomUUID();
+            var id2 = UUID.randomUUID();
+            var projection1 = new MemberNameProjection(id1, "Alice");
+            var projection2 = new MemberNameProjection(id2, "Bob");
+            doReturn(List.of(projection1, projection2)).when(memberRepository).findNamesByIds(any());
+
+            // when
+            var result = service.findMemberNamesByIds(Set.of(id1, id2));
+
+            // then
+            assertThat(result).isEqualTo(Map.of(id1, "Alice", id2, "Bob"));
         }
     }
 
