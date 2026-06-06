@@ -5,60 +5,32 @@
 	import PageTitleActionBar from '$lib/PageTitleActionBar.svelte';
 	import { addTask, loadTasks, tasks, updateTaskDoneStatus } from '$lib/stores/taskStore';
 	import { v4 as uuidv4 } from 'uuid';
-	import { findMember, loadMembers, members } from '$lib/stores/memberStore';
+	import { findMember, members } from '$lib/stores/memberStore';
 	import { householdState } from '$lib/stores/householdState.svelte';
-	import { addInterval, checkIsDone } from '$lib/taskDueCalculator';
+	import { checkIsDone } from '$lib/taskDueCalculator';
 	import { filterTasks, TaskFilterType } from '$lib/taskFilter';
 	import { userState } from '$lib/stores/userState';
-	import type { Member, Task } from '../../../../generated-sources/openapi';
+	import type { Member, Task, TaskEdit } from '../../../../generated-sources/openapi';
 	import MobileItemList from '$lib/MobileItemList.svelte';
 	import DesktopItemList from '$lib/DesktopItemList.svelte';
-
-	const today = new Date().toISOString().split('T')[0];
-	let dueDate: string = $state(today);
-
-	let recurrenceUnit: string = $state('days');
-	let recurrenceTimes: number = $state(1);
-	const nextRecurrenceDate: string = $derived(
-		calcNextRecurrenceDate(dueDate, recurrenceUnit, recurrenceTimes)
-	);
+	import TaskForm from '$lib/TaskForm.svelte';
 
 	let isShowNewTaskForm: boolean = $state(page.params.new !== undefined);
 
 	let filter: string = $state(TaskFilterType.ALL);
 	const filteredTasks = $derived(filterTasks($tasks, filter as TaskFilterType, $userState?.id));
 
-	let isNewTaskRecurring: boolean = $state(false);
-
 	afterNavigate(() => {
 		isShowNewTaskForm = page.params.new !== undefined;
 	});
 
-	function calcNextRecurrenceDate(currentDueDate: string, unit: string, times: number): string {
-		const date = new Date(currentDueDate);
-		return addInterval(date, unit, times).toLocaleDateString();
-	}
-
-	async function createTask(event: Event) {
-		event.preventDefault();
+	async function createTask(taskEdit: TaskEdit) {
 		if ($householdState) {
 			await addTask($householdState.id, {
 				id: uuidv4(),
-				title: (event.target as HTMLFormElement).newTaskTitle.value,
-				description: (event.target as HTMLFormElement).newTaskDescription.value,
-				assignedTo: (event.target as HTMLFormElement).newTaskAssignedTo.value,
-				dueDate: new Date((event.target as HTMLFormElement).newTaskDueDate.value),
-				recurring: isNewTaskRecurring,
-				recurrenceUnit: isNewTaskRecurring
-					? (event.target as HTMLFormElement).newTaskRecurrenceUnit.value
-					: undefined,
-				recurrenceInterval: isNewTaskRecurring
-					? parseInt((event.target as HTMLFormElement).newTaskRecurrenceTimes.value)
-					: undefined
+				...taskEdit
 			});
 		}
-		dueDate = today;
-		(event.target as HTMLFormElement).reset();
 		await goto('/app/tasks');
 	}
 
@@ -99,112 +71,7 @@
 
 	<div class="p-5 md:flex md:min-h-0 md:flex-1 md:flex-col md:overflow-hidden">
 		{#if isShowNewTaskForm}
-			<div class="card mt-10 bg-base-200 drop-shadow-xl card-border">
-				<form class="card-body grid md:grid-cols-2 md:gap-x-4" onsubmit={createTask}>
-					<fieldset class="fieldset">
-						<legend class="fieldset-legend">{m['tasks.new.task_title_label']()} *</legend>
-						<input
-							name="newTaskTitle"
-							type="text"
-							class="validator input w-full"
-							placeholder={m['tasks.new.task_title_placeholder']()}
-							minlength="3"
-							required
-						/>
-						<div class="validator-hint hidden">{m['tasks.new.task_title_error']()}</div>
-					</fieldset>
-
-					<fieldset class="fieldset">
-						<legend class="fieldset-legend">{m['tasks.new.assigned_to_label']()}</legend>
-						{#if $householdState}
-							{#await loadMembers($householdState.id)}
-								<span class="loading loading-dots"></span>
-							{:then}
-								<select name="newTaskAssignedTo" class="select w-full">
-									<option selected>{m['tasks.new.assigned_to_select_placeholder']()}</option>
-									{#each $members as member (member.id)}
-										<option value={member.id}>{member.name}</option>
-									{/each}
-								</select>
-							{/await}
-						{/if}
-					</fieldset>
-
-					<fieldset class="fieldset md:col-span-2">
-						<legend class="fieldset-legend">{m['tasks.new.description_label']()}</legend>
-						<textarea
-							name="newTaskDescription"
-							class="textarea h-24 w-full"
-							placeholder={m['tasks.new.description_placeholder']()}
-						></textarea>
-					</fieldset>
-
-					<fieldset class="fieldset">
-						<legend class="fieldset-legend">{m['tasks.new.due_date_label']()} *</legend>
-						<input
-							type="date"
-							name="newTaskDueDate"
-							class="validator input w-full"
-							min={today}
-							value={dueDate}
-							required
-						/>
-						<div class="validator-hint hidden">{m['tasks.new.due_date_error']()}</div>
-					</fieldset>
-
-					<fieldset class="fieldset w-64 rounded-box border border-base-300 bg-base-100 p-4">
-						<legend class="fieldset-legend">{m['tasks.new.recurring_label']()}</legend>
-						<input
-							type="checkbox"
-							name="newTaskIsRecurring"
-							class="toggle"
-							bind:checked={isNewTaskRecurring}
-						/>
-					</fieldset>
-
-					{#if isNewTaskRecurring}
-						<fieldset class="fieldset">
-							<legend class="fieldset-legend"
-								>{m['tasks.new.recurrence_pattern_times_label']()} *</legend
-							>
-							<input
-								type="number"
-								name="newTaskRecurrenceTimes"
-								class="validator input w-full"
-								min="1"
-								step="1"
-								bind:value={recurrenceTimes}
-								required
-							/>
-							<div class="validator-hint hidden">{m['tasks.new.due_date_error']()}</div>
-						</fieldset>
-
-						<fieldset class="fieldset">
-							<legend class="fieldset-legend">{m['tasks.new.recurrence_pattern_label']()} *</legend>
-							<select
-								name="newTaskRecurrenceUnit"
-								class="select w-full"
-								bind:value={recurrenceUnit}
-								required
-							>
-								<option value="days">{m['tasks.new.recurrence_pattern_days']()}</option>
-								<option value="weeks">{m['tasks.new.recurrence_pattern_weeks']()}</option>
-								<option value="months">{m['tasks.new.recurrence_pattern_months']()}</option>
-								<option value="years">{m['tasks.new.recurrence_pattern_years']()}</option>
-							</select>
-						</fieldset>
-
-						<p>
-							{m['tasks.new.next_recurrence_date_label']({
-								date: new Date(dueDate).toLocaleDateString(),
-								nextDate: nextRecurrenceDate
-							})}
-						</p>
-					{/if}
-
-					<button type="submit" class="btn btn-primary">{m['tasks.new.create_button']()}</button>
-				</form>
-			</div>
+			<TaskForm householdId={$householdState?.id ?? ''} onsubmit={createTask} />
 		{:else}
 			<form class="md:hidden">
 				<input
@@ -250,9 +117,13 @@
 		>
 			{#snippet singleItemView(task)}
 				<div class="flex items-center justify-between gap-4">
-					<span class="font-medium" class:text-secondary={isTaskOverdue(task)}>
+					<a
+						href="/app/tasks/edit/{task.id}"
+						class="font-medium"
+						class:text-secondary={isTaskOverdue(task)}
+					>
 						{task.title}
-					</span>
+					</a>
 					{#if task.dueDate}
 						<span class="text-sm whitespace-nowrap" class:text-secondary={isTaskOverdue(task)}>
 							{new Date(task.dueDate).toLocaleDateString('de-DE')}
@@ -327,9 +198,13 @@
 
 			{#snippet itemContent(task)}
 				<div class="flex flex-col">
-					<span class="font-medium" class:text-secondary={isTaskOverdue(task)}>
+					<a
+						href="/app/tasks/edit/{task.id}"
+						class="font-medium"
+						class:text-secondary={isTaskOverdue(task)}
+					>
 						{task.title}
-					</span>
+					</a>
 					{#if task.assignedTo}
 						{#await getMember(task.assignedTo)}
 							<span class="loading loading-xs loading-dots"></span>

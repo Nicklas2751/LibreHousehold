@@ -414,7 +414,7 @@ describe('taskDueCalculator', () => {
 			expect(checkIsDone(task)).toBe(false);
 		});
 
-		it('should return false for non-recurring task with done date before due date', () => {
+		it('should return true for non-recurring task with done date before due date', () => {
 			const task: Task = {
 				id: '1',
 				title: 'Test Task',
@@ -422,10 +422,10 @@ describe('taskDueCalculator', () => {
 				recurring: false,
 				done: new Date('2025-11-20')
 			};
-			expect(checkIsDone(task)).toBe(false);
+			expect(checkIsDone(task)).toBe(true);
 		});
 
-		it('should return false for non-recurring task with done date on due date', () => {
+		it('should return true for non-recurring task with done date on due date', () => {
 			const task: Task = {
 				id: '1',
 				title: 'Test Task',
@@ -433,7 +433,7 @@ describe('taskDueCalculator', () => {
 				recurring: false,
 				done: new Date('2025-11-22')
 			};
-			expect(checkIsDone(task)).toBe(false);
+			expect(checkIsDone(task)).toBe(true);
 		});
 
 		it('should return true for non-recurring task with done date after due date', () => {

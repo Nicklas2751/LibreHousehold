@@ -1,6 +1,7 @@
 package eu.wiegandt.librehousehold.tasks;
 
 import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.Transient;
 import org.springframework.data.domain.Persistable;
 import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.Table;
@@ -16,17 +17,19 @@ class TaskEntity implements Persistable<UUID> {
     @Column("household_id")
     private final UUID householdId;
     @Column("assigned_to")
-    private final UUID assignedTo;
-    private final String title;
-    private final String description;
+    private UUID assignedTo;
+    private String title;
+    private String description;
     @Column("due_date")
     private LocalDate dueDate;
     private LocalDate done;
-    private final boolean recurring;
+    private boolean recurring;
     @Column("recurrence_unit")
-    private final String recurrenceUnit;
+    private String recurrenceUnit;
     @Column("recurrence_interval")
-    private final Integer recurrenceInterval;
+    private Integer recurrenceInterval;
+    @Transient
+    private boolean isNew = true;
 
     TaskEntity(UUID id, UUID householdId, UUID assignedTo, String title, String description,
                LocalDate dueDate, LocalDate done, boolean recurring, String recurrenceUnit,
@@ -43,8 +46,16 @@ class TaskEntity implements Persistable<UUID> {
         this.recurrenceInterval = recurrenceInterval;
     }
 
-    public void setDone(LocalDate done) { this.done = done; }
+    void markExisting() { this.isNew = false; }
+
+    public void setAssignedTo(UUID assignedTo) { this.assignedTo = assignedTo; }
+    public void setTitle(String title) { this.title = title; }
+    public void setDescription(String description) { this.description = description; }
     public void setDueDate(LocalDate dueDate) { this.dueDate = dueDate; }
+    public void setDone(LocalDate done) { this.done = done; }
+    public void setRecurring(boolean recurring) { this.recurring = recurring; }
+    public void setRecurrenceUnit(String recurrenceUnit) { this.recurrenceUnit = recurrenceUnit; }
+    public void setRecurrenceInterval(Integer recurrenceInterval) { this.recurrenceInterval = recurrenceInterval; }
 
     @Override
     public UUID getId() { return id; }
@@ -59,5 +70,5 @@ class TaskEntity implements Persistable<UUID> {
     public Integer getRecurrenceInterval() { return recurrenceInterval; }
 
     @Override
-    public boolean isNew() { return true; }
+    public boolean isNew() { return isNew; }
 }

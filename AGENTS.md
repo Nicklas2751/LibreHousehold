@@ -252,6 +252,20 @@ export const functionName = async (
 - Stattdessen die echte Implementierung per `@Spy MemberMapper mapper = Mappers.getMapper(MemberMapper.class)` injizieren — funktioniert mit Mockito `@InjectMocks`.
 - Mapper-Tests (`*MapperTest.java`) prüfen jede public Mapping-Methode in einer eigenen `@Nested`-Klasse. Kein Instancio in Mapper-Tests — Eingabedaten immer explizit konstruieren.
 
+### UI Conventions
+
+- **Dialogs/Confirmations:** Immer DaisyUI-Modals (`<dialog class="modal">`) verwenden — niemals die nativen Browser-APIs `confirm()`, `alert()` oder `prompt()`. Das `<dialog>`-Element mit `bind:this` auf einer `$state`-Variable binden und `.showModal()` / `.close()` programmatisch aufrufen.
+
+```svelte
+let modal: HTMLDialogElement | null = $state(null);
+// Öffnen:
+onclick={() => modal?.showModal()}
+// Schließen (per Cancel-Button):
+<form method="dialog"><button class="btn">Abbrechen</button></form>
+// Schließen (programmatisch):
+modal?.close();
+```
+
 ### Error Handling
 
 - Show toast notifications on errors using the toast store.

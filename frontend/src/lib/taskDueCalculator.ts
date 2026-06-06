@@ -114,10 +114,7 @@ export function checkIsDone(task: Task): boolean {
 	doneDate.setUTCHours(0, 0, 0, 0);
 
 	if (!task.recurring) {
-		// For non-recurring tasks, check if done date is after the due date
-		const dueDate = new Date(task.dueDate);
-		dueDate.setUTCHours(0, 0, 0, 0);
-		return doneDate > dueDate;
+		return true;
 	}
 
 	// For recurring tasks, check if done date is after the last due date

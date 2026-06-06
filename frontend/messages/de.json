@@ -154,7 +154,7 @@
 			"task_title_placeholder": "z.B., Müll rausbringen",
 			"task_title_error": "Gib einen Aufgabentitel mit mindestens drei Zeichen ein.",
 			"assigned_to_label": "Zugewiesen an",
-			"assigned_to_placeholder": "Wähle ein Haushaltsmitglied",
+			"assigned_to_select_placeholder": "Wähle ein Haushaltsmitglied",
 			"description_label": "Beschreibung",
 			"description_placeholder": "z.B., Bitte bring den Müll raus bevor du gehst.",
 			"due_date_label": "Fälligkeitsdatum",
@@ -168,6 +168,12 @@
 			"recurrence_pattern_times_label": "Alle wie viele Einheiten?",
 			"next_recurrence_date_label": "Mit dem aktuellen Fälligkeitsdatum {date}, wird die nächste Wiederholung am {nextDate} sein.",
 			"create_button": "Aufgabe erstellen"
+		},
+		"edit": {
+			"title": "Aufgabe bearbeiten",
+			"save_button": "Änderungen speichern",
+			"delete_button": "Aufgabe löschen",
+			"delete_confirm": "Möchtest du diese Aufgabe wirklich löschen?"
 		}
 	},
 	"expenses": {

@@ -2,6 +2,7 @@ package eu.wiegandt.librehousehold.tasks;
 
 import eu.wiegandt.librehousehold.api.TasksApiDelegate;
 import eu.wiegandt.librehousehold.model.Task;
+import eu.wiegandt.librehousehold.model.TaskEdit;
 import eu.wiegandt.librehousehold.model.TaskUpdate;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
@@ -34,5 +35,16 @@ public class TasksApiDelegateImpl implements TasksApiDelegate {
     public ResponseEntity<Task> updateTask(UUID householdId, UUID taskId, Optional<TaskUpdate> taskUpdate) {
         var update = taskUpdate.orElseThrow(TaskBodyIsRequiredException::new);
         return ResponseEntity.ok(taskService.updateTask(taskId, update));
+    }
+
+    @Override
+    public ResponseEntity<Task> editTask(UUID householdId, UUID taskId, TaskEdit taskEdit) {
+        return ResponseEntity.ok(taskService.editTask(taskId, taskEdit));
+    }
+
+    @Override
+    public ResponseEntity<Void> deleteTask(UUID householdId, UUID taskId) {
+        taskService.deleteTask(taskId);
+        return ResponseEntity.noContent().build();
     }
 }

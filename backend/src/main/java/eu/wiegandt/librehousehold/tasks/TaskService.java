@@ -4,6 +4,7 @@ import eu.wiegandt.librehousehold.household.HouseholdDeleted;
 import eu.wiegandt.librehousehold.household.HouseholdQuery;
 import eu.wiegandt.librehousehold.household.MemberQuery;
 import eu.wiegandt.librehousehold.model.Task;
+import eu.wiegandt.librehousehold.model.TaskEdit;
 import eu.wiegandt.librehousehold.model.TaskStatsByMember;
 import eu.wiegandt.librehousehold.model.TaskUpdate;
 import org.springframework.modulith.events.ApplicationModuleListener;
@@ -68,6 +69,21 @@ class TaskService implements TaskStatisticsProvider {
         }
 
         return taskMapper.toTask(entity);
+    }
+
+    Task editTask(UUID taskId, TaskEdit edit) {
+        var existing = taskRepository.findById(taskId)
+                .orElseThrow(TaskNotFoundException::new);
+        taskMapper.updateEntityFromEdit(edit, existing);
+        var saved = taskRepository.save(existing);
+        return taskMapper.toTask(saved);
+    }
+
+    void deleteTask(UUID taskId) {
+        if (!taskRepository.existsById(taskId)) {
+            throw new TaskNotFoundException();
+        }
+        taskRepository.deleteById(taskId);
     }
 
     @ApplicationModuleListener
