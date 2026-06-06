@@ -7,7 +7,7 @@
 	import { v4 as uuidv4 } from 'uuid';
 	import { findMember, members } from '$lib/stores/memberStore';
 	import { householdState } from '$lib/stores/householdState.svelte';
-	import { checkIsDone } from '$lib/taskDueCalculator';
+	import { checkIsDone, getDisplayDueDate } from '$lib/taskDueCalculator';
 	import { filterTasks, TaskFilterType } from '$lib/taskFilter';
 	import { userState } from '$lib/stores/userState';
 	import type { Member, Task, TaskEdit } from '../../../../generated-sources/openapi';
@@ -51,9 +51,11 @@
 		if (checkIsDone(task)) return false;
 
 		const dueDate = new Date(task.dueDate);
+		dueDate.setUTCHours(0, 0, 0, 0);
 		// eslint-disable-next-line svelte/prefer-svelte-reactivity
-		const today = new Date(new Date().setHours(0, 0, 0, 0));
-		return dueDate < today;
+		const today = new Date();
+		today.setUTCHours(0, 0, 0, 0);
+		return dueDate <= today;
 	}
 </script>
 
@@ -126,7 +128,7 @@
 					</a>
 					{#if task.dueDate}
 						<span class="text-sm whitespace-nowrap" class:text-secondary={isTaskOverdue(task)}>
-							{new Date(task.dueDate).toLocaleDateString('de-DE')}
+							{getDisplayDueDate(task)?.toLocaleDateString('de-DE')}
 						</span>
 					{/if}
 				</div>
@@ -217,7 +219,7 @@
 				</div>
 				{#if task.dueDate}
 					<span class="text-sm whitespace-nowrap" class:text-secondary={isTaskOverdue(task)}>
-						{new Date(task.dueDate).toLocaleDateString('de-DE')}
+						{getDisplayDueDate(task)?.toLocaleDateString('de-DE')}
 					</span>
 				{/if}
 			{/snippet}

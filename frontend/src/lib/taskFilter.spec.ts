@@ -156,16 +156,16 @@ describe('taskFilter', () => {
 		});
 
 		it('should include recurring tasks that are done for current period', () => {
-			// Recurring task: weekly, started Nov 27
-			// Current date: Dec 4 -> last due date is Dec 4
-			// Done date Dec 5 is after Dec 4, so task is done for this period
+			// Recurring task: weekly, originally due Dec 4
+			// Backend advanced dueDate to Dec 11 when task was marked done on Dec 4
+			// previousDueDate = Dec 11 - 1 week = Dec 4 → today (Dec 4) <= Dec 4 → done
 			const recurringTask = createTask({
 				id: 'recurring-task',
-				dueDate: new Date('2025-11-27'),
+				dueDate: new Date('2025-12-11'), // advanced by backend (+1 week)
 				recurring: true,
 				recurrenceUnit: 'weeks',
 				recurrenceInterval: 1,
-				done: new Date('2025-12-05') // Done after the last due date (Dec 4)
+				done: new Date('2025-12-04')
 			});
 
 			const result = filterTasks([recurringTask], TaskFilterType.COMPLETED, 'user-1');
