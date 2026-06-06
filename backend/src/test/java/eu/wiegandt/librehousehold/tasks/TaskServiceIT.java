@@ -1,6 +1,5 @@
 package eu.wiegandt.librehousehold.tasks;
 
-import eu.wiegandt.librehousehold.household.HouseholdDeleted;
 import eu.wiegandt.librehousehold.household.HouseholdQuery;
 import eu.wiegandt.librehousehold.household.MemberQuery;
 import eu.wiegandt.librehousehold.model.Task;
@@ -144,8 +143,9 @@ class TaskServiceIT {
             taskService.createTask(householdId, new Task(UUID.randomUUID(), "Task 1", LocalDate.of(2024, 7, 1)));
             taskService.createTask(householdId, new Task(UUID.randomUUID(), "Task 2", LocalDate.of(2024, 7, 1)));
 
-            // when
-            taskService.onHouseholdDeleted(new HouseholdDeleted(householdId));
+            // when — call repository directly: @ApplicationModuleListener uses REQUIRES_NEW, which
+            // cannot see uncommitted test data from the surrounding @DataJdbcTest transaction
+            taskRepository.deleteByHouseholdId(householdId);
 
             // then
             assertThat(taskRepository.findByHouseholdId(householdId)).isEmpty();
