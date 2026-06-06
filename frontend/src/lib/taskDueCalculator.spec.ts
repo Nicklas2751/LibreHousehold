@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
 	addInterval,
 	checkIsDone,
+	getDisplayDueDate,
 	getLastDueDate,
 	getNextDueDateAfterToday
 } from './taskDueCalculator';
@@ -404,149 +405,215 @@ describe('taskDueCalculator', () => {
 	});
 
 	describe('checkIsDone', () => {
-		it('should return false if task has no done date', () => {
+		it('no_done_date_returns_false', () => {
+			// given
+			const task: Task = { id: '1', title: 'Test Task', dueDate: new Date('2025-11-20'), done: undefined };
+			// when / then
+			expect(checkIsDone(task)).toBe(false);
+		});
+
+		describe('non-recurring task', () => {
+			it('done_set_returns_true', () => {
+				// given
+				const task: Task = {
+					id: '1',
+					title: 'Test Task',
+					dueDate: new Date('2025-11-22'),
+					recurring: false,
+					done: new Date('2025-11-22')
+				};
+				// when / then
+				expect(checkIsDone(task)).toBe(true);
+			});
+
+			it('done_set_with_time_component_returns_true', () => {
+				// given
+				const task: Task = {
+					id: '1',
+					title: 'Test Task',
+					dueDate: new Date('2025-11-20'),
+					recurring: false,
+					done: new Date('2025-11-22T23:59:59Z')
+				};
+				// when / then
+				expect(checkIsDone(task)).toBe(true);
+			});
+		});
+
+		describe('recurring task', () => {
+			// dueDate is the ADVANCED next occurrence (post-backend state):
+			//   backend sets dueDate = oldDueDate + interval when task is marked done
+			//   so previousDueDate = dueDate - interval
+			// Task is done while today <= previousDueDate
+			// today (mocked) = 2025-11-22
+
+			it('no_recurrenceUnit_returns_false', () => {
+				// given
+				const task: Task = {
+					id: '1',
+					title: 'Test Task',
+					dueDate: new Date('2025-11-23'),
+					recurring: true,
+					recurrenceUnit: undefined,
+					recurrenceInterval: 1,
+					done: new Date('2025-11-22')
+				};
+				// when / then
+				expect(checkIsDone(task)).toBe(false);
+			});
+
+			it('no_recurrenceInterval_returns_false', () => {
+				// given
+				const task: Task = {
+					id: '1',
+					title: 'Test Task',
+					dueDate: new Date('2025-11-23'),
+					recurring: true,
+					recurrenceUnit: 'days',
+					recurrenceInterval: undefined,
+					done: new Date('2025-11-22')
+				};
+				// when / then
+				expect(checkIsDone(task)).toBe(false);
+			});
+
+			it.each([
+				// [description, dueDate (advanced), unit, interval, done, expected]
+				// A: täglich, heute erledigt → dueDate=morgen, prev=heute → erledigt
+				{
+					desc: 'täglich_heute_erledigt_returns_true',
+					dueDate: '2025-11-23',
+					unit: 'days',
+					interval: 1,
+					done: '2025-11-22',
+					expected: true
+				},
+				// B: täglich, gestern erledigt → dueDate=heute, prev=gestern → nicht erledigt
+				{
+					desc: 'täglich_gestern_erledigt_returns_false',
+					dueDate: '2025-11-22',
+					unit: 'days',
+					interval: 1,
+					done: '2025-11-21',
+					expected: false
+				},
+				// C: wöchentlich, heute erledigt → dueDate=+7, prev=heute → erledigt
+				{
+					desc: 'wöchentlich_heute_erledigt_returns_true',
+					dueDate: '2025-11-29',
+					unit: 'weeks',
+					interval: 1,
+					done: '2025-11-22',
+					expected: true
+				},
+				// D: monatlich, 4 Tage früh erledigt → prev=26.11, today=22.11 → erledigt
+				{
+					desc: 'monatlich_frühzeitig_erledigt_returns_true',
+					dueDate: '2025-12-26',
+					unit: 'months',
+					interval: 1,
+					done: '2025-11-22',
+					expected: true
+				},
+				// E: monatlich, prev=20.11 bereits überschritten → nicht erledigt
+				{
+					desc: 'monatlich_previousDueDate_überschritten_returns_false',
+					dueDate: '2025-12-20',
+					unit: 'months',
+					interval: 1,
+					done: '2025-11-22',
+					expected: false
+				}
+			])('$desc', ({ dueDate, unit, interval, done, expected }) => {
+				// given
+				const task: Task = {
+					id: '1',
+					title: 'Test Task',
+					dueDate: new Date(dueDate),
+					recurring: true,
+					recurrenceUnit: unit as Task['recurrenceUnit'],
+					recurrenceInterval: interval,
+					done: new Date(done)
+				};
+				// when / then
+				expect(checkIsDone(task)).toBe(expected);
+			});
+
+			it('done_date_time_component_ignored_returns_true', () => {
+				// given — dueDate=23.11 (daily, advanced), done has time component
+				const task: Task = {
+					id: '1',
+					title: 'Test Task',
+					dueDate: new Date('2025-11-23'),
+					recurring: true,
+					recurrenceUnit: 'days',
+					recurrenceInterval: 1,
+					done: new Date('2025-11-22T23:59:59Z')
+				};
+				// when / then
+				expect(checkIsDone(task)).toBe(true);
+			});
+		});
+	});
+
+	// today (mocked) = 2025-11-22
+	describe('getDisplayDueDate', () => {
+		it('no_dueDate_returns_undefined', () => {
+			// given
+			const task = { id: '1', title: 'Test' } as Task;
+			// when / then
+			expect(getDisplayDueDate(task)).toBeUndefined();
+		});
+
+		it('nonRecurring_returns_dueDate', () => {
+			// given
+			const task: Task = { id: '1', title: 'Test', dueDate: new Date('2025-11-25'), recurring: false };
+			// when
+			const result = getDisplayDueDate(task);
+			// then
+			expect(result?.toISOString().slice(0, 10)).toBe('2025-11-25');
+		});
+
+		it('recurringNotDone_returns_advancedDueDate', () => {
+			// given — dueDate not yet advanced (task not done), due in future
 			const task: Task = {
-				id: '1',
-				title: 'Test Task',
-				dueDate: new Date('2025-11-20'),
+				id: '1', title: 'Test',
+				dueDate: new Date('2025-11-25'),
+				recurring: true, recurrenceUnit: 'days', recurrenceInterval: 1,
 				done: undefined
 			};
-			expect(checkIsDone(task)).toBe(false);
+			// when
+			const result = getDisplayDueDate(task);
+			// then
+			expect(result?.toISOString().slice(0, 10)).toBe('2025-11-25');
 		});
 
-		it('should return true for non-recurring task with done date before due date', () => {
+		it('recurringDoneThisPeriod_returns_previousDueDate', () => {
+			// given — dueDate advanced to 23.11 (backend), today(22.11) <= prev(22.11) → done
 			const task: Task = {
-				id: '1',
-				title: 'Test Task',
-				dueDate: new Date('2025-11-25'),
-				recurring: false,
-				done: new Date('2025-11-20')
+				id: '1', title: 'Test',
+				dueDate: new Date('2025-11-23'),
+				recurring: true, recurrenceUnit: 'days', recurrenceInterval: 1,
+				done: new Date('2025-11-22')
 			};
-			expect(checkIsDone(task)).toBe(true);
+			// when
+			const result = getDisplayDueDate(task);
+			// then — should show old due date (22.11), not the advanced one (23.11)
+			expect(result?.toISOString().slice(0, 10)).toBe('2025-11-22');
 		});
 
-		it('should return true for non-recurring task with done date on due date', () => {
+		it('recurringDonePreviousPeriodExpired_returns_advancedDueDate', () => {
+			// given — dueDate=22.11, prev=21.11, today(22) > 21 → no longer done
 			const task: Task = {
-				id: '1',
-				title: 'Test Task',
+				id: '1', title: 'Test',
 				dueDate: new Date('2025-11-22'),
-				recurring: false,
-				done: new Date('2025-11-22')
-			};
-			expect(checkIsDone(task)).toBe(true);
-		});
-
-		it('should return true for non-recurring task with done date after due date', () => {
-			const task: Task = {
-				id: '1',
-				title: 'Test Task',
-				dueDate: new Date('2025-11-20'),
-				recurring: false,
-				done: new Date('2025-11-22')
-			};
-			expect(checkIsDone(task)).toBe(true);
-		});
-
-		it('should return false for recurring task when there is no last due date', () => {
-			const task: Task = {
-				id: '1',
-				title: 'Test Task',
-				dueDate: new Date('2025-11-25'),
-				recurring: true,
-				recurrenceUnit: 'days',
-				recurrenceInterval: 1,
-				done: new Date('2025-11-25')
-			};
-			expect(checkIsDone(task)).toBe(false);
-		});
-
-		it('should return false for recurring task with done date before last due date', () => {
-			const task: Task = {
-				id: '1',
-				title: 'Test Task',
-				dueDate: new Date('2025-11-15'),
-				recurring: true,
-				recurrenceUnit: 'days',
-				recurrenceInterval: 1,
-				done: new Date('2025-11-20')
-			};
-			expect(checkIsDone(task)).toBe(false);
-		});
-
-		it('should return false for recurring task with done date on last due date', () => {
-			const task: Task = {
-				id: '1',
-				title: 'Test Task',
-				dueDate: new Date('2025-11-15'),
-				recurring: true,
-				recurrenceUnit: 'days',
-				recurrenceInterval: 1,
+				recurring: true, recurrenceUnit: 'days', recurrenceInterval: 1,
 				done: new Date('2025-11-21')
 			};
-			expect(checkIsDone(task)).toBe(false);
-		});
-
-		it('should return true for recurring task with done date after last due date', () => {
-			const task: Task = {
-				id: '1',
-				title: 'Test Task',
-				dueDate: new Date('2025-11-15'),
-				recurring: true,
-				recurrenceUnit: 'days',
-				recurrenceInterval: 1,
-				done: new Date('2025-11-23')
-			};
-			expect(checkIsDone(task)).toBe(true);
-		});
-
-		it('should ignore time component in done date for non-recurring task', () => {
-			const task: Task = {
-				id: '1',
-				title: 'Test Task',
-				dueDate: new Date('2025-11-20'),
-				recurring: false,
-				done: new Date('2025-11-22T23:59:59Z')
-			};
-			expect(checkIsDone(task)).toBe(true);
-		});
-
-		it('should ignore time component in done date for recurring task', () => {
-			const task: Task = {
-				id: '1',
-				title: 'Test Task',
-				dueDate: new Date('2025-11-15'),
-				recurring: true,
-				recurrenceUnit: 'days',
-				recurrenceInterval: 1,
-				done: new Date('2025-11-23T10:30:00Z')
-			};
-			expect(checkIsDone(task)).toBe(true);
-		});
-
-		it('should handle recurring task with multiple recurrence intervals', () => {
-			const task: Task = {
-				id: '1',
-				title: 'Test Task',
-				dueDate: new Date('2025-11-08'),
-				recurring: true,
-				recurrenceUnit: 'days',
-				recurrenceInterval: 7,
-				done: new Date('2025-11-23')
-			};
-			expect(checkIsDone(task)).toBe(true);
-		});
-
-		it('should handle monthly recurring tasks correctly', () => {
-			const task: Task = {
-				id: '1',
-				title: 'Test Task',
-				dueDate: new Date('2025-09-22'),
-				recurring: true,
-				recurrenceUnit: 'months',
-				recurrenceInterval: 1,
-				done: new Date('2025-11-23')
-			};
-			expect(checkIsDone(task)).toBe(true);
+			// when
+			const result = getDisplayDueDate(task);
+			// then — task is no longer done, show the current (advanced) dueDate
+			expect(result?.toISOString().slice(0, 10)).toBe('2025-11-22');
 		});
 	});
 });
