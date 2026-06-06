@@ -428,6 +428,98 @@ paths:
             "application/problem+json":
               schema:
                 $ref: '#/components/schemas/Problem'
+    put:
+      summary: Edit a task
+      description: Fully replaces all editable fields of a task.
+      tags:
+        - tasks
+      operationId: editTask
+      parameters:
+        - name: householdId
+          in: path
+          required: true
+          description: The unique identifier of the household.
+          schema:
+            type: string
+            format: uuid
+            example: "f3ce1a6b-aba1-478d-9f01-ec484f23ce60"
+        - name: taskId
+          in: path
+          required: true
+          description: The unique identifier of the task.
+          schema:
+            type: string
+            format: uuid
+            example: "760e8400-e29b-41d4-a716-446655440000"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskEdit"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "400":
+          description: The data for editing the task is invalid.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        "404":
+          description: No household or task found with the specified ID.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        default:
+          description: An error occurred - see the status code and problem for more information.
+          content:
+            "application/problem+json":
+              schema:
+                $ref: '#/components/schemas/Problem'
+    delete:
+      summary: Delete a task
+      description: Permanently deletes a task.
+      tags:
+        - tasks
+      operationId: deleteTask
+      parameters:
+        - name: householdId
+          in: path
+          required: true
+          description: The unique identifier of the household.
+          schema:
+            type: string
+            format: uuid
+            example: "f3ce1a6b-aba1-478d-9f01-ec484f23ce60"
+        - name: taskId
+          in: path
+          required: true
+          description: The unique identifier of the task.
+          schema:
+            type: string
+            format: uuid
+            example: "760e8400-e29b-41d4-a716-446655440000"
+      responses:
+        "204":
+          description: Task successfully deleted.
+        "404":
+          description: No task found with the specified ID.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        default:
+          description: An error occurred - see the status code and problem for more information.
+          content:
+            "application/problem+json":
+              schema:
+                $ref: '#/components/schemas/Problem'
 
   /household/{householdId}/financials/{userId}/summary:
     get:
@@ -1626,6 +1718,59 @@ components:
             The date when the task was completed. Set to null to mark the task as not completed.
       example:
         done: "2024-07-01"
+
+    TaskEdit:
+      type: object
+      description: Object containing all editable fields of a task. Used for full replacement via PUT.
+      required:
+        - title
+        - dueDate
+      properties:
+        title:
+          type: string
+          minLength: 3
+          description: The title of the task.
+          example: "Take out the trash"
+        description:
+          type: string
+          description: A detailed description of the task.
+          example: "Take out the trash every Monday."
+        assignedTo:
+          type: string
+          format: uuid
+          description: The id of the user the task is assigned to.
+          example: "7c3a40a8-3f57-4645-8cf5-820a6a8d3613"
+        dueDate:
+          type: string
+          format: date
+          description: The due date of the task or if it's a recurring task, the first due date.
+          example: "2024-07-01"
+        recurring:
+          type: boolean
+          description: Indicates if the task is recurring.
+          example: true
+        recurrenceUnit:
+          type: string
+          enum:
+            - days
+            - weeks
+            - months
+            - years
+          description: The unit of recurrence for the task. Required if the task is recurring.
+          example: "weeks"
+        recurrenceInterval:
+          type: integer
+          minimum: 1
+          description: The interval of recurrence for the task. Required if the task is recurring.
+          example: 1
+      example:
+        title: "Take out the trash"
+        description: "Take out the trash every Monday."
+        assignedTo: "7c3a40a8-3f57-4645-8cf5-820a6a8d3613"
+        dueDate: "2024-07-01"
+        recurring: true
+        recurrenceUnit: "weeks"
+        recurrenceInterval: 1
 
     Category:
       type: object
