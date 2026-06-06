@@ -4,6 +4,7 @@ import eu.wiegandt.librehousehold.household.HouseholdDeleted;
 import eu.wiegandt.librehousehold.household.HouseholdQuery;
 import eu.wiegandt.librehousehold.household.MemberQuery;
 import eu.wiegandt.librehousehold.model.Task;
+import eu.wiegandt.librehousehold.model.TaskEdit;
 import eu.wiegandt.librehousehold.model.TaskStatsByMember;
 import eu.wiegandt.librehousehold.model.TaskUpdate;
 import org.junit.jupiter.api.Nested;
@@ -197,6 +198,84 @@ class TaskServiceTest {
             // then
             verify(taskRepository).clearDone(taskId);
             assertThat(result).usingRecursiveComparison().isEqualTo(expected);
+        }
+    }
+
+    @Nested
+    class editTask {
+
+        @Test
+        void unknownTaskId_throwsTaskNotFoundException() {
+            // given
+            doReturn(Optional.empty()).when(taskRepository).findById(any());
+
+            // when / then
+            assertThatThrownBy(() -> taskService.editTask(UUID.randomUUID(), new TaskEdit("Title", LocalDate.now())))
+                    .isInstanceOf(TaskNotFoundException.class);
+        }
+
+        @Test
+        void validEdit_savesUpdatedEntity() {
+            // given
+            var taskId = UUID.randomUUID();
+            var householdId = UUID.randomUUID();
+            var entity = new TaskEntity(taskId, householdId, null, "Old title", null, LocalDate.of(2024, 7, 1), null, false, null, null);
+            var edit = new TaskEdit("New title", LocalDate.of(2024, 8, 1));
+            doReturn(Optional.of(entity)).when(taskRepository).findById(taskId);
+            doReturn(entity).when(taskRepository).save(entity);
+
+            // when
+            taskService.editTask(taskId, edit);
+
+            // then
+            verify(taskRepository).save(entity);
+        }
+
+        @Test
+        void validEdit_returnsUpdatedTask() {
+            // given
+            var taskId = UUID.randomUUID();
+            var householdId = UUID.randomUUID();
+            var entity = new TaskEntity(taskId, householdId, null, "Old title", null, LocalDate.of(2024, 7, 1), LocalDate.of(2024, 6, 30), false, null, null);
+            var edit = new TaskEdit("New title", LocalDate.of(2024, 8, 1));
+            doReturn(Optional.of(entity)).when(taskRepository).findById(taskId);
+            doReturn(entity).when(taskRepository).save(entity);
+            var expected = new Task(taskId, "New title", LocalDate.of(2024, 8, 1))
+                    .recurring(false)
+                    .done(LocalDate.of(2024, 6, 30));
+
+            // when
+            var result = taskService.editTask(taskId, edit);
+
+            // then
+            assertThat(result).usingRecursiveComparison().isEqualTo(expected);
+        }
+    }
+
+    @Nested
+    class deleteTask {
+
+        @Test
+        void unknownTaskId_throwsTaskNotFoundException() {
+            // given
+            doReturn(false).when(taskRepository).existsById(any());
+
+            // when / then
+            assertThatThrownBy(() -> taskService.deleteTask(UUID.randomUUID()))
+                    .isInstanceOf(TaskNotFoundException.class);
+        }
+
+        @Test
+        void existingTask_deletesFromRepository() {
+            // given
+            var taskId = UUID.randomUUID();
+            doReturn(true).when(taskRepository).existsById(taskId);
+
+            // when
+            taskService.deleteTask(taskId);
+
+            // then
+            verify(taskRepository).deleteById(taskId);
         }
     }
 

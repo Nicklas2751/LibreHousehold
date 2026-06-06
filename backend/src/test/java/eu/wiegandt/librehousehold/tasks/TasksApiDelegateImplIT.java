@@ -2,6 +2,7 @@ package eu.wiegandt.librehousehold.tasks;
 
 import eu.wiegandt.librehousehold.api.TasksApiController;
 import eu.wiegandt.librehousehold.model.Task;
+import eu.wiegandt.librehousehold.model.TaskEdit;
 import eu.wiegandt.librehousehold.model.TaskUpdate;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -21,6 +22,7 @@ import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -81,6 +83,51 @@ class TasksApiDelegateImplIT {
             mockMvc.perform(post("/v1/household/{householdId}/tasks", UUID.randomUUID())
                             .contentType(MediaType.APPLICATION_JSON))
                     .andExpect(status().isBadRequest());
+        }
+    }
+
+    @Nested
+    class editTask {
+
+        @Test
+        void validBody_returns200WithUpdatedTask() throws Exception {
+            // given
+            var householdId = UUID.randomUUID();
+            var taskId = UUID.randomUUID();
+            var taskEdit = new TaskEdit("Clean kitchen", LocalDate.of(2024, 8, 1));
+            var updatedTask = new Task(taskId, "Clean kitchen", LocalDate.of(2024, 8, 1));
+            doReturn(updatedTask).when(taskService).editTask(eq(taskId), any(TaskEdit.class));
+
+            // when / then
+            mockMvc.perform(put("/v1/household/{householdId}/tasks/{taskId}", householdId, taskId)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(taskEdit)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.title").value("Clean kitchen"));
+        }
+
+        @Test
+        void missingBody_returns400() throws Exception {
+            // when / then
+            mockMvc.perform(put("/v1/household/{householdId}/tasks/{taskId}", UUID.randomUUID(), UUID.randomUUID())
+                            .contentType(MediaType.APPLICATION_JSON))
+                    .andExpect(status().isBadRequest());
+        }
+    }
+
+    @Nested
+    class deleteTask {
+
+        @Test
+        void existingTask_returns204() throws Exception {
+            // given
+            var householdId = UUID.randomUUID();
+            var taskId = UUID.randomUUID();
+            doNothing().when(taskService).deleteTask(taskId);
+
+            // when / then
+            mockMvc.perform(delete("/v1/household/{householdId}/tasks/{taskId}", householdId, taskId))
+                    .andExpect(status().isNoContent());
         }
     }
 
