@@ -91,39 +91,40 @@ export function addInterval(date: Date, unit: string, interval: number): Date {
 }
 
 /**
+ * Returns the due date to display for a task.
+ *
+ * For a recurring task that is still within its "done" period, returns the previous due date
+ * (dueDate - interval) so the UI reflects when the task was actually due, not the next occurrence.
+ */
+export function getDisplayDueDate(task: Task): Date | undefined {
+	if (!task.dueDate) return undefined;
+	if (task.recurring && checkIsDone(task) && task.recurrenceUnit && task.recurrenceInterval) {
+		return addInterval(new Date(task.dueDate), task.recurrenceUnit as string, -task.recurrenceInterval);
+	}
+	return new Date(task.dueDate);
+}
+
+/**
  * Checks if a task is considered done.
  *
- * For non-recurring tasks:
- * - The task is done if it has a done date that is after the due date.
- *
- * For recurring tasks:
- * - The task is done if it has a done date that is after the last due date.
- * - If there is no last due date, the task is not done.
+ * For recurring tasks the backend advances dueDate by one interval when done is set,
+ * so the previous due date is dueDate - interval. The task counts as done while today
+ * is still on or before that previous due date.
  *
  * @param task The task to check.
  * @returns True if the task is done, false otherwise.
  */
 export function checkIsDone(task: Task): boolean {
-	// If there's no done date, the task is not done
-	if (!task.done) {
-		return false;
-	}
+	if (!task.done) return false;
+	if (!task.recurring) return true;
 
-	// Normalize done date to ignore time
-	const doneDate = new Date(task.done);
-	doneDate.setUTCHours(0, 0, 0, 0);
+	if (!task.recurrenceUnit || !task.recurrenceInterval || !task.dueDate) return false;
 
-	if (!task.recurring) {
-		return true;
-	}
+	const previousDueDate = addInterval(new Date(task.dueDate), task.recurrenceUnit as string, -task.recurrenceInterval);
+	previousDueDate.setUTCHours(0, 0, 0, 0);
 
-	// For recurring tasks, check if done date is after the last due date
-	const lastDueDateBeforeToday = getLastDueDate(task);
+	const today = new Date();
+	today.setUTCHours(0, 0, 0, 0);
 
-	// If there's no last due date, the task is not done
-	if (!lastDueDateBeforeToday) {
-		return false;
-	}
-
-	return doneDate > lastDueDateBeforeToday;
+	return today <= previousDueDate;
 }
