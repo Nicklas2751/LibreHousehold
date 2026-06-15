@@ -59,7 +59,7 @@ jobs:
         run: ./mvnw verify
 
       - name: SonarCloud Scan
-        uses: SonarSource/sonarqube-scan-action@v8.1.0
+        uses: SonarSource/sonarqube-scan-action@v8.2.0
         with:
           projectBaseDir: backend
         env:
