@@ -50,6 +50,7 @@
 		if (!task.dueDate) return false;
 		if (checkIsDone(task)) return false;
 
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity
 		const dueDate = new Date(task.dueDate);
 		dueDate.setUTCHours(0, 0, 0, 0);
 		// eslint-disable-next-line svelte/prefer-svelte-reactivity

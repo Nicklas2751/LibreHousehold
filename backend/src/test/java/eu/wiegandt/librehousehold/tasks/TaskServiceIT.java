@@ -8,7 +8,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.data.jdbc.test.autoconfigure.DataJdbcTest;
+import org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Import;
@@ -26,8 +28,9 @@ import static org.mockito.Mockito.doReturn;
 @DataJdbcTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({TaskMapperImpl.class, TaskService.class})
+@ImportAutoConfiguration(FlywayAutoConfiguration.class)
 @TestPropertySource(properties = {
-        "spring.flyway.locations=classpath:db/migration/tasks"
+        "spring.flyway.locations=classpath:db/migration"
 })
 class TaskServiceIT {
 
