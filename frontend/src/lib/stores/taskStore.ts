@@ -29,7 +29,11 @@ export const loadTasks = async (householdId: string): Promise<void> => {
 	tasks.set(await api.getTasks({ householdId: householdId }));
 };
 
-export const editTask = async (householdId: string, taskId: string, taskEdit: TaskEdit): Promise<void> => {
+export const editTask = async (
+	householdId: string,
+	taskId: string,
+	taskEdit: TaskEdit
+): Promise<void> => {
 	let previousTasks: Task[] = [];
 	tasks.update((all) => {
 		previousTasks = [...all];

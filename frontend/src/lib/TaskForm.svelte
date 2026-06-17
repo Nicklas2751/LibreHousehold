@@ -3,7 +3,11 @@
 	import { loadMembers, members } from '$lib/stores/memberStore';
 	import { addInterval } from '$lib/taskDueCalculator';
 	import { untrack } from 'svelte';
-	import { TaskEditRecurrenceUnitEnum, type Task, type TaskEdit } from '../generated-sources/openapi';
+	import {
+		TaskEditRecurrenceUnitEnum,
+		type Task,
+		type TaskEdit
+	} from '../generated-sources/openapi';
 
 	interface Props {
 		task?: Task;
@@ -118,9 +122,7 @@
 
 		{#if recurring}
 			<fieldset class="fieldset">
-				<legend class="fieldset-legend"
-					>{m['tasks.new.recurrence_pattern_times_label']()} *</legend
-				>
+				<legend class="fieldset-legend">{m['tasks.new.recurrence_pattern_times_label']()} *</legend>
 				<input
 					type="number"
 					class="validator input w-full"
@@ -160,11 +162,15 @@
 
 		<div class="mt-2 flex gap-3 md:col-span-2">
 			{#if ondelete}
-				<button type="button" class="btn btn-error btn-outline" onclick={() => deleteModal?.showModal()}>
+				<button
+					type="button"
+					class="btn btn-outline btn-error"
+					onclick={() => deleteModal?.showModal()}
+				>
 					{m['tasks.edit.delete_button']()}
 				</button>
 			{/if}
-			<button type="submit" class="btn btn-primary ml-auto" disabled={submitting}>
+			<button type="submit" class="btn ml-auto btn-primary" disabled={submitting}>
 				{#if submitting}
 					<span class="loading loading-xs loading-spinner"></span>
 				{/if}

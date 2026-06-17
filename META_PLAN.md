@@ -17,7 +17,7 @@ Das Frontend ist vollständig ausgebaut und arbeitet mit einem Mock-Backend. Das
 | `household/` (Setup) | ✅ Implementiert |
 | `household/` (CRUD, Invite, Admin) | ✅ Implementiert |
 | `household/` (Members) | ✅ Implementiert |
-| `tasks/` | ❌ Modul leer |
+| `tasks/` | ✅ Implementiert |
 | `expenses/` (inkl. Reimbursements) | ❌ Modul leer |
 
 ---
@@ -184,7 +184,7 @@ Alle Updates über explizite `@Modifying @Query`-Methoden im Repository, die `in
 | 0 | Modul-Kommunikations-Analyse | — | ✅ | ADR-011: Kommunikationsmuster |
 | 1 | Household-CRUD + Invite + Frontend-Gültigkeit | `household/` | ✅ | Household-Settings, Invite-Gültigkeit |
 | 2 | Member-Verwaltung + Invite-Join-Flow | `household/` (Members) | ✅ | Settings (Profil), Join-Wizard, alle Dropdowns |
-| 3 | Tasks (inkl. Task-Statistics) | `tasks/` (neu) | ⬜ | Tasks, Dashboard-Tasks |
+| 3 | Tasks (inkl. Task-Statistics) | `tasks/` (neu) | ✅ | Tasks, Dashboard-Tasks |
 | 4 | Kategorien + Expenses + Reimbursements + Financials | `expenses/` (neu) | ⬜ | Expenses, Settle, Dashboard-Finanzen |
 | 5 | Statistics-Endpunkt (Aggregation) | Kein neues Modul | ⬜ | Statistics-Seite |
 | 6 | User Settings | `usersettings/` (neu) | ⬜ | User-Settings |

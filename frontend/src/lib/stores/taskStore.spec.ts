@@ -108,9 +108,17 @@ describe('taskStore', () => {
 		it('apiSuccess_updatesStoreWithServerResponse', async () => {
 			// given
 			const taskId = 'task-1';
-			const originalTask: Task = { id: taskId, title: 'Old title', dueDate: new Date('2024-07-01') };
+			const originalTask: Task = {
+				id: taskId,
+				title: 'Old title',
+				dueDate: new Date('2024-07-01')
+			};
 			const edit: TaskEdit = { title: 'New title', dueDate: new Date('2024-08-01') };
-			const serverUpdatedTask: Task = { id: taskId, title: 'New title', dueDate: new Date('2024-08-01') };
+			const serverUpdatedTask: Task = {
+				id: taskId,
+				title: 'New title',
+				dueDate: new Date('2024-08-01')
+			};
 			tasks.set([originalTask]);
 			mockEditTask.mockResolvedValueOnce(serverUpdatedTask);
 
@@ -124,7 +132,11 @@ describe('taskStore', () => {
 		it('apiError_rollsBackToOriginalStateAndShowsToast', async () => {
 			// given
 			const taskId = 'task-1';
-			const originalTask: Task = { id: taskId, title: 'Old title', dueDate: new Date('2024-07-01') };
+			const originalTask: Task = {
+				id: taskId,
+				title: 'Old title',
+				dueDate: new Date('2024-07-01')
+			};
 			const edit: TaskEdit = { title: 'New title', dueDate: new Date('2024-08-01') };
 			tasks.set([originalTask]);
 			mockEditTask.mockRejectedValueOnce(new Error('Server error'));

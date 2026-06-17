@@ -99,7 +99,11 @@ export function addInterval(date: Date, unit: string, interval: number): Date {
 export function getDisplayDueDate(task: Task): Date | undefined {
 	if (!task.dueDate) return undefined;
 	if (task.recurring && checkIsDone(task) && task.recurrenceUnit && task.recurrenceInterval) {
-		return addInterval(new Date(task.dueDate), task.recurrenceUnit as string, -task.recurrenceInterval);
+		return addInterval(
+			new Date(task.dueDate),
+			task.recurrenceUnit as string,
+			-task.recurrenceInterval
+		);
 	}
 	return new Date(task.dueDate);
 }
@@ -120,7 +124,11 @@ export function checkIsDone(task: Task): boolean {
 
 	if (!task.recurrenceUnit || !task.recurrenceInterval || !task.dueDate) return false;
 
-	const previousDueDate = addInterval(new Date(task.dueDate), task.recurrenceUnit as string, -task.recurrenceInterval);
+	const previousDueDate = addInterval(
+		new Date(task.dueDate),
+		task.recurrenceUnit as string,
+		-task.recurrenceInterval
+	);
 	previousDueDate.setUTCHours(0, 0, 0, 0);
 
 	const today = new Date();

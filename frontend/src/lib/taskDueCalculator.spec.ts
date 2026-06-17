@@ -407,7 +407,12 @@ describe('taskDueCalculator', () => {
 	describe('checkIsDone', () => {
 		it('no_done_date_returns_false', () => {
 			// given
-			const task: Task = { id: '1', title: 'Test Task', dueDate: new Date('2025-11-20'), done: undefined };
+			const task: Task = {
+				id: '1',
+				title: 'Test Task',
+				dueDate: new Date('2025-11-20'),
+				done: undefined
+			};
 			// when / then
 			expect(checkIsDone(task)).toBe(false);
 		});
@@ -567,7 +572,12 @@ describe('taskDueCalculator', () => {
 
 		it('nonRecurring_returns_dueDate', () => {
 			// given
-			const task: Task = { id: '1', title: 'Test', dueDate: new Date('2025-11-25'), recurring: false };
+			const task: Task = {
+				id: '1',
+				title: 'Test',
+				dueDate: new Date('2025-11-25'),
+				recurring: false
+			};
 			// when
 			const result = getDisplayDueDate(task);
 			// then
@@ -577,9 +587,12 @@ describe('taskDueCalculator', () => {
 		it('recurringNotDone_returns_advancedDueDate', () => {
 			// given — dueDate not yet advanced (task not done), due in future
 			const task: Task = {
-				id: '1', title: 'Test',
+				id: '1',
+				title: 'Test',
 				dueDate: new Date('2025-11-25'),
-				recurring: true, recurrenceUnit: 'days', recurrenceInterval: 1,
+				recurring: true,
+				recurrenceUnit: 'days',
+				recurrenceInterval: 1,
 				done: undefined
 			};
 			// when
@@ -591,9 +604,12 @@ describe('taskDueCalculator', () => {
 		it('recurringDoneThisPeriod_returns_previousDueDate', () => {
 			// given — dueDate advanced to 23.11 (backend), today(22.11) <= prev(22.11) → done
 			const task: Task = {
-				id: '1', title: 'Test',
+				id: '1',
+				title: 'Test',
 				dueDate: new Date('2025-11-23'),
-				recurring: true, recurrenceUnit: 'days', recurrenceInterval: 1,
+				recurring: true,
+				recurrenceUnit: 'days',
+				recurrenceInterval: 1,
 				done: new Date('2025-11-22')
 			};
 			// when
@@ -605,9 +621,12 @@ describe('taskDueCalculator', () => {
 		it('recurringDonePreviousPeriodExpired_returns_advancedDueDate', () => {
 			// given — dueDate=22.11, prev=21.11, today(22) > 21 → no longer done
 			const task: Task = {
-				id: '1', title: 'Test',
+				id: '1',
+				title: 'Test',
 				dueDate: new Date('2025-11-22'),
-				recurring: true, recurrenceUnit: 'days', recurrenceInterval: 1,
+				recurring: true,
+				recurrenceUnit: 'days',
+				recurrenceInterval: 1,
 				done: new Date('2025-11-21')
 			};
 			// when
