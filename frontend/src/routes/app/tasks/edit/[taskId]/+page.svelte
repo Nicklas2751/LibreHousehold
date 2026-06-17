@@ -38,7 +38,7 @@
 	<div class="p-5 md:flex md:min-h-0 md:flex-1 md:flex-col md:overflow-hidden">
 		{#if $householdState}
 			{#await loadTasks($householdState.id)}
-				<span class="loading loading-dots loading-lg"></span>
+				<span class="loading loading-lg loading-dots"></span>
 			{:then}
 				{#if task}
 					<TaskForm
@@ -48,7 +48,7 @@
 						ondelete={handleDelete}
 					/>
 				{:else}
-					<span class="loading loading-dots loading-lg"></span>
+					<span class="loading loading-lg loading-dots"></span>
 				{/if}
 			{/await}
 		{/if}
