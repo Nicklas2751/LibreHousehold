@@ -658,7 +658,7 @@ paths:
       summary: Get all categories
       description: Returns all expense categories for the specified household.
       tags:
-        - household
+        - expenses
       operationId: getCategories
       parameters:
         - name: householdId
@@ -694,7 +694,7 @@ paths:
       summary: Create a new category
       description: Creates a new expense category.
       tags:
-        - household
+        - expenses
       operationId: createCategory
       parameters:
         - name: householdId
@@ -992,24 +992,6 @@ paths:
           schema:
             type: string
             format: uuid
-        - name: creditorId
-          in: query
-          description: Filter by the user who receives the money.
-          schema:
-            type: string
-            format: uuid
-        - name: debtorId
-          in: query
-          description: Filter by the user who paid the money (debtor).
-          schema:
-            type: string
-            format: uuid
-        - name: status
-          in: query
-          description: Filter by status.
-          schema:
-            type: string
-            enum: [ PENDING, CONFIRMED, REJECTED ]
       responses:
         "200":
           description: OK
@@ -1610,6 +1592,7 @@ components:
         name:
           type: string
           minLength: 3
+          maxLength: 100
           description: The name of the household.
         image:
           type: string
@@ -1632,6 +1615,8 @@ components:
           description: The unique identifier of the member.
         name:
           type: string
+          minLength: 1
+          maxLength: 100
           description: The name of the member.
         email:
           type: string
@@ -1663,6 +1648,7 @@ components:
         title:
           type: string
           minLength: 3
+          maxLength: 200
           description: The title of the task.
         assignedTo:
           type: string
@@ -1670,6 +1656,7 @@ components:
           description: The id of the user the task is assigned to.
         description:
           type: string
+          maxLength: 1000
           description: A detailed description of the task.
         dueDate:
           type: string
@@ -1729,10 +1716,12 @@ components:
         title:
           type: string
           minLength: 3
+          maxLength: 200
           description: The title of the task.
           example: "Take out the trash"
         description:
           type: string
+          maxLength: 1000
           description: A detailed description of the task.
           example: "Take out the trash every Monday."
         assignedTo:
@@ -1789,6 +1778,7 @@ components:
           description: The name of the category.
         icon:
           type: string
+          maxLength: 10
           description: Optional icon identifier for the category (e.g., emoji or icon name).
       example:
         id: "660e8400-e29b-41d4-a716-446655440001"
@@ -1812,11 +1802,13 @@ components:
         title:
           type: string
           minLength: 3
+          maxLength: 200
           description: The title/description of the expense.
         amount:
           type: number
           format: double
           minimum: 0.01
+          maximum: 99999999.99
           description: The amount of money spent.
         paidBy:
           type: string
@@ -1840,6 +1832,7 @@ components:
             If empty or not provided, the expense is split equally among all household members.
         notes:
           type: string
+          maxLength: 1000
           description: Additional notes about the expense.
         isMutable:
           type: boolean
@@ -1865,11 +1858,13 @@ components:
         title:
           type: string
           minLength: 3
+          maxLength: 200
           description: The title/description of the expense.
         amount:
           type: number
           format: double
           minimum: 0.01
+          maximum: 99999999.99
           description: The amount of money spent.
         paidBy:
           type: string
@@ -1893,6 +1888,7 @@ components:
             If empty or not provided, the expense is split equally among all household members.
         notes:
           type: string
+          maxLength: 1000
           description: Additional notes about the expense.
       example:
         title: "Updated grocery shopping"
@@ -1950,6 +1946,7 @@ components:
           type: number
           format: double
           minimum: 0.01
+          maximum: 99999999.99
           description: The amount of money to be reimbursed.
         creditorId:
           type: string
@@ -1965,6 +1962,7 @@ components:
           description: The status of the reimbursement.
         notes:
           type: string
+          maxLength: 1000
           description: Optional notes about the reimbursement.
       example:
         id: "123e4567-e89b-12d3-a456-426614174000"
@@ -1985,6 +1983,7 @@ components:
           type: number
           format: double
           minimum: 0.01
+          maximum: 99999999.99
           description: The amount of money to be reimbursed.
         creditorId:
           type: string
@@ -1996,6 +1995,7 @@ components:
           description: The id of the member who owes the reimbursement.
         notes:
           type: string
+          maxLength: 1000
           description: Optional notes about the reimbursement.
       example:
         amount: 20.00
@@ -2012,6 +2012,7 @@ components:
           description: The status of the reimbursement.
         notes:
           type: string
+          maxLength: 1000
           description: Optional notes about the reimbursement.
       example:
         status: "CONFIRMED"
@@ -2235,6 +2236,7 @@ components:
         name:
           type: string
           minLength: 3
+          maxLength: 100
           example: "Mustermann Family"
 
     InviteResponse:
@@ -2312,6 +2314,7 @@ components:
         name:
           type: string
           minLength: 1
+          maxLength: 100
           example: "Jane Doe"
         email:
           type: string

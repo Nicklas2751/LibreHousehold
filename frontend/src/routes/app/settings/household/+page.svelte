@@ -288,14 +288,18 @@
 					autocomplete="off"
 					bind:value={householdName}
 					minlength="3"
+					maxlength="100"
 					required
 				/>
+				<div class="validator-hint hidden">{m['settings.household.name.name_error']()}</div>
 			</fieldset>
 			<div class="mt-3 card-actions justify-end">
 				<button
 					class="btn btn-sm btn-primary"
 					onclick={saveName}
-					disabled={nameSaving || householdName.trim().length < 3}
+					disabled={nameSaving ||
+						householdName.trim().length < 3 ||
+						householdName.trim().length > 100}
 				>
 					{#if nameSaving}
 						<span class="loading loading-xs loading-spinner"></span>

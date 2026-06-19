@@ -172,6 +172,7 @@
 							class="validator input w-full"
 							placeholder={m['expenses.new.expense_title_placeholder']()}
 							minlength="3"
+							maxlength="200"
 							value={expenseToEdit?.title ?? ''}
 							required
 						/>
@@ -186,12 +187,14 @@
 								type="number"
 								step="0.01"
 								min="0.01"
-								class="grow"
+								max="99999999.99"
+								class="validator grow"
 								required
 								value={expenseToEdit?.amount ?? ''}
 							/>
 							<span class="text-base-content/60">€</span>
 						</label>
+						<div class="validator-hint hidden">{m['expenses.new.amount_error']()}</div>
 					</fieldset>
 
 					<fieldset class="fieldset">
@@ -284,10 +287,11 @@
 						<legend class="fieldset-legend">{m['expenses.new.notes_label']()}</legend>
 						<textarea
 							name="notes"
-							class="textarea h-24 w-full"
+							class="validator textarea h-24 w-full"
 							placeholder={m['expenses.new.notes_placeholder']()}
-							>{expenseToEdit?.notes ?? ''}</textarea
+							maxlength="1000">{expenseToEdit?.notes ?? ''}</textarea
 						>
+						<div class="validator-hint hidden">{m['expenses.new.notes_max_error']()}</div>
 					</fieldset>
 
 					<button type="submit" class="btn btn-primary">

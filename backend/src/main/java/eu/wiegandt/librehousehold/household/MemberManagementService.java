@@ -111,4 +111,11 @@ class MemberManagementService implements MemberQuery {
         return memberRepository.findNamesByIds(memberIds).stream()
                 .collect(toMap(MemberNameProjection::id, MemberNameProjection::name));
     }
+
+    @Override
+    public List<UUID> findMemberIdsByHouseholdId(UUID householdId) {
+        return memberRepository.findByHouseholdId(householdId).stream()
+                .map(MemberEntity::getId)
+                .toList();
+    }
 }

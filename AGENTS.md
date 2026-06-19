@@ -245,12 +245,15 @@ export const functionName = async (
 - UI-only changes (visual/styling only) do not require tests.
 - Test files should be named `*.spec.ts` next to the source file where practical.
 - Run relevant tests as part of validation.
+- Every service method that reads from or writes to the database must have at least one happy-path integration test in a `*ServiceIT` class. Use `@DataJdbcTest` + Testcontainers (see `TaskServiceIT`, `ExpenseServiceIT` as reference). Repository-specific behaviour (e.g. cascades, derived queries) is verified there rather than in unit tests.
+- Do not use `@BeforeEach` in integration tests. Declare all test data — including IDs and mock stubs — inline in the `// given` block of each test. Each test must be self-contained and readable without scrolling to a setup method. DRY is an anti-pattern in tests: duplicated setup is preferable to hidden shared state.
 
 ### Mapper-Tests (Java)
 
 - MapStruct-Mapper sind interne Kollaborateure desselben Moduls und werden in Service-Tests **nie** gemockt.
 - Stattdessen die echte Implementierung per `@Spy MemberMapper mapper = Mappers.getMapper(MemberMapper.class)` injizieren — funktioniert mit Mockito `@InjectMocks`.
 - Mapper-Tests (`*MapperTest.java`) prüfen jede public Mapping-Methode in einer eigenen `@Nested`-Klasse. Kein Instancio in Mapper-Tests — Eingabedaten immer explizit konstruieren.
+- For mapping methods that return a complex object: always create a single `expected` object in the `given` block and assert with `assertThat(result).usingRecursiveComparison().isEqualTo(expected)`. Never use multiple `assertThat(result.getX()).isEqualTo(...)` calls on a returned object.
 
 ### UI Conventions
 
@@ -278,13 +281,15 @@ modal?.close();
 
 Entities als Records mit client-generierten UUIDs müssen `Persistable<UUID>` implementieren und `isNew() = true` zurückgeben, da Spring Data JDBC sonst anhand der nicht-null UUID ein UPDATE statt eines INSERT ausführt — das bei leerer Tabelle lautlos scheitert.
 
-Da Records unveränderlich sind, darf `save()` nur für neue Entities verwendet werden. Updates werden über explizite `@Modifying @Query`-Methoden im Repository abgewickelt:
+For entities implemented as classes with setters (not records), call `entity.markExisting()` before `save()` so Spring Data JDBC issues an UPDATE instead of INSERT. For record-based entities, use `@Modifying @Query` for updates since records are immutable:
 
 ```java
 @Modifying
 @Query("UPDATE household SET name = :name WHERE id = :id")
 void updateName(@Param("id") UUID id, @Param("name") String name);
 ```
+
+For class-based entities the recommended update pattern is via MapStruct `@MappingTarget` — see **Update Pattern (Spring Data JDBC + MapStruct)** below.
 
 ### Open Design Questions: Account & Email Model
 
@@ -322,6 +327,27 @@ Entschieden in [ADR-011](docs/architecture/adrs/adr-011.adoc). Kurzfassung:
 **Modul-übergreifende DB-FKs sind verboten.** Jedes Modul hat ein eigenes PostgreSQL-Schema (`household`, `tasks`, `expenses`). Fremd-IDs werden als einfache UUIDs ohne DB-FK gespeichert.
 
 **Event Publication Registry:** Die `event_publication`-Tabelle muss per Flyway-Migration angelegt werden — Spring Modulith würde sie sonst per Schema-Autogenerierung anlegen, was mit Flyway-only-Betrieb kollidiert.
+
+### Update Pattern (Spring Data JDBC + MapStruct)
+
+For partial updates (PATCH), use a MapStruct method annotated with `@MappingTarget` together with `repository.save()`. The entity's `markExisting()` callback (triggered by `@BeforeSave`) sets `isNew = false` so Spring Data JDBC issues an UPDATE instead of INSERT. `@MappedCollection` children (e.g. `expense_split`) are automatically cascaded during `save()`.
+
+```java
+@BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
+@Mapping(target = "fieldName", source = "fieldName",
+         conditionQualifiedByName = "isPresent", qualifiedByName = "fromOptionalString")
+void updateEntityFromUpdate(SomeUpdate source, @MappingTarget SomeEntity target);
+```
+
+Use `@Condition @Named("isPresent")` from `CoreOptionalMapper` to skip Optional fields that are empty, preventing existing values from being overwritten when a field is absent from the request. `CoreOptionalMapper` (`eu.wiegandt.librehousehold.core`) provides shared Optional conversion qualifiers; all mappers that need Optional handling should implement this interface.
+
+Examples: `TaskMapper.updateEntityFromEdit`, `ExpenseMapper.updateEntityFromUpdate`, `ReimbursementMapper.updateEntityFromUpdate`
+
+### Spring Data JDBC: Prefer Derived Queries
+
+Spring Data JDBC automatically derives methods such as `findByHouseholdId`, `deleteByHouseholdId`, and `existsByHouseholdIdAndName` — no `@Query` annotation needed. Use `@Query` only for complex queries that cannot be derived (e.g. multi-table joins, subqueries).
+
+**Important:** Derived `deleteBy*` methods execute raw SQL and do NOT cascade `@MappedCollection` children. Use `deleteAll(findByX(...))` for cascade-correct bulk deletes (loads entities first, then deletes each with full cascade).
 
 ### Pending Backend Implementations
 
