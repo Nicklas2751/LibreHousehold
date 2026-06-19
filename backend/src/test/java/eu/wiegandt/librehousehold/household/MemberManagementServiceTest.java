@@ -1,8 +1,10 @@
 package eu.wiegandt.librehousehold.household;
 
+import eu.wiegandt.librehousehold.model.Member;
 import eu.wiegandt.librehousehold.model.MemberRegistration;
 import eu.wiegandt.librehousehold.model.MemberUpdate;
 import org.instancio.Instancio;
+import org.instancio.Model;
 import org.instancio.junit.InstancioExtension;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -16,11 +18,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 
 import java.time.LocalDate;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -49,6 +47,8 @@ class MemberManagementServiceTest {
     @InjectMocks
     private MemberManagementService service;
 
+    private final Model<MemberEntity> memberEntityModel = Instancio.of(MemberEntity.class).toModel();
+
     @Nested
     class getMembers {
 
@@ -69,17 +69,16 @@ class MemberManagementServiceTest {
         void multipleMembers_returnsMappedMembers() {
             // given
             var householdId = UUID.randomUUID();
-            var entity1 = Instancio.of(MemberEntity.class).set(field(MemberEntity::householdId), householdId).create();
-            var entity2 = Instancio.of(MemberEntity.class).set(field(MemberEntity::householdId), householdId).create();
-            doReturn(List.of(entity1, entity2)).when(memberRepository).findByHouseholdId(householdId);
+            var entities = Instancio.ofList(memberEntityModel)
+                    .set(field(MemberEntity::householdId), householdId).create();
+            doReturn(entities).when(memberRepository).findByHouseholdId(householdId);
 
             // when
             var result = service.getMembers(householdId);
 
             // then
-            assertThat(result).hasSize(2);
-            assertThat(result.get(0).getId()).isEqualTo(entity1.id());
-            assertThat(result.get(1).getId()).isEqualTo(entity2.id());
+            assertThat(result).extracting(Member::getId)
+                    .containsExactlyInAnyOrderElementsOf(entities.stream().map(MemberEntity::id).toList());
         }
     }
 
@@ -101,7 +100,7 @@ class MemberManagementServiceTest {
         void memberFound_returnsMappedMember() {
             // given
             var memberId = UUID.randomUUID();
-            var entity = Instancio.create(MemberEntity.class);
+            var entity = Instancio.of(memberEntityModel).create();
             doReturn(Optional.of(entity)).when(memberRepository).findById(memberId);
 
             // when
@@ -221,7 +220,7 @@ class MemberManagementServiceTest {
                     .set(field(InviteEntity::householdId), householdId)
                     .set(field(InviteEntity::validUntil), LocalDate.now().plusDays(3))
                     .create();
-            var savedEntity = Instancio.create(MemberEntity.class);
+            var savedEntity = Instancio.of(memberEntityModel).create();
             doReturn(Optional.of(invite)).when(inviteRepository).findByToken(token);
             doReturn(savedEntity).when(memberRepository).save(any(MemberEntity.class));
 
@@ -300,6 +299,39 @@ class MemberManagementServiceTest {
 
             // then
             verify(memberRepository).updateEmail(memberId, "updated@example.com");
+        }
+    }
+
+    @Nested
+    class findMemberIdsByHouseholdId {
+
+        @Test
+        void existingMembers_returnsAllMemberIds() {
+            // given
+            var householdId = UUID.randomUUID();
+            var entities = Instancio.ofList(memberEntityModel)
+                    .set(field(MemberEntity::householdId), householdId).create();
+            doReturn(entities).when(memberRepository).findByHouseholdId(householdId);
+
+            // when
+            var result = service.findMemberIdsByHouseholdId(householdId);
+
+            // then
+            assertThat(result).containsExactlyInAnyOrderElementsOf(
+                    entities.stream().map(MemberEntity::id).toList());
+        }
+
+        @Test
+        void noMembers_returnsEmptyList() {
+            // given
+            var householdId = UUID.randomUUID();
+            doReturn(List.of()).when(memberRepository).findByHouseholdId(householdId);
+
+            // when
+            var result = service.findMemberIdsByHouseholdId(householdId);
+
+            // then
+            assertThat(result).isEmpty();
         }
     }
 

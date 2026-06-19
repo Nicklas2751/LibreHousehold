@@ -189,8 +189,9 @@
 			"cancel_button": "Abbrechen",
 			"expense_title_label": "Beschreibung",
 			"expense_title_placeholder": "z.B. Einkauf Lidl",
-			"expense_title_error": "Gib eine Beschreibung mit mindestens drei Zeichen ein.",
+			"expense_title_error": "Gib eine Beschreibung mit 3 bis 200 Zeichen ein.",
 			"amount_label": "Betrag",
+			"amount_error": "Der Betrag muss zwischen 0,01 und 99.999.999,99 liegen.",
 			"paid_by_label": "Bezahlt von",
 			"paid_by_select_placeholder": "Mitglied auswählen...",
 			"date_label": "Datum",
@@ -201,6 +202,7 @@
 			"split_between_hint": "Wähle die Mitglieder aus, zwischen denen die Ausgabe aufgeteilt werden soll. Wenn nichts ausgewählt ist, wird gleichmäßig zwischen allen aufgeteilt.",
 			"notes_label": "Notizen",
 			"notes_placeholder": "Zusätzliche Notizen...",
+			"notes_max_error": "Die Notizen dürfen maximal 1.000 Zeichen lang sein.",
 			"create_button": "Ausgabe erstellen"
 		},
 		"edit": {
@@ -306,6 +308,7 @@
 			"name": {
 				"title": "Haushaltsname",
 				"label": "Name",
+				"name_error": "Gib einen Namen mit 3 bis 100 Zeichen ein.",
 				"save_button": "Speichern",
 				"save_success": "Haushaltsname gespeichert.",
 				"save_error": "Fehler beim Speichern des Haushaltsnamens."

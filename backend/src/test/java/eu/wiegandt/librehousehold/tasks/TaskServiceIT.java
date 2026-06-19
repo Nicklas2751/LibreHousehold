@@ -4,7 +4,6 @@ import eu.wiegandt.librehousehold.household.HouseholdQuery;
 import eu.wiegandt.librehousehold.household.MemberQuery;
 import eu.wiegandt.librehousehold.model.Task;
 import eu.wiegandt.librehousehold.model.TaskUpdate;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -49,25 +48,18 @@ class TaskServiceIT {
     @MockitoBean
     private MemberQuery memberQuery;
 
-    private UUID householdId;
-
-    @BeforeEach
-    void setUp() {
-        householdId = UUID.randomUUID();
-        doReturn(true).when(householdQuery).householdExists(householdId);
-    }
-
     @Nested
     class createTask {
 
         @Test
         void validTask_persistedInDatabase() {
             // given
+            var householdId = UUID.randomUUID();
             var taskId = UUID.randomUUID();
-            var task = new Task(taskId, "Take out trash", LocalDate.of(2024, 7, 1));
+            doReturn(true).when(householdQuery).householdExists(householdId);
 
             // when
-            taskService.createTask(householdId, task);
+            taskService.createTask(householdId, new Task(taskId, "Take out trash", LocalDate.of(2024, 7, 1)));
 
             // then
             assertThat(taskRepository.findById(taskId))
@@ -84,6 +76,8 @@ class TaskServiceIT {
         @Test
         void existingTasks_returnsAll() {
             // given
+            var householdId = UUID.randomUUID();
+            doReturn(true).when(householdQuery).householdExists(householdId);
             taskService.createTask(householdId, new Task(UUID.randomUUID(), "Task 1", LocalDate.of(2024, 7, 1)));
             taskService.createTask(householdId, new Task(UUID.randomUUID(), "Task 2", LocalDate.of(2024, 7, 1)));
 
@@ -101,8 +95,10 @@ class TaskServiceIT {
         @Test
         void nonRecurringTask_setsDoneInDatabase() {
             // given
+            var householdId = UUID.randomUUID();
             var taskId = UUID.randomUUID();
             var doneDate = LocalDate.of(2024, 7, 5);
+            doReturn(true).when(householdQuery).householdExists(householdId);
             taskService.createTask(householdId, new Task(taskId, "Clean", LocalDate.of(2024, 7, 1)));
 
             // when
@@ -116,14 +112,15 @@ class TaskServiceIT {
         @Test
         void recurringTask_advancesDueDateInDatabase() {
             // given
+            var householdId = UUID.randomUUID();
             var taskId = UUID.randomUUID();
             var originalDueDate = LocalDate.of(2024, 7, 1);
             var doneDate = LocalDate.of(2024, 7, 3);
-            var task = new Task(taskId, "Weekly clean", originalDueDate)
+            doReturn(true).when(householdQuery).householdExists(householdId);
+            taskService.createTask(householdId, new Task(taskId, "Weekly clean", originalDueDate)
                     .recurring(true)
                     .recurrenceUnit(Task.RecurrenceUnitEnum.WEEKS)
-                    .recurrenceInterval(1);
-            taskService.createTask(householdId, task);
+                    .recurrenceInterval(1));
 
             // when
             taskService.updateTask(taskId, new TaskUpdate().done(doneDate));
@@ -143,6 +140,8 @@ class TaskServiceIT {
         @Test
         void deletedHousehold_removesAllTasksFromDatabase() {
             // given
+            var householdId = UUID.randomUUID();
+            doReturn(true).when(householdQuery).householdExists(householdId);
             taskService.createTask(householdId, new Task(UUID.randomUUID(), "Task 1", LocalDate.of(2024, 7, 1)));
             taskService.createTask(householdId, new Task(UUID.randomUUID(), "Task 2", LocalDate.of(2024, 7, 1)));
 

@@ -84,6 +84,30 @@ class TasksApiDelegateImplIT {
                             .contentType(MediaType.APPLICATION_JSON))
                     .andExpect(status().isBadRequest());
         }
+
+        @Test
+        void titleTooShort_returns400() throws Exception {
+            // given
+            var task = new Task(UUID.randomUUID(), "ab", LocalDate.of(2024, 7, 1));
+
+            // when / then
+            mockMvc.perform(post("/v1/household/{householdId}/tasks", UUID.randomUUID())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(task)))
+                    .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        void titleTooLong_returns400() throws Exception {
+            // given
+            var task = new Task(UUID.randomUUID(), "x".repeat(201), LocalDate.of(2024, 7, 1));
+
+            // when / then
+            mockMvc.perform(post("/v1/household/{householdId}/tasks", UUID.randomUUID())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(task)))
+                    .andExpect(status().isBadRequest());
+        }
     }
 
     @Nested
