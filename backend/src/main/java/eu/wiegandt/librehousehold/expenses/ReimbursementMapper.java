@@ -19,6 +19,7 @@ interface ReimbursementMapper extends CoreOptionalMapper {
     @Mapping(target = "householdId", source = "householdId")
     @Mapping(target = "status", constant = "PENDING")
     @Mapping(target = "notes", source = "create.notes", qualifiedByName = "fromOptionalString")
+    @Mapping(target = "createdAt", expression = "java(java.time.LocalDateTime.now())")
     ReimbursementEntity toEntity(ReimbursementCreate create, UUID id, UUID householdId);
 
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
@@ -29,6 +30,7 @@ interface ReimbursementMapper extends CoreOptionalMapper {
     @Mapping(target = "amount", ignore = true)
     @Mapping(target = "creditorId", ignore = true)
     @Mapping(target = "debtorId", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
     void updateEntityFromUpdate(ReimbursementUpdate source, @MappingTarget ReimbursementEntity target);
 
     @Named("optionalStatusToString")

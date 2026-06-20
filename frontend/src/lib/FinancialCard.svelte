@@ -2,11 +2,38 @@
 	import { m } from '$lib/paraglide/messages.js';
 	import { findMember, members } from '$lib/stores/memberStore';
 	import { householdState } from '$lib/stores/householdState.svelte';
-	import type { FinancialSummary, Member, MemberBalance } from '../generated-sources/openapi';
+	import { userState } from '$lib/stores/userState';
+	import type {
+		FinancialSummary,
+		Member,
+		MemberBalance,
+		Reimbursement
+	} from '../generated-sources/openapi';
 	import { goto } from '$app/navigation';
 
-	let { summary, balances }: { summary: FinancialSummary | null; balances: MemberBalance[] } =
-		$props();
+	let {
+		summary,
+		balances,
+		reimbursements = []
+	}: {
+		summary: FinancialSummary | null;
+		balances: MemberBalance[];
+		reimbursements: Reimbursement[];
+	} = $props();
+
+	function normalizeBalance(v: number): number {
+		return Math.abs(v) < 0.005 ? 0 : v;
+	}
+
+	function hasPendingSettlement(memberId: string): boolean {
+		return reimbursements.some(
+			(r) =>
+				$userState &&
+				r.debtorId === $userState.id &&
+				r.creditorId === memberId &&
+				r.status === 'PENDING'
+		);
+	}
 
 	async function getMember(memberId: string): Promise<Member | undefined> {
 		if (memberId) {
@@ -21,13 +48,8 @@
 	}
 
 	async function handleSettleClick(balance: MemberBalance) {
-		// Navigate to settlement page or open modal with payerId (user) and debtorId (current user is payer if balance negative?)
-		// Wait, logic:
-		// if balance.balance < 0: "You owe X". Current user is Debtor. X is Creditor.
-		// Route parameter names are tricky. Let's use a clear URL structure.
-		// /app/settlement?creditorId=...&amount=...
 		const creditorId = balance.memberId;
-		const amount = Math.abs(balance.balance); // The amount to pay
+		const amount = Math.abs(balance.balance);
 		await goto(`/app/reimbursements/settle?creditorId=${creditorId}&amount=${amount}`);
 	}
 </script>
@@ -37,15 +59,15 @@
 		<h2 class="card-title">{m['dashboard.financials.title']()}</h2>
 
 		{#if summary}
+			{@const netBalance = normalizeBalance(summary.owedToYou - summary.youOwe)}
 			<div class="stat p-0">
 				<div class="stat-title">{m['dashboard.financials.total_balance_label']()}</div>
-				<!-- Logic for net balance: (owedToYou - youOwe) -->
 				<div
 					class="stat-value"
-					class:text-success={summary.owedToYou - summary.youOwe > 0}
-					class:text-error={summary.owedToYou - summary.youOwe < 0}
+					class:text-success={netBalance >= 0}
+					class:text-error={netBalance < 0}
 				>
-					{(summary.owedToYou - summary.youOwe).toFixed(2)} €
+					{netBalance.toFixed(2)} €
 				</div>
 			</div>
 
@@ -55,6 +77,7 @@
 				{#each balances as balance (balance.memberId)}
 					{@const hasDebt = Math.abs(balance.balance) > 0.001}
 					{@const hasPending = balance.pendingBalance && Math.abs(balance.pendingBalance) > 0.001}
+					{@const pendingSettlementExists = hasPendingSettlement(balance.memberId)}
 
 					{#if hasDebt || hasPending}
 						<li
@@ -89,12 +112,18 @@
 										</span>
 									{/if}
 									{#if balance.balance < -0.001}
-										<button
-											class="btn btn-outline btn-xs btn-error"
-											onclick={() => handleSettleClick(balance)}
-										>
-											{m['dashboard.financials.settle_button']()}
-										</button>
+										{#if pendingSettlementExists}
+											<span class="badge badge-warning badge-sm">
+												{m['dashboard.financials.pending_settlement_badge']()}
+											</span>
+										{:else}
+											<button
+												class="btn btn-outline btn-xs btn-error"
+												onclick={() => handleSettleClick(balance)}
+											>
+												{m['dashboard.financials.settle_button']()}
+											</button>
+										{/if}
 									{/if}
 								</div>
 							</div>

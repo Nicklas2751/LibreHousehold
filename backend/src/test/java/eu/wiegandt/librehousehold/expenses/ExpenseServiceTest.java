@@ -53,7 +53,7 @@ class ExpenseServiceTest {
             // given
             var householdId = UUID.randomUUID();
             var entity = Instancio.create(ExpenseEntity.class);
-            doReturn(List.of(entity)).when(expenseRepository).findByHouseholdId(householdId);
+            doReturn(List.of(entity)).when(expenseRepository).findByHouseholdIdOrderByDateDesc(householdId);
             doReturn(false).when(reimbursementRepository)
                     .existsByHouseholdIdAndCreditorIdAndStatusIn(any(), any(), any());
             var expected = expenseMapper.toExpense(entity, true);
@@ -70,7 +70,7 @@ class ExpenseServiceTest {
             // given
             var householdId = UUID.randomUUID();
             var entity = Instancio.create(ExpenseEntity.class);
-            doReturn(List.of(entity)).when(expenseRepository).findByHouseholdId(householdId);
+            doReturn(List.of(entity)).when(expenseRepository).findByHouseholdIdOrderByDateDesc(householdId);
             doReturn(true).when(reimbursementRepository)
                     .existsByHouseholdIdAndCreditorIdAndStatusIn(any(), any(), any());
             var expected = expenseMapper.toExpense(entity, false);

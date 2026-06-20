@@ -7,6 +7,7 @@ import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.Table;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Table(schema = "expenses", value = "reimbursement")
@@ -23,11 +24,13 @@ class ReimbursementEntity implements Persistable<UUID> {
     private final UUID debtorId;
     private String status;
     private String notes;
+    @Column("created_at")
+    private final LocalDateTime createdAt;
     @Transient
     private boolean isNew = true;
 
     ReimbursementEntity(UUID id, UUID householdId, BigDecimal amount, UUID creditorId,
-                        UUID debtorId, String status, String notes) {
+                        UUID debtorId, String status, String notes, LocalDateTime createdAt) {
         this.id = id;
         this.householdId = householdId;
         this.amount = amount;
@@ -35,6 +38,7 @@ class ReimbursementEntity implements Persistable<UUID> {
         this.debtorId = debtorId;
         this.status = status;
         this.notes = notes;
+        this.createdAt = createdAt;
     }
 
     void markExisting() {
@@ -76,6 +80,10 @@ class ReimbursementEntity implements Persistable<UUID> {
 
     public String getNotes() {
         return notes;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
     }
 
     @Override

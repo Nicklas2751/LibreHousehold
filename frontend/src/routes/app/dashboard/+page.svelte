@@ -14,7 +14,7 @@
 		loadMemberBalances,
 		memberBalances
 	} from '$lib/stores/financialStore';
-	import { loadReimbursements } from '$lib/stores/reimbursementStore';
+	import { loadReimbursements, reimbursements } from '$lib/stores/reimbursementStore';
 	import { loadMembers, members } from '$lib/stores/memberStore';
 	import { userState } from '$lib/stores/userState';
 	import FinancialCard from '$lib/FinancialCard.svelte';
@@ -92,7 +92,11 @@
 <div class="grid gap-4 p-5 md:grid-cols-6">
 	<StatCard title={m['dashboard.task_due_card.title']()} value={countOfUpcomingTasks.toString()} />
 
-	<FinancialCard summary={$financialSummary} balances={$memberBalances} />
+	<FinancialCard
+		summary={$financialSummary}
+		balances={$memberBalances}
+		reimbursements={$reimbursements}
+	/>
 	<PendingReimbursementsCard />
 
 	{#if $householdState}

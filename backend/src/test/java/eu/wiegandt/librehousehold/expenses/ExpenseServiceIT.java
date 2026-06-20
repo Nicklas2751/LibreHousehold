@@ -17,6 +17,9 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -44,6 +47,9 @@ class ExpenseServiceIT {
 
     @Autowired
     private ExpenseMapper expenseMapper;
+
+    @Autowired
+    private ReimbursementRepository reimbursementRepository;
 
     @MockitoBean
     private HouseholdQuery householdQuery;
@@ -124,6 +130,84 @@ class ExpenseServiceIT {
             // then
             assertThat(result).extracting(Expense::getId)
                     .containsExactlyInAnyOrder(matching1.getId(), matching2.getId());
+        }
+
+        @Test
+        void expensePredatesConfirmedSettlement_isExcluded() {
+            // given
+            var householdId = UUID.randomUUID();
+            var payerId = UUID.randomUUID();
+            var debtorId = UUID.randomUUID();
+            doReturn(true).when(householdQuery).householdExists(householdId);
+
+            expenseService.createExpense(householdId, Instancio.of(Expense.class)
+                    .set(field(Expense.class, "paidBy"), payerId)
+                    .set(field(Expense.class, "splitBetween"), List.of())
+                    .set(field(Expense.class, "date"), LocalDate.of(2024, 1, 1))
+                    .create());
+
+            var confirmedSettlement = new ReimbursementEntity(UUID.randomUUID(), householdId,
+                    BigDecimal.ONE, payerId, debtorId, "CONFIRMED", null,
+                    LocalDateTime.of(2024, 6, 1, 0, 0));
+            reimbursementRepository.save(confirmedSettlement);
+
+            // when
+            var result = expenseService.getDebtorExpenses(householdId, payerId, debtorId);
+
+            // then
+            assertThat(result).isEmpty();
+        }
+
+        @Test
+        void expensePostdatesConfirmedSettlement_isIncluded() {
+            // given
+            var householdId = UUID.randomUUID();
+            var payerId = UUID.randomUUID();
+            var debtorId = UUID.randomUUID();
+            doReturn(true).when(householdQuery).householdExists(householdId);
+
+            var expense = expenseService.createExpense(householdId, Instancio.of(Expense.class)
+                    .set(field(Expense.class, "paidBy"), payerId)
+                    .set(field(Expense.class, "splitBetween"), List.of())
+                    .set(field(Expense.class, "date"), LocalDate.of(2024, 7, 1))
+                    .create());
+
+            var confirmedSettlement = new ReimbursementEntity(UUID.randomUUID(), householdId,
+                    BigDecimal.ONE, payerId, debtorId, "CONFIRMED", null,
+                    LocalDateTime.of(2024, 6, 1, 0, 0));
+            reimbursementRepository.save(confirmedSettlement);
+
+            // when
+            var result = expenseService.getDebtorExpenses(householdId, payerId, debtorId);
+
+            // then
+            assertThat(result).extracting(Expense::getId).containsExactly(expense.getId());
+        }
+
+        @Test
+        void pendingSettlementIsNotCutoff_expenseIsIncluded() {
+            // given
+            var householdId = UUID.randomUUID();
+            var payerId = UUID.randomUUID();
+            var debtorId = UUID.randomUUID();
+            doReturn(true).when(householdQuery).householdExists(householdId);
+
+            var expense = expenseService.createExpense(householdId, Instancio.of(Expense.class)
+                    .set(field(Expense.class, "paidBy"), payerId)
+                    .set(field(Expense.class, "splitBetween"), List.of())
+                    .set(field(Expense.class, "date"), LocalDate.of(2024, 1, 1))
+                    .create());
+
+            var pendingSettlement = new ReimbursementEntity(UUID.randomUUID(), householdId,
+                    BigDecimal.ONE, payerId, debtorId, "PENDING", null,
+                    LocalDateTime.of(2024, 6, 1, 0, 0));
+            reimbursementRepository.save(pendingSettlement);
+
+            // when
+            var result = expenseService.getDebtorExpenses(householdId, payerId, debtorId);
+
+            // then
+            assertThat(result).extracting(Expense::getId).containsExactly(expense.getId());
         }
     }
 }
