@@ -350,6 +350,36 @@
 					"confirm": "Delete household"
 				}
 			}
+		},
+		"categories": {
+			"title": "Categories",
+			"description": "Create and manage expense categories",
+			"empty_hint": "No categories yet.",
+			"name_label": "Name",
+			"name_placeholder": "e.g. Groceries",
+			"icon_label": "Icon (Emoji)",
+			"icon_placeholder": "e.g. 🛒",
+			"icon_hint": "Optional emoji (max. 10 characters)",
+			"create_button": "Create category",
+			"create_success": "Category created.",
+			"create_error": "Failed to create category.",
+			"duplicate_error": "A category with this name already exists.",
+			"in_use_error": "Category cannot be deleted because it is still used by expenses.",
+			"load_error": "Failed to load categories.",
+			"edit_modal": {
+				"title": "Edit category",
+				"save_button": "Save",
+				"save_success": "Category saved.",
+				"save_error": "Failed to save category.",
+				"cancel": "Cancel"
+			},
+			"delete_modal": {
+				"title": "Delete category?",
+				"text": "The category \"{name}\" will be permanently deleted.",
+				"delete_error": "Failed to delete category.",
+				"cancel": "Cancel",
+				"confirm": "Delete"
+			}
 		}
 	}
 }

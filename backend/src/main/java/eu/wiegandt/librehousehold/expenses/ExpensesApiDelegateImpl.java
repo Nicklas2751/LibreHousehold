@@ -2,6 +2,7 @@ package eu.wiegandt.librehousehold.expenses;
 
 import eu.wiegandt.librehousehold.api.ExpensesApiDelegate;
 import eu.wiegandt.librehousehold.model.Category;
+import eu.wiegandt.librehousehold.model.CategoryUpdate;
 import eu.wiegandt.librehousehold.model.Expense;
 import eu.wiegandt.librehousehold.model.ExpenseUpdate;
 import org.springframework.http.ResponseEntity;
@@ -31,6 +32,18 @@ public class ExpensesApiDelegateImpl implements ExpensesApiDelegate {
     public ResponseEntity<Category> createCategory(UUID householdId, Optional<Category> category) {
         var cat = category.orElseThrow(CategoryBodyIsRequiredException::new);
         return ResponseEntity.ok(categoryService.createCategory(householdId, cat));
+    }
+
+    @Override
+    public ResponseEntity<Category> updateCategory(UUID householdId, UUID categoryId, Optional<CategoryUpdate> categoryUpdate) {
+        var update = categoryUpdate.orElse(new CategoryUpdate());
+        return ResponseEntity.ok(categoryService.updateCategory(householdId, categoryId, update));
+    }
+
+    @Override
+    public ResponseEntity<Void> deleteCategory(UUID householdId, UUID categoryId) {
+        categoryService.deleteCategory(householdId, categoryId);
+        return ResponseEntity.noContent().build();
     }
 
     @Override

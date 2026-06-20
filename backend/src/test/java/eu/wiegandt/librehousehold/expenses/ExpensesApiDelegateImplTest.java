@@ -1,6 +1,7 @@
 package eu.wiegandt.librehousehold.expenses;
 
 import eu.wiegandt.librehousehold.model.Category;
+import eu.wiegandt.librehousehold.model.CategoryUpdate;
 import eu.wiegandt.librehousehold.model.Expense;
 import eu.wiegandt.librehousehold.model.ExpenseUpdate;
 import org.junit.jupiter.api.Nested;
@@ -87,6 +88,99 @@ class ExpensesApiDelegateImplTest {
             // when / then
             assertThatThrownBy(() -> delegate.createCategory(UUID.randomUUID(), Optional.empty()))
                     .isInstanceOf(CategoryBodyIsRequiredException.class);
+        }
+    }
+
+    @Nested
+    class updateCategory {
+
+        @Test
+        void validInput_returnsOk() {
+            // given
+            var householdId = UUID.randomUUID();
+            var categoryId = UUID.randomUUID();
+            var update = new CategoryUpdate().name("Neu");
+            var updated = new Category(categoryId, "Neu");
+            doReturn(updated).when(categoryService).updateCategory(householdId, categoryId, update);
+
+            // when
+            var result = delegate.updateCategory(householdId, categoryId, Optional.of(update));
+
+            // then
+            assertThat(result.getStatusCode().value()).isEqualTo(200);
+            assertThat(result.getBody()).isEqualTo(updated);
+        }
+
+        @Test
+        void emptyBody_passesDefaultUpdateToService() {
+            // given
+            var householdId = UUID.randomUUID();
+            var categoryId = UUID.randomUUID();
+            var emptyUpdate = new CategoryUpdate();
+            var updated = new Category(categoryId, "Unverändert");
+            doReturn(updated).when(categoryService).updateCategory(householdId, categoryId, emptyUpdate);
+
+            // when
+            var result = delegate.updateCategory(householdId, categoryId, Optional.empty());
+
+            // then
+            assertThat(result.getStatusCode().value()).isEqualTo(200);
+            assertThat(result.getBody()).isEqualTo(updated);
+        }
+
+        @Test
+        void notFound_throwsCategoryNotFoundException() {
+            // given
+            var householdId = UUID.randomUUID();
+            var categoryId = UUID.randomUUID();
+            var update = new CategoryUpdate().name("Neu");
+            doThrow(CategoryNotFoundException.class).when(categoryService).updateCategory(householdId, categoryId, update);
+
+            // when / then
+            assertThatThrownBy(() -> delegate.updateCategory(householdId, categoryId, Optional.of(update)))
+                    .isInstanceOf(CategoryNotFoundException.class);
+        }
+    }
+
+    @Nested
+    class deleteCategory {
+
+        @Test
+        void validInput_returnsNoContent() {
+            // given
+            var householdId = UUID.randomUUID();
+            var categoryId = UUID.randomUUID();
+
+            // when
+            var result = delegate.deleteCategory(householdId, categoryId);
+
+            // then
+            assertThat(result.getStatusCode().value()).isEqualTo(204);
+            verify(categoryService).deleteCategory(householdId, categoryId);
+        }
+
+        @Test
+        void notFound_throwsCategoryNotFoundException() {
+            // given
+            var householdId = UUID.randomUUID();
+            var categoryId = UUID.randomUUID();
+            doThrow(CategoryNotFoundException.class).when(categoryService).deleteCategory(householdId, categoryId);
+
+            // when / then
+            assertThatThrownBy(() -> delegate.deleteCategory(householdId, categoryId))
+                    .isInstanceOf(CategoryNotFoundException.class);
+        }
+
+        @Test
+        void categoryInUse_throwsCategoryInUseException() {
+            // given
+            var householdId = UUID.randomUUID();
+            var categoryId = UUID.randomUUID();
+            doThrow(CategoryInUseException.class).when(categoryService).deleteCategory(householdId, categoryId);
+
+            // when / then
+            assertThatThrownBy(() -> delegate.deleteCategory(householdId, categoryId))
+                    .isInstanceOf(CategoryInUseException.class);
         }
     }
 

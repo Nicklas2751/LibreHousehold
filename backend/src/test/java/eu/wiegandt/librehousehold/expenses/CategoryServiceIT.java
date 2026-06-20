@@ -2,6 +2,7 @@ package eu.wiegandt.librehousehold.expenses;
 
 import eu.wiegandt.librehousehold.household.HouseholdQuery;
 import eu.wiegandt.librehousehold.model.Category;
+import eu.wiegandt.librehousehold.model.CategoryUpdate;
 import org.instancio.Instancio;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -17,15 +18,19 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.HashSet;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.instancio.Select.field;
 import static org.mockito.Mockito.doReturn;
 
 @DataJdbcTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({CategoryMapperImpl.class, CategoryService.class})
+@Import({CategoryMapperImpl.class, CategoryService.class, CategoryEntityCallbacks.class})
 @ImportAutoConfiguration(FlywayAutoConfiguration.class)
 @TestPropertySource(properties = {
         "spring.flyway.locations=classpath:db/migration"
@@ -40,6 +45,9 @@ class CategoryServiceIT {
 
     @Autowired
     private CategoryRepository categoryRepository;
+
+    @Autowired
+    private ExpenseRepository expenseRepository;
 
     @Autowired
     private CategoryMapper categoryMapper;
@@ -84,6 +92,98 @@ class CategoryServiceIT {
 
             // then
             assertThat(result).containsExactlyInAnyOrderElementsOf(expected);
+        }
+    }
+
+    @Nested
+    class deleteCategory {
+
+        @Test
+        void categoryNotInUse_deleted() {
+            // given
+            var householdId = UUID.randomUUID();
+            var categoryId = UUID.randomUUID();
+            categoryRepository.save(new CategoryEntity(categoryId, householdId, "Lebensmittel", "🛒"));
+
+            // when
+            categoryService.deleteCategory(householdId, categoryId);
+
+            // then
+            assertThat(categoryRepository.findById(categoryId)).isEmpty();
+        }
+
+        @Test
+        void categoryNotFound_throwsCategoryNotFoundException() {
+            // given
+            var householdId = UUID.randomUUID();
+            var categoryId = UUID.randomUUID();
+
+            // when / then
+            assertThatThrownBy(() -> categoryService.deleteCategory(householdId, categoryId))
+                    .isInstanceOf(CategoryNotFoundException.class);
+        }
+
+        @Test
+        void categoryInUse_throwsCategoryInUseException() {
+            // given
+            var householdId = UUID.randomUUID();
+            var categoryId = UUID.randomUUID();
+            categoryRepository.save(new CategoryEntity(categoryId, householdId, "Lebensmittel", "🛒"));
+            expenseRepository.save(new ExpenseEntity(
+                    UUID.randomUUID(), householdId, "Einkauf", BigDecimal.TEN,
+                    UUID.randomUUID(), LocalDate.now(), categoryId, null, new HashSet<>()
+            ));
+
+            // when / then
+            assertThatThrownBy(() -> categoryService.deleteCategory(householdId, categoryId))
+                    .isInstanceOf(CategoryInUseException.class);
+        }
+    }
+
+    @Nested
+    class updateCategory {
+
+        @Test
+        void existingCategory_updatesNameAndIcon() {
+            // given
+            var householdId = UUID.randomUUID();
+            var categoryId = UUID.randomUUID();
+            categoryRepository.save(new CategoryEntity(categoryId, householdId, "Alt", null));
+            var update = new CategoryUpdate().name("Neu").icon("🥦");
+            var expected = new Category().id(categoryId).name("Neu").icon("🥦");
+
+            // when
+            var result = categoryService.updateCategory(householdId, categoryId, update);
+
+            // then
+            assertThat(result).usingRecursiveComparison().isEqualTo(expected);
+        }
+
+        @Test
+        void categoryNotFound_throwsCategoryNotFoundException() {
+            // given
+            var householdId = UUID.randomUUID();
+            var categoryId = UUID.randomUUID();
+            var update = new CategoryUpdate().name("Neu");
+
+            // when / then
+            assertThatThrownBy(() -> categoryService.updateCategory(householdId, categoryId, update))
+                    .isInstanceOf(CategoryNotFoundException.class);
+        }
+
+        @Test
+        void duplicateName_throwsCategoryAlreadyExistsException() {
+            // given
+            var householdId = UUID.randomUUID();
+            var categoryId = UUID.randomUUID();
+            var otherCategoryId = UUID.randomUUID();
+            categoryRepository.save(new CategoryEntity(categoryId, householdId, "Original", null));
+            categoryRepository.save(new CategoryEntity(otherCategoryId, householdId, "Belegt", null));
+            var update = new CategoryUpdate().name("Belegt");
+
+            // when / then
+            assertThatThrownBy(() -> categoryService.updateCategory(householdId, categoryId, update))
+                    .isInstanceOf(CategoryAlreadyExistsException.class);
         }
     }
 }

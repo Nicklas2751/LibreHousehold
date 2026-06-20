@@ -10,6 +10,8 @@
 		if (page.url.pathname.startsWith('/app/settings/user')) return m['settings.user.title']();
 		if (page.url.pathname.startsWith('/app/settings/household'))
 			return m['settings.household.title']();
+		if (page.url.pathname.startsWith('/app/settings/categories'))
+			return m['settings.categories.title']();
 		return '';
 	});
 </script>

@@ -29,6 +29,10 @@ class CategoryEntity implements Persistable<UUID> {
 
     void markExisting() { this.isNew = false; }
 
+    public void setName(String name) { this.name = name; }
+
+    public void setIcon(String icon) { this.icon = icon; }
+
     @Override
     public UUID getId() { return id; }
     public UUID getHouseholdId() { return householdId; }
