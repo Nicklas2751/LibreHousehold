@@ -30,8 +30,8 @@ interface ExpenseRepository extends CrudRepository<ExpenseEntity, UUID> {
                 (SELECT MAX(r.created_at)::date
                  FROM expenses.reimbursement r
                  WHERE r.household_id = :householdId
-                   AND r.creditor_id = :payerId
-                   AND r.debtor_id = :debtorId
+                   AND ((r.creditor_id = :payerId AND r.debtor_id = :debtorId)
+                     OR (r.creditor_id = :debtorId AND r.debtor_id = :payerId))
                    AND r.status = 'CONFIRMED'),
                 '0001-01-01'::date
               )

@@ -56,6 +56,8 @@ class ExpenseServiceTest {
             doReturn(List.of(entity)).when(expenseRepository).findByHouseholdIdOrderByDateDesc(householdId);
             doReturn(false).when(reimbursementRepository)
                     .existsByHouseholdIdAndCreditorIdAndStatusIn(any(), any(), any());
+            doReturn(false).when(reimbursementRepository)
+                    .existsActiveSettlementAsDebtorCoveringExpense(any(), any(), any());
             var expected = expenseMapper.toExpense(entity, true);
 
             // when
@@ -73,6 +75,25 @@ class ExpenseServiceTest {
             doReturn(List.of(entity)).when(expenseRepository).findByHouseholdIdOrderByDateDesc(householdId);
             doReturn(true).when(reimbursementRepository)
                     .existsByHouseholdIdAndCreditorIdAndStatusIn(any(), any(), any());
+            var expected = expenseMapper.toExpense(entity, false);
+
+            // when
+            var result = expenseService.getExpenses(householdId);
+
+            // then
+            assertThat(result).singleElement().usingRecursiveComparison().isEqualTo(expected);
+        }
+
+        @Test
+        void debtorInActiveSettlementCoveringExpense_returnsIsMutableFalse() {
+            // given
+            var householdId = UUID.randomUUID();
+            var entity = Instancio.create(ExpenseEntity.class);
+            doReturn(List.of(entity)).when(expenseRepository).findByHouseholdIdOrderByDateDesc(householdId);
+            doReturn(false).when(reimbursementRepository)
+                    .existsByHouseholdIdAndCreditorIdAndStatusIn(any(), any(), any());
+            doReturn(true).when(reimbursementRepository)
+                    .existsActiveSettlementAsDebtorCoveringExpense(any(), any(), any());
             var expected = expenseMapper.toExpense(entity, false);
 
             // when
@@ -108,6 +129,8 @@ class ExpenseServiceTest {
             doReturn(savedEntity).when(expenseRepository).save(any(ExpenseEntity.class));
             doReturn(false).when(reimbursementRepository)
                     .existsByHouseholdIdAndCreditorIdAndStatusIn(any(), any(), any());
+            doReturn(false).when(reimbursementRepository)
+                    .existsActiveSettlementAsDebtorCoveringExpense(any(), any(), any());
             var expected = expenseMapper.toExpense(savedEntity, true);
 
             // when
@@ -157,6 +180,8 @@ class ExpenseServiceTest {
             doReturn(Optional.of(entity)).when(expenseRepository).findByIdAndHouseholdId(expenseId, householdId);
             doReturn(false).when(reimbursementRepository)
                     .existsByHouseholdIdAndCreditorIdAndStatusIn(any(), any(), any());
+            doReturn(false).when(reimbursementRepository)
+                    .existsActiveSettlementAsDebtorCoveringExpense(any(), any(), any());
             var update = new ExpenseUpdate().title("Updated Title");
 
             // when
@@ -207,6 +232,8 @@ class ExpenseServiceTest {
             doReturn(Optional.of(entity)).when(expenseRepository).findByIdAndHouseholdId(expenseId, householdId);
             doReturn(false).when(reimbursementRepository)
                     .existsByHouseholdIdAndCreditorIdAndStatusIn(any(), any(), any());
+            doReturn(false).when(reimbursementRepository)
+                    .existsActiveSettlementAsDebtorCoveringExpense(any(), any(), any());
 
             // when
             expenseService.deleteExpense(householdId, expenseId);
@@ -240,6 +267,8 @@ class ExpenseServiceTest {
             doReturn(Optional.of(entity)).when(expenseRepository).findByIdAndHouseholdId(expenseId, householdId);
             doReturn(false).when(reimbursementRepository)
                     .existsByHouseholdIdAndCreditorIdAndStatusIn(any(), any(), any());
+            doReturn(false).when(reimbursementRepository)
+                    .existsActiveSettlementAsDebtorCoveringExpense(any(), any(), any());
             var expected = expenseMapper.toExpense(entity, true);
 
             // when
@@ -263,6 +292,8 @@ class ExpenseServiceTest {
             doReturn(List.of(entity)).when(expenseRepository).findDebtorExpenses(householdId, payerId, debtorId);
             doReturn(false).when(reimbursementRepository)
                     .existsByHouseholdIdAndCreditorIdAndStatusIn(any(), any(), any());
+            doReturn(false).when(reimbursementRepository)
+                    .existsActiveSettlementAsDebtorCoveringExpense(any(), any(), any());
             var expected = expenseMapper.toExpense(entity, true);
 
             // when
