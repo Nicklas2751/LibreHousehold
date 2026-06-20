@@ -35,7 +35,7 @@ class ExpenseService {
 
     List<Expense> getExpenses(UUID householdId) {
         return expenseRepository.findByHouseholdIdOrderByDateDesc(householdId).stream()
-                .map(entity -> expenseMapper.toExpense(entity, isMutable(householdId, entity.getPaidBy())))
+                .map(entity -> expenseMapper.toExpense(entity, isMutable(householdId, entity.getPaidBy(), entity.getId())))
                 .toList();
     }
 
@@ -44,14 +44,14 @@ class ExpenseService {
             throw new HouseholdNotFoundException();
         }
         var saved = expenseRepository.save(expenseMapper.toEntity(expense, householdId));
-        return expenseMapper.toExpense(saved, isMutable(householdId, saved.getPaidBy()));
+        return expenseMapper.toExpense(saved, isMutable(householdId, saved.getPaidBy(), saved.getId()));
     }
 
     Expense updateExpense(UUID householdId, UUID expenseId, ExpenseUpdate update) {
         var entity = expenseRepository.findByIdAndHouseholdId(expenseId, householdId)
                 .orElseThrow(ExpenseNotFoundException::new);
 
-        if (!isMutable(householdId, entity.getPaidBy())) {
+        if (!isMutable(householdId, entity.getPaidBy(), entity.getId())) {
             throw new ExpenseNotMutableException();
         }
 
@@ -64,7 +64,7 @@ class ExpenseService {
         var entity = expenseRepository.findByIdAndHouseholdId(expenseId, householdId)
                 .orElseThrow(ExpenseNotFoundException::new);
 
-        if (!isMutable(householdId, entity.getPaidBy())) {
+        if (!isMutable(householdId, entity.getPaidBy(), entity.getId())) {
             throw new ExpenseNotMutableException();
         }
 
@@ -74,12 +74,12 @@ class ExpenseService {
     Expense getExpense(UUID householdId, UUID expenseId) {
         var entity = expenseRepository.findByIdAndHouseholdId(expenseId, householdId)
                 .orElseThrow(ExpenseNotFoundException::new);
-        return expenseMapper.toExpense(entity, isMutable(householdId, entity.getPaidBy()));
+        return expenseMapper.toExpense(entity, isMutable(householdId, entity.getPaidBy(), entity.getId()));
     }
 
     List<Expense> getDebtorExpenses(UUID householdId, UUID payerId, UUID debtorId) {
         return expenseRepository.findDebtorExpenses(householdId, payerId, debtorId).stream()
-                .map(entity -> expenseMapper.toExpense(entity, isMutable(householdId, entity.getPaidBy())))
+                .map(entity -> expenseMapper.toExpense(entity, isMutable(householdId, entity.getPaidBy(), entity.getId())))
                 .toList();
     }
 
@@ -91,8 +91,12 @@ class ExpenseService {
         categoryRepository.deleteByHouseholdId(householdId);
     }
 
-    private boolean isMutable(UUID householdId, UUID paidBy) {
-        return !reimbursementRepository.existsByHouseholdIdAndCreditorIdAndStatusIn(
-                householdId, paidBy, ACTIVE_REIMBURSEMENT_STATUSES);
+    private boolean isMutable(UUID householdId, UUID paidBy, UUID expenseId) {
+        if (reimbursementRepository.existsByHouseholdIdAndCreditorIdAndStatusIn(
+                householdId, paidBy, ACTIVE_REIMBURSEMENT_STATUSES)) {
+            return false;
+        }
+        return !reimbursementRepository.existsActiveSettlementAsDebtorCoveringExpense(
+                householdId, paidBy, expenseId);
     }
 }

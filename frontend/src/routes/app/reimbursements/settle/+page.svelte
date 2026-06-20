@@ -21,6 +21,7 @@
 
 	// Load detailed expenses
 	let expenseList: Expense[] = $state([]);
+	let offsettingExpenseList: Expense[] = $state([]);
 	$effect(() => {
 		if ($householdState && $userState && creditorId) {
 			// "You owe X" -> Payer is X (creditorId), Debtor is Me ($userState.id)
@@ -28,6 +29,10 @@
 
 			loadDebtorExpenses($householdState.id, creditorId, $userState.id).then((res) => {
 				expenseList = res;
+			});
+			// Reverse: expenses I paid that the creditor owes me (offsetting my debt)
+			loadDebtorExpenses($householdState.id, $userState.id, creditorId).then((res) => {
+				offsettingExpenseList = res;
 			});
 		}
 	});
@@ -99,6 +104,25 @@
 				<p class="mb-6 text-center text-base-content/60 italic">
 					{m['settle.no_details']()}
 				</p>
+			{/if}
+
+			{#if offsettingExpenseList.length > 0}
+				<div class="divider">{m['settle.offsetting_details_label']()}</div>
+				<ul class="list mb-6 max-h-60 overflow-y-auto rounded-box bg-base-100 shadow-sm">
+					{#each offsettingExpenseList as expense (expense.id)}
+						<li class="list-row items-center border-b border-base-200 p-3 last:border-0">
+							<div class="flex-1">
+								<div class="font-medium">{expense.title}</div>
+								<div class="text-xs text-base-content/60">
+									{new Date(expense.date).toLocaleDateString('de-DE')}
+								</div>
+							</div>
+							<div class="font-bold text-success">
+								−{expense.amount.toFixed(2)} €
+							</div>
+						</li>
+					{/each}
+				</ul>
 			{/if}
 
 			<div class="mt-4 card-actions justify-center">

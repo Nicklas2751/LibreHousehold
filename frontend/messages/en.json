@@ -232,6 +232,7 @@
 		"total_amount_label": "Total Amount",
 		"details_label": "Details (Expenses included in this debt)",
 		"no_details": "No detailed expenses found.",
+		"offsetting_details_label": "Your offsetting expenses",
 		"confirm_payment_button": "Mark as Paid",
 		"disclaimer": "This action does not transfer actual money. Please ensure you have transferred the amount via bank transfer or cash."
 	},

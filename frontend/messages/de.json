@@ -234,6 +234,7 @@
 		"total_amount_label": "Gesamtbetrag",
 		"details_label": "Details (Enthaltene Ausgaben)",
 		"no_details": "Keine Detail-Ausgaben gefunden.",
+		"offsetting_details_label": "Deine gegengerechneten Ausgaben",
 		"confirm_payment_button": "Als bezahlt markieren",
 		"disclaimer": "Diese Aktion führt keine echte Zahlung durch. Bitte stelle sicher, dass du den Betrag per Überweisung oder Bar gezahlt hast."
 	},
