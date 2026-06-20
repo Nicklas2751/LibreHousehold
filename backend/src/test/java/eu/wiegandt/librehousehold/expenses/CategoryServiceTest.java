@@ -2,6 +2,7 @@ package eu.wiegandt.librehousehold.expenses;
 
 import eu.wiegandt.librehousehold.household.HouseholdQuery;
 import eu.wiegandt.librehousehold.model.Category;
+import eu.wiegandt.librehousehold.model.CategoryUpdate;
 import org.instancio.Instancio;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -13,9 +14,11 @@ import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
@@ -25,6 +28,9 @@ class CategoryServiceTest {
 
     @Mock
     private CategoryRepository categoryRepository;
+
+    @Mock
+    private ExpenseRepository expenseRepository;
 
     @Spy
     private CategoryMapper categoryMapper = Mappers.getMapper(CategoryMapper.class);
@@ -111,6 +117,102 @@ class CategoryServiceTest {
             // when / then
             assertThatThrownBy(() -> categoryService.createCategory(householdId, category))
                     .isInstanceOf(HouseholdNotFoundException.class);
+        }
+    }
+
+    @Nested
+    class updateCategory {
+
+        @Test
+        void foundCategory_updatesAndReturnsCategory() {
+            // given
+            var householdId = UUID.randomUUID();
+            var categoryId = UUID.randomUUID();
+            var entity = Instancio.create(CategoryEntity.class);
+            var savedEntity = Instancio.create(CategoryEntity.class);
+            var update = new CategoryUpdate().name("Neu").icon("🥦");
+            doReturn(Optional.of(entity)).when(categoryRepository).findByIdAndHouseholdId(categoryId, householdId);
+            doReturn(false).when(categoryRepository).existsByHouseholdIdAndNameAndIdNot(householdId, "Neu", categoryId);
+            doReturn(savedEntity).when(categoryRepository).save(entity);
+            var expected = categoryMapper.toCategory(savedEntity);
+
+            // when
+            var result = categoryService.updateCategory(householdId, categoryId, update);
+
+            // then
+            assertThat(result).usingRecursiveComparison().isEqualTo(expected);
+        }
+
+        @Test
+        void categoryNotFound_throwsCategoryNotFoundException() {
+            // given
+            var householdId = UUID.randomUUID();
+            var categoryId = UUID.randomUUID();
+            var update = new CategoryUpdate().name("Neu");
+            doReturn(Optional.empty()).when(categoryRepository).findByIdAndHouseholdId(categoryId, householdId);
+
+            // when / then
+            assertThatThrownBy(() -> categoryService.updateCategory(householdId, categoryId, update))
+                    .isInstanceOf(CategoryNotFoundException.class);
+        }
+
+        @Test
+        void duplicateName_throwsCategoryAlreadyExistsException() {
+            // given
+            var householdId = UUID.randomUUID();
+            var categoryId = UUID.randomUUID();
+            var entity = Instancio.create(CategoryEntity.class);
+            var update = new CategoryUpdate().name("Belegt");
+            doReturn(Optional.of(entity)).when(categoryRepository).findByIdAndHouseholdId(categoryId, householdId);
+            doReturn(true).when(categoryRepository).existsByHouseholdIdAndNameAndIdNot(householdId, "Belegt", categoryId);
+
+            // when / then
+            assertThatThrownBy(() -> categoryService.updateCategory(householdId, categoryId, update))
+                    .isInstanceOf(CategoryAlreadyExistsException.class);
+        }
+    }
+
+    @Nested
+    class deleteCategory {
+
+        @Test
+        void categoryNotInUse_doesNotThrow() {
+            // given
+            var householdId = UUID.randomUUID();
+            var categoryId = UUID.randomUUID();
+            var entity = Instancio.create(CategoryEntity.class);
+            doReturn(Optional.of(entity)).when(categoryRepository).findByIdAndHouseholdId(categoryId, householdId);
+            doReturn(false).when(expenseRepository).existsByCategoryId(categoryId);
+
+            // when / then
+            assertThatCode(() -> categoryService.deleteCategory(householdId, categoryId))
+                    .doesNotThrowAnyException();
+        }
+
+        @Test
+        void categoryNotFound_throwsCategoryNotFoundException() {
+            // given
+            var householdId = UUID.randomUUID();
+            var categoryId = UUID.randomUUID();
+            doReturn(Optional.empty()).when(categoryRepository).findByIdAndHouseholdId(categoryId, householdId);
+
+            // when / then
+            assertThatThrownBy(() -> categoryService.deleteCategory(householdId, categoryId))
+                    .isInstanceOf(CategoryNotFoundException.class);
+        }
+
+        @Test
+        void categoryInUse_throwsCategoryInUseException() {
+            // given
+            var householdId = UUID.randomUUID();
+            var categoryId = UUID.randomUUID();
+            var entity = Instancio.create(CategoryEntity.class);
+            doReturn(Optional.of(entity)).when(categoryRepository).findByIdAndHouseholdId(categoryId, householdId);
+            doReturn(true).when(expenseRepository).existsByCategoryId(categoryId);
+
+            // when / then
+            assertThatThrownBy(() -> categoryService.deleteCategory(householdId, categoryId))
+                    .isInstanceOf(CategoryInUseException.class);
         }
     }
 }

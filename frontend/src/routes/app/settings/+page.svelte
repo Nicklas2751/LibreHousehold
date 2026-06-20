@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { UserCircleIcon } from '@indaco/svelte-iconoir/user-circle';
 	import { HouseRoomsIcon } from '@indaco/svelte-iconoir/house-rooms';
+	import { LabelIcon } from '@indaco/svelte-iconoir/label';
 	import { HalfMoonIcon } from '@indaco/svelte-iconoir/half-moon';
 	import { BrightnessIcon } from '@indaco/svelte-iconoir/brightness';
 	import { LanguageIcon } from '@indaco/svelte-iconoir/language';
@@ -109,5 +110,21 @@
 				</div>
 			</a>
 		{/if}
+
+		<a
+			href="/app/settings/categories"
+			class="card bg-base-200 shadow-sm transition-colors hover:bg-base-300"
+		>
+			<div class="card-body flex flex-row items-center gap-4 p-4">
+				<div class="flex h-11 w-11 min-w-11 items-center justify-center rounded-full bg-accent/15">
+					<LabelIcon class="text-accent" />
+				</div>
+				<div class="flex-1">
+					<h3 class="font-semibold">{m['settings.categories.title']()}</h3>
+					<p class="text-sm text-base-content/60">{m['settings.categories.description']()}</p>
+				</div>
+				<NavArrowRightIcon class="text-base-content/40" />
+			</div>
+		</a>
 	</div>
 </div>

@@ -12,6 +12,8 @@ interface ExpenseRepository extends CrudRepository<ExpenseEntity, UUID> {
 
     List<ExpenseEntity> findByHouseholdId(UUID householdId);
 
+    boolean existsByCategoryId(UUID categoryId);
+
     Optional<ExpenseEntity> findByIdAndHouseholdId(UUID id, UUID householdId);
 
     @Query("""

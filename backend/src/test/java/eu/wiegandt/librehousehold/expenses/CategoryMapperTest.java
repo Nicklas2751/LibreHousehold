@@ -1,6 +1,7 @@
 package eu.wiegandt.librehousehold.expenses;
 
 import eu.wiegandt.librehousehold.model.Category;
+import eu.wiegandt.librehousehold.model.CategoryUpdate;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
@@ -111,6 +112,74 @@ class CategoryMapperTest {
         @Test
         void emptyOptional_returnsNull() {
             assertThat(mapper.fromOptionalString(Optional.empty())).isNull();
+        }
+    }
+
+    @Nested
+    class updateEntityFromUpdate {
+
+        @Test
+        void bothFieldsPresent_updatesNameAndIcon() {
+            // given
+            var id = UUID.randomUUID();
+            var householdId = UUID.randomUUID();
+            var entity = new CategoryEntity(id, householdId, "Old Name", "🛒");
+            var update = new CategoryUpdate().name("New Name").icon("🥦");
+            var expected = new CategoryEntity(id, householdId, "New Name", "🥦");
+
+            // when
+            mapper.updateEntityFromUpdate(update, entity);
+
+            // then
+            assertThat(entity).usingRecursiveComparison().ignoringFields("isNew").isEqualTo(expected);
+        }
+
+        @Test
+        void onlyNamePresent_updatesNameLeavesIconUnchanged() {
+            // given
+            var id = UUID.randomUUID();
+            var householdId = UUID.randomUUID();
+            var entity = new CategoryEntity(id, householdId, "Old Name", "🛒");
+            var update = new CategoryUpdate().name("New Name");
+            var expected = new CategoryEntity(id, householdId, "New Name", "🛒");
+
+            // when
+            mapper.updateEntityFromUpdate(update, entity);
+
+            // then
+            assertThat(entity).usingRecursiveComparison().ignoringFields("isNew").isEqualTo(expected);
+        }
+
+        @Test
+        void onlyIconPresent_updatesIconLeavesNameUnchanged() {
+            // given
+            var id = UUID.randomUUID();
+            var householdId = UUID.randomUUID();
+            var entity = new CategoryEntity(id, householdId, "Old Name", "🛒");
+            var update = new CategoryUpdate().icon("🥦");
+            var expected = new CategoryEntity(id, householdId, "Old Name", "🥦");
+
+            // when
+            mapper.updateEntityFromUpdate(update, entity);
+
+            // then
+            assertThat(entity).usingRecursiveComparison().ignoringFields("isNew").isEqualTo(expected);
+        }
+
+        @Test
+        void bothFieldsEmpty_nothingUpdated() {
+            // given
+            var id = UUID.randomUUID();
+            var householdId = UUID.randomUUID();
+            var entity = new CategoryEntity(id, householdId, "Old Name", "🛒");
+            var update = new CategoryUpdate();
+            var expected = new CategoryEntity(id, householdId, "Old Name", "🛒");
+
+            // when
+            mapper.updateEntityFromUpdate(update, entity);
+
+            // then
+            assertThat(entity).usingRecursiveComparison().ignoringFields("isNew").isEqualTo(expected);
         }
     }
 }

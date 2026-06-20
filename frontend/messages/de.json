@@ -353,6 +353,36 @@
 					"confirm": "Haushalt löschen"
 				}
 			}
+		},
+		"categories": {
+			"title": "Kategorien",
+			"description": "Ausgabenkategorien anlegen und verwalten",
+			"empty_hint": "Noch keine Kategorien vorhanden.",
+			"name_label": "Name",
+			"name_placeholder": "z. B. Lebensmittel",
+			"icon_label": "Icon (Emoji)",
+			"icon_placeholder": "z. B. 🛒",
+			"icon_hint": "Optionales Emoji (max. 10 Zeichen)",
+			"create_button": "Kategorie erstellen",
+			"create_success": "Kategorie erstellt.",
+			"create_error": "Fehler beim Erstellen der Kategorie.",
+			"duplicate_error": "Eine Kategorie mit diesem Namen existiert bereits.",
+			"in_use_error": "Kategorie kann nicht gelöscht werden, da sie noch von Ausgaben verwendet wird.",
+			"load_error": "Fehler beim Laden der Kategorien.",
+			"edit_modal": {
+				"title": "Kategorie bearbeiten",
+				"save_button": "Speichern",
+				"save_success": "Kategorie gespeichert.",
+				"save_error": "Fehler beim Speichern der Kategorie.",
+				"cancel": "Abbrechen"
+			},
+			"delete_modal": {
+				"title": "Kategorie löschen?",
+				"text": "Die Kategorie \"{name}\" wird unwiderruflich gelöscht.",
+				"delete_error": "Fehler beim Löschen der Kategorie.",
+				"cancel": "Abbrechen",
+				"confirm": "Löschen"
+			}
 		}
 	}
 }
