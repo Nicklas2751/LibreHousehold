@@ -2081,7 +2081,7 @@ components:
           description: The id of the member who owes the reimbursement.
         status:
           type: string
-          enum: [ PENDING, CONFIRMED, REJECTED ]
+          enum: [ PENDING, CONFIRMED, REJECTED, CANCELLED ]
           description: The status of the reimbursement.
         notes:
           type: string
@@ -2131,7 +2131,7 @@ components:
       properties:
         status:
           type: string
-          enum: [ PENDING, CONFIRMED, REJECTED ]
+          enum: [ PENDING, CONFIRMED, REJECTED, CANCELLED ]
           description: The status of the reimbursement.
         notes:
           type: string

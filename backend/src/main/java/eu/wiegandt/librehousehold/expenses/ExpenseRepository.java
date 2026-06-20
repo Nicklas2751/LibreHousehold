@@ -12,6 +12,8 @@ interface ExpenseRepository extends CrudRepository<ExpenseEntity, UUID> {
 
     List<ExpenseEntity> findByHouseholdId(UUID householdId);
 
+    List<ExpenseEntity> findByHouseholdIdOrderByDateDesc(UUID householdId);
+
     boolean existsByCategoryId(UUID categoryId);
 
     Optional<ExpenseEntity> findByIdAndHouseholdId(UUID id, UUID householdId);
@@ -23,6 +25,15 @@ interface ExpenseRepository extends CrudRepository<ExpenseEntity, UUID> {
               AND (
                 NOT EXISTS (SELECT 1 FROM expenses.expense_split es WHERE es.expense_id = e.id)
                 OR EXISTS (SELECT 1 FROM expenses.expense_split es WHERE es.expense_id = e.id AND es.member_id = :debtorId)
+              )
+              AND e.date >= COALESCE(
+                (SELECT MAX(r.created_at)::date
+                 FROM expenses.reimbursement r
+                 WHERE r.household_id = :householdId
+                   AND r.creditor_id = :payerId
+                   AND r.debtor_id = :debtorId
+                   AND r.status = 'CONFIRMED'),
+                '0001-01-01'::date
               )
             """)
     List<ExpenseEntity> findDebtorExpenses(@Param("householdId") UUID householdId,

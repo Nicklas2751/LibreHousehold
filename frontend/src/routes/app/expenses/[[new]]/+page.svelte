@@ -16,6 +16,7 @@
 	import { householdState } from '$lib/stores/householdState.svelte';
 	import { userState } from '$lib/stores/userState';
 	import { categories, loadCategories } from '$lib/stores/categoryStore';
+	import { financialSummary, loadFinancialSummary } from '$lib/stores/financialStore';
 	import type { Expense, Member } from '../../../../generated-sources/openapi';
 	import { EditIcon } from '@indaco/svelte-iconoir/edit';
 	import { BinIcon } from '@indaco/svelte-iconoir/bin';
@@ -28,6 +29,17 @@
 
 	let isShowForm: boolean = $state(false);
 	let expenseToEdit: Expense | null = $state(null);
+
+	let detailExpense: Expense | null = $state(null);
+	let detailModal: HTMLDialogElement | null = $state(null);
+
+	// Load financial summary and categories on page open
+	$effect(() => {
+		if ($householdState && $userState) {
+			loadFinancialSummary($householdState.id, $userState.id);
+			loadCategories($householdState.id);
+		}
+	});
 
 	// Initial load logic
 	$effect(() => {
@@ -130,6 +142,10 @@
 		return expense.paidBy === $userState?.id && isExpenseMutable(expense);
 	}
 
+	function isOwnExpense(expense: Expense): boolean {
+		return expense.paidBy === $userState?.id;
+	}
+
 	async function handleDeleteExpense(expenseId: string) {
 		if ($householdState && confirm(m['expenses.delete_confirm']())) {
 			await deleteExpense($householdState.id, expenseId);
@@ -141,6 +157,11 @@
 
 	async function handleEditClick(expenseId: string) {
 		await goto(`/app/expenses/${expenseId}`);
+	}
+
+	function showDetailModal(expense: Expense) {
+		detailExpense = expense;
+		detailModal?.showModal();
 	}
 </script>
 
@@ -240,8 +261,7 @@
 											value={category.id}
 											selected={category.id === expenseToEdit?.categoryId}
 										>
-											{#if category.icon}{category.icon}
-											{/if}{category.name}
+											{category.icon ? `${category.icon} ${category.name}` : category.name}
 										</option>
 									{/each}
 								</select>
@@ -301,6 +321,26 @@
 			</div>
 		{/if}
 
+		<!-- Balance summary banner -->
+		{#if !isShowForm && $financialSummary}
+			<div class="mb-3 flex flex-wrap gap-2">
+				{#if $financialSummary.youOwe > 0.001}
+					<div class="badge badge-error badge-lg gap-1 font-medium">
+						{m['expenses.balance_summary.you_owe']({
+							amount: $financialSummary.youOwe.toFixed(2) + ' €'
+						})}
+					</div>
+				{/if}
+				{#if $financialSummary.owedToYou > 0.001}
+					<div class="badge badge-success badge-lg gap-1 font-medium">
+						{m['expenses.balance_summary.owed_to_you']({
+							amount: $financialSummary.owedToYou.toFixed(2) + ' €'
+						})}
+					</div>
+				{/if}
+			</div>
+		{/if}
+
 		<!-- Mobile Expense List -->
 		<MobileItemList
 			loadItems={loadExpenses}
@@ -308,8 +348,21 @@
 			noItemsMessage={m['expenses.no_expenses']()}
 		>
 			{#snippet singleItemView(expense)}
-				<div class="flex-1">
-					<span class="font-medium">{expense.title}</span>
+				<div
+					class="flex-1 cursor-pointer"
+					role="button"
+					tabindex="0"
+					onclick={() => showDetailModal(expense)}
+					onkeydown={(e) => e.key === 'Enter' && showDetailModal(expense)}
+				>
+					<div class="flex items-center gap-1">
+						<span class="font-medium" class:opacity-50={!isExpenseMutable(expense)}>
+							{expense.title}
+						</span>
+						{#if !isExpenseMutable(expense)}
+							<span class="badge badge-ghost badge-xs">{m['expenses.detail.settled_badge']()}</span>
+						{/if}
+					</div>
 					<p class="text-xs text-base-content/60">
 						{#await getMember(expense.paidBy)}
 							<span class="loading loading-xs loading-dots"></span>
@@ -321,7 +374,14 @@
 						• {new Date(expense.date).toLocaleDateString('de-DE')}
 					</p>
 				</div>
-				<span class="font-bold">{expense.amount.toFixed(2)}€</span>
+				<span
+					class="font-bold"
+					class:text-success={isOwnExpense(expense)}
+					class:text-error={!isOwnExpense(expense)}
+					class:opacity-50={!isExpenseMutable(expense)}
+				>
+					{isOwnExpense(expense) ? '' : '−'}{expense.amount.toFixed(2)} €
+				</span>
 			{/snippet}
 			{#snippet singleItemActions(expense)}
 				{#if canEditExpense(expense)}
@@ -352,8 +412,21 @@
 			noItemsMessage={m['expenses.no_expenses']()}
 		>
 			{#snippet itemContent(expense)}
-				<div class="flex flex-col">
-					<span class="font-medium">{expense.title}</span>
+				<div
+					class="flex flex-col cursor-pointer"
+					role="button"
+					tabindex="0"
+					onclick={() => showDetailModal(expense)}
+					onkeydown={(e) => e.key === 'Enter' && showDetailModal(expense)}
+				>
+					<div class="flex items-center gap-1">
+						<span class="font-medium" class:opacity-50={!isExpenseMutable(expense)}>
+							{expense.title}
+						</span>
+						{#if !isExpenseMutable(expense)}
+							<span class="badge badge-ghost badge-xs">{m['expenses.detail.settled_badge']()}</span>
+						{/if}
+					</div>
 					{#await getMember(expense.paidBy)}
 						<span class="loading loading-xs loading-dots"></span>
 					{:then member}
@@ -367,7 +440,14 @@
 						{new Date(expense.date).toLocaleDateString('de-DE')}
 					</span>
 				</div>
-				<span class="text-lg font-bold">{expense.amount.toFixed(2)}€</span>
+				<span
+					class="text-lg font-bold"
+					class:text-success={isOwnExpense(expense)}
+					class:text-error={!isOwnExpense(expense)}
+					class:opacity-50={!isExpenseMutable(expense)}
+				>
+					{isOwnExpense(expense) ? '' : '−'}{expense.amount.toFixed(2)} €
+				</span>
 			{/snippet}
 			{#snippet itemActions(expense)}
 				{#if canEditExpense(expense)}
@@ -392,3 +472,76 @@
 		</DesktopItemList>
 	</div>
 </div>
+
+<!-- Expense Detail Modal -->
+<dialog class="modal" bind:this={detailModal}>
+	<div class="modal-box w-full max-w-md">
+		{#if detailExpense}
+			<h3 class="mb-4 text-lg font-bold">{detailExpense.title}</h3>
+
+			<div class="space-y-3 text-sm">
+				<div class="flex items-center justify-between">
+					<span class="opacity-60">{m['expenses.new.amount_label']()}</span>
+					<span
+						class="font-bold text-base"
+						class:text-success={isOwnExpense(detailExpense)}
+						class:text-error={!isOwnExpense(detailExpense)}
+					>
+						{isOwnExpense(detailExpense) ? '' : '−'}{detailExpense.amount.toFixed(2)} €
+					</span>
+				</div>
+
+				<div class="flex items-center justify-between">
+					<span class="opacity-60">{m['expenses.detail.paid_by_label']()}</span>
+					{#await getMember(detailExpense.paidBy)}
+						<span class="loading loading-xs loading-dots"></span>
+					{:then member}
+						<span class="font-medium">{member?.name ?? '—'}</span>
+					{/await}
+				</div>
+
+				<div class="flex items-center justify-between">
+					<span class="opacity-60">{m['expenses.detail.date_label']()}</span>
+					<span>{new Date(detailExpense.date).toLocaleDateString('de-DE')}</span>
+				</div>
+
+				<div class="flex items-center justify-between">
+					<span class="opacity-60">{m['expenses.detail.category_label']()}</span>
+					<span>
+						{#if $categories.length > 0}
+							{@const cat = $categories.find((c) => c.id === detailExpense?.categoryId)}
+							{cat ? (cat.icon ? `${cat.icon} ${cat.name}` : cat.name) : '—'}
+						{:else}
+							—
+						{/if}
+					</span>
+				</div>
+
+				{#if !isExpenseMutable(detailExpense)}
+					<div class="flex items-center justify-between">
+						<span class="opacity-60">Status</span>
+						<span class="badge badge-ghost">{m['expenses.detail.settled_badge']()}</span>
+					</div>
+				{/if}
+
+				<div class="divider my-2"></div>
+
+				<div>
+					<p class="mb-1 opacity-60">{m['expenses.detail.notes_label']()}</p>
+					<p class="text-base-content/80">
+						{detailExpense.notes ?? m['expenses.detail.no_notes']()}
+					</p>
+				</div>
+			</div>
+		{/if}
+
+		<div class="modal-action">
+			<form method="dialog">
+				<button class="btn">{m['expenses.detail.close_button']()}</button>
+			</form>
+		</div>
+	</div>
+	<form method="dialog" class="modal-backdrop">
+		<button>close</button>
+	</form>
+</dialog>

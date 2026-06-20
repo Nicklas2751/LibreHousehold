@@ -34,7 +34,7 @@ class ExpenseService {
     }
 
     List<Expense> getExpenses(UUID householdId) {
-        return expenseRepository.findByHouseholdId(householdId).stream()
+        return expenseRepository.findByHouseholdIdOrderByDateDesc(householdId).stream()
                 .map(entity -> expenseMapper.toExpense(entity, isMutable(householdId, entity.getPaidBy())))
                 .toList();
     }

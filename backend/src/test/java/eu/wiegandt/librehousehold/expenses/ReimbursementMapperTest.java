@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -28,7 +29,7 @@ class ReimbursementMapperTest {
             var creditorId = UUID.randomUUID();
             var debtorId = UUID.randomUUID();
             var entity = new ReimbursementEntity(id, householdId, BigDecimal.valueOf(50.0),
-                    creditorId, debtorId, "CONFIRMED", "Payment received");
+                    creditorId, debtorId, "CONFIRMED", "Payment received", LocalDateTime.now());
             var expected = new Reimbursement(id, 50.0, creditorId, debtorId, Reimbursement.StatusEnum.CONFIRMED)
                     .notes("Payment received");
 
@@ -46,7 +47,7 @@ class ReimbursementMapperTest {
             var creditorId = UUID.randomUUID();
             var debtorId = UUID.randomUUID();
             var entity = new ReimbursementEntity(id, UUID.randomUUID(),
-                    BigDecimal.valueOf(25.0), creditorId, debtorId, "PENDING", null);
+                    BigDecimal.valueOf(25.0), creditorId, debtorId, "PENDING", null, LocalDateTime.now());
             var expected = new Reimbursement(id, 25.0, creditorId, debtorId, Reimbursement.StatusEnum.PENDING);
 
             // when
@@ -69,14 +70,14 @@ class ReimbursementMapperTest {
             var debtorId = UUID.randomUUID();
             var create = new ReimbursementCreate(50.0, creditorId, debtorId).notes("Payment");
             var expected = new ReimbursementEntity(id, householdId, BigDecimal.valueOf(50.0),
-                    creditorId, debtorId, "PENDING", "Payment");
+                    creditorId, debtorId, "PENDING", "Payment", LocalDateTime.now());
 
             // when
             var result = mapper.toEntity(create, id, householdId);
 
             // then
             assertThat(result).usingRecursiveComparison()
-                    .ignoringFields("isNew")
+                    .ignoringFields("isNew", "createdAt")
                     .isEqualTo(expected);
         }
 
@@ -89,14 +90,14 @@ class ReimbursementMapperTest {
             var debtorId = UUID.randomUUID();
             var create = new ReimbursementCreate(25.0, creditorId, debtorId);
             var expected = new ReimbursementEntity(id, householdId, BigDecimal.valueOf(25.0),
-                    creditorId, debtorId, "PENDING", null);
+                    creditorId, debtorId, "PENDING", null, LocalDateTime.now());
 
             // when
             var result = mapper.toEntity(create, id, householdId);
 
             // then
             assertThat(result).usingRecursiveComparison()
-                    .ignoringFields("isNew")
+                    .ignoringFields("isNew", "createdAt")
                     .isEqualTo(expected);
         }
     }
@@ -108,7 +109,7 @@ class ReimbursementMapperTest {
         void presentStatus_updatesEntityStatus() {
             // given
             var entity = new ReimbursementEntity(UUID.randomUUID(), UUID.randomUUID(),
-                    BigDecimal.valueOf(25.0), UUID.randomUUID(), UUID.randomUUID(), "PENDING", null);
+                    BigDecimal.valueOf(25.0), UUID.randomUUID(), UUID.randomUUID(), "PENDING", null, LocalDateTime.now());
             var update = new ReimbursementUpdate().status(ReimbursementUpdate.StatusEnum.CONFIRMED);
 
             // when
@@ -122,7 +123,7 @@ class ReimbursementMapperTest {
         void emptyStatus_doesNotUpdateEntityStatus() {
             // given
             var entity = new ReimbursementEntity(UUID.randomUUID(), UUID.randomUUID(),
-                    BigDecimal.valueOf(25.0), UUID.randomUUID(), UUID.randomUUID(), "PENDING", null);
+                    BigDecimal.valueOf(25.0), UUID.randomUUID(), UUID.randomUUID(), "PENDING", null, LocalDateTime.now());
             var update = new ReimbursementUpdate();
 
             // when
@@ -136,7 +137,7 @@ class ReimbursementMapperTest {
         void presentNotes_updatesEntityNotes() {
             // given
             var entity = new ReimbursementEntity(UUID.randomUUID(), UUID.randomUUID(),
-                    BigDecimal.valueOf(25.0), UUID.randomUUID(), UUID.randomUUID(), "PENDING", null);
+                    BigDecimal.valueOf(25.0), UUID.randomUUID(), UUID.randomUUID(), "PENDING", null, LocalDateTime.now());
             var update = new ReimbursementUpdate().notes("All settled");
 
             // when
@@ -150,7 +151,7 @@ class ReimbursementMapperTest {
         void emptyNotes_doesNotUpdateEntityNotes() {
             // given
             var entity = new ReimbursementEntity(UUID.randomUUID(), UUID.randomUUID(),
-                    BigDecimal.valueOf(25.0), UUID.randomUUID(), UUID.randomUUID(), "PENDING", "Existing note");
+                    BigDecimal.valueOf(25.0), UUID.randomUUID(), UUID.randomUUID(), "PENDING", "Existing note", LocalDateTime.now());
             var update = new ReimbursementUpdate();
 
             // when

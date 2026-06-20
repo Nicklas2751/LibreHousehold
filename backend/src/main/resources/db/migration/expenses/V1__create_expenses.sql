@@ -30,5 +30,6 @@ CREATE TABLE expenses.reimbursement (
     creditor_id  UUID NOT NULL,
     debtor_id    UUID NOT NULL,
     status       TEXT NOT NULL DEFAULT 'PENDING',
-    notes        TEXT
+    notes        TEXT,
+    created_at   TIMESTAMP NOT NULL DEFAULT NOW()
 );

@@ -111,7 +111,8 @@
 			"pending_outgoing": "Pending to {name}",
 			"pending_incoming": "Pending from {name}",
 			"settled": "Settled",
-			"settle_button": "Settle Up"
+			"settle_button": "Settle Up",
+			"pending_settlement_badge": "Pending"
 		},
 		"upcoming_tasks_card": {
 			"title": "Upcoming Tasks",
@@ -133,7 +134,10 @@
 			"no_pending": "No pending settlements.",
 			"incoming_text": "{name} wants to settle {amount}",
 			"confirm_button": "Confirm",
-			"reject_button": "Reject"
+			"reject_button": "Reject",
+			"outgoing_title": "Sent Payments",
+			"outgoing_text": "You sent {amount} to {name}",
+			"cancel_button": "Withdraw"
 		},
 		"view_all": "View all"
 	},
@@ -206,6 +210,19 @@
 		"edit": {
 			"title": "Edit Expense",
 			"save_button": "Save Changes"
+		},
+		"detail": {
+			"close_button": "Close",
+			"paid_by_label": "Paid by",
+			"date_label": "Date",
+			"category_label": "Category",
+			"notes_label": "Notes",
+			"no_notes": "No notes",
+			"settled_badge": "Settled"
+		},
+		"balance_summary": {
+			"you_owe": "You owe a total of {amount}",
+			"owed_to_you": "You are owed {amount}"
 		}
 	},
 	"settle": {
