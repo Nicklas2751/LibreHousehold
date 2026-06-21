@@ -211,6 +211,15 @@
 			"title": "Edit Expense",
 			"save_button": "Save Changes"
 		},
+		"user_share_label": "Your share",
+		"split_between_label": "Split between",
+		"split_all_members": "All members",
+		"delete_modal": {
+			"title": "Delete expense?",
+			"text": "The expense \"{title}\" will be permanently deleted.",
+			"confirm": "Delete",
+			"cancel": "Cancel"
+		},
 		"detail": {
 			"close_button": "Close",
 			"paid_by_label": "Paid by",

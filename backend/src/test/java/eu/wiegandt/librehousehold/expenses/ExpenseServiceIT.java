@@ -1,6 +1,7 @@
 package eu.wiegandt.librehousehold.expenses;
 
 import eu.wiegandt.librehousehold.household.HouseholdQuery;
+import eu.wiegandt.librehousehold.household.MemberQuery;
 import eu.wiegandt.librehousehold.model.Expense;
 import org.instancio.Instancio;
 import org.junit.jupiter.api.Nested;
@@ -54,6 +55,9 @@ class ExpenseServiceIT {
     @MockitoBean
     private HouseholdQuery householdQuery;
 
+    @MockitoBean
+    private MemberQuery memberQuery;
+
     @Nested
     class createExpense {
 
@@ -61,7 +65,9 @@ class ExpenseServiceIT {
         void validExpense_persistedInDatabase() {
             // given
             var householdId = UUID.randomUUID();
-            var expense = Instancio.create(Expense.class);
+            var expense = Instancio.of(Expense.class)
+                    .set(field(Expense.class, "splitBetween"), List.of(UUID.randomUUID()))
+                    .create();
             doReturn(true).when(householdQuery).householdExists(householdId);
 
             // when
@@ -71,6 +77,27 @@ class ExpenseServiceIT {
             var entity = expenseRepository.findById(expense.getId()).orElseThrow();
             assertThat(entity).usingRecursiveComparison().ignoringFields("isNew")
                     .isEqualTo(expenseMapper.toEntity(expense, householdId));
+        }
+
+        @Test
+        void emptySplit_persistsAllMembersExplicitly() {
+            // given
+            var householdId = UUID.randomUUID();
+            var member1 = UUID.randomUUID();
+            var member2 = UUID.randomUUID();
+            var expense = Instancio.of(Expense.class)
+                    .set(field(Expense.class, "splitBetween"), List.of())
+                    .create();
+            doReturn(true).when(householdQuery).householdExists(householdId);
+            doReturn(List.of(member1, member2)).when(memberQuery).findMemberIdsByHouseholdId(householdId);
+
+            // when
+            expenseService.createExpense(householdId, expense);
+
+            // then
+            var entity = expenseRepository.findById(expense.getId()).orElseThrow();
+            assertThat(entity.getSplitBetween())
+                    .containsExactlyInAnyOrder(new ExpenseSplitRef(member1), new ExpenseSplitRef(member2));
         }
     }
 
