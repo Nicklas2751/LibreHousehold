@@ -213,6 +213,15 @@
 			"title": "Ausgabe bearbeiten",
 			"save_button": "Änderungen speichern"
 		},
+		"user_share_label": "Dein Anteil",
+		"split_between_label": "Aufgeteilt zwischen",
+		"split_all_members": "Alle Mitglieder",
+		"delete_modal": {
+			"title": "Ausgabe löschen?",
+			"text": "Die Ausgabe \"{title}\" wird unwiderruflich gelöscht.",
+			"confirm": "Löschen",
+			"cancel": "Abbrechen"
+		},
 		"detail": {
 			"close_button": "Schließen",
 			"paid_by_label": "Bezahlt von",

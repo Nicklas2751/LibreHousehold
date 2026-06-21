@@ -2,6 +2,7 @@ package eu.wiegandt.librehousehold.expenses;
 
 import eu.wiegandt.librehousehold.household.HouseholdDeleted;
 import eu.wiegandt.librehousehold.household.HouseholdQuery;
+import eu.wiegandt.librehousehold.household.MemberQuery;
 import eu.wiegandt.librehousehold.model.Expense;
 import eu.wiegandt.librehousehold.model.ExpenseUpdate;
 import org.instancio.Instancio;
@@ -9,6 +10,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mapstruct.factory.Mappers;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
@@ -20,6 +22,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.instancio.Select.field;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.verify;
@@ -41,6 +44,9 @@ class ExpenseServiceTest {
 
     @Mock
     private HouseholdQuery householdQuery;
+
+    @Mock
+    private MemberQuery memberQuery;
 
     @InjectMocks
     private ExpenseService expenseService;
@@ -117,6 +123,34 @@ class ExpenseServiceTest {
             // when / then
             assertThatThrownBy(() -> expenseService.createExpense(householdId, expense))
                     .isInstanceOf(HouseholdNotFoundException.class);
+        }
+
+        @Test
+        void emptySplit_resolvesToAllCurrentMembers() {
+            // given
+            var householdId = UUID.randomUUID();
+            var member1 = UUID.randomUUID();
+            var member2 = UUID.randomUUID();
+            var expense = Instancio.of(Expense.class)
+                    .set(field(Expense.class, "splitBetween"), List.of())
+                    .create();
+            var savedEntity = Instancio.create(ExpenseEntity.class);
+            doReturn(true).when(householdQuery).householdExists(householdId);
+            doReturn(List.of(member1, member2)).when(memberQuery).findMemberIdsByHouseholdId(householdId);
+            doReturn(savedEntity).when(expenseRepository).save(any(ExpenseEntity.class));
+            doReturn(false).when(reimbursementRepository)
+                    .existsByHouseholdIdAndCreditorIdAndStatusIn(any(), any(), any());
+            doReturn(false).when(reimbursementRepository)
+                    .existsActiveSettlementAsDebtorCoveringExpense(any(), any(), any());
+
+            // when
+            expenseService.createExpense(householdId, expense);
+
+            // then
+            var captor = ArgumentCaptor.forClass(ExpenseEntity.class);
+            verify(expenseRepository).save(captor.capture());
+            assertThat(captor.getValue().getSplitBetween())
+                    .containsExactlyInAnyOrder(new ExpenseSplitRef(member1), new ExpenseSplitRef(member2));
         }
 
         @Test

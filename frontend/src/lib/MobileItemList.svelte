@@ -7,7 +7,7 @@
 		items: T[];
 		noItemsMessage: string;
 		singleItemView: Snippet<[T]>;
-		singleItemActions: Snippet<[T]>;
+		singleItemActions?: Snippet<[T]>;
 	}
 
 	const { loadItems, items, noItemsMessage, singleItemView, singleItemActions }: Props = $props();
@@ -30,7 +30,7 @@
 							<div class="flex-1">
 								{@render singleItemView(item)}
 							</div>
-							{@render singleItemActions(item)}
+							{#if singleItemActions}{@render singleItemActions(item)}{/if}
 						</li>
 					{/each}
 				</ul>

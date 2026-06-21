@@ -33,11 +33,15 @@
 	let detailExpense: Expense | null = $state(null);
 	let detailModal: HTMLDialogElement | null = $state(null);
 
-	// Load financial summary and categories on page open
+	let deleteModal: HTMLDialogElement | null = $state(null);
+	let expenseToDelete: Expense | null = $state(null);
+
+	// Load financial summary, categories and members on page open
 	$effect(() => {
 		if ($householdState && $userState) {
 			loadFinancialSummary($householdState.id, $userState.id);
 			loadCategories($householdState.id);
+			loadMembers($householdState.id);
 		}
 	});
 
@@ -146,8 +150,31 @@
 		return expense.paidBy === $userState?.id;
 	}
 
+	function isUserInvolved(expense: Expense): boolean {
+		const split = expense.splitBetween ?? [];
+		const userId = $userState?.id;
+		if (!userId) return true;
+		if (expense.paidBy === userId) return true;
+		if (split.length === 0) return true;
+		return split.includes(userId);
+	}
+
+	function getUserShare(expense: Expense): number | null {
+		const split = expense.splitBetween ?? [];
+		const userId = $userState?.id;
+		if (!userId || split.length === 0) return null;
+		if (!split.includes(userId)) return null;
+		return expense.amount / split.length;
+	}
+
+	function getSplitLabel(expense: Expense): string {
+		const split = expense.splitBetween ?? [];
+		if (split.length === 0) return m['expenses.split_all_members']();
+		return split.map((id) => $members.find((member) => member.id === id)?.name ?? '…').join(', ');
+	}
+
 	async function handleDeleteExpense(expenseId: string) {
-		if ($householdState && confirm(m['expenses.delete_confirm']())) {
+		if ($householdState) {
 			await deleteExpense($householdState.id, expenseId);
 			if (expenseToEdit?.id === expenseId) {
 				await goto('/app/expenses');
@@ -349,59 +376,49 @@
 		>
 			{#snippet singleItemView(expense)}
 				<div
-					class="flex-1 cursor-pointer"
+					class="flex flex-1 cursor-pointer items-center justify-between gap-2"
+					class:opacity-50={!isExpenseMutable(expense) || !isUserInvolved(expense)}
 					role="button"
 					tabindex="0"
 					onclick={() => showDetailModal(expense)}
 					onkeydown={(e) => e.key === 'Enter' && showDetailModal(expense)}
 				>
-					<div class="flex items-center gap-1">
-						<span class="font-medium" class:opacity-50={!isExpenseMutable(expense)}>
-							{expense.title}
-						</span>
-						{#if !isExpenseMutable(expense)}
-							<span class="badge badge-ghost badge-xs">{m['expenses.detail.settled_badge']()}</span>
+					<div>
+						<div class="flex items-center gap-1">
+							<span class="font-medium">
+								{expense.title}
+							</span>
+							{#if !isExpenseMutable(expense)}
+								<span class="badge badge-ghost badge-xs"
+									>{m['expenses.detail.settled_badge']()}</span
+								>
+							{/if}
+						</div>
+						<p class="text-xs text-base-content/60">
+							{#await getMember(expense.paidBy)}
+								<span class="loading loading-xs loading-dots"></span>
+							{:then member}
+								{#if member}{member.name} •{/if}
+							{/await}
+							{new Date(expense.date).toLocaleDateString('de-DE')}
+						</p>
+						<p class="text-xs text-base-content/40">{getSplitLabel(expense)}</p>
+					</div>
+					<div class="shrink-0 text-right">
+						<div
+							class="font-bold"
+							class:text-success={isOwnExpense(expense)}
+							class:text-error={!isOwnExpense(expense)}
+						>
+							{isOwnExpense(expense) ? '' : '−'}{expense.amount.toFixed(2)} €
+						</div>
+						{#if getUserShare(expense) !== null}
+							<div class="text-xs text-base-content/60">
+								{m['expenses.user_share_label']()}: {getUserShare(expense)!.toFixed(2)} €
+							</div>
 						{/if}
 					</div>
-					<p class="text-xs text-base-content/60">
-						{#await getMember(expense.paidBy)}
-							<span class="loading loading-xs loading-dots"></span>
-						{:then member}
-							{#if member}
-								{member.name}
-							{/if}
-						{/await}
-						• {new Date(expense.date).toLocaleDateString('de-DE')}
-					</p>
 				</div>
-				<span
-					class="font-bold"
-					class:text-success={isOwnExpense(expense)}
-					class:text-error={!isOwnExpense(expense)}
-					class:opacity-50={!isExpenseMutable(expense)}
-				>
-					{isOwnExpense(expense) ? '' : '−'}{expense.amount.toFixed(2)} €
-				</span>
-			{/snippet}
-			{#snippet singleItemActions(expense)}
-				{#if canEditExpense(expense)}
-					<div class="mt-2 flex gap-2">
-						<button
-							class="btn btn-ghost btn-xs"
-							onclick={() => handleEditClick(expense.id)}
-							aria-label={m['expenses.edit.title']()}
-						>
-							<EditIcon />
-						</button>
-						<button
-							class="btn btn-xs btn-error"
-							onclick={() => handleDeleteExpense(expense.id)}
-							aria-label={m['expenses.delete_button']()}
-						>
-							<BinIcon />
-						</button>
-					</div>
-				{/if}
 			{/snippet}
 		</MobileItemList>
 
@@ -414,13 +431,14 @@
 			{#snippet itemContent(expense)}
 				<div
 					class="flex flex-col cursor-pointer"
+					class:opacity-50={!isExpenseMutable(expense) || !isUserInvolved(expense)}
 					role="button"
 					tabindex="0"
 					onclick={() => showDetailModal(expense)}
 					onkeydown={(e) => e.key === 'Enter' && showDetailModal(expense)}
 				>
 					<div class="flex items-center gap-1">
-						<span class="font-medium" class:opacity-50={!isExpenseMutable(expense)}>
+						<span class="font-medium">
 							{expense.title}
 						</span>
 						{#if !isExpenseMutable(expense)}
@@ -439,35 +457,26 @@
 					<span class="text-xs text-base-content/60">
 						{new Date(expense.date).toLocaleDateString('de-DE')}
 					</span>
+					<span class="text-xs text-base-content/40">{getSplitLabel(expense)}</span>
 				</div>
-				<span
-					class="text-lg font-bold"
-					class:text-success={isOwnExpense(expense)}
-					class:text-error={!isOwnExpense(expense)}
-					class:opacity-50={!isExpenseMutable(expense)}
-				>
-					{isOwnExpense(expense) ? '' : '−'}{expense.amount.toFixed(2)} €
-				</span>
-			{/snippet}
-			{#snippet itemActions(expense)}
-				{#if canEditExpense(expense)}
-					<div class="flex items-center gap-2">
-						<button
-							class="btn btn-ghost btn-sm"
-							onclick={() => handleEditClick(expense.id)}
-							aria-label={m['expenses.edit.title']()}
-						>
-							<EditIcon />
-						</button>
-						<button
-							class="btn text-error btn-ghost btn-sm"
-							onclick={() => handleDeleteExpense(expense.id)}
-							aria-label={m['expenses.delete_button']()}
-						>
-							<BinIcon />
-						</button>
+				<div class="shrink-0 text-right">
+					<div
+						class="text-lg font-bold"
+						class:text-success={isOwnExpense(expense)}
+						class:text-error={!isOwnExpense(expense)}
+						class:opacity-50={!isExpenseMutable(expense) || !isUserInvolved(expense)}
+					>
+						{isOwnExpense(expense) ? '' : '−'}{expense.amount.toFixed(2)} €
 					</div>
-				{/if}
+					{#if getUserShare(expense) !== null}
+						<div
+							class="text-xs text-base-content/60"
+							class:opacity-50={!isExpenseMutable(expense) || !isUserInvolved(expense)}
+						>
+							{m['expenses.user_share_label']()}: {getUserShare(expense)!.toFixed(2)} €
+						</div>
+					{/if}
+				</div>
 			{/snippet}
 		</DesktopItemList>
 	</div>
@@ -490,6 +499,13 @@
 						{isOwnExpense(detailExpense) ? '' : '−'}{detailExpense.amount.toFixed(2)} €
 					</span>
 				</div>
+
+				{#if getUserShare(detailExpense) !== null}
+					<div class="flex items-center justify-between">
+						<span class="opacity-60">{m['expenses.user_share_label']()}</span>
+						<span class="font-medium">{getUserShare(detailExpense)!.toFixed(2)} €</span>
+					</div>
+				{/if}
 
 				<div class="flex items-center justify-between">
 					<span class="opacity-60">{m['expenses.detail.paid_by_label']()}</span>
@@ -517,6 +533,11 @@
 					</span>
 				</div>
 
+				<div class="flex items-center justify-between">
+					<span class="opacity-60">{m['expenses.split_between_label']()}</span>
+					<span class="text-right">{getSplitLabel(detailExpense)}</span>
+				</div>
+
 				{#if !isExpenseMutable(detailExpense)}
 					<div class="flex items-center justify-between">
 						<span class="opacity-60">Status</span>
@@ -535,10 +556,62 @@
 			</div>
 		{/if}
 
-		<div class="modal-action">
-			<form method="dialog">
+		<div class="modal-action flex-wrap gap-2">
+			{#if detailExpense && canEditExpense(detailExpense)}
+				<button
+					class="btn btn-outline btn-sm"
+					onclick={() => {
+						const id = detailExpense!.id;
+						detailModal?.close();
+						handleEditClick(id);
+					}}
+				>
+					<EditIcon />{m['expenses.edit.title']()}
+				</button>
+				<button
+					class="btn btn-error btn-outline btn-sm"
+					onclick={() => {
+						expenseToDelete = detailExpense;
+						detailModal?.close();
+						deleteModal?.showModal();
+					}}
+				>
+					<BinIcon />{m['expenses.delete_button']()}
+				</button>
+			{/if}
+			<form method="dialog" class="ml-auto">
 				<button class="btn">{m['expenses.detail.close_button']()}</button>
 			</form>
+		</div>
+	</div>
+	<form method="dialog" class="modal-backdrop">
+		<button>close</button>
+	</form>
+</dialog>
+
+<!-- Delete Confirmation Modal -->
+<dialog bind:this={deleteModal} class="modal">
+	<div class="modal-box">
+		<h3 class="text-lg font-bold">{m['expenses.delete_modal.title']()}</h3>
+		<p class="py-4">
+			{m['expenses.delete_modal.text']({ title: expenseToDelete?.title ?? '' })}
+		</p>
+		<div class="modal-action">
+			<form method="dialog">
+				<button class="btn">{m['expenses.delete_modal.cancel']()}</button>
+			</form>
+			<button
+				class="btn btn-error"
+				onclick={async () => {
+					if (expenseToDelete) {
+						await handleDeleteExpense(expenseToDelete.id);
+						deleteModal?.close();
+						expenseToDelete = null;
+					}
+				}}
+			>
+				{m['expenses.delete_modal.confirm']()}
+			</button>
 		</div>
 	</div>
 	<form method="dialog" class="modal-backdrop">

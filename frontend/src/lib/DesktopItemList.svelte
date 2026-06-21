@@ -8,7 +8,7 @@
 		noItemsMessage: string;
 		header?: Snippet;
 		itemContent: Snippet<[T]>;
-		itemActions: Snippet<[T]>;
+		itemActions?: Snippet<[T]>;
 	}
 
 	const { loadItems, items, noItemsMessage, header, itemContent, itemActions }: Props = $props();
@@ -39,7 +39,7 @@
 								<div class="list-col-grow flex items-center justify-between gap-4">
 									{@render itemContent(item)}
 								</div>
-								{@render itemActions(item)}
+								{#if itemActions}{@render itemActions(item)}{/if}
 							</li>
 						{/each}
 					</ul>
