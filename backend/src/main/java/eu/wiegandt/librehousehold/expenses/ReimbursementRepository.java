@@ -14,24 +14,17 @@ interface ReimbursementRepository extends CrudRepository<ReimbursementEntity, UU
 
     Optional<ReimbursementEntity> findByIdAndHouseholdId(UUID id, UUID householdId);
 
-    boolean existsByHouseholdIdAndCreditorIdAndStatusIn(UUID householdId, UUID creditorId, List<String> statuses);
-
-    void deleteByHouseholdId(UUID householdId);
-
     @Query("""
             SELECT EXISTS (
-                SELECT 1 FROM expenses.reimbursement r
-                WHERE r.household_id = :householdId
+                SELECT 1 FROM expenses.settlement_expense se
+                JOIN expenses.reimbursement r ON r.id = se.settlement_id
+                WHERE se.expense_id = :expenseId
+                  AND r.household_id = :householdId
                   AND r.status IN ('PENDING', 'CONFIRMED')
-                  AND r.debtor_id = :debtorId
-                  AND (
-                    NOT EXISTS (SELECT 1 FROM expenses.expense_split es WHERE es.expense_id = :expenseId)
-                    OR EXISTS (SELECT 1 FROM expenses.expense_split es
-                               WHERE es.expense_id = :expenseId AND es.member_id = r.creditor_id)
-                  )
             )
             """)
-    boolean existsActiveSettlementAsDebtorCoveringExpense(@Param("householdId") UUID householdId,
-                                                          @Param("debtorId") UUID debtorId,
-                                                          @Param("expenseId") UUID expenseId);
+    boolean existsActiveSettlementCoveringExpense(@Param("householdId") UUID householdId,
+                                                   @Param("expenseId") UUID expenseId);
+
+    void deleteByHouseholdId(UUID householdId);
 }

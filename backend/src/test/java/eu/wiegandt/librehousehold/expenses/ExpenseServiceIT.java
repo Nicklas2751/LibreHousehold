@@ -19,9 +19,9 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -160,50 +160,21 @@ class ExpenseServiceIT {
         }
 
         @Test
-        void reverseDirectionConfirmedSettlement_isAlsoCutoff() {
+        void expenseInConfirmedSettlement_isExcluded() {
             // given
             var householdId = UUID.randomUUID();
             var payerId = UUID.randomUUID();
             var debtorId = UUID.randomUUID();
             doReturn(true).when(householdQuery).householdExists(householdId);
 
-            // payerId paid this expense before the settlement; split is empty (all members owe)
-            expenseService.createExpense(householdId, Instancio.of(Expense.class)
+            var expense = expenseService.createExpense(householdId, Instancio.of(Expense.class)
                     .set(field(Expense.class, "paidBy"), payerId)
                     .set(field(Expense.class, "splitBetween"), List.of())
-                    .set(field(Expense.class, "date"), LocalDate.of(2024, 1, 1))
-                    .create());
-
-            // settlement in REVERSE direction: creditor=debtorId, debtor=payerId
-            var reverseSettlement = new ReimbursementEntity(UUID.randomUUID(), householdId,
-                    BigDecimal.ONE, debtorId, payerId, "CONFIRMED", null,
-                    LocalDateTime.of(2024, 6, 1, 0, 0));
-            reimbursementRepository.save(reverseSettlement);
-
-            // when: query for payerId's expenses where debtorId owes
-            var result = expenseService.getDebtorExpenses(householdId, payerId, debtorId);
-
-            // then: expense predates the settlement → excluded
-            assertThat(result).isEmpty();
-        }
-
-        @Test
-        void expensePredatesConfirmedSettlement_isExcluded() {
-            // given
-            var householdId = UUID.randomUUID();
-            var payerId = UUID.randomUUID();
-            var debtorId = UUID.randomUUID();
-            doReturn(true).when(householdQuery).householdExists(householdId);
-
-            expenseService.createExpense(householdId, Instancio.of(Expense.class)
-                    .set(field(Expense.class, "paidBy"), payerId)
-                    .set(field(Expense.class, "splitBetween"), List.of())
-                    .set(field(Expense.class, "date"), LocalDate.of(2024, 1, 1))
                     .create());
 
             var confirmedSettlement = new ReimbursementEntity(UUID.randomUUID(), householdId,
-                    BigDecimal.ONE, payerId, debtorId, "CONFIRMED", null,
-                    LocalDateTime.of(2024, 6, 1, 0, 0));
+                    BigDecimal.ONE, payerId, debtorId, "CONFIRMED", null, LocalDateTime.now());
+            confirmedSettlement.setCoveredExpenses(Set.of(new SettlementExpenseRef(expense.getId())));
             reimbursementRepository.save(confirmedSettlement);
 
             // when
@@ -214,7 +185,7 @@ class ExpenseServiceIT {
         }
 
         @Test
-        void expensePostdatesConfirmedSettlement_isIncluded() {
+        void expenseNotInConfirmedSettlement_isIncluded() {
             // given
             var householdId = UUID.randomUUID();
             var payerId = UUID.randomUUID();
@@ -224,12 +195,11 @@ class ExpenseServiceIT {
             var expense = expenseService.createExpense(householdId, Instancio.of(Expense.class)
                     .set(field(Expense.class, "paidBy"), payerId)
                     .set(field(Expense.class, "splitBetween"), List.of())
-                    .set(field(Expense.class, "date"), LocalDate.of(2024, 7, 1))
                     .create());
 
+            // settlement with empty coveredExpenses — does not cover the expense
             var confirmedSettlement = new ReimbursementEntity(UUID.randomUUID(), householdId,
-                    BigDecimal.ONE, payerId, debtorId, "CONFIRMED", null,
-                    LocalDateTime.of(2024, 6, 1, 0, 0));
+                    BigDecimal.ONE, payerId, debtorId, "CONFIRMED", null, LocalDateTime.now());
             reimbursementRepository.save(confirmedSettlement);
 
             // when
@@ -250,18 +220,17 @@ class ExpenseServiceIT {
             var expense = expenseService.createExpense(householdId, Instancio.of(Expense.class)
                     .set(field(Expense.class, "paidBy"), payerId)
                     .set(field(Expense.class, "splitBetween"), List.of())
-                    .set(field(Expense.class, "date"), LocalDate.of(2024, 1, 1))
                     .create());
 
             var pendingSettlement = new ReimbursementEntity(UUID.randomUUID(), householdId,
-                    BigDecimal.ONE, payerId, debtorId, "PENDING", null,
-                    LocalDateTime.of(2024, 6, 1, 0, 0));
+                    BigDecimal.ONE, payerId, debtorId, "PENDING", null, LocalDateTime.now());
+            pendingSettlement.setCoveredExpenses(Set.of(new SettlementExpenseRef(expense.getId())));
             reimbursementRepository.save(pendingSettlement);
 
             // when
             var result = expenseService.getDebtorExpenses(householdId, payerId, debtorId);
 
-            // then
+            // then: PENDING settlements don't exclude from debtor expenses
             assertThat(result).extracting(Expense::getId).containsExactly(expense.getId());
         }
     }
@@ -270,20 +239,45 @@ class ExpenseServiceIT {
     class getExpenses {
 
         @Test
-        void debtorInActiveSettlementCoveringExpense_isMutableFalse() {
+        void expenseInCoveredExpenses_isMutableFalse() {
             // given
             var householdId = UUID.randomUUID();
             var creditorId = UUID.randomUUID();
             var debtorId = UUID.randomUUID();
             doReturn(true).when(householdQuery).householdExists(householdId);
 
-            // debtorId paid this expense; creditorId is explicitly in the split
+            var expense = expenseService.createExpense(householdId, Instancio.of(Expense.class)
+                    .set(field(Expense.class, "paidBy"), debtorId)
+                    .set(field(Expense.class, "splitBetween"), List.of(creditorId, debtorId))
+                    .create());
+
+            var settlement = new ReimbursementEntity(UUID.randomUUID(), householdId,
+                    BigDecimal.ONE, creditorId, debtorId, "CONFIRMED", null, LocalDateTime.now());
+            settlement.setCoveredExpenses(Set.of(new SettlementExpenseRef(expense.getId())));
+            reimbursementRepository.save(settlement);
+
+            // when
+            var result = expenseService.getExpenses(householdId);
+
+            // then
+            assertThat(result).singleElement()
+                    .satisfies(e -> assertThat(e.getIsMutable()).contains(false));
+        }
+
+        @Test
+        void expenseNotInCoveredExpenses_isMutableTrue() {
+            // given
+            var householdId = UUID.randomUUID();
+            var creditorId = UUID.randomUUID();
+            var debtorId = UUID.randomUUID();
+            doReturn(true).when(householdQuery).householdExists(householdId);
+
             expenseService.createExpense(householdId, Instancio.of(Expense.class)
                     .set(field(Expense.class, "paidBy"), debtorId)
                     .set(field(Expense.class, "splitBetween"), List.of(creditorId, debtorId))
                     .create());
 
-            // settlement: creditor=creditorId, debtor=debtorId → active (CONFIRMED)
+            // settlement with empty coveredExpenses — does not cover the expense above
             var settlement = new ReimbursementEntity(UUID.randomUUID(), householdId,
                     BigDecimal.ONE, creditorId, debtorId, "CONFIRMED", null, LocalDateTime.now());
             reimbursementRepository.save(settlement);
@@ -291,37 +285,9 @@ class ExpenseServiceIT {
             // when
             var result = expenseService.getExpenses(householdId);
 
-            // then: expense is covered by the settlement → not mutable
+            // then
             assertThat(result).singleElement()
-                    .satisfies(expense -> assertThat(expense.getIsMutable()).contains(false));
-        }
-
-        @Test
-        void debtorInSettlementButCreditorNotInSplit_isMutableTrue() {
-            // given
-            var householdId = UUID.randomUUID();
-            var creditorId = UUID.randomUUID();
-            var debtorId = UUID.randomUUID();
-            var unrelatedMember = UUID.randomUUID();
-            doReturn(true).when(householdQuery).householdExists(householdId);
-
-            // debtorId paid this expense; split only contains debtorId and unrelatedMember
-            expenseService.createExpense(householdId, Instancio.of(Expense.class)
-                    .set(field(Expense.class, "paidBy"), debtorId)
-                    .set(field(Expense.class, "splitBetween"), List.of(debtorId, unrelatedMember))
-                    .create());
-
-            // settlement: creditor=creditorId, debtor=debtorId → but creditorId is NOT in the expense split
-            var settlement = new ReimbursementEntity(UUID.randomUUID(), householdId,
-                    BigDecimal.ONE, creditorId, debtorId, "CONFIRMED", null, LocalDateTime.now());
-            reimbursementRepository.save(settlement);
-
-            // when
-            var result = expenseService.getExpenses(householdId);
-
-            // then: settlement does not cover this expense → still mutable
-            assertThat(result).singleElement()
-                    .satisfies(expense -> assertThat(expense.getIsMutable()).contains(true));
+                    .satisfies(e -> assertThat(e.getIsMutable()).contains(true));
         }
     }
 }

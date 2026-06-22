@@ -7,16 +7,20 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 class ReimbursementService {
 
     private final ReimbursementRepository reimbursementRepository;
+    private final ExpenseRepository expenseRepository;
     private final ReimbursementMapper reimbursementMapper;
 
     ReimbursementService(ReimbursementRepository reimbursementRepository,
+                         ExpenseRepository expenseRepository,
                          ReimbursementMapper reimbursementMapper) {
         this.reimbursementRepository = reimbursementRepository;
+        this.expenseRepository = expenseRepository;
         this.reimbursementMapper = reimbursementMapper;
     }
 
@@ -28,6 +32,12 @@ class ReimbursementService {
 
     Reimbursement createReimbursement(UUID householdId, ReimbursementCreate create) {
         var entity = reimbursementMapper.toEntity(create, UUID.randomUUID(), householdId);
+        var coveredExpenses = expenseRepository
+                .findDebtorExpenses(householdId, create.getCreditorId(), create.getDebtorId())
+                .stream()
+                .map(e -> new SettlementExpenseRef(e.getId()))
+                .collect(Collectors.toSet());
+        entity.setCoveredExpenses(coveredExpenses);
         var saved = reimbursementRepository.save(entity);
         return reimbursementMapper.toReimbursement(saved);
     }
@@ -37,6 +47,7 @@ class ReimbursementService {
                 .orElseThrow(ReimbursementNotFoundException::new);
 
         reimbursementMapper.updateEntityFromUpdate(update, entity);
+        entity.markExisting();
         reimbursementRepository.save(entity);
         return reimbursementMapper.toReimbursement(entity);
     }
