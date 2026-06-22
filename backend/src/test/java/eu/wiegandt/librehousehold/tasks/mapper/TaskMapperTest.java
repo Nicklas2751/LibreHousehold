@@ -32,11 +32,10 @@ class TaskMapperTest {
         void entityWithAllFields_mapsAllFieldsCorrectly() {
             // given
             var entity = new TaskEntity(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), "Clean kitchen",
-                    "Wipe surfaces", LocalDate.of(2024, 7, 1), LocalDate.of(2024, 6, 30), true, "WEEKS", 2);
+                    "Wipe surfaces", LocalDate.of(2024, 7, 1), true, "WEEKS", 2);
             var expected = new Task(entity.getId(), "Clean kitchen", LocalDate.of(2024, 7, 1))
                     .assignedTo(entity.getAssignedTo())
                     .description("Wipe surfaces")
-                    .done(LocalDate.of(2024, 6, 30))
                     .recurring(true)
                     .recurrenceUnit(Task.RecurrenceUnitEnum.WEEKS)
                     .recurrenceInterval(2);
@@ -52,7 +51,7 @@ class TaskMapperTest {
         void entityWithNullOptionalFields_returnsTaskWithEmptyOptionals() {
             // given
             var entity = new TaskEntity(UUID.randomUUID(), UUID.randomUUID(), null, "Title",
-                    null, LocalDate.of(2024, 7, 1), null, false, null, null);
+                    null, LocalDate.of(2024, 7, 1), false, null, null);
             var expected = new Task(entity.getId(), "Title", LocalDate.of(2024, 7, 1))
                     .recurring(false);
 
@@ -74,7 +73,7 @@ class TaskMapperTest {
         void entityWithRecurrenceUnit_mapsEnumValueCorrectly(Task.RecurrenceUnitEnum recurrenceUnit) {
             // given
             var entity = new TaskEntity(UUID.randomUUID(), UUID.randomUUID(), null, "T",
-                    null, LocalDate.of(2024, 7, 1), null, true, recurrenceUnit.name(), 1);
+                    null, LocalDate.of(2024, 7, 1), true, recurrenceUnit.name(), 1);
             var expected = new Task(entity.getId(), "T", LocalDate.of(2024, 7, 1))
                     .recurring(true)
                     .recurrenceUnit(recurrenceUnit)
@@ -101,7 +100,7 @@ class TaskMapperTest {
                     .done(LocalDate.of(2024, 6, 30));
             var expected = new TaskEntity(task.getId(), householdId, task.getAssignedTo().orElseThrow(),
                     "Take out trash", "Put in bin", LocalDate.of(2024, 7, 1),
-                    LocalDate.of(2024, 6, 30), true, "WEEKS", 2);
+                    true, "WEEKS", 2);
 
             // when
             var entity = mapper.toEntity(task, householdId);
@@ -116,7 +115,7 @@ class TaskMapperTest {
             var householdId = UUID.randomUUID();
             var task = new Task(UUID.randomUUID(), "Simple task", LocalDate.of(2024, 7, 1));
             var expected = new TaskEntity(task.getId(), householdId, null, "Simple task",
-                    null, LocalDate.of(2024, 7, 1), null, false, null, null);
+                    null, LocalDate.of(2024, 7, 1), false, null, null);
 
             // when
             var entity = mapper.toEntity(task, householdId);
@@ -139,7 +138,7 @@ class TaskMapperTest {
             var task = new Task(UUID.randomUUID(), "Task", LocalDate.of(2024, 7, 1))
                     .recurrenceUnit(recurrenceUnit);
             var expected = new TaskEntity(task.getId(), householdId, null, "Task",
-                    null, LocalDate.of(2024, 7, 1), null, false, recurrenceUnit.name(), null);
+                    null, LocalDate.of(2024, 7, 1), false, recurrenceUnit.name(), null);
 
             // when
             var entity = mapper.toEntity(task, householdId);
@@ -189,21 +188,6 @@ class TaskMapperTest {
         @Test
         void emptyOptional_returnsNull() {
             assertThat(mapper.fromOptionalUUID(Optional.empty())).isNull();
-        }
-    }
-
-    @Nested
-    class fromOptionalDate {
-
-        @Test
-        void presentOptional_returnsDate() {
-            var date = LocalDate.of(2024, 7, 1);
-            assertThat(mapper.fromOptionalDate(Optional.of(date))).isEqualTo(date);
-        }
-
-        @Test
-        void emptyOptional_returnsNull() {
-            assertThat(mapper.fromOptionalDate(Optional.empty())).isNull();
         }
     }
 

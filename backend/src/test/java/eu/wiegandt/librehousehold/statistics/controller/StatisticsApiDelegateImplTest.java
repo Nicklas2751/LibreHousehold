@@ -75,7 +75,7 @@ class StatisticsApiDelegateImplTest {
             doReturn(avgExpensesPerMonth).when(expenseStatisticsProvider).getAvgExpensesPerMonth(eq(householdId), any(), any());
             doReturn(categories).when(expenseStatisticsProvider).getExpenseStatsByCategory(eq(householdId), any(), any());
             doReturn(members).when(expenseStatisticsProvider).getExpenseStatsByMember(eq(householdId), any(), any());
-            doReturn(tasks).when(taskStatisticsProvider).getTaskStatsByMember(householdId);
+            doReturn(tasks).when(taskStatisticsProvider).getTaskStatsByMember(eq(householdId), any(), any());
             var range = StatisticsPeriodConverter.convert(period, LocalDate.now());
             var expected = new StatisticsResponse(
                     period,
