@@ -7,6 +7,14 @@ import java.time.LocalDate;
 import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * MapStruct mapper mixin that handles {@link java.util.Optional} fields in PATCH-style update mappings.
+ * Mappers in any module that need Optional conversion should extend this interface.
+ *
+ * <p>The {@code isPresent} condition prevents overwriting an existing value when an Optional
+ * field is {@code null} in the source (i.e. absent from the PATCH request), which is the
+ * expected behaviour for partial updates.
+ */
 @SuppressWarnings("OptionalAssignedToNull")
 public interface CoreOptionalMapper {
 
