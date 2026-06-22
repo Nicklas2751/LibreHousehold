@@ -3,6 +3,7 @@ package eu.wiegandt.librehousehold.tasks.service;
 import eu.wiegandt.librehousehold.household.HouseholdDeleted;
 import eu.wiegandt.librehousehold.household.HouseholdQuery;
 import eu.wiegandt.librehousehold.household.MemberQuery;
+import eu.wiegandt.librehousehold.tasks.TaskStatisticsProvider;
 import eu.wiegandt.librehousehold.tasks.exception.HouseholdNotFoundException;
 import eu.wiegandt.librehousehold.tasks.exception.TaskNotFoundException;
 import eu.wiegandt.librehousehold.tasks.mapper.TaskMapper;
