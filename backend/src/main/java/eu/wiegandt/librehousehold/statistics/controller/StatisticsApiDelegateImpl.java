@@ -47,7 +47,7 @@ public class StatisticsApiDelegateImpl implements StatisticsApiDelegate {
         var expensesByMember = sortedByMemberTotalDesc(
                 expenseStatisticsProvider.getExpenseStatsByMember(householdId, range.from(), range.to()));
         var tasksByMember = sortedByDoneDesc(
-                taskStatisticsProvider.getTaskStatsByMember(householdId));
+                taskStatisticsProvider.getTaskStatsByMember(householdId, range.from(), range.to()));
 
         var response = new StatisticsResponse(
                 statisticsPeriod,

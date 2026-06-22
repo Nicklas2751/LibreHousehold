@@ -7,7 +7,9 @@ import eu.wiegandt.librehousehold.tasks.TaskStatisticsProvider;
 import eu.wiegandt.librehousehold.tasks.exception.HouseholdNotFoundException;
 import eu.wiegandt.librehousehold.tasks.exception.TaskNotFoundException;
 import eu.wiegandt.librehousehold.tasks.mapper.TaskMapper;
+import eu.wiegandt.librehousehold.tasks.model.TaskCompletionEntity;
 import eu.wiegandt.librehousehold.tasks.model.TaskEntity;
+import eu.wiegandt.librehousehold.tasks.repository.TaskCompletionRepository;
 import eu.wiegandt.librehousehold.tasks.repository.TaskRepository;
 import eu.wiegandt.librehousehold.model.Task;
 import eu.wiegandt.librehousehold.model.TaskEdit;
@@ -16,33 +18,49 @@ import eu.wiegandt.librehousehold.model.TaskUpdate;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
+import static java.util.stream.Collectors.counting;
 import static java.util.stream.Collectors.groupingBy;
+import static java.util.stream.Collectors.toMap;
 
 @Service
 public class TaskService implements TaskStatisticsProvider {
 
     private final TaskRepository taskRepository;
+    private final TaskCompletionRepository taskCompletionRepository;
     private final TaskMapper taskMapper;
     private final HouseholdQuery householdQuery;
     private final MemberQuery memberQuery;
 
     public TaskService(TaskRepository taskRepository,
-                TaskMapper taskMapper,
-                HouseholdQuery householdQuery,
-                MemberQuery memberQuery) {
+                       TaskCompletionRepository taskCompletionRepository,
+                       TaskMapper taskMapper,
+                       HouseholdQuery householdQuery,
+                       MemberQuery memberQuery) {
         this.taskRepository = taskRepository;
+        this.taskCompletionRepository = taskCompletionRepository;
         this.taskMapper = taskMapper;
         this.householdQuery = householdQuery;
         this.memberQuery = memberQuery;
     }
 
     public List<Task> getTasks(UUID householdId) {
-        return taskRepository.findByHouseholdId(householdId).stream()
-                .map(taskMapper::toTask)
+        var entities = taskRepository.findByHouseholdId(householdId);
+        if (entities.isEmpty()) {
+            return List.of();
+        }
+        var taskIds = entities.stream().map(TaskEntity::getId).toList();
+        var latestDoneByTaskId = taskCompletionRepository.findLatestByTaskIdIn(taskIds).stream()
+                .collect(toMap(TaskCompletionEntity::taskId, TaskCompletionEntity::doneDate));
+        return entities.stream()
+                .map(e -> taskMapper.toTask(e).done(latestDoneByTaskId.get(e.getId())))
                 .toList();
     }
 
@@ -61,20 +79,24 @@ public class TaskService implements TaskStatisticsProvider {
         var done = update.getDone();
         if (done.isPresent()) {
             var doneDate = done.get();
-            entity.setDone(doneDate);
             if (entity.isRecurring() && entity.getRecurrenceUnit() != null && entity.getRecurrenceInterval() != null) {
                 var newDueDate = entity.getDueDate().plus(entity.getRecurrenceInterval(), ChronoUnit.valueOf(entity.getRecurrenceUnit()));
                 entity.setDueDate(newDueDate);
-                taskRepository.updateDoneAndDueDate(taskId, doneDate, newDueDate);
-            } else {
-                taskRepository.updateDone(taskId, doneDate);
+                taskRepository.updateDueDate(taskId, newDueDate);
             }
+            LocalDate responseDone = null;
+            if (entity.getAssignedTo() != null) {
+                taskCompletionRepository.save(new TaskCompletionEntity(UUID.randomUUID(), taskId, entity.getAssignedTo(), doneDate));
+                responseDone = doneDate;
+            }
+            return taskMapper.toTask(entity).done(responseDone);
         } else {
-            entity.setDone(null);
-            taskRepository.clearDone(taskId);
+            taskCompletionRepository.findFirstByTaskIdOrderByDoneDateDesc(taskId)
+                    .ifPresent(c -> taskCompletionRepository.deleteById(c.id()));
+            var latestDone = taskCompletionRepository.findFirstByTaskIdOrderByDoneDateDesc(taskId)
+                    .map(TaskCompletionEntity::doneDate).orElse(null);
+            return taskMapper.toTask(entity).done(latestDone);
         }
-
-        return taskMapper.toTask(entity);
     }
 
     public Task editTask(UUID taskId, TaskEdit edit) {
@@ -82,7 +104,9 @@ public class TaskService implements TaskStatisticsProvider {
                 .orElseThrow(TaskNotFoundException::new);
         taskMapper.updateEntityFromEdit(edit, existing);
         var saved = taskRepository.save(existing);
-        return taskMapper.toTask(saved);
+        var latestDone = taskCompletionRepository.findFirstByTaskIdOrderByDoneDateDesc(taskId)
+                .map(TaskCompletionEntity::doneDate).orElse(null);
+        return taskMapper.toTask(saved).done(latestDone);
     }
 
     public void deleteTask(UUID taskId) {
@@ -98,36 +122,45 @@ public class TaskService implements TaskStatisticsProvider {
     }
 
     @Override
-    public List<TaskStatsByMember> getTaskStatsByMember(UUID householdId) {
-        var tasks = taskRepository.findByHouseholdId(householdId);
-        var tasksByMember = tasks.stream()
-                .filter(t -> t.getAssignedTo() != null)
-                .collect(groupingBy(TaskEntity::getAssignedTo));
+    public List<TaskStatsByMember> getTaskStatsByMember(UUID householdId, LocalDate from, LocalDate to) {
+        var completions = taskCompletionRepository.findByHouseholdIdAndPeriod(householdId, from, to);
+        var doneCountByMember = completions.stream()
+                .collect(groupingBy(TaskCompletionEntity::doneBy, counting()));
 
-        if (tasksByMember.isEmpty()) {
+        var tasks = taskRepository.findByHouseholdId(householdId);
+        var assignedTasks = tasks.stream().filter(t -> t.getAssignedTo() != null).toList();
+        var taskIds = assignedTasks.stream().map(TaskEntity::getId).toList();
+        var latestDoneByTaskId = taskIds.isEmpty() ? Map.<UUID, LocalDate>of() :
+                taskCompletionRepository.findLatestByTaskIdIn(taskIds).stream()
+                        .collect(toMap(TaskCompletionEntity::taskId, TaskCompletionEntity::doneDate));
+        var openCountByMember = assignedTasks.stream()
+                .filter(t -> !isCurrentlyDone(t, latestDoneByTaskId.get(t.getId())))
+                .collect(groupingBy(TaskEntity::getAssignedTo, counting()));
+
+        var allMemberIds = new HashSet<UUID>();
+        allMemberIds.addAll(doneCountByMember.keySet());
+        allMemberIds.addAll(openCountByMember.keySet());
+
+        if (allMemberIds.isEmpty()) {
             return List.of();
         }
 
-        var memberNames = memberQuery.findMemberNamesByIds(tasksByMember.keySet());
+        var memberNames = memberQuery.findMemberNamesByIds(allMemberIds);
 
-        return tasksByMember.entrySet().stream()
-                .map(entry -> {
-                    var memberId = entry.getKey();
-                    var memberTasks = entry.getValue();
-                    var doneCount = (int) memberTasks.stream().filter(this::isDone).count();
-                    return new TaskStatsByMember(
-                            memberId,
-                            memberNames.getOrDefault(memberId, "Unknown"),
-                            doneCount,
-                            memberTasks.size() - doneCount
-                    );
-                })
+        return allMemberIds.stream()
+                .map(memberId -> new TaskStatsByMember(
+                        memberId,
+                        memberNames.getOrDefault(memberId, "Unknown"),
+                        doneCountByMember.getOrDefault(memberId, 0L).intValue(),
+                        openCountByMember.getOrDefault(memberId, 0L).intValue()
+                ))
                 .toList();
     }
 
-    private boolean isDone(TaskEntity task) {
-        if (task.getDone() == null) return false;
+    private boolean isCurrentlyDone(TaskEntity task, LocalDate latestDoneDate) {
+        if (latestDoneDate == null) return false;
         if (!task.isRecurring()) return true;
-        return !task.getDone().isBefore(task.getDueDate());
+        var previousDueDate = task.getDueDate().minus(task.getRecurrenceInterval(), ChronoUnit.valueOf(task.getRecurrenceUnit()));
+        return !latestDoneDate.isBefore(previousDueDate);
     }
 }

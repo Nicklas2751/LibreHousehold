@@ -7,6 +7,7 @@ import eu.wiegandt.librehousehold.tasks.repository.*;
 import eu.wiegandt.librehousehold.household.HouseholdQuery;
 import eu.wiegandt.librehousehold.household.MemberQuery;
 import eu.wiegandt.librehousehold.model.Task;
+import eu.wiegandt.librehousehold.model.TaskStatsByMember;
 import eu.wiegandt.librehousehold.model.TaskUpdate;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -23,9 +24,11 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
 import java.time.LocalDate;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 
 @DataJdbcTest
@@ -45,6 +48,9 @@ class TaskServiceIT {
 
     @Autowired
     private TaskRepository taskRepository;
+
+    @Autowired
+    private TaskCompletionRepository taskCompletionRepository;
 
     @MockitoBean
     private HouseholdQuery householdQuery;
@@ -97,20 +103,21 @@ class TaskServiceIT {
     class updateTask {
 
         @Test
-        void nonRecurringTask_setsDoneInDatabase() {
+        void nonRecurringTask_savesCompletionInDatabase() {
             // given
             var householdId = UUID.randomUUID();
             var taskId = UUID.randomUUID();
+            var memberId = UUID.randomUUID();
             var doneDate = LocalDate.of(2024, 7, 5);
             doReturn(true).when(householdQuery).householdExists(householdId);
-            taskService.createTask(householdId, new Task(taskId, "Clean", LocalDate.of(2024, 7, 1)));
+            taskService.createTask(householdId, new Task(taskId, "Clean", LocalDate.of(2024, 7, 1)).assignedTo(memberId));
 
             // when
             taskService.updateTask(taskId, new TaskUpdate().done(doneDate));
 
             // then
-            assertThat(taskRepository.findById(taskId))
-                    .hasValueSatisfying(e -> assertThat(e.getDone()).isEqualTo(doneDate));
+            assertThat(taskCompletionRepository.findFirstByTaskIdOrderByDoneDateDesc(taskId))
+                    .hasValueSatisfying(c -> assertThat(c.doneDate()).isEqualTo(doneDate));
         }
 
         @Test
@@ -118,10 +125,12 @@ class TaskServiceIT {
             // given
             var householdId = UUID.randomUUID();
             var taskId = UUID.randomUUID();
+            var memberId = UUID.randomUUID();
             var originalDueDate = LocalDate.of(2024, 7, 1);
             var doneDate = LocalDate.of(2024, 7, 3);
             doReturn(true).when(householdQuery).householdExists(householdId);
             taskService.createTask(householdId, new Task(taskId, "Weekly clean", originalDueDate)
+                    .assignedTo(memberId)
                     .recurring(true)
                     .recurrenceUnit(Task.RecurrenceUnitEnum.WEEKS)
                     .recurrenceInterval(1));
@@ -131,10 +140,37 @@ class TaskServiceIT {
 
             // then
             assertThat(taskRepository.findById(taskId))
-                    .hasValueSatisfying(e -> {
-                        assertThat(e.getDone()).isEqualTo(doneDate);
-                        assertThat(e.getDueDate()).isEqualTo(originalDueDate.plusWeeks(1));
-                    });
+                    .hasValueSatisfying(e -> assertThat(e.getDueDate()).isEqualTo(originalDueDate.plusWeeks(1)));
+        }
+    }
+
+    @Nested
+    class getTaskStatsByMember {
+
+        @Test
+        void recurringTaskCompletedTwiceInPeriod_doneCountIsTwo() {
+            // given
+            var householdId = UUID.randomUUID();
+            var memberId = UUID.randomUUID();
+            var taskId = UUID.randomUUID();
+            var from = LocalDate.of(2024, 7, 1);
+            var to = LocalDate.of(2024, 7, 31);
+            doReturn(true).when(householdQuery).householdExists(householdId);
+            doReturn(Map.of(memberId, "Alice")).when(memberQuery).findMemberNamesByIds(any());
+            taskService.createTask(householdId, new Task(taskId, "Weekly clean", LocalDate.of(2024, 7, 1))
+                    .assignedTo(memberId)
+                    .recurring(true)
+                    .recurrenceUnit(Task.RecurrenceUnitEnum.WEEKS)
+                    .recurrenceInterval(1));
+            taskService.updateTask(taskId, new TaskUpdate().done(LocalDate.of(2024, 7, 5)));
+            taskService.updateTask(taskId, new TaskUpdate().done(LocalDate.of(2024, 7, 12)));
+            var expected = new TaskStatsByMember(memberId, "Alice", 2, 0);
+
+            // when
+            var result = taskService.getTaskStatsByMember(householdId, from, to);
+
+            // then
+            assertThat(result).singleElement().usingRecursiveComparison().isEqualTo(expected);
         }
     }
 

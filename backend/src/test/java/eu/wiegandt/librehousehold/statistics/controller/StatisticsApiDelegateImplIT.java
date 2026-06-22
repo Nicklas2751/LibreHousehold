@@ -62,7 +62,7 @@ class StatisticsApiDelegateImplIT {
             doReturn(List.of(new ExpenseStatsByMember(memberId, "Alice", 100.0, 100.0)))
                     .when(expenseStatisticsProvider).getExpenseStatsByMember(eq(householdId), any(), any());
             doReturn(List.of(new TaskStatsByMember(memberId, "Alice", 5, 2)))
-                    .when(taskStatisticsProvider).getTaskStatsByMember(householdId);
+                    .when(taskStatisticsProvider).getTaskStatsByMember(eq(householdId), any(), any());
 
             // when / then
             mockMvc.perform(get("/v1/household/{householdId}/statistics", householdId)

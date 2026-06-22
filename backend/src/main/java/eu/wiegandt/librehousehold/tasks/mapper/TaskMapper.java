@@ -20,7 +20,7 @@ public interface TaskMapper {
     @Mapping(target = "recurring", qualifiedByName = "toOptionalBoolean")
     @Mapping(target = "recurrenceUnit", qualifiedByName = "toOptionalTaskRecurrenceUnit")
     @Mapping(target = "recurrenceInterval", qualifiedByName = "toOptional")
-    @Mapping(target = "done", qualifiedByName = "toOptional")
+    @Mapping(target = "done", ignore = true)
     Task toTask(TaskEntity entity);
 
     @Mapping(source = "householdId", target = "householdId")
@@ -29,7 +29,6 @@ public interface TaskMapper {
     @Mapping(target = "recurring", qualifiedByName = "fromOptionalBoolean")
     @Mapping(target = "recurrenceUnit", qualifiedByName = "fromOptionalRecurrenceUnit")
     @Mapping(target = "recurrenceInterval", qualifiedByName = "fromOptionalInt")
-    @Mapping(target = "done", qualifiedByName = "fromOptionalDate")
     TaskEntity toEntity(Task task, UUID householdId);
 
     @Mapping(target = "description", qualifiedByName = "fromOptional")
@@ -37,7 +36,6 @@ public interface TaskMapper {
     @Mapping(target = "recurring", qualifiedByName = "fromOptionalBoolean")
     @Mapping(target = "recurrenceUnit", qualifiedByName = "fromOptionalTaskEditRecurrenceUnit")
     @Mapping(target = "recurrenceInterval", qualifiedByName = "fromOptionalInt")
-    @Mapping(target = "done", ignore = true)
     @Mapping(target = "householdId", ignore = true)
     void updateEntityFromEdit(TaskEdit edit, @MappingTarget TaskEntity entity);
 
@@ -63,11 +61,6 @@ public interface TaskMapper {
 
     @Named("fromOptionalUUID")
     default UUID fromOptionalUUID(Optional<UUID> value) {
-        return value.orElse(null);
-    }
-
-    @Named("fromOptionalDate")
-    default LocalDate fromOptionalDate(Optional<LocalDate> value) {
         return value.orElse(null);
     }
 

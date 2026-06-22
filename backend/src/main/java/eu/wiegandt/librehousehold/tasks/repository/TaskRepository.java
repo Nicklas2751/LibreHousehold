@@ -15,16 +15,8 @@ public interface TaskRepository extends CrudRepository<TaskEntity, UUID> {
     List<TaskEntity> findByHouseholdId(UUID householdId);
 
     @Modifying
-    @Query("UPDATE tasks.task SET done = :done WHERE id = :id")
-    void updateDone(@Param("id") UUID id, @Param("done") LocalDate done);
-
-    @Modifying
-    @Query("UPDATE tasks.task SET done = :done, due_date = :dueDate WHERE id = :id")
-    void updateDoneAndDueDate(@Param("id") UUID id, @Param("done") LocalDate done, @Param("dueDate") LocalDate dueDate);
-
-    @Modifying
-    @Query("UPDATE tasks.task SET done = NULL WHERE id = :id")
-    void clearDone(@Param("id") UUID id);
+    @Query("UPDATE tasks.task SET due_date = :dueDate WHERE id = :id")
+    void updateDueDate(@Param("id") UUID id, @Param("dueDate") LocalDate dueDate);
 
     @Modifying
     @Query("DELETE FROM tasks.task WHERE household_id = :householdId")
