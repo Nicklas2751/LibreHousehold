@@ -1,4 +1,4 @@
-package eu.wiegandt.librehousehold.expenses.service;
+package eu.wiegandt.librehousehold.expenses;
 
 import eu.wiegandt.librehousehold.model.ExpenseStatsByCategory;
 import eu.wiegandt.librehousehold.model.ExpenseStatsByMember;

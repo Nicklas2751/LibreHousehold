@@ -2,6 +2,7 @@ package eu.wiegandt.librehousehold.expenses.service;
 
 import eu.wiegandt.librehousehold.expenses.model.CategoryEntity;
 import eu.wiegandt.librehousehold.expenses.model.ExpenseEntity;
+import eu.wiegandt.librehousehold.expenses.ExpenseStatisticsProvider;
 import eu.wiegandt.librehousehold.expenses.repository.CategoryRepository;
 import eu.wiegandt.librehousehold.expenses.repository.ExpenseRepository;
 import eu.wiegandt.librehousehold.household.MemberQuery;

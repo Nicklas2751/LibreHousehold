@@ -1,4 +1,4 @@
-package eu.wiegandt.librehousehold.tasks.service;
+package eu.wiegandt.librehousehold.tasks;
 
 import eu.wiegandt.librehousehold.model.TaskStatsByMember;
 
