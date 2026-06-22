@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mapstruct.factory.Mappers;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
@@ -14,6 +15,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -21,12 +23,16 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.instancio.Select.field;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
 class ReimbursementServiceTest {
 
     @Mock
     private ReimbursementRepository reimbursementRepository;
+
+    @Mock
+    private ExpenseRepository expenseRepository;
 
     @Spy
     private ReimbursementMapper reimbursementMapper = Mappers.getMapper(ReimbursementMapper.class);
@@ -79,6 +85,7 @@ class ReimbursementServiceTest {
             var savedEntity = Instancio.of(ReimbursementEntity.class)
                     .set(field(ReimbursementEntity.class, "status"), "CONFIRMED")
                     .create();
+            doReturn(List.of()).when(expenseRepository).findDebtorExpenses(any(), any(), any());
             doReturn(savedEntity).when(reimbursementRepository).save(any(ReimbursementEntity.class));
             var expected = reimbursementMapper.toReimbursement(savedEntity);
 
@@ -87,6 +94,33 @@ class ReimbursementServiceTest {
 
             // then
             assertThat(result).usingRecursiveComparison().isEqualTo(expected);
+        }
+
+        @Test
+        void validInput_populatesCoveredExpenses() {
+            // given
+            var householdId = UUID.randomUUID();
+            var creditorId = UUID.randomUUID();
+            var debtorId = UUID.randomUUID();
+            var create = new ReimbursementCreate()
+                    .creditorId(creditorId)
+                    .debtorId(debtorId);
+            var expenseEntity = Instancio.create(ExpenseEntity.class);
+            var savedEntity = Instancio.of(ReimbursementEntity.class)
+                    .set(field(ReimbursementEntity.class, "status"), "PENDING")
+                    .create();
+            doReturn(List.of(expenseEntity)).when(expenseRepository)
+                    .findDebtorExpenses(householdId, creditorId, debtorId);
+            doReturn(savedEntity).when(reimbursementRepository).save(any(ReimbursementEntity.class));
+
+            // when
+            reimbursementService.createReimbursement(householdId, create);
+
+            // then
+            var captor = ArgumentCaptor.forClass(ReimbursementEntity.class);
+            verify(reimbursementRepository).save(captor.capture());
+            assertThat(captor.getValue().getCoveredExpenses())
+                    .isEqualTo(Set.of(new SettlementExpenseRef(expenseEntity.getId())));
         }
     }
 

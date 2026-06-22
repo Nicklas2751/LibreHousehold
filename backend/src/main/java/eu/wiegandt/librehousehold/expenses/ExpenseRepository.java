@@ -26,14 +26,14 @@ interface ExpenseRepository extends CrudRepository<ExpenseEntity, UUID> {
                 NOT EXISTS (SELECT 1 FROM expenses.expense_split es WHERE es.expense_id = e.id)
                 OR EXISTS (SELECT 1 FROM expenses.expense_split es WHERE es.expense_id = e.id AND es.member_id = :debtorId)
               )
-              AND e.date >= COALESCE(
-                (SELECT MAX(r.created_at)::date
-                 FROM expenses.reimbursement r
-                 WHERE r.household_id = :householdId
-                   AND ((r.creditor_id = :payerId AND r.debtor_id = :debtorId)
-                     OR (r.creditor_id = :debtorId AND r.debtor_id = :payerId))
-                   AND r.status = 'CONFIRMED'),
-                '0001-01-01'::date
+              AND NOT EXISTS (
+                SELECT 1 FROM expenses.settlement_expense se
+                JOIN expenses.reimbursement r ON r.id = se.settlement_id
+                WHERE se.expense_id = e.id
+                  AND r.status = 'CONFIRMED'
+                  AND r.household_id = :householdId
+                  AND r.creditor_id = :payerId
+                  AND r.debtor_id = :debtorId
               )
             """)
     List<ExpenseEntity> findDebtorExpenses(@Param("householdId") UUID householdId,

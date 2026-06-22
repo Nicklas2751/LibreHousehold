@@ -33,3 +33,8 @@ CREATE TABLE expenses.reimbursement (
     notes        TEXT,
     created_at   TIMESTAMP NOT NULL DEFAULT NOW()
 );
+
+CREATE TABLE expenses.settlement_expense (
+    settlement_id UUID NOT NULL,
+    expense_id    UUID NOT NULL
+);

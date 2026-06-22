@@ -4,10 +4,13 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.Transient;
 import org.springframework.data.domain.Persistable;
 import org.springframework.data.relational.core.mapping.Column;
+import org.springframework.data.relational.core.mapping.MappedCollection;
 import org.springframework.data.relational.core.mapping.Table;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 @Table(schema = "expenses", value = "reimbursement")
@@ -26,6 +29,8 @@ class ReimbursementEntity implements Persistable<UUID> {
     private String notes;
     @Column("created_at")
     private final LocalDateTime createdAt;
+    @MappedCollection(idColumn = "settlement_id")
+    private Set<SettlementExpenseRef> coveredExpenses = new HashSet<>();
     @Transient
     private boolean isNew = true;
 
@@ -51,6 +56,14 @@ class ReimbursementEntity implements Persistable<UUID> {
 
     public void setNotes(String notes) {
         this.notes = notes;
+    }
+
+    public Set<SettlementExpenseRef> getCoveredExpenses() {
+        return coveredExpenses;
+    }
+
+    public void setCoveredExpenses(Set<SettlementExpenseRef> coveredExpenses) {
+        this.coveredExpenses = coveredExpenses;
     }
 
     @Override
