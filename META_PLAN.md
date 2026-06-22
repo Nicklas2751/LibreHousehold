@@ -23,7 +23,9 @@ Fortschritt in der Benutzeroberfläche.
 | `household/` (CRUD, Invite, Admin) | ✅ Implementiert |
 | `household/` (Members)             | ✅ Implementiert |
 | `tasks/`                           | ✅ Implementiert |
-| `expenses/` (inkl. Reimbursements) | ❌ Modul leer    |
+| `expenses/` (inkl. Reimbursements) | ✅ Implementiert |
+| `statistics/` (Aggregation)        | ⬜ Fehlt noch    |
+| `usersettings/`                    | ⬜ Fehlt noch    |
 
 ---
 
@@ -131,22 +133,36 @@ leer und kann als erstes vollständiges Modul-Beispiel für das vereinbarte Komm
 
 ---
 
-## Abschnitt 4 — Kategorien + Expenses + Reimbursements + Financials
+## Abschnitt 4 — Kategorien + Expenses + Reimbursements + Financials ✅
 
 **Warum zusammen?**
 Expenses und Reimbursements sind inhaltlich eng verbunden: Reimbursements referenzieren Expenses, die `isMutable`-Logik
 hängt vom Reimbursement-Status ab. Ein gemeinsames Modul `expenses/` vermeidet künstliche Modul-Grenzen.
 
-**Was wird implementiert?**
+**Was wurde implementiert?**
 
-- Neues Modul `expenses/` mit eigenem DB-Schema (`expenses`)
-- Flyway-Migrationen: `category`-, `expense`-, `reimbursement`-Tabellen (alle ohne FK zu anderen Schemas)
-- Endpunkte: Kategorien, Expenses (CRUD), Reimbursements (CRUD + Status), Financials (Summary + Balances)
-- `isMutable`-Aktivierung als interne Modullogik
-- **Expense-Statistics im gleichen Modul:** `totalExpenses`, `avgExpensesPerMonth`, `expensesByCategory`,
-  `expensesByMember`
+- Modul `expenses/` mit eigenem DB-Schema; Subpackages: `controller`, `exception`, `mapper`, `model`, `repository`,
+  `service`
+- Flyway-Migrationen: `category`-, `expense`-, `expense_split`-, `reimbursement`-, `settlement_expense`-Tabellen
+- `ExpensesApiDelegateImpl` — Kategorien + Expenses CRUD
+- `ReimbursementsApiDelegateImpl` — Reimbursements erstellen, Status setzen, zurückziehen
+- `FinancialsApiDelegateImpl` — Summary + Member-Balances
+- `CategoryService`, `ExpenseService`, `ReimbursementService`, `FinancialService`
+- `isMutable`-Logik: Expense ist nur editierbar, solange kein aktives Reimbursement existiert
+- `SettlementExpenseRef`-Tracking: welche Expenses durch welches Reimbursement abgedeckt sind
+- **Expense-Statistics im gleichen Modul:** `ExpenseStatisticsProvider` + `ExpenseStatisticsService` (Interface für
+  Abschnitt 5 vorbereitet)
+- `ExpenseSplitRef`: eigener Anteil + zwischen wem eine Expense aufgeteilt ist
+- Frontend: Expenses-Seite, Settle-Seite, Kategorie-Verwaltung vollständig funktional
+
+**Design-Entscheidungen:**
+
+- Reimbursement-Entwurf ermöglicht Withdrawal (Zurückziehen); `settlement_expense` speichert welche Expenses durch
+  ein Reimbursement gedeckt werden, um doppelte Anzeige als „ausgeglichen" zu vermeiden
+- Kein DB-FK zu `household` oder `member`; IDs als UUID ohne Constraint
 
 **UI-Fortschritt:** Expenses-Seite + Settle-Seite vollständig funktional. Dashboard-Financial-Card zeigt echte Salden.
+Kategorie-Verwaltung mit Erstellen, Umbenennen und Löschen (mit Nutzungsprüfung).
 
 **Abhängigkeiten:** Abschnitt 0 (Kommunikationsmuster), Abschnitt 2 (Member-IDs).
 
@@ -216,6 +232,6 @@ Alle Updates über explizite `@Modifying @Query`-Methoden im Repository, die `in
 | 1 | Household-CRUD + Invite + Frontend-Gültigkeit       | `household/`           | ✅      | Household-Settings, Invite-Gültigkeit          |
 | 2 | Member-Verwaltung + Invite-Join-Flow                | `household/` (Members) | ✅      | Settings (Profil), Join-Wizard, alle Dropdowns |
 | 3 | Tasks (inkl. Task-Statistics)                       | `tasks/` (neu)         | ✅      | Tasks, Dashboard-Tasks                         |
-| 4 | Kategorien + Expenses + Reimbursements + Financials | `expenses/` (neu)      | ⬜      | Expenses, Settle, Dashboard-Finanzen           |
+| 4 | Kategorien + Expenses + Reimbursements + Financials | `expenses/` (neu)      | ✅      | Expenses, Settle, Dashboard-Finanzen           |
 | 5 | Statistics-Endpunkt (Aggregation)                   | Kein neues Modul       | ⬜      | Statistics-Seite                               |
 | 6 | User Settings                                       | `usersettings/` (neu)  | ⬜      | User-Settings                                  |
