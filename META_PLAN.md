@@ -24,7 +24,7 @@ Fortschritt in der Benutzeroberfläche.
 | `household/` (Members)             | ✅ Implementiert |
 | `tasks/`                           | ✅ Implementiert |
 | `expenses/` (inkl. Reimbursements) | ✅ Implementiert |
-| `statistics/` (Aggregation)        | ⬜ Fehlt noch    |
+| `statistics/` (Aggregation)        | ✅ Implementiert |
 | `usersettings/`                    | ⬜ Fehlt noch    |
 
 ---
@@ -168,18 +168,31 @@ Kategorie-Verwaltung mit Erstellen, Umbenennen und Löschen (mit Nutzungsprüfun
 
 ---
 
-## Abschnitt 5 — Statistics-Endpunkt (Aggregation)
+## Abschnitt 5 — Statistics-Endpunkt (Aggregation) ✅
 
 **Warum kein eigenes Modul?**
 Statistics sind ein reines Read-Aggregat. Da Tasks und Expenses ihre eigenen Statistics-Service-Methoden mitbringen, ist
 ein separates `statistics/`-Modul eine unnötige Schicht.
 
-**Was wird implementiert?**
+**Was wurde implementiert?**
 
 - `GET /household/{id}/statistics?period=...` — Controller delegiert an Read-Interfaces aus `tasks/` und `expenses/`
 - Perioden-Utility: `LAST_7_DAYS`, `LAST_14_DAYS`, `THIS_MONTH`, `LAST_3_MONTHS`, `LAST_6_MONTHS`, `THIS_YEAR`,
   `LAST_YEAR`
 - Kein eigenes Datenbankschema, keine eigenen Entities
+- `TaskCompletionEntity` + `task_completion`-Tabelle: speichert wer welchen Task wann erledigt hat (für korrekte
+  Member-Zählung bei wiederkehrenden Tasks)
+- `TaskCompletionRepository` mit Abfragen nach Haushalt und Zeitraum
+- `TaskStatisticsProvider`-Interface + Implementierung im `tasks/`-Modul
+- `ExpenseStatisticsProvider`-Interface + Implementierung im `expenses/`-Modul
+- `StatisticsApiDelegateImpl` aggregiert Daten aus beiden Modulen
+
+**Design-Entscheidungen:**
+
+- `task_completion`-Tabelle statt `done`-Feld-Auswertung, da wiederkehrende Tasks mehrfach erledigt werden können —
+  ohne separates Tracking wurden Completions doppelt gezählt
+- Named Interfaces (`TaskStatisticsProvider`, `ExpenseStatisticsProvider`) halten die Modul-Grenze: kein direkter
+  Zugriff des Statistics-Controllers auf Repository-Klassen anderer Module
 
 **UI-Fortschritt:** Statistics-Seite zeigt echte Daten. Zeitraum-Selector funktioniert.
 
@@ -233,5 +246,5 @@ Alle Updates über explizite `@Modifying @Query`-Methoden im Repository, die `in
 | 2 | Member-Verwaltung + Invite-Join-Flow                | `household/` (Members) | ✅      | Settings (Profil), Join-Wizard, alle Dropdowns |
 | 3 | Tasks (inkl. Task-Statistics)                       | `tasks/` (neu)         | ✅      | Tasks, Dashboard-Tasks                         |
 | 4 | Kategorien + Expenses + Reimbursements + Financials | `expenses/` (neu)      | ✅      | Expenses, Settle, Dashboard-Finanzen           |
-| 5 | Statistics-Endpunkt (Aggregation)                   | Kein neues Modul       | ⬜      | Statistics-Seite                               |
+| 5 | Statistics-Endpunkt (Aggregation)                   | Kein neues Modul       | ✅      | Statistics-Seite                               |
 | 6 | User Settings                                       | `usersettings/` (neu)  | ⬜      | User-Settings                                  |
