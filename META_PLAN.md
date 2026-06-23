@@ -25,7 +25,7 @@ Fortschritt in der Benutzeroberfläche.
 | `tasks/`                           | ✅ Implementiert |
 | `expenses/` (inkl. Reimbursements) | ✅ Implementiert |
 | `statistics/` (Aggregation)        | ✅ Implementiert |
-| `usersettings/`                    | ⬜ Fehlt noch    |
+| `usersettings/`                    | ✅ Implementiert |
 
 ---
 
@@ -200,17 +200,21 @@ ein separates `statistics/`-Modul eine unnötige Schicht.
 
 ---
 
-## Abschnitt 6 — User Settings (Präferenzen + Account-Verwaltung)
+## Abschnitt 6 — User Settings (Präferenzen + Account-Verwaltung) ✅
 
-**Was wird implementiert?**
+**Was wurde implementiert?**
 
-- Neues Modul `usersettings/`
-- Flyway-Migration: `theme`, `language`, `password_hash` (Argon2id, Vorbereitung auf Auth)
-- `PATCH /household/{id}/members/{memberId}/preferences`
-- `PUT /household/{id}/members/{memberId}/password`
-- `DELETE /household/{id}/members/{memberId}/account`
+- Neues Modul `usersettings/` mit eigenem DB-Schema
+- Flyway-Migration: `usersettings.user_preferences` (theme, language)
+- `PATCH /household/{id}/members/{memberId}/preferences` — Präferenzen speichern (Upsert)
+- `DELETE /household/{id}/members/{memberId}/account` — eigenen Account löschen (409 wenn Admin)
+- `MemberQuery` um `memberExistsById()` + `isAdmin()` erweitert (Named Interface)
+- Neues `MemberDeletion`-Interface für modul-übergreifenden Member-Lösch-Aufruf (Named Interface)
+- Cleanup via `@ApplicationModuleListener` auf `MemberRemoved`-Event
 
-**UI-Fortschritt:** User-Settings vollständig funktional.
+**Bewusst ausgelassen:** `PUT /password` (`changePassword`) — kommt mit dem Auth-Abschnitt.
+
+**UI-Fortschritt:** Präferenzen (Theme/Sprache) werden serverseitig gespeichert. Account löschen funktioniert mit 409-Schutz für den Admin.
 
 **Abhängigkeiten:** Abschnitte 0, 1, 2 abgeschlossen.
 
@@ -247,4 +251,4 @@ Alle Updates über explizite `@Modifying @Query`-Methoden im Repository, die `in
 | 3 | Tasks (inkl. Task-Statistics)                       | `tasks/` (neu)         | ✅      | Tasks, Dashboard-Tasks                         |
 | 4 | Kategorien + Expenses + Reimbursements + Financials | `expenses/` (neu)      | ✅      | Expenses, Settle, Dashboard-Finanzen           |
 | 5 | Statistics-Endpunkt (Aggregation)                   | Kein neues Modul       | ✅      | Statistics-Seite                               |
-| 6 | User Settings                                       | `usersettings/` (neu)  | ⬜      | User-Settings                                  |
+| 6 | User Settings (Präferenzen + Account-Löschung)      | `usersettings/` (neu)  | ✅      | User-Settings (Präferenzen gespeichert, Account löschen) |

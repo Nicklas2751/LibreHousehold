@@ -1,5 +1,6 @@
 package eu.wiegandt.librehousehold.household.service;
 
+import eu.wiegandt.librehousehold.household.MemberDeletion;
 import eu.wiegandt.librehousehold.household.MemberQuery;
 import eu.wiegandt.librehousehold.household.MemberRemoved;
 import eu.wiegandt.librehousehold.household.exception.InvalidInviteException;
@@ -29,7 +30,7 @@ import java.util.UUID;
 import static java.util.stream.Collectors.toMap;
 
 @Service
-public class MemberManagementService implements MemberQuery {
+public class MemberManagementService implements MemberQuery, MemberDeletion {
 
     private final MemberRepository memberRepository;
     private final HouseholdRepository householdRepository;
@@ -105,6 +106,7 @@ public class MemberManagementService implements MemberQuery {
         }
     }
 
+    @Override
     @Transactional
     public void removeMember(UUID memberId) {
         if (!memberRepository.existsById(memberId)) {
@@ -128,5 +130,17 @@ public class MemberManagementService implements MemberQuery {
         return memberRepository.findByHouseholdId(householdId).stream()
                 .map(MemberEntity::getId)
                 .toList();
+    }
+
+    @Override
+    public boolean memberExistsById(UUID memberId) {
+        return memberRepository.existsById(memberId);
+    }
+
+    @Override
+    public boolean isAdmin(UUID memberId) {
+        return memberRepository.findById(memberId)
+                .map(MemberEntity::isAdmin)
+                .orElse(false);
     }
 }

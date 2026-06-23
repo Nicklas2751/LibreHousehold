@@ -372,6 +372,85 @@ class MemberManagementServiceTest {
     }
 
     @Nested
+    class memberExistsById {
+
+        @Test
+        void memberNotFound_returnsFalse() {
+            // given
+            var memberId = UUID.randomUUID();
+            doReturn(false).when(memberRepository).existsById(memberId);
+
+            // when
+            var result = service.memberExistsById(memberId);
+
+            // then
+            assertThat(result).isFalse();
+        }
+
+        @Test
+        void memberFound_returnsTrue() {
+            // given
+            var memberId = UUID.randomUUID();
+            doReturn(true).when(memberRepository).existsById(memberId);
+
+            // when
+            var result = service.memberExistsById(memberId);
+
+            // then
+            assertThat(result).isTrue();
+        }
+    }
+
+    @Nested
+    class isAdmin {
+
+        @Test
+        void memberNotFound_returnsFalse() {
+            // given
+            var memberId = UUID.randomUUID();
+            doReturn(Optional.empty()).when(memberRepository).findById(memberId);
+
+            // when
+            var result = service.isAdmin(memberId);
+
+            // then
+            assertThat(result).isFalse();
+        }
+
+        @Test
+        void memberFoundAndNotAdmin_returnsFalse() {
+            // given
+            var memberId = UUID.randomUUID();
+            var entity = Instancio.of(memberEntityModel)
+                    .set(field(MemberEntity::isAdmin), false)
+                    .create();
+            doReturn(Optional.of(entity)).when(memberRepository).findById(memberId);
+
+            // when
+            var result = service.isAdmin(memberId);
+
+            // then
+            assertThat(result).isFalse();
+        }
+
+        @Test
+        void memberFoundAndIsAdmin_returnsTrue() {
+            // given
+            var memberId = UUID.randomUUID();
+            var entity = Instancio.of(memberEntityModel)
+                    .set(field(MemberEntity::isAdmin), true)
+                    .create();
+            doReturn(Optional.of(entity)).when(memberRepository).findById(memberId);
+
+            // when
+            var result = service.isAdmin(memberId);
+
+            // then
+            assertThat(result).isTrue();
+        }
+    }
+
+    @Nested
     class removeMember {
 
         @Test
