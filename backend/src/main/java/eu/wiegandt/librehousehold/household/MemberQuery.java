@@ -28,4 +28,14 @@ public interface MemberQuery {
      * @return the member IDs; empty if the household has no members
      */
     List<UUID> findMemberIdsByHouseholdId(UUID householdId);
+
+    /**
+     * Returns true if a member with the given ID exists.
+     */
+    boolean memberExistsById(UUID memberId);
+
+    /**
+     * Returns true if the member with the given ID is the household admin.
+     */
+    boolean isAdmin(UUID memberId);
 }
