@@ -291,14 +291,17 @@ void updateName(@Param("id") UUID id, @Param("name") String name);
 
 For class-based entities the recommended update pattern is via MapStruct `@MappingTarget` — see **Update Pattern (Spring Data JDBC + MapStruct)** below.
 
-### Open Design Questions: Account & Email Model
+### Account and Member: Shared UUID
 
-The following architectural questions need a decision before user management is implemented:
+`AccountEntity` (auth module, schema `auth`) and `MemberEntity` (household module, schema `household`) represent two aspects of the same person and are linked by a shared UUID: `AccountEntity.id == MemberEntity.id`.
 
-- **Email uniqueness scope**: Currently `member.email` is globally unique (system-wide UNIQUE constraint). It needs to be decided whether uniqueness should be system-wide or per-household.
-- **Account–Household relationship**: Should a user account be tied to one specific household, or can a single account belong to multiple households?
-- **Missing endpoint**: An endpoint is needed to check whether a given e-mail address is already registered before household setup — otherwise the client gets a generic 409 with no actionable information.
-- **Existing accounts**: It is unresolved whether a user with an existing account should be able to set up a new household or whether accounts are inherently household-scoped.
+There is no database foreign key between them — cross-module DB FKs are forbidden (ADR-011). The shared UUID is a convention enforced by the application: whenever a new user is created (during household setup or invite acceptance), both entities are saved in the same transaction with the same UUID.
+
+**Email lives only on `AccountEntity`.** `MemberEntity` does not store an email address. Notification features query the auth module via Named Interface when they need a member's email.
+
+**`isAdmin` lives only on `MemberEntity`.** It is a property of the household membership relationship. The JWT customizer reads it via `MemberQuery` at token issuance and writes it as a JWT claim. The auth module does not store role information independently.
+
+**One account, one household.** A user account belongs to exactly one household. `household_id` is not stored on `AccountEntity`; the JWT customizer fetches it from the household module via `MemberQuery` at login time.
 
 ### Task Schema
 

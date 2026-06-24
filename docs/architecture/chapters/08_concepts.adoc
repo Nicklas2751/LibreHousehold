@@ -50,6 +50,20 @@ A user can never read or write data that belongs to a different household.
 Both annotations delegate to Spring beans that communicate with other modules through Named Interfaces (xref:../adrs/adr-011.adoc[ADR 011]).
 See xref:../adrs/adr-013.adoc[ADR 013] for the full role model and xref:../adrs/adr-014.adoc[ADR 014] for the JWT claims design.
 
+=== Identity: Account and Member Share One UUID
+
+`AccountEntity` (auth module) and `MemberEntity` (household module) represent two different aspects of the same person and are linked by a shared UUID — `AccountEntity.id == MemberEntity.id`.
+There is no database foreign key between them (cross-module DB FKs are forbidden per xref:../adrs/adr-011.adoc[ADR 011]); the shared UUID is a convention enforced by the application.
+
+`AccountEntity` is the credential container: it stores the email address and, for local accounts, the Argon2id password hash.
+`MemberEntity` is the household membership record: it stores the display name, avatar, and the admin flag for the household.
+
+The email address lives exclusively on `AccountEntity`.
+`MemberEntity` does not store an email; notification features will query the auth module via Named Interface when they need a member's address.
+
+At token issuance time the JWT customizer reads `household_id` and `isAdmin` from the household module via `MemberQuery` and writes them as JWT claims.
+This is the only point where the auth module queries the household module; all subsequent request-level checks read directly from the JWT.
+
 === Modular Monolith (Modulith)
 
 A modular monolith, or "modulith", is an architectural style where the application is structured into distinct modules within a single deployable unit. Each module encapsulates specific functionality and can interact with other modules through well-defined interfaces. This approach combines the benefits of modularity with the simplicity of a monolithic deployment. For more information see the https://spring.io/blog/2022/10/21/introducing-spring-modulith[Spring Modulith blog post] or https://entwickler.de/software-architektur/microservices-oder-monolithen-beides[this german Entwickler.de article about moduliths].
