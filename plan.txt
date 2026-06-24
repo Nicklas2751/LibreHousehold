@@ -135,7 +135,20 @@ Ziel: Nutzer kann sich mit Google (und weiteren Providern) anmelden.
      - Zweiter Login mit gleichem Sub gibt denselben Account zurück
      - E-Mail-Kollision liefert Redirect mit ?error=email_already_registered
 
-► Review-Punkt: JIT-Provisioning-Logik, Fehlerbehandlung E-Mail-Kollision
+     Hinweis JIT-Provisioning:
+     Beim ersten Login über Google wird ein AccountEntity angelegt mit email aus dem
+     OIDC-Token und password_hash = NULL (nullable, weil kein lokales Passwort).
+     Login läuft über provider_sub — password_hash bleibt dauerhaft leer.
+
+     Known Gap — E-Mail-Sync bei OIDC-Login:
+     Ändert ein Nutzer seine E-Mail bei Google, erkennen wir das beim nächsten Login
+     nicht: JIT-Provisioning sucht per provider_sub, findet den bestehenden Account,
+     aktualisiert aber die gespeicherte E-Mail nicht. Folge: auth.account.email wird
+     stale, Benachrichtigungen gehen an die alte Adresse.
+     Fix (hier implementieren): Im JIT-Handler nach dem Lookup prüfen, ob die E-Mail
+     im OIDC-Token von der gespeicherten abweicht — wenn ja, updateEmail aufrufen.
+
+► Review-Punkt: JIT-Provisioning-Logik, Fehlerbehandlung E-Mail-Kollision, E-Mail-Sync
 
 
 ──────────────────────────────────────────────────────────────────────
@@ -221,6 +234,36 @@ Ziel: Frontend kann konfigurierte Login-Provider zur Laufzeit abfragen.
      - Response enthält nur konfigurierte Provider
 
 ► Review-Punkt: Endpoint-Design, Konfigurationsstruktur
+
+
+──────────────────────────────────────────────────────────────────────
+PHASE 7b — E-Mail-Änderung (Domain-Event-Ansatz)  [IMPLEMENTIERT]
+──────────────────────────────────────────────────────────────────────
+Ziel: Nutzer kann seine E-Mail-Adresse über das bestehende
+      PATCH /household/{householdId}/members/{memberId} ändern.
+      Kein separater Endpoint — der TypeScript-Client bleibt unverändert.
+
+Implementierter Ansatz:
+  - MemberUpdate erhält wieder das optionale `email`-Feld (openapi.yml)
+  - MemberManagementService.updateMember() prüft, ob email im Update
+    enthalten ist; wenn ja: MemberEmailChanged-Domain-Event publizieren
+  - MemberEmailChanged (Record im household-Root-Package):
+      memberId (UUID), newEmail (String)
+  - AccountEmailListener (@Component im auth-Paket) lauscht per
+    @ApplicationModuleListener auf MemberEmailChanged und ruft
+    accountRepository.updateEmail() auf
+
+Tests:
+  - MemberManagementServiceTest.updateMember:
+    emailPresent_publishesMemberEmailChangedEvent
+    emailAbsent_doesNotPublishEvent
+
+Noch ausstehend:
+  - Integrations-Test: E-Mail-Update im auth.account nach PATCH-Request
+  - Fehlerbehandlung: 409 bei Duplikat-E-Mail (DataIntegrityViolationException
+    → HTTP 409 im Listener oder Controller-ExceptionHandler)
+
+► Review-Punkt: Event-Routing, Fehlerbehandlung Duplikat-E-Mail
 
 
 ──────────────────────────────────────────────────────────────────────

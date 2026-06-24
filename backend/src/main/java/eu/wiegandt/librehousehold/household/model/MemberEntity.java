@@ -11,7 +11,6 @@ import java.util.UUID;
 public record MemberEntity(
         @Id UUID id,
         String name,
-        String email,
         String avatar,
         @Column("household_id") UUID householdId,
         @Column("is_admin") boolean isAdmin

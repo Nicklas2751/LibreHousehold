@@ -66,7 +66,6 @@ class MemberMapperTest {
             var entity = new MemberEntity(
                     UUID.fromString("11111111-1111-1111-1111-111111111111"),
                     "Max Mustermann",
-                    "max@example.com",
                     "data:image/png;base64,abc",
                     UUID.fromString("22222222-2222-2222-2222-222222222222"),
                     true
@@ -78,7 +77,6 @@ class MemberMapperTest {
             // then
             assertThat(result.getId()).isEqualTo(entity.id());
             assertThat(result.getName()).isEqualTo(entity.name());
-            assertThat(result.getEmail()).isEqualTo(entity.email());
             assertThat(result.getAvatar()).contains(entity.avatar());
             assertThat(result.getIsAdmin()).contains(true);
         }

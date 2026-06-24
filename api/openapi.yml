@@ -212,7 +212,7 @@ paths:
                 $ref: '#/components/schemas/Problem'
     patch:
       summary: Update a member's profile
-      description: Updates the display name and/or email address of a household member.
+      description: Updates the display name and/or email address of a household member. An email change is forwarded to the auth module via a domain event.
       tags:
         - members
       operationId: updateMember
@@ -240,6 +240,12 @@ paths:
           description: Member updated.
         "404":
           description: Member not found.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        "409":
+          description: The email address is already in use.
           content:
             application/problem+json:
               schema:
@@ -1450,12 +1456,6 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
-        "409":
-          description: A member with this email already exists.
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/Problem'
         default:
           description: An error occurred.
           content:
@@ -1712,7 +1712,6 @@ components:
       required:
         - id
         - name
-        - email
       properties:
         id:
           type: string
@@ -1723,10 +1722,6 @@ components:
           minLength: 1
           maxLength: 100
           description: The name of the member.
-        email:
-          type: string
-          format: email
-          description: The email address of the member.
         avatar:
           type: string
           format: base64
@@ -1737,7 +1732,6 @@ components:
       example:
         id: "7c3a40a8-3f57-4645-8cf5-820a6a8d3613"
         name: "John Doe"
-        email: "john.doe@example.org"
         avatar: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAoCAYAAACM/rhtAAAFZ0lEQVR4AcyYSUgcQRSG/5lDAlkIISSBbIQEErJdAlnIcgiEJAQEL4IigogoHvSgB0VFRRA9CYKgKOrJi7gvIN4EFRU9iTsq4oqi4IKIosavoIdxMs60M2YRXnfNq/f+/+uuKg/tHBgYOJqZmTlaWFj4rwIm2Jw3btzQ2tqarl69qjt37vwXAQtMsDkvXLigJ0+eaGJiQltbW/rXfzDAAhNsToAgJsEEBeT+ReANAywwwWAAGZBgggIKyf3NwBNvGGCxvF2AJJiggEIayP2NwAtPvGFw9zwByAQFFNJAI7k/GXjghSfenl6/AVJAIQ00IkDuTwTaeOCFpzcPr4AU0kAjAgiRO89AE2088DpN+1RAGmhEACEEyZ1HoIUm2nj40vQJSCMCCCGIMLlgAg200ETbn5ZfQAQQQhBhDMgFEvSigRaadjRsASKEIMIYYETuLEEPvWigZbfXNiCCCGOAEYbk7AS19NCLhp0eq+ZMgDRhgBGGGJPzFdRQSw+9vmq9zZ0ZEBGMMMQYAHLegjlqqKXHW42/XECAiGKIMQCAkHMPcsxRQ6373FnGAQNigjEAgABEjmBMjjlqyAUaQQFiCgAgAAFGMCbHHDXBRNCAmAMCEGAEY3LMBRvnAhgshK/+cwF0X1beHm+RnC9ju3NBAwICEGAsK8GYHHN2QU6rCwoQAEAAAswyYUyOOWqsfCD3gAExBgAQgDzNyTFHDbWe83Z/BwSIIcYAACJ5t2OOGmrp8V7lO3tmQIwwxBgA3/IyHwSopYdef/We82cCxAAjDO3AWWbU0kMvGlbezv1UwJ2dHXV1deno6MjoIIzB/fv3dfwdRwcHByZv9wIkvTU1Ndrc3DzRhtfY2JhXzVMBU1JS9PnzZ+3t7ZlPIsA1Nzfr9u3bevbsma5fv67BwcETRv5+ZGdnKzY2VsPDw0aT+ry8PF2+fPlUTa+ATU1NKi0tpV/b29vmuw333NxcVVVVaXl5WSEhIfr586f29/dNnb+Lu6a13J2dncrMzPSp+Rvg4uKioqKiFBcXZzx5cwg2Njbq48ePio6ONm8xLS1NKysrZhtkZGTo27dvrrdSXl6uL1++aHV11Wh4al65csV8sCorK9P79++9aprG48sJwMPDQ1McHh6u0NDQ42kZIfYPy/Lp0yeT4/L48WNump6eVkJCgnp7e5Wenq7x8XHzcPTfvHlT7poRERGmhwuarMTTp09dD+auSQ1xArCoqEizs7NiKefm5pgXT8tgdHTU7DvGxKVLl3Tr1i2z4e/du6eKigoVFxfr69ev+v79uxITEymTpVlYWGh+u19YnUePHpktxCF017TqXIDHXzSVnJyssLAw1dXViaejqKOjQ0tLS3rx4oVZUnJWsMQsP7/pe/78uebn55Wfny+n0ylLMzIyUj09Perr66NU7pobGxtmlYAF0l2TYhcgh+D169dqaGhQZWWlqqurmVdOTo6GhobMXmH5TPL4AsjxTS9fvuSm2tpajYyMmLfKaeXfE5pv3rxRa2urOQzoUuypyXLzoPxbY97SZOwCfPjwodi07CX+fVhiPDkH4N27d2prazNPzzZISkoSy/PgwQNxCGJiYpSamipOa0tLizgor169Un9/vyt8aa6vr6ukpER37949sZUMIK+WV8xT8DSQOxwObq748eOHgGJ/8TDd3d0GxuFwCDgORFZWlnnTgMbHx2tqasrVz8Dh8K3JFqivr9fk5KTr4Dj5R+wJh9iHDx/EMl28eJGfcjgcZsPzcZulZI9aS9He3m5g2OQUFxQUmF7rVJIj7Gi+ffvWtSdhc2LI13TeIkvlL3Z3d3Xt2jVzcPzV2p331IQFJth+AQAA//9Opj3vAAAABklEQVQDAM9TAgNdiTbvAAAAAElFTkSuQmCC"
     Task:
       type: object
@@ -2414,7 +2408,6 @@ components:
       required:
         - id
         - name
-        - email
       properties:
         id:
           type: string
@@ -2423,10 +2416,6 @@ components:
         name:
           type: string
           example: "Max Mustermann"
-        email:
-          type: string
-          format: email
-          example: "max@example.com"
         avatar:
           type: string
           example: "data:image/jpeg;base64,/9j/4AAQ..."

@@ -1,5 +1,6 @@
 package eu.wiegandt.librehousehold.household.service;
 import eu.wiegandt.librehousehold.household.HouseholdDeleted;
+import eu.wiegandt.librehousehold.household.MemberEmailChanged;
 import eu.wiegandt.librehousehold.household.MemberRemoved;
 import eu.wiegandt.librehousehold.household.exception.*;
 import eu.wiegandt.librehousehold.household.mapper.*;
@@ -21,7 +22,7 @@ import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.dao.DataIntegrityViolationException;
+
 
 import java.time.LocalDate;
 import java.util.*;
@@ -201,22 +202,6 @@ class MemberManagementServiceTest {
         }
 
         @Test
-        void duplicateEmail_throwsMemberAlreadyExistsException() {
-            // given
-            var token = UUID.randomUUID();
-            var registration = Instancio.create(MemberRegistration.class);
-            var invite = Instancio.of(InviteEntity.class)
-                    .set(field(InviteEntity::validUntil), LocalDate.now().plusDays(3))
-                    .create();
-            doReturn(Optional.of(invite)).when(inviteRepository).findByToken(token);
-            doThrow(DataIntegrityViolationException.class).when(memberRepository).save(any(MemberEntity.class));
-
-            // when / then
-            assertThatThrownBy(() -> service.joinHousehold(token, registration))
-                    .isInstanceOf(MemberAlreadyExistsException.class);
-        }
-
-        @Test
         void validToken_savesWithHouseholdIdFromTokenAndIsAdminFalse() {
             // given
             var token = UUID.randomUUID();
@@ -256,30 +241,6 @@ class MemberManagementServiceTest {
         }
 
         @Test
-        void emailUpdateWithZeroRows_throwsMemberNotFoundException() {
-            // given
-            var memberId = UUID.randomUUID();
-            var update = new MemberUpdate().email("new@example.com");
-            doReturn(0).when(memberRepository).updateEmail(memberId, "new@example.com");
-
-            // when / then
-            assertThatThrownBy(() -> service.updateMember(memberId, update))
-                    .isInstanceOf(MemberNotFoundException.class);
-        }
-
-        @Test
-        void duplicateEmail_throwsMemberAlreadyExistsException() {
-            // given
-            var memberId = UUID.randomUUID();
-            var update = new MemberUpdate().email("taken@example.com");
-            doThrow(DataIntegrityViolationException.class).when(memberRepository).updateEmail(memberId, "taken@example.com");
-
-            // when / then
-            assertThatThrownBy(() -> service.updateMember(memberId, update))
-                    .isInstanceOf(MemberAlreadyExistsException.class);
-        }
-
-        @Test
         void validNameUpdate_updatesNameInRepository() {
             // given
             var memberId = UUID.randomUUID();
@@ -294,18 +255,33 @@ class MemberManagementServiceTest {
         }
 
         @Test
-        void validEmailUpdate_updatesEmailInRepository() {
+        void emailPresent_publishesMemberEmailChangedEvent() {
             // given
             var memberId = UUID.randomUUID();
-            var update = new MemberUpdate().email("updated@example.com");
-            doReturn(1).when(memberRepository).updateEmail(memberId, "updated@example.com");
+            var newEmail = "new@example.com";
+            var update = new MemberUpdate().email(newEmail);
 
             // when
             service.updateMember(memberId, update);
 
             // then
-            verify(memberRepository).updateEmail(memberId, "updated@example.com");
+            verify(eventPublisher).publishEvent(new MemberEmailChanged(memberId, newEmail));
         }
+
+        @Test
+        void emailAbsent_doesNotPublishEvent() {
+            // given
+            var memberId = UUID.randomUUID();
+            var update = new MemberUpdate().name("New Name");
+            doReturn(1).when(memberRepository).updateName(memberId, "New Name");
+
+            // when
+            service.updateMember(memberId, update);
+
+            // then
+            verify(eventPublisher, never()).publishEvent(any(MemberEmailChanged.class));
+        }
+
     }
 
     @Nested

@@ -58,17 +58,6 @@ class HouseholdSetupServiceTest {
         }
 
         @Test
-        void dataIntegrityViolationOnMemberSave_throwsMemberAlreadyExistsException() {
-            // given
-            doReturn(Instancio.create(HouseholdEntity.class)).when(householdRepository).save(any(HouseholdEntity.class));
-            doThrow(DataIntegrityViolationException.class).when(memberRepository).save(any(MemberEntity.class));
-
-            // when / then
-            assertThatThrownBy(() -> service.setupHousehold(buildSetup()))
-                    .isInstanceOf(MemberAlreadyExistsException.class);
-        }
-
-        @Test
         void validSetup_savesMemberWithHouseholdIdFromSavedHouseholdAndIsAdminTrue() {
             // given
             var savedHousehold = Instancio.create(HouseholdEntity.class);

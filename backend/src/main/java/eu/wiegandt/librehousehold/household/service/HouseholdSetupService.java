@@ -1,8 +1,8 @@
 package eu.wiegandt.librehousehold.household.service;
 
 import eu.wiegandt.librehousehold.household.exception.HouseholdAlreadyExistsException;
-import eu.wiegandt.librehousehold.household.exception.MemberAlreadyExistsException;
 import eu.wiegandt.librehousehold.household.mapper.HouseholdSetupMapper;
+import org.springframework.dao.DataIntegrityViolationException;
 import eu.wiegandt.librehousehold.household.model.HouseholdEntity;
 import eu.wiegandt.librehousehold.household.model.InviteEntity;
 import eu.wiegandt.librehousehold.household.model.MemberEntity;
@@ -11,7 +11,7 @@ import eu.wiegandt.librehousehold.household.repository.InviteRepository;
 import eu.wiegandt.librehousehold.household.repository.MemberRepository;
 import eu.wiegandt.librehousehold.model.HouseholdSetup;
 import eu.wiegandt.librehousehold.model.HouseholdSetupResponse;
-import org.springframework.dao.DataIntegrityViolationException;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,18 +44,13 @@ public class HouseholdSetupService {
         } catch (DataIntegrityViolationException e) {
             throw new HouseholdAlreadyExistsException();
         }
-        try {
-            memberRepository.save(new MemberEntity(
-                    setup.getMember().getId(),
-                    setup.getMember().getName(),
-                    setup.getMember().getEmail(),
-                    setup.getMember().getAvatar().orElse(null),
-                    savedHousehold.id(),
-                    true
-            ));
-        } catch (DataIntegrityViolationException e) {
-            throw new MemberAlreadyExistsException();
-        }
+        memberRepository.save(new MemberEntity(
+                setup.getMember().getId(),
+                setup.getMember().getName(),
+                setup.getMember().getAvatar().orElse(null),
+                savedHousehold.id(),
+                true
+        ));
         var invite = inviteRepository.save(new InviteEntity(
                 null,
                 savedHousehold.id(),

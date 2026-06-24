@@ -1,10 +1,11 @@
 package eu.wiegandt.librehousehold.household.service;
 
 import eu.wiegandt.librehousehold.household.MemberDeletion;
+import eu.wiegandt.librehousehold.household.MemberEmailChanged;
 import eu.wiegandt.librehousehold.household.MemberQuery;
 import eu.wiegandt.librehousehold.household.MemberRemoved;
 import eu.wiegandt.librehousehold.household.exception.InvalidInviteException;
-import eu.wiegandt.librehousehold.household.exception.MemberAlreadyExistsException;
+
 import eu.wiegandt.librehousehold.household.exception.MemberNotFoundException;
 import eu.wiegandt.librehousehold.household.mapper.MemberMapper;
 import eu.wiegandt.librehousehold.household.model.MemberEntity;
@@ -17,7 +18,7 @@ import eu.wiegandt.librehousehold.model.Member;
 import eu.wiegandt.librehousehold.model.MemberRegistration;
 import eu.wiegandt.librehousehold.model.MemberUpdate;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.dao.DataIntegrityViolationException;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -75,34 +76,24 @@ public class MemberManagementService implements MemberQuery, MemberDeletion {
         var invite = inviteRepository.findByToken(token)
                 .filter(i -> !i.validUntil().isBefore(LocalDate.now()))
                 .orElseThrow(InvalidInviteException::new);
-        try {
-            var saved = memberRepository.save(new MemberEntity(
-                    registration.getId(),
-                    registration.getName(),
-                    registration.getEmail(),
-                    registration.getAvatar().orElse(null),
-                    invite.householdId(),
-                    false
-            ));
-            return memberMapper.toMember(saved);
-        } catch (DataIntegrityViolationException e) {
-            throw new MemberAlreadyExistsException();
-        }
+        var saved = memberRepository.save(new MemberEntity(
+                registration.getId(),
+                registration.getName(),
+                registration.getAvatar().orElse(null),
+                invite.householdId(),
+                false
+        ));
+        return memberMapper.toMember(saved);
     }
 
     @Transactional
     public void updateMember(UUID memberId, MemberUpdate update) {
-        try {
-            if (update.getName().isPresent()) {
-                var rows = memberRepository.updateName(memberId, update.getName().get());
-                if (rows == 0) throw new MemberNotFoundException();
-            }
-            if (update.getEmail().isPresent()) {
-                var rows = memberRepository.updateEmail(memberId, update.getEmail().get());
-                if (rows == 0) throw new MemberNotFoundException();
-            }
-        } catch (DataIntegrityViolationException e) {
-            throw new MemberAlreadyExistsException();
+        if (update.getName().isPresent()) {
+            var rows = memberRepository.updateName(memberId, update.getName().get());
+            if (rows == 0) throw new MemberNotFoundException();
+        }
+        if (update.getEmail().isPresent()) {
+            eventPublisher.publishEvent(new MemberEmailChanged(memberId, update.getEmail().get()));
         }
     }
 

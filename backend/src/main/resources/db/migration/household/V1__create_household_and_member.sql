@@ -9,7 +9,6 @@ CREATE TABLE member
 (
     id           UUID PRIMARY KEY,
     name         TEXT NOT NULL,
-    email        TEXT NOT NULL UNIQUE,
     avatar       TEXT,
     household_id UUID NOT NULL REFERENCES household (id),
     is_admin     BOOLEAN NOT NULL DEFAULT FALSE

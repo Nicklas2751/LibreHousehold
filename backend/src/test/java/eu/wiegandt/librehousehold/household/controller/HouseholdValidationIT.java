@@ -52,7 +52,7 @@ class HouseholdValidationIT {
         void householdNameTooLong_returns400() throws Exception {
             // given
             var household = new Household(UUID.randomUUID(), "x".repeat(101));
-            var member = new Member(UUID.randomUUID(), "Max Mustermann", "max@example.com");
+            var member = new Member(UUID.randomUUID(), "Max Mustermann");
             var setup = new HouseholdSetup(household, member);
 
             // when / then
@@ -66,7 +66,7 @@ class HouseholdValidationIT {
         void householdNameTooShort_returns400() throws Exception {
             // given
             var household = new Household(UUID.randomUUID(), "ab");
-            var member = new Member(UUID.randomUUID(), "Max Mustermann", "max@example.com");
+            var member = new Member(UUID.randomUUID(), "Max Mustermann");
             var setup = new HouseholdSetup(household, member);
 
             // when / then
