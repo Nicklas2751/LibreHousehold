@@ -25,10 +25,6 @@ public interface MemberRepository extends CrudRepository<MemberEntity, UUID> {
     int updateName(@Param("id") UUID id, @Param("name") String name);
 
     @Modifying
-    @Query("UPDATE member SET email = :email WHERE id = :id")
-    int updateEmail(@Param("id") UUID id, @Param("email") String email);
-
-    @Modifying
     @Query("UPDATE member SET is_admin = false WHERE household_id = :householdId AND is_admin = true")
     int revokeAdmin(@Param("householdId") UUID householdId);
 

@@ -91,23 +91,6 @@ class HouseholdSetupServiceIT {
     }
 
     @Test
-    void setupHousehold_duplicateMemberEmail_throwsMemberAlreadyExistsException() {
-        // given
-        var member1 = Instancio.create(Member.class);
-        var household1 = Instancio.create(Household.class);
-        service.setupHousehold(new HouseholdSetup(household1, member1));
-
-        var member2 = Instancio.of(Member.class)
-                .set(field(Member::getEmail), member1.getEmail())
-                .create();
-        var household2 = Instancio.create(Household.class);
-
-        // when / then
-        assertThatThrownBy(() -> service.setupHousehold(new HouseholdSetup(household2, member2)))
-                .isInstanceOf(MemberAlreadyExistsException.class);
-    }
-
-    @Test
     void setupHousehold_validSetup_inviteTokenStoredInDatabase() {
         // given
         var member = Instancio.create(Member.class);

@@ -111,25 +111,6 @@ class MemberManagementServiceIT {
                     .isInstanceOf(InvalidInviteException.class);
         }
 
-        @Test
-        void duplicateEmail_throwsMemberAlreadyExistsException() {
-            // given
-            var token = setupResponse.getInviteToken();
-            var registration1 = Instancio.create(MemberRegistration.class);
-            memberManagementService.joinHousehold(token, registration1);
-
-            var token2 = setupService.setupHousehold(new HouseholdSetup(
-                    Instancio.create(Household.class),
-                    Instancio.create(Member.class)
-            )).getInviteToken();
-            var registration2 = Instancio.of(MemberRegistration.class)
-                    .set(field(MemberRegistration::getEmail), registration1.getEmail())
-                    .create();
-
-            // when / then
-            assertThatThrownBy(() -> memberManagementService.joinHousehold(token2, registration2))
-                    .isInstanceOf(MemberAlreadyExistsException.class);
-        }
     }
 
     @Nested
