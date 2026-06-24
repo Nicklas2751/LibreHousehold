@@ -1,0 +1,44 @@
+:jbake-title: ADR 013: Role Model and Authorization
+:jbake-type: page_toc
+:jbake-status: published
+:jbake-menu: adrs
+:jbake-order: 13
+
+[[adr-013]]
+= ADR 013: Role Model and Authorization
+
+== Context
+
+Users within a household have different levels of access.
+Some actions, such as inviting members or renaming the household, must be limited to a designated administrator.
+Write and delete access to individual resources such as tasks and expenses must be limited to the resource's creator.
+Without a defined authorization model, enforcement will be ad hoc and inconsistent across service methods.
+
+== Considered Options
+
+Single role for all members; Two roles (MEMBER, ADMIN) with DB lookup on each request; Two roles stored in the JWT with per-resource author check via DB; Fine-grained ACL
+
+== Decision Outcome
+
+Two roles, `MEMBER` and `ADMIN`, are defined per household.
+The household creator becomes the first admin; the role can be transferred to another member.
+Roles are stored in the JWT `role` claim (see xref:adr-014.adoc[ADR 014]), so no DB lookup is needed for the common case.
+When the admin role is transferred, all refresh tokens for the affected users are revoked; the next login produces a JWT with the updated role.
+
+Authorization is enforced in three layers.
+
+*Authentication:* All API endpoints require a valid JWT.
+This is configured globally in the `SecurityFilterChain` via `.anyRequest().authenticated()`, so no per-method annotation is needed for the basic login check.
+
+*Household scope:* Every request that includes a household ID must carry a JWT whose `household_id` claim matches that ID.
+This is enforced through a custom `@PreAuthorize`-based annotation applied at the service layer, so a user can never read or write data belonging to another household.
+
+*Role and author checks:* Two custom annotations cover the remaining cases.
+
+`@OnlyAdmin` marks operations that require the ADMIN role within the household.
+It verifies both the household scope and the role from the JWT, with no DB lookup required.
+
+`@OnlyAuthor` marks operations that require the caller to be the creator of the specific resource.
+It verifies the household scope and then checks resource ownership via a single DB query, which is unavoidable for per-resource checks.
+
+Both annotations are implemented as meta-annotations on `@PreAuthorize` and delegate to Spring beans that communicate with other modules through Named Interfaces (xref:adr-011.adoc[ADR 011]).

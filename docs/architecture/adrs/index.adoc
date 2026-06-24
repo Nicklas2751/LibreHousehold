@@ -14,3 +14,6 @@
 === xref:adr-009.adoc[ADR 009: Save passwords only hashed and salted with Argon2id]
 === xref:adr-010.adoc[ADR 010: Use API first with OpenAPI Specification]
 === xref:adr-011.adoc[ADR 011: Cross-Module Communication Strategy]
+=== xref:adr-012.adoc[ADR 012: Embedded Spring Authorization Server as Authorization Server]
+=== xref:adr-013.adoc[ADR 013: Authorization — Role Model and Method Security]
+=== xref:adr-014.adoc[ADR 014: JWT Token Design — Claims, Lifetime, and Refresh Strategy]

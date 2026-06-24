@@ -1,0 +1,43 @@
+:jbake-title: ADR 012: Embedded Spring Authorization Server as Authorization Server
+:jbake-type: page_toc
+:jbake-status: published
+:jbake-menu: adrs
+:jbake-order: 12
+
+[[adr-012]]
+= ADR 012: Embedded Spring Authorization Server as Authorization Server
+
+== Context
+
+The application needs to authenticate users. +
+Self-hosters must be able to run the application without external services, but users should also be able to sign in with familiar social providers such as Google or Apple.
+A decision is needed on how to provide authentication while satisfying both requirements.
+
+== Considered Options
+
+Local accounts only; External OIDC provider only; Embedded Spring Authorization Server; External self-hosted IdP (Keycloak, Zitadel, Authentik); Session-based authentication
+
+== Decision Outcome
+
+The https://docs.spring.io/spring-authorization-server/reference/[Spring Authorization Server] is embedded directly in the Spring Boot application. +
+It serves as the single OAuth 2.1 and OIDC 1.0 issuer for both the REST API and the SvelteKit frontend, with no additional service required.
+Local login (`formLogin`) and social login via external OIDC providers (`oauth2Login`) are supported in a single configuration.
+On first social login, a local user record is created automatically through JIT provisioning via a custom `FederatedIdentityAuthenticationSuccessHandler`.
+The SvelteKit frontend uses `oidc-client-ts` to perform the Authorization Code and PKCE flow; tokens are kept in memory only, consistent with the no-`localStorage` rule in `AGENTS.md`.
+Operators who already run a dedicated IdP may disable the embedded AS and point the Resource Server at their external issuer instead.
+
+Two implementation details follow from this decision.
+First, the login form is a Thymeleaf template served by Spring, not a SvelteKit component, and must be styled to match the application.
+Second, the OIDC discovery document does not list which social providers are configured, so a dedicated unauthenticated endpoint (`GET /api/auth/providers`) is added to communicate the active login methods to the frontend.
+
+== Consequences
+
+**Positive:**
+
+- Self-hosters run a single Docker container with no mandatory external dependencies.
+- A single token issuer simplifies the Resource Server configuration.
+
+**Negative:**
+
+- RSA keys for JWT signing must persist across restarts via a Docker volume; keys lost on restart invalidate all active sessions.
+- The login template is maintained separately from the SvelteKit codebase.

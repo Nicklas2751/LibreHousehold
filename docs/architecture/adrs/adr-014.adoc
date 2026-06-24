@@ -1,0 +1,55 @@
+:jbake-title: ADR 014: JWT Claims and Token Lifetime
+:jbake-type: page_toc
+:jbake-status: published
+:jbake-menu: adrs
+:jbake-order: 14
+
+[[adr-014]]
+= ADR 014: JWT Claims and Token Lifetime
+
+== Context
+
+The Spring Authorization Server (xref:adr-012.adoc[ADR 012]) issues a JWT for every authenticated user. +
+A decision is needed on which application data to include in the token and how long the token should remain valid.
+Including too little forces a DB lookup on every request; including too much widens the window in which a token contains stale data after a role or household change.
+
+== Considered Options
+
+Minimal claims, all data resolved from DB; Application claims (role, household_id) in the token; Full user and household data in the token; Opaque reference tokens with server-side introspection
+
+== Decision Outcome
+
+Access tokens include three application-specific claims in addition to the standard OIDC set:
+
+[cols="1,3"]
+|===
+|Claim |Purpose
+
+|`household_id`
+|UUID of the user's household (`null` until onboarding is complete). One user belongs to one household, so this claim eliminates a DB lookup on every household-scoped request.
+
+|`role`
+|`MEMBER` or `ADMIN`. Role changes are rare; the short access-token lifetime bounds the inconsistency window to an acceptable maximum.
+
+|`provider`
+|The login method used (`local`, `google`, `apple`, etc.). Used to generate appropriate error messages when a federated account is no longer available.
+|===
+
+Token lifetimes follow https://cheatsheetseries.owasp.org/cheatsheets/OAuth2_Cheat_Sheet.html[OWASP recommendations].
+Access tokens expire after 15 minutes to limit exposure of a compromised stateless JWT.
+Refresh tokens expire after 30 days of inactivity, with the window reset on each successful use.
+
+Refresh token rotation is enabled: each use issues a new refresh token and invalidates the old one.
+If a previously used refresh token is presented again, Spring Authorization Server revokes all tokens for that user, which detects token theft via family revocation.
+This behavior is provided by `JdbcOAuth2AuthorizationService`.
+
+== Consequences
+
+**Positive:**
+
+- Household scope and role checks resolve from the JWT without a DB lookup.
+
+**Negative:**
+
+- Role and household changes are not reflected immediately; the delay is bounded by the 15-minute access-token lifetime.
+- The `null` value of `household_id` during onboarding must be handled explicitly in every protected endpoint.
