@@ -1,0 +1,26 @@
+@startuml
+skinparam sequenceMessageAlign left
+skinparam responseMessageBelowArrow true
+
+participant "SvelteKit SPA\n(oidc-client-ts)" as spa #LightBlue
+participant "Spring Auth Server" as as #LightGreen
+database "PostgreSQL\n(OAuth2AuthorizationService)" as db
+
+spa -> as : POST /oauth2/token\ngrant_type=refresh_token\n&refresh_token=<current_rt>
+
+as -> db : look up refresh token
+db --> as : authorization record
+
+alt refresh token valid and unused
+    as -> db : invalidate old refresh token
+    as -> db : persist new refresh token
+    as --> spa : new access_token (15 min)\n+ new refresh_token (30 days)
+else refresh token already used (possible theft)
+    as -> db : revoke ALL tokens for this user\n(family revocation)
+    as --> spa : HTTP 400 invalid_grant
+    spa -> spa : clear tokens,\nredirect to /login
+else refresh token expired (> 30 days inactive)
+    as --> spa : HTTP 400 invalid_grant
+    spa -> spa : clear tokens,\nredirect to /login
+end
+@enduml

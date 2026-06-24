@@ -15,6 +15,41 @@
 
 Architecture Decision Records (ADRs) are a way to document important architectural decisions in a structured manner. They help in maintaining a record of the rationale behind decisions, alternatives considered, and the implications of those decisions. For more information see https://adr.github.io[adr.github.io].
 
+=== Security: Authentication and Authorization
+
+Authentication and authorization are cross-cutting concerns that affect every module and every API endpoint.
+
+==== Authentication
+
+LibreHousehold embeds a Spring Authorization Server inside the monolith as the single OAuth 2.1 / OIDC 1.0 issuer.
+It supports two login methods simultaneously: local accounts (email and Argon2id password) and federated logins via external OIDC providers such as Google.
+Self-hosters configure which providers are active through environment variables; no separate identity service is required.
+
+The SvelteKit SPA uses `oidc-client-ts` with the Authorization Code grant and PKCE.
+Tokens are stored in memory only and are never written to `localStorage` or `sessionStorage`.
+
+For the detailed interaction between the SPA, Authorization Server, and REST API see xref:06_runtime_view.adoc[Chapter 6 — Runtime View].
+The architectural decision is documented in xref:../adrs/adr-012.adoc[ADR 012].
+
+==== Authorization
+
+Authorization is enforced in three layers.
+
+*Global authentication check:* The `SecurityFilterChain` applies `.anyRequest().authenticated()`, so every endpoint requires a valid JWT without any per-method annotation.
+
+*Household scope:* Every service method that operates on a household resource uses a `@PreAuthorize`-based annotation that compares the JWT `household_id` claim against the household ID in the request.
+A user can never read or write data that belongs to a different household.
+
+*Role and author checks:* Two custom meta-annotations handle finer-grained access control.
+
+- `@OnlyAdmin` requires the `ADMIN` role in the JWT `role` claim plus the household scope check.
+  No DB lookup is needed.
+- `@OnlyAuthor` requires the caller to be the creator of the specific resource.
+  This check reads the resource owner from the database; no other approach is possible for per-resource decisions.
+
+Both annotations delegate to Spring beans that communicate with other modules through Named Interfaces (xref:../adrs/adr-011.adoc[ADR 011]).
+See xref:../adrs/adr-013.adoc[ADR 013] for the full role model and xref:../adrs/adr-014.adoc[ADR 014] for the JWT claims design.
+
 === Modular Monolith (Modulith)
 
 A modular monolith, or "modulith", is an architectural style where the application is structured into distinct modules within a single deployable unit. Each module encapsulates specific functionality and can interact with other modules through well-defined interfaces. This approach combines the benefits of modularity with the simplicity of a monolithic deployment. For more information see the https://spring.io/blog/2022/10/21/introducing-spring-modulith[Spring Modulith blog post] or https://entwickler.de/software-architektur/microservices-oder-monolithen-beides[this german Entwickler.de article about moduliths].

@@ -10,3 +10,50 @@
 
 [[section-runtime-view]]
 == Runtime View
+
+=== Authentication and Token Flows
+
+The following scenarios cover the three core interactions between the SvelteKit SPA, the Spring Authorization Server, and the REST API.
+All flows use the Authorization Code grant with PKCE (RFC 7636).
+See xref:../adrs/adr-012.adoc[ADR 012] for the architectural rationale.
+
+==== Local Login
+
+A user signs in with an email address and password stored in LibreHousehold.
+
+[plantuml, auth_local_login, svg]
+....
+include::../images/auth_local_login.puml[]
+....
+
+The SPA fetches the available login methods from `GET /api/auth/providers` before rendering the login page.
+The actual credential form is a Thymeleaf template served by the Spring Authorization Server, not a SvelteKit component.
+After the user submits credentials, the Authorization Server verifies the Argon2id password hash (xref:../adrs/adr-009.adoc[ADR 009]) and redirects back to the SPA with an authorization code.
+The SPA exchanges the code for tokens using the stored PKCE verifier.
+
+==== Social Login (OIDC / OAuth 2.0)
+
+A user signs in through an external identity provider such as Google.
+
+[plantuml, auth_oidc_login, svg]
+....
+include::../images/auth_oidc_login.puml[]
+....
+
+The redirect chain passes through the Spring Authorization Server, which acts as the single issuer for all tokens regardless of provider.
+On the first login with a given provider, the Authorization Server provisions a local user account from the provider's `id_token` claims (JIT provisioning).
+If the provider's email address matches an existing local account, the login is rejected with an `email_already_registered` error.
+
+==== Token Refresh
+
+The SPA uses `oidc-client-ts` to silently refresh the access token before it expires.
+
+[plantuml, auth_token_refresh, svg]
+....
+include::../images/auth_token_refresh.puml[]
+....
+
+Refresh token rotation is enforced on every use.
+If a previously consumed refresh token is presented, the server treats this as a theft signal and revokes all tokens for the user (family revocation).
+The user is then redirected to the login page.
+See xref:../adrs/adr-014.adoc[ADR 014] for token lifetime decisions.

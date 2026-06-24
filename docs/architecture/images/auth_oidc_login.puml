@@ -1,0 +1,33 @@
+@startuml
+skinparam sequenceMessageAlign left
+skinparam responseMessageBelowArrow true
+
+actor "User" as user
+participant "SvelteKit SPA" as spa #LightBlue
+participant "Spring Auth Server" as as #LightGreen
+participant "External Provider\n(e.g. Google)" as idp #LightYellow
+database "PostgreSQL" as db
+
+user -> spa : clicks "Sign in with Google"
+spa -> as : GET /oauth2/authorize\n?response_type=code\n&code_challenge=S256(verifier)
+as -> idp : redirect to provider\nauthorization endpoint
+user -> idp : authenticates with provider
+idp --> as : callback with provider code
+
+as -> idp : POST /token (code exchange)
+idp --> as : provider access_token + id_token
+
+as -> db : lookup user by (provider, sub)
+alt first login — JIT provisioning
+    as -> db : INSERT user\n(email, provider, provider_sub)
+    db --> as : new user record
+else returning user
+    db --> as : existing user record
+end
+
+as -> as : issue own JWT with\nhousehold_id + role claims
+as --> spa : HTTP 302 /callback?code=AUTH_CODE
+
+spa -> as : POST /oauth2/token\n(code + code_verifier)
+as --> spa : access_token (15 min)\n+ refresh_token (30 days)
+@enduml

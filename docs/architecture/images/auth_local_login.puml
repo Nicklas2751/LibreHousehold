@@ -1,0 +1,32 @@
+@startuml
+skinparam sequenceMessageAlign left
+skinparam responseMessageBelowArrow true
+
+actor "User" as user
+participant "SvelteKit SPA" as spa #LightBlue
+participant "Spring Auth Server\n(Thymeleaf)" as as #LightGreen
+participant "REST API\n(Resource Server)" as api #LightGreen
+database "PostgreSQL" as db
+
+user -> spa : navigates to /login
+spa -> api : GET /api/auth/providers
+api -> spa : { local: true, google: true, ... }
+spa -> user : renders login buttons
+
+user -> spa : clicks "Sign in with email"
+spa -> as : GET /oauth2/authorize\n?response_type=code\n&code_challenge=S256(verifier)\n&code_challenge_method=S256
+as -> user : serves Thymeleaf login form
+
+user -> as : POST /login\n(email, password)
+as -> db : load user, verify Argon2id hash
+db --> as : UserDetails
+as -> as : issue JWT with\nhousehold_id + role claims
+as --> spa : HTTP 302 /callback?code=AUTH_CODE
+
+spa -> as : POST /oauth2/token\n(code + code_verifier)
+as --> spa : access_token (15 min)\n+ refresh_token (30 days)
+
+spa -> api : GET /v1/tasks\nAuthorization: Bearer <access_token>
+api -> api : validate JWT signature\ncheck household_id claim
+api --> spa : tasks []
+@enduml

@@ -23,11 +23,15 @@
 |xref:01_introduction_and_goals.adoc#QG2[QG2 - Secure]
 |
 - xref:../adrs/adr-009.adoc[ADR 009 - Save passwords only hashed and salted with Argon2id]
+- xref:../adrs/adr-012.adoc[ADR 012 - Embedded Spring Authorization Server as Authorization Server]
+- xref:../adrs/adr-013.adoc[ADR 013 - Role Model and Authorization]
+- xref:../adrs/adr-014.adoc[ADR 014 - JWT Claims and Token Lifetime]
 
 |xref:01_introduction_and_goals.adoc#QG3[QG3 - Easy to host]
 |
 - xref:../adrs/adr-002.adoc[ADR 002 - Java as backend language]
 - xref:../adrs/adr-006.adoc[ADR 006 - Progressive Web App (PWA) for the Frontend]
+- xref:../adrs/adr-012.adoc[ADR 012 - Embedded Spring Authorization Server as Authorization Server]
 
 |xref:01_introduction_and_goals.adoc#QG4[QG4 - Maintainable]
 |
