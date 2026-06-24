@@ -1,0 +1,270 @@
+Auth-Modul Implementierungsplan
+================================
+
+Jede Phase endet an einem Punkt, an dem der Zwischenstand reviewt und
+verbessert werden kann, bevor die nächste Phase beginnt.
+
+TDD-Ablauf je Phase:
+  1. Fehlschlagenden Test schreiben
+  2. Minimale Implementierung, die den Test grün macht
+  3. Refactoring ohne Verhaltensänderung
+
+Modul-Package: eu.wiegandt.librehousehold.auth
+Flyway-Schema: auth (eigenes Schema analog zu household, tasks usw.)
+
+
+──────────────────────────────────────────────────────────────────────
+PHASE 1 — Datenmodell & Flyway-Migrationen
+──────────────────────────────────────────────────────────────────────
+Ziel: Tabellenschema festlegen, bevor Logik geschrieben wird.
+
+1.1  Flyway-Migration auth/V1__create_account.sql
+     Tabelle `account`:
+       id UUID PK, email VARCHAR UNIQUE NOT NULL,
+       password_hash VARCHAR (nullable, leer bei Social-Login)
+     Tabelle `federated_identity`:
+       id UUID PK, account_id UUID NOT NULL REFERENCES auth.account(id),
+       provider VARCHAR NOT NULL, provider_sub VARCHAR NOT NULL,
+       UNIQUE (provider, provider_sub)
+
+     Hinweis: AccountEntity.id == MemberEntity.id (geteilte UUID, kein DB-FK
+     über Modulgrenzen hinweg). role und household_id werden NICHT in account
+     gespeichert — der JWT-Customizer holt diese Werte zur Token-Ausstellung
+     via Named Interface aus dem household-Modul (Phase 3).
+
+1.2  Integration-Test AccountRepositoryIT (Basis-Queries)
+     - findByEmail gibt Optional.empty() für unbekannte E-Mail
+     - findByEmail gibt Account zurück nach INSERT
+     - findByProviderAndProviderSub gibt FederatedIdentity zurück
+
+1.3  AccountEntity (Record: id, email, password_hash — implementiert Persistable<UUID>)
+     FederatedIdentityEntity (Record: id, account_id, provider, provider_sub — implementiert Persistable<UUID>)
+
+1.4  AccountRepository (findByEmail), FederatedIdentityRepository (findByProviderAndProviderSub)
+
+1.5  Refactoring: email aus MemberEntity entfernen
+     Berührt: household/V1__create_household_and_member.sql (Spalte entfernen),
+     MemberEntity (Feld entfernen), MemberRepository (updateEmail entfernen),
+     HouseholdSetupService, MemberManagementService, OpenAPI-Spec (Member-Schemas),
+     TypeScript-Client regenerieren, betroffene Tests anpassen.
+
+► Review-Punkt: Tabellenschema, Entity-Design, Repository-Schnittstellen
+
+
+──────────────────────────────────────────────────────────────────────
+PHASE 2 — Spring Authorization Server Grundkonfiguration
+──────────────────────────────────────────────────────────────────────
+Ziel: Spring Authorization Server startet und liefert OIDC-Metadaten.
+      Dependency-Entscheidung vor Beginn mit dem User abstimmen.
+
+2.1  Neue Abhängigkeit: spring-security-oauth2-authorization-server
+     Neue Abhängigkeit: spring-boot-starter-thymeleaf
+     (vor dem Hinzufügen kurz mit User bestätigen)
+
+2.2  Bestehende Migration __root/V1__create_event_publication.sql erweitern
+     Tabellen ergänzen: oauth2_authorization, oauth2_authorization_consent,
+     oauth2_registered_client (Spring-AS-Standard-Schema)
+
+2.3  AuthorizationServerConfig (SecurityFilterChain für Auth-Server)
+     - RegisteredClientRepository (PKCE-fähiger SPA-Client)
+     - JdbcOAuth2AuthorizationService
+     - RSA-Schlüssel aus Umgebungsvariable LIBREHOUSEHOLD_AUTH_RSA_KEY_PATH
+
+2.4  ResourceServerConfig (SecurityFilterChain für REST-API)
+     - .anyRequest().authenticated() als globale Absicherung
+     - JWT-Decoder mit eigenem Issuer
+
+2.5  Integrations-Test AuthorizationServerIT
+     - GET /.well-known/openid-configuration liefert HTTP 200
+     - Issuer-URL stimmt mit konfiguriertem Wert überein
+
+► Review-Punkt: Security-Konfiguration, Client-Registrierung, Schlüsselverwaltung
+
+
+──────────────────────────────────────────────────────────────────────
+PHASE 3 — Lokale Authentifizierung (formLogin)
+──────────────────────────────────────────────────────────────────────
+Ziel: Nutzer kann sich mit E-Mail + Passwort anmelden und erhält JWT.
+
+3.1  Unit-Test AccountUserDetailsServiceTest
+     - loadUserByUsername gibt UserDetails zurück für bekannte E-Mail
+     - loadUserByUsername wirft UsernameNotFoundException für unbekannte E-Mail
+
+3.2  AccountUserDetailsService (implementiert UserDetailsService)
+     Argon2id-Passwort-Verifikation via Spring Security PasswordEncoder
+
+3.3  Unit-Test TokenCustomizerTest
+     - customize fügt sub-Claim (= account_id = member_id) hinzu
+     - customize fügt household_id-Claim hinzu (via MemberQuery Named Interface)
+     - customize fügt role-Claim hinzu (isAdmin aus MemberQuery)
+     - customize fügt provider-Claim "local" hinzu
+     - customize setzt household_id auf null wenn noch kein Haushalt (MemberQuery gibt Optional.empty())
+
+3.4  TokenCustomizer (implementiert OAuth2TokenCustomizer<JwtEncodingContext>)
+     Nutzt MemberQuery Named Interface (household-Modul) um household_id und isAdmin zu lesen
+
+3.5  Integrations-Test LocalLoginIT
+     - POST /oauth2/token mit grant_type=authorization_code liefert access_token
+     - Access-Token enthält Claim household_id
+     - Access-Token enthält Claim role
+
+► Review-Punkt: UserDetailsService, Token-Claims, Login-Flow Ende-zu-Ende
+
+
+──────────────────────────────────────────────────────────────────────
+PHASE 4 — Föderierte Authentifizierung (OIDC Social Login)
+──────────────────────────────────────────────────────────────────────
+Ziel: Nutzer kann sich mit Google (und weiteren Providern) anmelden.
+      JIT-Provisioning legt beim ersten Login automatisch einen Account an.
+
+4.1  Unit-Test JitProvisioningHandlerTest
+     - bekannter Provider-Sub: kein INSERT, vorhandener Account wird zurückgegeben
+     - unbekannter Provider-Sub, neue E-Mail: Account + FederatedIdentity werden angelegt
+     - unbekannter Provider-Sub, E-Mail existiert bereits als lokaler Account:
+       OAuth2AuthenticationException mit error_code "email_already_registered"
+
+4.2  JitProvisioningHandler (Consumer<OAuth2User> für
+     FederatedIdentityAuthenticationSuccessHandler)
+
+4.3  Konfiguration: oauth2Login in AuthorizationServerConfig
+     Provider-spezifische Konfiguration (Google) über application.yaml
+     Konfigurationsparameter: LIBREHOUSEHOLD_OIDC_GOOGLE_CLIENT_ID / CLIENT_SECRET
+
+4.4  Integrations-Test SocialLoginIT (MockServer simuliert Google-Token-Endpoint)
+     - JIT-Provisioning legt Account bei erstem Login an
+     - Zweiter Login mit gleichem Sub gibt denselben Account zurück
+     - E-Mail-Kollision liefert Redirect mit ?error=email_already_registered
+
+► Review-Punkt: JIT-Provisioning-Logik, Fehlerbehandlung E-Mail-Kollision
+
+
+──────────────────────────────────────────────────────────────────────
+PHASE 5 — Autorisierungsschichten
+──────────────────────────────────────────────────────────────────────
+Ziel: @OnlyAdmin und @OnlyAuthor absichern Endpunkte deklarativ.
+      Household-Scope-Prüfung verhindert Zugriff auf fremde Haushalte.
+
+5.1  Unit-Test HouseholdScopeCheckerTest
+     - isCurrentUserInHousehold gibt true wenn JWT household_id == Parameter
+     - isCurrentUserInHousehold gibt false bei Abweichung
+     - isCurrentUserInHousehold wirft AuthorizationDeniedException wenn household_id null
+
+5.2  HouseholdScopeChecker (Spring-Bean, Named Interface des auth-Moduls)
+
+5.3  @InHousehold — @PreAuthorize-Meta-Annotation für Household-Scope-Prüfung
+
+5.4  Unit-Test AdminCheckerTest
+     - isAdmin gibt true wenn JWT role == ADMIN und Household-Scope passt
+     - isAdmin gibt false wenn role == MEMBER
+
+5.5  @OnlyAdmin — Meta-Annotation (@InHousehold + Rollen-Prüfung)
+
+5.6  Unit-Test AuthorCheckerTest
+     - isAuthor gibt true wenn aufrufender Account Ersteller der Ressource ist
+       (DB-Query via Named Interface des Zielmoduls)
+     - isAuthor gibt false für anderen Account
+
+5.7  @OnlyAuthor — Meta-Annotation (@InHousehold + Autoren-Prüfung via DB)
+
+5.8  Integrations-Test AuthorizationLayerIT
+     - Anfrage ohne Token: 401
+     - Anfrage mit Token aus fremdem Haushalt: 403
+     - MEMBER-Token auf @OnlyAdmin-Endpunkt: 403
+     - ADMIN-Token auf @OnlyAdmin-Endpunkt: 200
+     - Falscher Author auf @OnlyAuthor-Endpunkt: 403
+
+► Review-Punkt: Annotations-Design, Named Interfaces, Test-Abdeckung der Schichten
+
+
+──────────────────────────────────────────────────────────────────────
+PHASE 6 — Token-Lebenszyklus & Refresh-Rotation
+──────────────────────────────────────────────────────────────────────
+Ziel: Refresh-Token-Rotation und Family-Revocation funktionieren.
+
+6.1  JdbcOAuth2AuthorizationService ist bereits in Phase 2 konfiguriert.
+     Rotation wird in RegisteredClient aktiviert:
+     .tokenSettings(TokenSettings.builder()
+         .reuseRefreshTokens(false) ...)
+
+6.2  Integrations-Test RefreshTokenIT
+     - Refresh liefert neuen access_token + neuen refresh_token
+     - Alter refresh_token ist danach ungültig (400 invalid_grant)
+     - Verwendung eines bereits konsumierten refresh_token
+       revoziert alle Token des Nutzers (Family Revocation)
+       und liefert 400 invalid_grant
+
+6.3  Token-Lebensdauern in application.yaml konfigurierbar:
+     Access-Token: 15 Minuten, Refresh-Token: 30 Tage
+
+► Review-Punkt: Rotation-Konfiguration, Family-Revocation-Verhalten
+
+
+──────────────────────────────────────────────────────────────────────
+PHASE 7 — Provider-Discovery-Endpoint & OpenAPI
+──────────────────────────────────────────────────────────────────────
+Ziel: Frontend kann konfigurierte Login-Provider zur Laufzeit abfragen.
+
+7.1  OpenAPI-Ergänzung: GET /api/auth/providers (unauthenticated)
+     Response-Schema: { local: boolean, google: boolean, apple: boolean, ... }
+     Anschließend: npm run openapi im Frontend
+
+7.2  Unit-Test AuthProviderServiceTest
+     - gibt nur Provider zurück, die in application.yaml aktiviert sind
+     - gibt leere Liste zurück wenn kein Provider konfiguriert
+
+7.3  AuthProviderService liest Konfiguration aus @ConfigurationProperties
+
+7.4  AuthProviderController (delegiert an generierten OpenAPI-Delegate)
+
+7.5  Integrations-Test AuthProviderControllerIT (@WebMvcTest)
+     - GET /api/auth/providers ohne Token liefert 200
+     - Response enthält nur konfigurierte Provider
+
+► Review-Punkt: Endpoint-Design, Konfigurationsstruktur
+
+
+──────────────────────────────────────────────────────────────────────
+PHASE 8 — Thymeleaf-Login-Template
+──────────────────────────────────────────────────────────────────────
+Ziel: Login-Formular ist mit DaisyUI gestaltet und zeigt Fehler an.
+      (Rein visuell — keine automatisierten Tests.)
+
+8.1  login.html (Thymeleaf-Template)
+     - E-Mail + Passwort Formular mit DaisyUI-Klassen
+     - Fehlermeldungen: falsches Passwort, account_locked,
+       email_already_registered
+     - Nur die in Phase 7 konfigurierten Social-Login-Buttons anzeigen
+
+8.2  Statische Assets (Tailwind CSS, DaisyUI) inline eingebettet oder
+     über Spring MVC static resources bereitgestellt
+
+► Review-Punkt: UI, Fehlertexte, Barrierefreiheit
+
+
+──────────────────────────────────────────────────────────────────────
+PHASE 9 — Frontend-Integration (SvelteKit)
+──────────────────────────────────────────────────────────────────────
+Ziel: SPA nutzt oidc-client-ts für Login, Silent-Refresh und Logout.
+
+9.1  Neue Abhängigkeit: oidc-client-ts (vor Beginn mit User abstimmen)
+
+9.2  Unit-Test authStore.spec.ts
+     - getProviders lädt Provider-Liste von /api/auth/providers
+     - login leitet zu /oauth2/authorize weiter
+     - isAuthenticated gibt false zurück wenn kein Token im Speicher
+     - token gibt null zurück nach logout
+
+9.3  authStore.svelte.ts
+     - UserManager-Konfiguration (authority, client_id, redirect_uri, scope)
+     - Token-Speicherung nur im Speicher (kein localStorage)
+     - Automatisches Silent-Refresh über oidc-client-ts
+
+9.4  /login-Seite: Provider-Buttons dynamisch aus authStore laden
+
+9.5  /callback-Seite: Authorization-Code-Exchange abschließen,
+     dann zur App weiterleiten
+
+9.6  Geschützte Routen: +layout.ts prüft isAuthenticated,
+     leitet bei Bedarf zu /login weiter
+
+► Review-Punkt: oidc-client-ts-Konfiguration, Token-Handling, Route-Schutz
