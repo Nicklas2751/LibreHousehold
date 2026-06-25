@@ -1,0 +1,145 @@
+package eu.wiegandt.librehousehold.auth;
+
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
+import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.oauth2.core.AuthorizationGrantType;
+import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
+import org.springframework.security.oauth2.core.oidc.OidcScopes;
+import org.springframework.security.oauth2.server.authorization.JdbcOAuth2AuthorizationService;
+import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationService;
+import org.springframework.security.oauth2.server.authorization.client.InMemoryRegisteredClientRepository;
+import org.springframework.security.oauth2.server.authorization.client.RegisteredClient;
+import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository;
+import org.springframework.security.oauth2.server.authorization.settings.ClientSettings;
+import org.springframework.security.oauth2.server.authorization.settings.TokenSettings;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
+import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
+
+import java.time.Duration;
+import java.util.UUID;
+
+/**
+ * Security configuration for the OAuth2 Authorization Server.
+ * <p>
+ * {@code @EnableWebSecurity} is technically redundant with Spring Boot because
+ * {@code SecurityAutoConfiguration} already activates web security via auto-configuration.
+ * It is kept here to make the intent explicit: this class owns the security setup and
+ * intentionally replaces Spring Boot's defaults.
+ */
+@Configuration
+@EnableWebSecurity
+@EnableConfigurationProperties(AuthProperties.class)
+class AuthorizationServerConfig {
+
+    /**
+     * Security filter chain for the Authorization Server's own endpoints (evaluated first, order 1).
+     * <p>
+     * {@code http.oauth2AuthorizationServer(...)} is the Spring Security 7 DSL that internally
+     * creates an {@code OAuth2AuthorizationServerConfigurer} and applies it to the HTTP security.
+     * The configurer's endpoint matcher restricts this chain to OAuth2/OIDC paths only:
+     * {@code /oauth2/authorize}, {@code /oauth2/token}, {@code /oauth2/jwks},
+     * {@code /.well-known/openid-configuration}, and a few others.
+     * All other paths fall through to the default chain (order 2).
+     * <p>
+     * When an unauthenticated browser requests {@code /oauth2/authorize}, the exception handler
+     * redirects it to {@code /login} (the form-login page configured in the default chain)
+     * instead of returning a 401. This is the standard OAuth2 authorization code flow entry point.
+     */
+    @Bean
+    @Order(1)
+    SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity httpSecurity) {
+        httpSecurity
+                .oauth2AuthorizationServer(authorizationServerConfigurer -> {
+                    httpSecurity.securityMatcher(authorizationServerConfigurer.getEndpointsMatcher());
+                    authorizationServerConfigurer.oidc(Customizer.withDefaults());
+                })
+                .authorizeHttpRequests(registry -> registry.anyRequest().authenticated())
+                .exceptionHandling(exceptionHandlingConfigurer -> exceptionHandlingConfigurer
+                        .defaultAuthenticationEntryPointFor(
+                                new LoginUrlAuthenticationEntryPoint("/login"),
+                                new MediaTypeRequestMatcher(MediaType.TEXT_HTML)));
+
+        return httpSecurity.build();
+    }
+
+    /**
+     * Default security filter chain for all non-Authorization-Server endpoints (order 2).
+     * <p>
+     * This chain secures the REST API ({@code /v1/**}) and the login page.
+     * <p>
+     * Form login is required because the authorization code flow (chain 1) redirects
+     * unauthenticated users to {@code /login}, which is served by Thymeleaf and handled here.
+     * <p>
+     * The JWT resource server configuration enables Bearer token authentication for REST API
+     * calls. It uses the same {@code JWKSource} as the authorization server (auto-configured
+     * by Spring Boot), so tokens issued here can also be verified here.
+     * <p>
+     * Spring Boot's default {@code SecurityFilterChain} auto-configuration backs off entirely
+     * as soon as any custom {@code SecurityFilterChain} bean is present, so this bean must
+     * define all required rules explicitly.
+     */
+    @Bean
+    @Order(2)
+    SecurityFilterChain defaultSecurityFilterChain(HttpSecurity httpSecurity) {
+        httpSecurity
+                .authorizeHttpRequests(registry -> registry.anyRequest().authenticated())
+                .formLogin(Customizer.withDefaults())
+                .oauth2ResourceServer(resourceServerConfigurer -> resourceServerConfigurer.jwt(Customizer.withDefaults()));
+
+        return httpSecurity.build();
+    }
+
+    /**
+     * Defines the single registered OAuth2 client: the LibreHousehold SPA.
+     * <p>
+     * The SPA uses the Authorization Code flow with PKCE and no client secret
+     * ({@link ClientAuthenticationMethod#NONE}). PKCE is mandatory because browser
+     * applications cannot store a secret securely. Refresh tokens allow the SPA to
+     * obtain new access tokens without re-prompting the user, and are rotated on
+     * every use ({@code reuseRefreshTokens = false}) to limit the impact of token theft.
+     */
+    @Bean
+    RegisteredClientRepository registeredClientRepository(AuthProperties authProperties) {
+        var singlePageApplicationClient = RegisteredClient.withId(UUID.randomUUID().toString())
+                .clientId(authProperties.clientId())
+                .clientAuthenticationMethod(ClientAuthenticationMethod.NONE)
+                .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+                .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
+                .redirectUri(authProperties.redirectUri())
+                .scope(OidcScopes.OPENID)
+                .scope(OidcScopes.PROFILE)
+                .clientSettings(ClientSettings.builder()
+                        .requireProofKey(true)
+                        .requireAuthorizationConsent(false)
+                        .build())
+                .tokenSettings(TokenSettings.builder()
+                        .accessTokenTimeToLive(Duration.ofMinutes(15))
+                        .refreshTokenTimeToLive(Duration.ofDays(30))
+                        .reuseRefreshTokens(false)
+                        .build())
+                .build();
+        return new InMemoryRegisteredClientRepository(singlePageApplicationClient);
+    }
+
+    /**
+     * Persists OAuth2 authorization state (authorization codes, access tokens, refresh tokens)
+     * in the database via JDBC.
+     * <p>
+     * Without this bean, Spring would fall back to an in-memory store that loses all active
+     * sessions on application restart. The required schema ({@code oauth2_authorization} table
+     * and siblings) is created by the root Flyway migration {@code V1__create_event_publication.sql}.
+     */
+    @Bean
+    OAuth2AuthorizationService authorizationService(JdbcTemplate jdbcTemplate,
+                                                    RegisteredClientRepository registeredClientRepository) {
+        return new JdbcOAuth2AuthorizationService(jdbcTemplate, registeredClientRepository);
+    }
+}

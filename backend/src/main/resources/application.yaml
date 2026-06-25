@@ -4,6 +4,15 @@ spring:
   modulith:
     runtime:
       flyway-enabled: true
+  security:
+    oauth2:
+      authorizationserver:
+        issuer: http://localhost:8080
+
+librehousehold:
+  auth:
+    client-id: librehousehold-spa
+    redirect-uri: http://localhost:5173/callback
 
 server:
   tomcat:
