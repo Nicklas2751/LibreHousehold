@@ -26,6 +26,7 @@ import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 import static java.util.stream.Collectors.toMap;
@@ -133,5 +134,11 @@ public class MemberManagementService implements MemberQuery, MemberDeletion {
         return memberRepository.findById(memberId)
                 .map(MemberEntity::isAdmin)
                 .orElse(false);
+    }
+
+    @Override
+    public Optional<UUID> findHouseholdIdByMemberId(UUID memberId) {
+        return memberRepository.findById(memberId)
+                .map(MemberEntity::householdId);
     }
 }

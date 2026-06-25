@@ -427,6 +427,40 @@ class MemberManagementServiceTest {
     }
 
     @Nested
+    class findHouseholdIdByMemberId {
+
+        @Test
+        void knownMember_returnsHouseholdId() {
+            // given
+            var memberId = UUID.randomUUID();
+            var householdId = UUID.randomUUID();
+            var entity = Instancio.of(memberEntityModel)
+                    .set(field(MemberEntity::householdId), householdId)
+                    .create();
+            doReturn(Optional.of(entity)).when(memberRepository).findById(memberId);
+
+            // when
+            var result = service.findHouseholdIdByMemberId(memberId);
+
+            // then
+            assertThat(result).contains(householdId);
+        }
+
+        @Test
+        void unknownMember_returnsEmpty() {
+            // given
+            var memberId = UUID.randomUUID();
+            doReturn(Optional.empty()).when(memberRepository).findById(memberId);
+
+            // when
+            var result = service.findHouseholdIdByMemberId(memberId);
+
+            // then
+            assertThat(result).isEmpty();
+        }
+    }
+
+    @Nested
     class removeMember {
 
         @Test

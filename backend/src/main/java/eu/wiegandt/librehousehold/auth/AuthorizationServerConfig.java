@@ -9,6 +9,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
 import org.springframework.security.oauth2.core.oidc.OidcScopes;
@@ -127,6 +129,17 @@ class AuthorizationServerConfig {
                         .build())
                 .build();
         return new InMemoryRegisteredClientRepository(singlePageApplicationClient);
+    }
+
+    /**
+     * Password encoder using Argon2id as mandated by ADR-009.
+     * Argon2id is the winner of the Password Hashing Competition and provides better
+     * resistance against GPU/ASIC attacks than BCrypt. BouncyCastle (bcpkix-jdk18on)
+     * is required on the classpath for this encoder to function.
+     */
+    @Bean
+    PasswordEncoder passwordEncoder() {
+        return Argon2PasswordEncoder.defaultsForSpringSecurity_v5_8();
     }
 
     /**

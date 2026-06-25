@@ -3,6 +3,7 @@ package eu.wiegandt.librehousehold.household;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -38,4 +39,13 @@ public interface MemberQuery {
      * Returns true if the member with the given ID is the household admin.
      */
     boolean isAdmin(UUID memberId);
+
+    /**
+     * Returns the household ID for the given member, or empty if the member does not exist.
+     * Used by the auth module at token issuance time to embed the household context into the JWT.
+     *
+     * @param memberId the member (= account) ID
+     * @return the household ID, or empty when no membership record exists yet
+     */
+    Optional<UUID> findHouseholdIdByMemberId(UUID memberId);
 }
