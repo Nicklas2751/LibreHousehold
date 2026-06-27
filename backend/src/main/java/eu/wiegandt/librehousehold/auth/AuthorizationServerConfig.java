@@ -1,5 +1,6 @@
 package eu.wiegandt.librehousehold.auth;
 
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -11,8 +12,10 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
+import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.core.oidc.OidcScopes;
 import org.springframework.security.oauth2.server.authorization.JdbcOAuth2AuthorizationService;
 import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationService;
@@ -25,6 +28,8 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.UUID;
 
@@ -80,6 +85,10 @@ class AuthorizationServerConfig {
      * Form login is required because the authorization code flow (chain 1) redirects
      * unauthenticated users to {@code /login}, which is served by Thymeleaf and handled here.
      * <p>
+     * OAuth2 login enables federated identity (e.g. Google). The {@link FederatedIdentityOidcUserService}
+     * handles JIT provisioning. On {@link OAuth2AuthenticationException} the failure handler encodes
+     * the error code into a redirect so Thymeleaf can display a localised message.
+     * <p>
      * The JWT resource server configuration enables Bearer token authentication for REST API
      * calls. It uses the same {@code JWKSource} as the authorization server (auto-configured
      * by Spring Boot), so tokens issued here can also be verified here.
@@ -90,11 +99,25 @@ class AuthorizationServerConfig {
      */
     @Bean
     @Order(2)
-    SecurityFilterChain defaultSecurityFilterChain(HttpSecurity httpSecurity) {
+    SecurityFilterChain defaultSecurityFilterChain(HttpSecurity httpSecurity,
+                                                   FederatedIdentityOidcUserService federatedIdentityOidcUserService,
+                                                   ObjectProvider<ClientRegistrationRepository> clientRegistrations) {
         httpSecurity
                 .authorizeHttpRequests(registry -> registry.anyRequest().authenticated())
                 .formLogin(Customizer.withDefaults())
                 .oauth2ResourceServer(resourceServerConfigurer -> resourceServerConfigurer.jwt(Customizer.withDefaults()));
+
+        // oauth2Login is only activated when at least one provider (e.g. Google) is configured
+        if (clientRegistrations.getIfAvailable() != null) {
+            httpSecurity.oauth2Login(oauth2 -> oauth2
+                    .userInfoEndpoint(uie -> uie.oidcUserService(federatedIdentityOidcUserService))
+                    .failureHandler((_, response, exception) -> {
+                        var errorCode = (exception instanceof OAuth2AuthenticationException oae)
+                                ? oae.getError().getErrorCode()
+                                : "authentication_error";
+                        response.sendRedirect("/login?error=" + URLEncoder.encode(errorCode, StandardCharsets.UTF_8));
+                    }));
+        }
 
         return httpSecurity.build();
     }

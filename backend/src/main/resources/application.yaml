@@ -8,6 +8,9 @@ spring:
     oauth2:
       authorizationserver:
         issuer: http://localhost:8080
+      # Social login providers (e.g. Google) are configured via standard Spring Boot env vars:
+      # SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_CLIENT_ID=...
+      # SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_CLIENT_SECRET=...
 
 librehousehold:
   auth:
