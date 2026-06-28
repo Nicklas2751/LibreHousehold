@@ -6,6 +6,7 @@ import eu.wiegandt.librehousehold.household.service.HouseholdManagementService;
 import eu.wiegandt.librehousehold.household.service.HouseholdSetupService;
 import eu.wiegandt.librehousehold.model.*;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Component;
 
 import java.util.Optional;
@@ -30,28 +31,33 @@ public class HouseholdApiDelegateImpl implements HouseholdApiDelegate {
     }
 
     @Override
+    @PreAuthorize("@householdScopeChecker.isCurrentUserInHousehold(#householdId) and @adminChecker.isAdmin()")
     public ResponseEntity<Void> updateHousehold(UUID householdId, HouseholdUpdate householdUpdate) {
         householdManagementService.updateName(householdId, householdUpdate);
         return ResponseEntity.noContent().build();
     }
 
     @Override
+    @PreAuthorize("@householdScopeChecker.isCurrentUserInHousehold(#householdId) and @adminChecker.isAdmin()")
     public ResponseEntity<Void> deleteHousehold(UUID householdId) {
         householdManagementService.deleteHousehold(householdId);
         return ResponseEntity.noContent().build();
     }
 
     @Override
+    @PreAuthorize("@householdScopeChecker.isCurrentUserInHousehold(#householdId) and @adminChecker.isAdmin()")
     public ResponseEntity<InviteResponse> getInvite(UUID householdId) {
         return ResponseEntity.ok(householdManagementService.getInvite(householdId));
     }
 
     @Override
+    @PreAuthorize("@householdScopeChecker.isCurrentUserInHousehold(#householdId) and @adminChecker.isAdmin()")
     public ResponseEntity<InviteResponse> generateInviteLink(UUID householdId) {
         return ResponseEntity.ok(householdManagementService.regenerateInvite(householdId));
     }
 
     @Override
+    @PreAuthorize("@householdScopeChecker.isCurrentUserInHousehold(#householdId) and @adminChecker.isAdmin()")
     public ResponseEntity<Void> transferOwnership(UUID householdId, TransferOwnershipRequest transferOwnershipRequest) {
         householdManagementService.transferOwnership(householdId, transferOwnershipRequest.getMemberId());
         return ResponseEntity.noContent().build();

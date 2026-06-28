@@ -1,6 +1,7 @@
 package eu.wiegandt.librehousehold.usersettings.controller;
 
 import eu.wiegandt.librehousehold.api.UsersettingsApiDelegate;
+import eu.wiegandt.librehousehold.auth.OnlyAuthor;
 import eu.wiegandt.librehousehold.model.UserPreferences;
 import eu.wiegandt.librehousehold.usersettings.service.UsersettingsService;
 import org.springframework.http.ResponseEntity;
@@ -18,15 +19,17 @@ public class UsersettingsApiDelegateImpl implements UsersettingsApiDelegate {
     }
 
     @Override
+    @OnlyAuthor
     public ResponseEntity<UserPreferences> updatePreferences(UUID householdId,
-                                                             UUID memberId,
+                                                             UUID resourceId,
                                                              UserPreferences userPreferences) {
-        return ResponseEntity.ok(service.updatePreferences(memberId, userPreferences));
+        return ResponseEntity.ok(service.updatePreferences(resourceId, userPreferences));
     }
 
     @Override
-    public ResponseEntity<Void> deleteAccount(UUID householdId, UUID memberId) {
-        service.deleteAccount(memberId);
+    @OnlyAuthor
+    public ResponseEntity<Void> deleteAccount(UUID householdId, UUID resourceId) {
+        service.deleteAccount(resourceId);
         return ResponseEntity.noContent().build();
     }
 }

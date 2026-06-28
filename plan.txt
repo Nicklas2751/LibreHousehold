@@ -285,7 +285,7 @@ Ziel: Login-Formular ist mit DaisyUI gestaltet und zeigt Fehler an.
 
 
 ──────────────────────────────────────────────────────────────────────
-PHASE 9 — Frontend-Integration (SvelteKit)
+PHASE 9 — Frontend-Integration (Svelte)
 ──────────────────────────────────────────────────────────────────────
 Ziel: SPA nutzt oidc-client-ts für Login, Silent-Refresh und Logout.
 

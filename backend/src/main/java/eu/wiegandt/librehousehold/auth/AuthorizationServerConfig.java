@@ -1,6 +1,7 @@
 package eu.wiegandt.librehousehold.auth;
 
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -9,6 +10,7 @@ import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -43,6 +45,7 @@ import java.util.UUID;
  */
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 @EnableConfigurationProperties(AuthProperties.class)
 class AuthorizationServerConfig {
 
@@ -62,6 +65,7 @@ class AuthorizationServerConfig {
      */
     @Bean
     @Order(1)
+    @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
     SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity httpSecurity) {
         httpSecurity
                 .oauth2AuthorizationServer(authorizationServerConfigurer -> {
@@ -99,6 +103,7 @@ class AuthorizationServerConfig {
      */
     @Bean
     @Order(2)
+    @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
     SecurityFilterChain defaultSecurityFilterChain(HttpSecurity httpSecurity,
                                                    FederatedIdentityOidcUserService federatedIdentityOidcUserService,
                                                    ObjectProvider<ClientRegistrationRepository> clientRegistrations) {

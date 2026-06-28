@@ -1,6 +1,7 @@
 package eu.wiegandt.librehousehold.expenses.controller;
 
 import eu.wiegandt.librehousehold.api.FinancialsApiDelegate;
+import eu.wiegandt.librehousehold.auth.InHousehold;
 import eu.wiegandt.librehousehold.expenses.service.FinancialService;
 import eu.wiegandt.librehousehold.model.FinancialSummary;
 import eu.wiegandt.librehousehold.model.MemberBalance;
@@ -20,11 +21,13 @@ public class FinancialsApiDelegateImpl implements FinancialsApiDelegate {
     }
 
     @Override
+    @InHousehold
     public ResponseEntity<FinancialSummary> getFinancialSummary(UUID householdId, UUID userId) {
         return ResponseEntity.ok(financialService.getFinancialSummary(householdId, userId));
     }
 
     @Override
+    @InHousehold
     public ResponseEntity<List<MemberBalance>> getMemberBalances(UUID householdId, UUID userId) {
         return ResponseEntity.ok(financialService.getMemberBalances(householdId, userId));
     }

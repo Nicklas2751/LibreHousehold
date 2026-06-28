@@ -1,6 +1,7 @@
 package eu.wiegandt.librehousehold.statistics.controller;
 
 import eu.wiegandt.librehousehold.api.StatisticsApiDelegate;
+import eu.wiegandt.librehousehold.auth.InHousehold;
 import eu.wiegandt.librehousehold.expenses.ExpenseStatisticsProvider;
 import eu.wiegandt.librehousehold.household.HouseholdQuery;
 import eu.wiegandt.librehousehold.model.ExpenseStatsByCategory;
@@ -35,6 +36,7 @@ public class StatisticsApiDelegateImpl implements StatisticsApiDelegate {
     }
 
     @Override
+    @InHousehold
     public ResponseEntity<StatisticsResponse> getStatistics(UUID householdId, String period) {
         if (!householdQuery.householdExists(householdId)) {
             throw new HouseholdNotFoundException();

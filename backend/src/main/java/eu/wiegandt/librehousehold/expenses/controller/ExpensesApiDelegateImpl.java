@@ -1,6 +1,8 @@
 package eu.wiegandt.librehousehold.expenses.controller;
 
 import eu.wiegandt.librehousehold.api.ExpensesApiDelegate;
+import eu.wiegandt.librehousehold.auth.InHousehold;
+import eu.wiegandt.librehousehold.auth.OnlyAuthor;
 import eu.wiegandt.librehousehold.expenses.exception.CategoryBodyIsRequiredException;
 import eu.wiegandt.librehousehold.expenses.exception.ExpenseBodyIsRequiredException;
 import eu.wiegandt.librehousehold.expenses.service.CategoryService;
@@ -28,57 +30,67 @@ public class ExpensesApiDelegateImpl implements ExpensesApiDelegate {
     }
 
     @Override
+    @InHousehold
     public ResponseEntity<List<Category>> getCategories(UUID householdId) {
         return ResponseEntity.ok(categoryService.getCategories(householdId));
     }
 
     @Override
+    @InHousehold
     public ResponseEntity<Category> createCategory(UUID householdId, Optional<Category> category) {
         var cat = category.orElseThrow(CategoryBodyIsRequiredException::new);
         return ResponseEntity.ok(categoryService.createCategory(householdId, cat));
     }
 
     @Override
+    @InHousehold
     public ResponseEntity<Category> updateCategory(UUID householdId, UUID categoryId, Optional<CategoryUpdate> categoryUpdate) {
         var update = categoryUpdate.orElse(new CategoryUpdate());
         return ResponseEntity.ok(categoryService.updateCategory(householdId, categoryId, update));
     }
 
     @Override
+    @InHousehold
     public ResponseEntity<Void> deleteCategory(UUID householdId, UUID categoryId) {
         categoryService.deleteCategory(householdId, categoryId);
         return ResponseEntity.noContent().build();
     }
 
     @Override
+    @InHousehold
     public ResponseEntity<List<Expense>> getExpenses(UUID householdId) {
         return ResponseEntity.ok(expenseService.getExpenses(householdId));
     }
 
     @Override
+    @InHousehold
     public ResponseEntity<Expense> getExpense(UUID householdId, UUID expenseId) {
         return ResponseEntity.ok(expenseService.getExpense(householdId, expenseId));
     }
 
     @Override
+    @InHousehold
     public ResponseEntity<Expense> createExpense(UUID householdId, Optional<Expense> expense) {
         var exp = expense.orElseThrow(ExpenseBodyIsRequiredException::new);
         return ResponseEntity.ok(expenseService.createExpense(householdId, exp));
     }
 
     @Override
-    public ResponseEntity<Expense> updateExpense(UUID householdId, UUID expenseId, Optional<ExpenseUpdate> expenseUpdate) {
+    @OnlyAuthor
+    public ResponseEntity<Expense> updateExpense(UUID householdId, UUID resourceId, Optional<ExpenseUpdate> expenseUpdate) {
         var update = expenseUpdate.orElse(new ExpenseUpdate());
-        return ResponseEntity.ok(expenseService.updateExpense(householdId, expenseId, update));
+        return ResponseEntity.ok(expenseService.updateExpense(householdId, resourceId, update));
     }
 
     @Override
-    public ResponseEntity<Void> deleteExpense(UUID householdId, UUID expenseId) {
-        expenseService.deleteExpense(householdId, expenseId);
+    @OnlyAuthor
+    public ResponseEntity<Void> deleteExpense(UUID householdId, UUID resourceId) {
+        expenseService.deleteExpense(householdId, resourceId);
         return ResponseEntity.noContent().build();
     }
 
     @Override
+    @InHousehold
     public ResponseEntity<List<Expense>> getDebtorExpenses(UUID householdId, UUID payerId, UUID debtorId) {
         return ResponseEntity.ok(expenseService.getDebtorExpenses(householdId, payerId, debtorId));
     }

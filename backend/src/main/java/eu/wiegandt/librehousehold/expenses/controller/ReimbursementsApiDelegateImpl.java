@@ -1,6 +1,8 @@
 package eu.wiegandt.librehousehold.expenses.controller;
 
 import eu.wiegandt.librehousehold.api.ReimbursementsApiDelegate;
+import eu.wiegandt.librehousehold.auth.InHousehold;
+import eu.wiegandt.librehousehold.auth.OnlyAuthor;
 import eu.wiegandt.librehousehold.expenses.service.ReimbursementService;
 import eu.wiegandt.librehousehold.model.Reimbursement;
 import eu.wiegandt.librehousehold.model.ReimbursementCreate;
@@ -22,20 +24,23 @@ public class ReimbursementsApiDelegateImpl implements ReimbursementsApiDelegate 
     }
 
     @Override
+    @InHousehold
     public ResponseEntity<List<Reimbursement>> getReimbursements(UUID householdId) {
         return ResponseEntity.ok(reimbursementService.getReimbursements(householdId));
     }
 
     @Override
+    @InHousehold
     public ResponseEntity<Reimbursement> createReimbursement(UUID householdId, Optional<ReimbursementCreate> reimbursementCreate) {
         var create = reimbursementCreate.orElse(new ReimbursementCreate());
         return ResponseEntity.status(201).body(reimbursementService.createReimbursement(householdId, create));
     }
 
     @Override
-    public ResponseEntity<Reimbursement> updateReimbursement(UUID householdId, UUID reimbursementId,
+    @OnlyAuthor
+    public ResponseEntity<Reimbursement> updateReimbursement(UUID householdId, UUID resourceId,
                                                               Optional<ReimbursementUpdate> reimbursementUpdate) {
         var update = reimbursementUpdate.orElse(new ReimbursementUpdate());
-        return ResponseEntity.ok(reimbursementService.updateReimbursement(householdId, reimbursementId, update));
+        return ResponseEntity.ok(reimbursementService.updateReimbursement(householdId, resourceId, update));
     }
 }
