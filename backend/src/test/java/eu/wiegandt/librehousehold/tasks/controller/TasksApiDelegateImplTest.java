@@ -1,12 +1,10 @@
 package eu.wiegandt.librehousehold.tasks.controller;
-import eu.wiegandt.librehousehold.tasks.exception.*;
-import eu.wiegandt.librehousehold.tasks.mapper.*;
-import eu.wiegandt.librehousehold.tasks.model.*;
-import eu.wiegandt.librehousehold.tasks.repository.*;
-import eu.wiegandt.librehousehold.tasks.service.*;
 
+import eu.wiegandt.librehousehold.auth.CurrentUserIdProvider;
 import eu.wiegandt.librehousehold.model.Task;
 import eu.wiegandt.librehousehold.model.TaskUpdate;
+import eu.wiegandt.librehousehold.tasks.exception.TaskBodyIsRequiredException;
+import eu.wiegandt.librehousehold.tasks.service.TaskService;
 import org.instancio.Instancio;
 import org.instancio.junit.InstancioExtension;
 import org.junit.jupiter.api.Nested;
@@ -17,7 +15,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -31,6 +28,9 @@ class TasksApiDelegateImplTest {
 
     @Mock
     private TaskService taskService;
+
+    @Mock
+    private CurrentUserIdProvider currentUserIdProvider;
 
     @InjectMocks
     private TasksApiDelegateImpl tasksApiDelegate;
@@ -97,15 +97,17 @@ class TasksApiDelegateImplTest {
             // given
             var householdId = UUID.randomUUID();
             var taskId = UUID.randomUUID();
+            var currentUserId = UUID.randomUUID();
             var update = Instancio.create(TaskUpdate.class);
             var updated = Instancio.create(Task.class);
-            doReturn(updated).when(taskService).updateTask(taskId, update);
+            doReturn(currentUserId).when(currentUserIdProvider).getCurrentUserId();
+            doReturn(updated).when(taskService).updateTask(taskId, update, currentUserId);
 
             // when
             var result = tasksApiDelegate.updateTask(householdId, taskId, Optional.of(update));
 
             // then
-            verify(taskService).updateTask(taskId, update);
+            verify(taskService).updateTask(taskId, update, currentUserId);
             assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
             assertThat(result.getBody()).isEqualTo(updated);
         }

@@ -103,21 +103,45 @@ class TaskServiceIT {
     class updateTask {
 
         @Test
-        void nonRecurringTask_savesCompletionInDatabase() {
+        void nonRecurringTask_savesCompletionWithCurrentUserInDatabase() {
             // given
             var householdId = UUID.randomUUID();
             var taskId = UUID.randomUUID();
-            var memberId = UUID.randomUUID();
+            var currentUserId = UUID.randomUUID();
             var doneDate = LocalDate.of(2024, 7, 5);
             doReturn(true).when(householdQuery).householdExists(householdId);
-            taskService.createTask(householdId, new Task(taskId, "Clean", LocalDate.of(2024, 7, 1)).assignedTo(memberId));
+            taskService.createTask(householdId, new Task(taskId, "Clean", LocalDate.of(2024, 7, 1)));
 
             // when
-            taskService.updateTask(taskId, new TaskUpdate().done(doneDate));
+            taskService.updateTask(taskId, new TaskUpdate().done(doneDate), currentUserId);
 
             // then
             assertThat(taskCompletionRepository.findFirstByTaskIdOrderByDoneDateDesc(taskId))
-                    .hasValueSatisfying(c -> assertThat(c.doneDate()).isEqualTo(doneDate));
+                    .hasValueSatisfying(c -> {
+                        assertThat(c.doneDate()).isEqualTo(doneDate);
+                        assertThat(c.doneBy()).isEqualTo(currentUserId);
+                    });
+        }
+
+        @Test
+        void unassignedTask_setsDone_savesCompletionWithCurrentUserInDatabase() {
+            // given
+            var householdId = UUID.randomUUID();
+            var taskId = UUID.randomUUID();
+            var currentUserId = UUID.randomUUID();
+            var doneDate = LocalDate.of(2024, 7, 5);
+            doReturn(true).when(householdQuery).householdExists(householdId);
+            taskService.createTask(householdId, new Task(taskId, "Unassigned task", LocalDate.of(2024, 7, 1)));
+
+            // when
+            taskService.updateTask(taskId, new TaskUpdate().done(doneDate), currentUserId);
+
+            // then
+            assertThat(taskCompletionRepository.findFirstByTaskIdOrderByDoneDateDesc(taskId))
+                    .hasValueSatisfying(c -> {
+                        assertThat(c.doneDate()).isEqualTo(doneDate);
+                        assertThat(c.doneBy()).isEqualTo(currentUserId);
+                    });
         }
 
         @Test
@@ -136,7 +160,7 @@ class TaskServiceIT {
                     .recurrenceInterval(1));
 
             // when
-            taskService.updateTask(taskId, new TaskUpdate().done(doneDate));
+            taskService.updateTask(taskId, new TaskUpdate().done(doneDate), memberId);
 
             // then
             assertThat(taskRepository.findById(taskId))
@@ -162,8 +186,8 @@ class TaskServiceIT {
                     .recurring(true)
                     .recurrenceUnit(Task.RecurrenceUnitEnum.WEEKS)
                     .recurrenceInterval(1));
-            taskService.updateTask(taskId, new TaskUpdate().done(LocalDate.of(2024, 7, 5)));
-            taskService.updateTask(taskId, new TaskUpdate().done(LocalDate.of(2024, 7, 12)));
+            taskService.updateTask(taskId, new TaskUpdate().done(LocalDate.of(2024, 7, 5)), memberId);
+            taskService.updateTask(taskId, new TaskUpdate().done(LocalDate.of(2024, 7, 12)), memberId);
             var expected = new TaskStatsByMember(memberId, "Alice", 2, 0);
 
             // when

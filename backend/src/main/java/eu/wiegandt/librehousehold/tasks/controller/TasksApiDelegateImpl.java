@@ -1,6 +1,7 @@
 package eu.wiegandt.librehousehold.tasks.controller;
 
 import eu.wiegandt.librehousehold.api.TasksApiDelegate;
+import eu.wiegandt.librehousehold.auth.CurrentUserIdProvider;
 import eu.wiegandt.librehousehold.auth.InHousehold;
 import eu.wiegandt.librehousehold.tasks.exception.TaskBodyIsRequiredException;
 import eu.wiegandt.librehousehold.tasks.service.TaskService;
@@ -18,9 +19,11 @@ import java.util.UUID;
 public class TasksApiDelegateImpl implements TasksApiDelegate {
 
     private final TaskService taskService;
+    private final CurrentUserIdProvider currentUserIdProvider;
 
-    public TasksApiDelegateImpl(TaskService taskService) {
+    public TasksApiDelegateImpl(TaskService taskService, CurrentUserIdProvider currentUserIdProvider) {
         this.taskService = taskService;
+        this.currentUserIdProvider = currentUserIdProvider;
     }
 
     @Override
@@ -40,7 +43,7 @@ public class TasksApiDelegateImpl implements TasksApiDelegate {
     @InHousehold
     public ResponseEntity<Task> updateTask(UUID householdId, UUID taskId, Optional<TaskUpdate> taskUpdate) {
         var update = taskUpdate.orElseThrow(TaskBodyIsRequiredException::new);
-        return ResponseEntity.ok(taskService.updateTask(taskId, update));
+        return ResponseEntity.ok(taskService.updateTask(taskId, update, currentUserIdProvider.getCurrentUserId()));
     }
 
     @Override

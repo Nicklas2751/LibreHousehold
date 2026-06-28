@@ -1,5 +1,6 @@
 package eu.wiegandt.librehousehold.auth;
 
+import eu.wiegandt.librehousehold.core.ResourceOwnerQuery;
 import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;

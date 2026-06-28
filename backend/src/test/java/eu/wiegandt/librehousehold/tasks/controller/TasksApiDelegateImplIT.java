@@ -6,6 +6,7 @@ import eu.wiegandt.librehousehold.tasks.repository.*;
 import eu.wiegandt.librehousehold.tasks.service.*;
 
 import eu.wiegandt.librehousehold.api.TasksApiController;
+import eu.wiegandt.librehousehold.auth.CurrentUserIdProvider;
 import eu.wiegandt.librehousehold.model.Task;
 import eu.wiegandt.librehousehold.model.TaskEdit;
 import eu.wiegandt.librehousehold.model.TaskUpdate;
@@ -46,6 +47,9 @@ class TasksApiDelegateImplIT {
 
     @MockitoBean
     private TaskService taskService;
+
+    @MockitoBean
+    private CurrentUserIdProvider currentUserIdProvider;
 
     @Nested
     class getTasks {
@@ -167,9 +171,11 @@ class TasksApiDelegateImplIT {
         void validBody_returns200WithUpdatedTask() throws Exception {
             // given
             var taskId = UUID.randomUUID();
+            var currentUserId = UUID.randomUUID();
             var doneDate = LocalDate.of(2024, 7, 5);
             var updated = new Task(taskId, "Clean", LocalDate.of(2024, 7, 1)).done(doneDate);
-            doReturn(updated).when(taskService).updateTask(eq(taskId), any(TaskUpdate.class));
+            doReturn(currentUserId).when(currentUserIdProvider).getCurrentUserId();
+            doReturn(updated).when(taskService).updateTask(eq(taskId), any(TaskUpdate.class), eq(currentUserId));
 
             // when / then
             mockMvc.perform(patch("/v1/household/{householdId}/tasks/{taskId}", UUID.randomUUID(), taskId)

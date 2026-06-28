@@ -11,6 +11,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.web.SecurityFilterChain;
 
+import eu.wiegandt.librehousehold.core.ResourceOwnerQuery;
 import java.util.List;
 
 @TestConfiguration

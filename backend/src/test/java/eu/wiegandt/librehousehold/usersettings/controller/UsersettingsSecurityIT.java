@@ -2,7 +2,7 @@ package eu.wiegandt.librehousehold.usersettings.controller;
 
 import eu.wiegandt.librehousehold.api.UsersettingsApiController;
 import eu.wiegandt.librehousehold.auth.MethodSecurityTestConfig;
-import eu.wiegandt.librehousehold.auth.ResourceOwnerQuery;
+import eu.wiegandt.librehousehold.core.ResourceOwnerQuery;
 import eu.wiegandt.librehousehold.usersettings.service.UsersettingsService;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;

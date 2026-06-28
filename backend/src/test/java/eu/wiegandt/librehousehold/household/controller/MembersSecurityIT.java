@@ -2,7 +2,7 @@ package eu.wiegandt.librehousehold.household.controller;
 
 import eu.wiegandt.librehousehold.api.MembersApiController;
 import eu.wiegandt.librehousehold.auth.MethodSecurityTestConfig;
-import eu.wiegandt.librehousehold.auth.ResourceOwnerQuery;
+import eu.wiegandt.librehousehold.core.ResourceOwnerQuery;
 import eu.wiegandt.librehousehold.household.service.MemberManagementService;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;

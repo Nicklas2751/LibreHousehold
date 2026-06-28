@@ -72,7 +72,7 @@ public class TaskService implements TaskStatisticsProvider {
         return taskMapper.toTask(saved);
     }
 
-    public Task updateTask(UUID taskId, TaskUpdate update) {
+    public Task updateTask(UUID taskId, TaskUpdate update, UUID currentUserId) {
         var entity = taskRepository.findById(taskId)
                 .orElseThrow(TaskNotFoundException::new);
 
@@ -84,12 +84,8 @@ public class TaskService implements TaskStatisticsProvider {
                 entity.setDueDate(newDueDate);
                 taskRepository.updateDueDate(taskId, newDueDate);
             }
-            LocalDate responseDone = null;
-            if (entity.getAssignedTo() != null) {
-                taskCompletionRepository.save(new TaskCompletionEntity(UUID.randomUUID(), taskId, entity.getAssignedTo(), doneDate));
-                responseDone = doneDate;
-            }
-            return taskMapper.toTask(entity).done(responseDone);
+            taskCompletionRepository.save(new TaskCompletionEntity(UUID.randomUUID(), taskId, currentUserId, doneDate));
+            return taskMapper.toTask(entity).done(doneDate);
         } else {
             taskCompletionRepository.findFirstByTaskIdOrderByDoneDateDesc(taskId)
                     .ifPresent(c -> taskCompletionRepository.deleteById(c.id()));

@@ -1,6 +1,6 @@
 package eu.wiegandt.librehousehold.expenses;
 
-import eu.wiegandt.librehousehold.auth.ResourceOwnerQuery;
+import eu.wiegandt.librehousehold.core.ResourceOwnerQuery;
 import eu.wiegandt.librehousehold.expenses.repository.ReimbursementRepository;
 import org.springframework.stereotype.Component;
 

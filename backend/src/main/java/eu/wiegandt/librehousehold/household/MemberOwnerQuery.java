@@ -1,6 +1,6 @@
 package eu.wiegandt.librehousehold.household;
 
-import eu.wiegandt.librehousehold.auth.ResourceOwnerQuery;
+import eu.wiegandt.librehousehold.core.ResourceOwnerQuery;
 import eu.wiegandt.librehousehold.household.repository.MemberRepository;
 import org.springframework.stereotype.Component;
 

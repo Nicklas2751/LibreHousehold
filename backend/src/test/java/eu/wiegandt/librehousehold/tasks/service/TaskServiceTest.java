@@ -125,7 +125,7 @@ class TaskServiceTest {
             doReturn(Optional.empty()).when(taskRepository).findById(any());
 
             // when / then
-            assertThatThrownBy(() -> taskService.updateTask(UUID.randomUUID(), new TaskUpdate()))
+            assertThatThrownBy(() -> taskService.updateTask(UUID.randomUUID(), new TaskUpdate(), UUID.randomUUID()))
                     .isInstanceOf(TaskNotFoundException.class);
         }
 
@@ -140,7 +140,7 @@ class TaskServiceTest {
             var expected = new Task(taskId, "T", LocalDate.of(2024, 7, 1)).assignedTo(memberId).recurring(false).done(doneDate);
 
             // when
-            var result = taskService.updateTask(taskId, new TaskUpdate().done(doneDate));
+            var result = taskService.updateTask(taskId, new TaskUpdate().done(doneDate), memberId);
 
             // then
             verify(taskRepository, never()).updateDueDate(any(), any());
@@ -161,7 +161,7 @@ class TaskServiceTest {
             var expected = new Task(taskId, "T", LocalDate.of(2024, 7, 1)).assignedTo(memberId).recurring(false);
 
             // when
-            var result = taskService.updateTask(taskId, new TaskUpdate());
+            var result = taskService.updateTask(taskId, new TaskUpdate(), UUID.randomUUID());
 
             // then
             verify(taskCompletionRepository).deleteById(completionId);
@@ -186,7 +186,7 @@ class TaskServiceTest {
                     .done(doneDate);
 
             // when
-            var result = taskService.updateTask(taskId, new TaskUpdate().done(doneDate));
+            var result = taskService.updateTask(taskId, new TaskUpdate().done(doneDate), memberId);
 
             // then
             verify(taskRepository).updateDueDate(taskId, expectedNewDueDate);
@@ -212,7 +212,7 @@ class TaskServiceTest {
                     .recurrenceInterval(2);
 
             // when
-            var result = taskService.updateTask(taskId, new TaskUpdate());
+            var result = taskService.updateTask(taskId, new TaskUpdate(), UUID.randomUUID());
 
             // then
             verify(taskRepository, never()).updateDueDate(any(), any());
@@ -221,21 +221,22 @@ class TaskServiceTest {
         }
 
         @Test
-        void assignedTask_setsDone_savesCompletion() {
+        void assignedTask_setsDone_savesCompletionWithCurrentUser() {
             // given
             var taskId = UUID.randomUUID();
-            var memberId = UUID.randomUUID();
+            var assignedMemberId = UUID.randomUUID();
+            var currentUserId = UUID.randomUUID();
             var doneDate = LocalDate.of(2024, 7, 5);
-            var entity = new TaskEntity(taskId, UUID.randomUUID(), memberId, "T", null, LocalDate.of(2024, 7, 1), false, null, null);
+            var entity = new TaskEntity(taskId, UUID.randomUUID(), assignedMemberId, "T", null, LocalDate.of(2024, 7, 1), false, null, null);
             doReturn(Optional.of(entity)).when(taskRepository).findById(taskId);
 
             // when
-            taskService.updateTask(taskId, new TaskUpdate().done(doneDate));
+            taskService.updateTask(taskId, new TaskUpdate().done(doneDate), currentUserId);
 
             // then
             verify(taskCompletionRepository).save(argThat(c ->
                     c.taskId().equals(taskId) &&
-                    c.doneBy().equals(memberId) &&
+                    c.doneBy().equals(currentUserId) &&
                     c.doneDate().equals(doneDate)
             ));
         }
@@ -253,24 +254,30 @@ class TaskServiceTest {
                     .when(taskCompletionRepository).findFirstByTaskIdOrderByDoneDateDesc(taskId);
 
             // when
-            taskService.updateTask(taskId, new TaskUpdate());
+            taskService.updateTask(taskId, new TaskUpdate(), UUID.randomUUID());
 
             // then
             verify(taskCompletionRepository).deleteById(completionId);
         }
 
         @Test
-        void unassignedTask_setsDone_noCompletionSaved() {
+        void unassignedTask_setsDone_savesCompletionWithCurrentUser() {
             // given
             var taskId = UUID.randomUUID();
+            var currentUserId = UUID.randomUUID();
+            var doneDate = LocalDate.of(2024, 7, 5);
             var entity = new TaskEntity(taskId, UUID.randomUUID(), null, "T", null, LocalDate.of(2024, 7, 1), false, null, null);
             doReturn(Optional.of(entity)).when(taskRepository).findById(taskId);
 
             // when
-            taskService.updateTask(taskId, new TaskUpdate().done(LocalDate.of(2024, 7, 5)));
+            taskService.updateTask(taskId, new TaskUpdate().done(doneDate), currentUserId);
 
             // then
-            verify(taskCompletionRepository, never()).save(any());
+            verify(taskCompletionRepository).save(argThat(c ->
+                    c.taskId().equals(taskId) &&
+                    c.doneBy().equals(currentUserId) &&
+                    c.doneDate().equals(doneDate)
+            ));
         }
     }
 

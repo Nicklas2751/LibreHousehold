@@ -11,6 +11,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 
 import java.util.List;
+import eu.wiegandt.librehousehold.core.ResourceOwnerQuery;
 import java.util.UUID;
 
 import org.springframework.security.authorization.AuthorizationDeniedException;

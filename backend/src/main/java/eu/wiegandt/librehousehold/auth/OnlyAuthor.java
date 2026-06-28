@@ -11,7 +11,7 @@ import java.lang.annotation.Target;
 /**
  * Restricts access to the resource owner (author).
  * The annotated method must have a {@code householdId} parameter and a {@code resourceId} parameter.
- * Ownership is resolved via all registered {@link ResourceOwnerQuery} beans.
+ * Ownership is resolved via all registered {@link eu.wiegandt.librehousehold.core.ResourceOwnerQuery} beans.
  */
 @Target({ElementType.METHOD, ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)

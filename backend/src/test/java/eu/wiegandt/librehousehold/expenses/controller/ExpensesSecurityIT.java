@@ -2,7 +2,7 @@ package eu.wiegandt.librehousehold.expenses.controller;
 
 import eu.wiegandt.librehousehold.api.ExpensesApiController;
 import eu.wiegandt.librehousehold.auth.MethodSecurityTestConfig;
-import eu.wiegandt.librehousehold.auth.ResourceOwnerQuery;
+import eu.wiegandt.librehousehold.core.ResourceOwnerQuery;
 import eu.wiegandt.librehousehold.expenses.service.CategoryService;
 import eu.wiegandt.librehousehold.expenses.service.ExpenseService;
 import org.junit.jupiter.api.Nested;
