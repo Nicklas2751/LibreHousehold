@@ -16,6 +16,8 @@ librehousehold:
   auth:
     client-id: librehousehold-spa
     redirect-uri: http://localhost:5173/callback
+    access-token-time-to-live: PT15M
+    refresh-token-time-to-live: P30D
 
 server:
   tomcat:

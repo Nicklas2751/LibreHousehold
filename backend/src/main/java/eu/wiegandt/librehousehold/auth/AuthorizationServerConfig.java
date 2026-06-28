@@ -32,7 +32,6 @@ import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.time.Duration;
 import java.util.UUID;
 
 /**
@@ -151,8 +150,8 @@ class AuthorizationServerConfig {
                         .requireAuthorizationConsent(false)
                         .build())
                 .tokenSettings(TokenSettings.builder()
-                        .accessTokenTimeToLive(Duration.ofMinutes(15))
-                        .refreshTokenTimeToLive(Duration.ofDays(30))
+                        .accessTokenTimeToLive(authProperties.accessTokenTimeToLive())
+                        .refreshTokenTimeToLive(authProperties.refreshTokenTimeToLive())
                         .reuseRefreshTokens(false)
                         .build())
                 .build();
