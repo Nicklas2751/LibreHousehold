@@ -38,8 +38,26 @@ tags:
     description: Operations related to administration
   - name: statistics
     description: Aggregated statistics for a household over a given time period
+  - name: auth
+    description: Authentication and provider discovery
 
 paths:
+  /auth/providers:
+    get:
+      summary: Get available authentication providers
+      description: Returns which login providers are configured. Can be called without authentication.
+      tags:
+        - auth
+      operationId: getAuthProviders
+      security: [ ]
+      responses:
+        '200':
+          description: Available authentication providers
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthProviders'
+
   /household/setup:
     post:
       summary: Setup a new household
@@ -2460,3 +2478,20 @@ components:
           type: string
           enum: [ en, de ]
           example: "de"
+
+    AuthProviders:
+      type: object
+      required:
+        - local
+        - socialProviders
+      properties:
+        local:
+          type: boolean
+          description: Whether local email/password login is available
+          example: true
+        socialProviders:
+          type: array
+          description: Registration IDs of configured OAuth2/OIDC social login providers (e.g. "google", "github", "keycloak")
+          items:
+            type: string
+          example: ["google", "github"]

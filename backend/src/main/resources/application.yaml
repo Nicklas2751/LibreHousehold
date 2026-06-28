@@ -18,6 +18,8 @@ librehousehold:
     redirect-uri: http://localhost:5173/callback
     access-token-time-to-live: PT15M
     refresh-token-time-to-live: P30D
+    providers:
+      local: true
 
 server:
   tomcat:

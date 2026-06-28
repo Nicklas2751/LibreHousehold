@@ -45,7 +45,7 @@ import java.util.UUID;
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
-@EnableConfigurationProperties(AuthProperties.class)
+@EnableConfigurationProperties({AuthProperties.class, AuthProviderProperties.class})
 class AuthorizationServerConfig {
 
     /**
@@ -107,7 +107,9 @@ class AuthorizationServerConfig {
                                                    FederatedIdentityOidcUserService federatedIdentityOidcUserService,
                                                    ObjectProvider<ClientRegistrationRepository> clientRegistrations) {
         httpSecurity
-                .authorizeHttpRequests(registry -> registry.anyRequest().authenticated())
+                .authorizeHttpRequests(registry -> registry
+                        .requestMatchers("/v1/auth/providers").permitAll()
+                        .anyRequest().authenticated())
                 .formLogin(Customizer.withDefaults())
                 .oauth2ResourceServer(resourceServerConfigurer -> resourceServerConfigurer.jwt(Customizer.withDefaults()));
 
