@@ -263,6 +263,22 @@
 		"success_text": "Du bist jetzt Mitglied von \"{name}\".",
 		"success_button": "Zum Dashboard"
 	},
+	"login": {
+		"title": "Anmelden",
+		"subtitle": "Melde dich an, um fortzufahren.",
+		"email_label": "E-Mail-Adresse",
+		"email_placeholder": "deine@email.de",
+		"password_label": "Passwort",
+		"password_placeholder": "••••••••",
+		"submit_button": "Anmelden",
+		"social_button": "Mit {provider} anmelden",
+		"divider_text": "oder",
+		"error_bad_credentials": "Ungültige E-Mail-Adresse oder Passwort.",
+		"error_account_locked": "Dein Konto wurde gesperrt. Bitte wende dich an den Administrator.",
+		"error_email_already_registered": "Diese E-Mail ist bereits mit einem lokalen Konto verknüpft.",
+		"error_generic": "Anmeldung fehlgeschlagen. Bitte versuche es erneut.",
+		"no_providers": "Keine Anmeldemethode konfiguriert."
+	},
 	"settings": {
 		"back": "Zurück zu Einstellungen",
 		"appearance": {

@@ -261,6 +261,22 @@
 		"success_text": "You are now a member of \"{name}\".",
 		"success_button": "Go to Dashboard"
 	},
+	"login": {
+		"title": "Sign In",
+		"subtitle": "Sign in to continue.",
+		"email_label": "Email address",
+		"email_placeholder": "your@email.com",
+		"password_label": "Password",
+		"password_placeholder": "••••••••",
+		"submit_button": "Sign In",
+		"social_button": "Sign in with {provider}",
+		"divider_text": "or",
+		"error_bad_credentials": "Invalid email address or password.",
+		"error_account_locked": "Your account has been locked. Please contact the administrator.",
+		"error_email_already_registered": "This email is already linked to a local account.",
+		"error_generic": "Sign in failed. Please try again.",
+		"no_providers": "No sign-in method configured."
+	},
 	"settings": {
 		"back": "Back to Settings",
 		"appearance": {

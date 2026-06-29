@@ -1,0 +1,5 @@
+spring:
+  security:
+    oauth2:
+      authorizationserver:
+        issuer: http://localhost:5173

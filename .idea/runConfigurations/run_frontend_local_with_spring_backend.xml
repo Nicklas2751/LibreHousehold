@@ -8,6 +8,7 @@
     <node-interpreter value="$APPLICATION_CONFIG_DIR$/node/versions/24.14.1/bin/node" />
     <envs>
       <env name="VITE_API_URL" value="http://localhost:8080/v1" />
+      <env name="VITE_AUTHORITY" value="http://localhost:8080" />
     </envs>
     <method v="2" />
   </configuration>

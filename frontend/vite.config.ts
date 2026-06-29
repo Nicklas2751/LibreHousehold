@@ -21,6 +21,14 @@ export default defineConfig({
 	server: {
 		cors: { origin: /^https?:\/\/(?:(?:[^:]+\.)?localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/ },
 		proxy: {
+			'/api/login': {
+				target: apiProxyTarget,
+				changeOrigin: true,
+				rewrite: (path) => path.replace(/^\/api/, '')
+			},
+			'/oauth2': { target: apiProxyTarget, changeOrigin: true },
+			'/login/oauth2': { target: apiProxyTarget, changeOrigin: true },
+			'/.well-known': { target: apiProxyTarget, changeOrigin: true },
 			'/api': {
 				target: apiProxyTarget,
 				changeOrigin: true,
