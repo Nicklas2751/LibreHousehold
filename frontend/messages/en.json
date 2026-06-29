@@ -47,6 +47,30 @@
 			"back_button": "Back",
 			"continue_button": "Continue"
 		},
+		"registration_step": {
+			"title": "Your Account",
+			"text": "Choose a registration method.",
+			"name_label": "Your Name",
+			"name_placeholder": "e.g., John Doe",
+			"name_error": "Enter a name with at least three characters.",
+			"email_label": "Email address",
+			"email_placeholder": "your@email.com",
+			"email_error": "Enter a valid email address.",
+			"password_label": "Password",
+			"password_placeholder": "At least 8 characters",
+			"password_confirm_label": "Confirm password",
+			"password_mismatch": "Passwords do not match.",
+			"email_taken": "This email address is already registered.",
+			"setup_error": "Registration failed. Please try again.",
+			"back_button": "Back",
+			"continue_button": "Create account",
+			"social_separator": "or register with provider"
+		},
+		"callback_setup_success": {
+			"title": "Household set up!",
+			"invite_text": "Invite others to your household:",
+			"dashboard_button": "Go to dashboard"
+		},
 		"finish_step": {
 			"title": "You're all set!",
 			"invite_text": "Invite others to your household:",
@@ -275,7 +299,8 @@
 		"error_account_locked": "Your account has been locked. Please contact the administrator.",
 		"error_email_already_registered": "This email is already linked to a local account.",
 		"error_generic": "Sign in failed. Please try again.",
-		"no_providers": "No sign-in method configured."
+		"no_providers": "No sign-in method configured.",
+		"back_to_start": "Back to start"
 	},
 	"settings": {
 		"back": "Back to Settings",

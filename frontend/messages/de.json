@@ -47,6 +47,30 @@
 			"back_button": "Zurück",
 			"continue_button": "Weiter"
 		},
+		"registration_step": {
+			"title": "Dein Konto",
+			"text": "Wähle eine Registrierungsmethode.",
+			"name_label": "Dein Name",
+			"name_placeholder": "z.B., Max Mustermann",
+			"name_error": "Gib einen Namen mit mindestens drei Zeichen ein.",
+			"email_label": "E-Mail-Adresse",
+			"email_placeholder": "deine@email.de",
+			"email_error": "Gib eine gültige E-Mail-Adresse ein.",
+			"password_label": "Passwort",
+			"password_placeholder": "Mindestens 8 Zeichen",
+			"password_confirm_label": "Passwort bestätigen",
+			"password_mismatch": "Die Passwörter stimmen nicht überein.",
+			"email_taken": "Diese E-Mail-Adresse ist bereits registriert.",
+			"setup_error": "Registrierung fehlgeschlagen. Bitte erneut versuchen.",
+			"back_button": "Zurück",
+			"continue_button": "Konto erstellen",
+			"social_separator": "oder mit Anbieter registrieren"
+		},
+		"callback_setup_success": {
+			"title": "Haushalt eingerichtet!",
+			"invite_text": "Lade andere zu deinem Haushalt ein:",
+			"dashboard_button": "Zum Dashboard"
+		},
 		"finish_step": {
 			"title": "Alles erledigt!",
 			"invite_text": "Lade andere zu deinem Haushalt ein:",
@@ -277,7 +301,8 @@
 		"error_account_locked": "Dein Konto wurde gesperrt. Bitte wende dich an den Administrator.",
 		"error_email_already_registered": "Diese E-Mail ist bereits mit einem lokalen Konto verknüpft.",
 		"error_generic": "Anmeldung fehlgeschlagen. Bitte versuche es erneut.",
-		"no_providers": "Keine Anmeldemethode konfiguriert."
+		"no_providers": "Keine Anmeldemethode konfiguriert.",
+		"back_to_start": "Zurück zur Startseite"
 	},
 	"settings": {
 		"back": "Zurück zu Einstellungen",

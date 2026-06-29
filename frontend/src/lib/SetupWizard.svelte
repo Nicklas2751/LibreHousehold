@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { m } from '$lib/paraglide/messages.js';
 	import { CopyIcon } from '@indaco/svelte-iconoir/copy';
 	import { addToast } from '$lib/stores/toastStore';
@@ -10,8 +11,10 @@
 		type Household,
 		type HouseholdSetup,
 		HouseholdApi,
+		AuthApi,
 		type Member,
-		ResponseError
+		ResponseError,
+		type AuthProviders
 	} from '../generated-sources/openapi';
 	import { v4 as uuidv4 } from 'uuid';
 	import { updateHouseholdState } from '$lib/stores/householdState.svelte';
@@ -26,7 +29,6 @@
 	} from '$lib/setupWizardLogic';
 	import { goto } from '$app/navigation';
 	import { updateUserState } from '$lib/stores/userState';
-	import MemberProfileForm from '$lib/MemberProfileForm.svelte';
 
 	const householdId: string = uuidv4();
 	let inviteUrl: string = $state('');
@@ -35,7 +37,21 @@
 
 	let householdName: string = $state('');
 	let householdImage: string = $state('');
+
+	let memberName: string = $state('');
+	let email: string = $state('');
+	let password: string = $state('');
+	let passwordConfirm: string = $state('');
+	let passwordMismatch: boolean = $state(false);
 	let serverEmailError: string | null = $state(null);
+	let submitting: boolean = $state(false);
+
+	let providers = $state<AuthProviders | null>(null);
+
+	onMount(async () => {
+		const api = new AuthApi(new Configuration({ basePath: '/api' }));
+		providers = await api.getAuthProviders();
+	});
 
 	function nextStep() {
 		step = calculateNextStep(step, maxSteps);
@@ -52,11 +68,9 @@
 	async function handleImageChange(event: Event) {
 		const target = event.target as HTMLInputElement;
 		const files = target.files;
-
 		if (files && files.length > 0) {
-			const file = files[0];
 			try {
-				householdImage = await readFileAsDataURL(file);
+				householdImage = await readFileAsDataURL(files[0]);
 			} catch (error) {
 				console.error('Error reading file:', error);
 			}
@@ -91,7 +105,6 @@
 		await navigator
 			.share(shareData)
 			.then(() => {
-				console.log('Invite link shared successfully');
 				addToast(new Toast(m['setup.finish_step.invite_link_shared_toast'](), 'success'));
 			})
 			.catch((err) => {
@@ -99,31 +112,31 @@
 			});
 	}
 
-	async function finish(data: { name: string; email: string; avatar: string }) {
-		const apiConfig = new Configuration({ basePath: '/api' });
-		const householdApi = new HouseholdApi(apiConfig);
-
-		const adminMember: Member = {
-			id: uuidv4(),
-			name: data.name,
-			email: data.email,
-			avatar: data.avatar || undefined,
-			isAdmin: true
-		};
-		const household: Household = {
-			id: householdId,
-			name: householdName,
-			image: householdImage
-		};
-		const householdSetup: HouseholdSetup = { household, member: adminMember };
-
+	async function submitLocalRegistration(event: SubmitEvent) {
+		event.preventDefault();
+		if (password !== passwordConfirm) {
+			passwordMismatch = true;
+			return;
+		}
+		passwordMismatch = false;
 		serverEmailError = null;
+		submitting = true;
 		try {
-			const response = await householdApi.setupHousehold({ householdSetup });
+			const authApi = new AuthApi(new Configuration({ basePath: '/api' }));
+			const response = await authApi.registerLocal({
+				localRegistration: {
+					householdName,
+					householdImage: householdImage || undefined,
+					memberName,
+					email,
+					password
+				}
+			});
 			const baseUrl = `${window.location.protocol}//${window.location.host}`;
 			inviteUrl = generateInviteUrl(baseUrl, response.inviteToken);
 			updateHouseholdState(response.household);
-			updateUserState(adminMember);
+			const member: Member = { id: uuidv4(), name: memberName, isAdmin: true };
+			updateUserState(member);
 			nextStep();
 		} catch (err: unknown) {
 			const status =
@@ -133,11 +146,21 @@
 						? (err as { status: unknown }).status
 						: undefined;
 			if (status === 409) {
-				serverEmailError = m['invite.email_taken']();
+				serverEmailError = m['setup.registration_step.email_taken']();
 			} else {
-				addToast(new Toast(m['setup.create_account_step.setup_error'](), 'error'));
+				addToast(new Toast(m['setup.registration_step.setup_error'](), 'error'));
 			}
+		} finally {
+			submitting = false;
 		}
+	}
+
+	function startSocialRegistration(provider: string) {
+		sessionStorage.setItem(
+			'lh_pending_setup',
+			JSON.stringify({ householdName, householdImage, memberName })
+		);
+		window.location.href = `/oauth2/authorization/${provider}`;
 	}
 </script>
 
@@ -194,24 +217,102 @@
 			</div>
 		</form>
 	{:else if step === 1}
-		<h2 class="text-xl font-bold text-base-content">{m['setup.create_account_step.title']()}</h2>
-		<MemberProfileForm
-			contextHint={m['setup.create_account_step.text']()}
-			nameLabel={m['setup.create_account_step.admin_name_label']()}
-			nameHint={m['setup.create_account_step.admin_name_error']()}
-			namePlaceholder={m['setup.create_account_step.admin_name_placeholder']()}
-			emailLabel={m['setup.create_account_step.admin_email_label']()}
-			emailHint={m['setup.create_account_step.admin_email_error']()}
-			emailPlaceholder={m['setup.create_account_step.admin_email_placeholder']()}
-			backLabel={m['setup.create_account_step.back_button']()}
-			submitLabel={m['setup.finish_step.finish_button']()}
-			{serverEmailError}
-			onClearEmailError={() => {
-				serverEmailError = null;
-			}}
-			onformsubmit={finish}
-			onback={() => goBackToStep(step - 1)}
-		/>
+		<h2 class="text-xl font-bold text-base-content">{m['setup.registration_step.title']()}</h2>
+		<p>{m['setup.registration_step.text']()}</p>
+		<form onsubmit={submitLocalRegistration} class="flex flex-col gap-4" novalidate>
+			<fieldset class="fieldset">
+				<legend class="fieldset-legend">{m['setup.registration_step.name_label']()} *</legend>
+				<input
+					type="text"
+					class="input-bordered validator input w-full"
+					minlength="3"
+					placeholder={m['setup.registration_step.name_placeholder']()}
+					bind:value={memberName}
+					required
+				/>
+				<div class="validator-hint">{m['setup.registration_step.name_error']()}</div>
+			</fieldset>
+			<fieldset class="fieldset">
+				<legend class="fieldset-legend">{m['setup.registration_step.email_label']()} *</legend>
+				<input
+					type="email"
+					class="input-bordered validator input w-full"
+					placeholder={m['setup.registration_step.email_placeholder']()}
+					bind:value={email}
+					autocomplete="email"
+					required
+				/>
+				<div class="validator-hint">{m['setup.registration_step.email_error']()}</div>
+				{#if serverEmailError}
+					<div class="label">
+						<span class="label-text-alt text-error">{serverEmailError}</span>
+					</div>
+				{/if}
+			</fieldset>
+			<fieldset class="fieldset">
+				<legend class="fieldset-legend">{m['setup.registration_step.password_label']()} *</legend>
+				<input
+					type="password"
+					class="input-bordered validator input w-full"
+					minlength="8"
+					placeholder={m['setup.registration_step.password_placeholder']()}
+					bind:value={password}
+					autocomplete="new-password"
+					required
+				/>
+			</fieldset>
+			<fieldset class="fieldset">
+				<legend class="fieldset-legend"
+					>{m['setup.registration_step.password_confirm_label']()} *</legend
+				>
+				<input
+					type="password"
+					class="input-bordered validator input w-full"
+					minlength="8"
+					placeholder={m['setup.registration_step.password_placeholder']()}
+					bind:value={passwordConfirm}
+					autocomplete="new-password"
+					required
+				/>
+				{#if passwordMismatch}
+					<div class="label">
+						<span class="label-text-alt text-error"
+							>{m['setup.registration_step.password_mismatch']()}</span
+						>
+					</div>
+				{/if}
+			</fieldset>
+			<div class="flex justify-between gap-3">
+				<button
+					type="button"
+					class="btn flex-1 btn-outline"
+					onclick={() => goBackToStep(step - 1)}
+				>
+					{m['setup.registration_step.back_button']()}
+				</button>
+				<button type="submit" class="btn flex-1 btn-primary" disabled={submitting}>
+					{m['setup.registration_step.continue_button']()}
+				</button>
+			</div>
+		</form>
+
+		{#if providers !== null && providers.socialProviders.length > 0}
+			<div class="divider">{m['setup.registration_step.social_separator']()}</div>
+			<div class="flex flex-col gap-2">
+				{#each providers.socialProviders as provider (provider)}
+					<button
+						type="button"
+						class="btn btn-neutral w-full"
+						onclick={() => startSocialRegistration(provider)}
+						disabled={memberName.trim().length < 3}
+					>
+						{m['login.social_button']({
+							provider: provider.charAt(0).toUpperCase() + provider.slice(1)
+						})}
+					</button>
+				{/each}
+			</div>
+		{/if}
 	{:else if step === 2}
 		<h2 class="text-xl font-bold text-base-content">{m['setup.finish_step.title']()}</h2>
 		<p>{m['setup.finish_step.invite_text']()}</p>

@@ -37,3 +37,7 @@ export async function logout(): Promise<void> {
 export function getAccessToken(): string | null {
 	return get(userStore)?.access_token ?? null;
 }
+
+export function getUser(): User | null {
+	return get(userStore);
+}

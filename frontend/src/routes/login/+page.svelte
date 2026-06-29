@@ -53,7 +53,7 @@
 </script>
 
 <div class="hero min-h-screen bg-base-200">
-	<div class="hero-content">
+	<div class="hero-content flex-col">
 		<div class="md:card md:w-96 md:bg-base-100 md:shadow-sm">
 			<div class="md:card-body">
 				<div class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-primary">
@@ -152,6 +152,9 @@
 					</div>
 				{/if}
 			</div>
+		</div>
+		<div class="mt-4 text-center">
+			<a href="/" class="link link-neutral text-sm">{m['login.back_to_start']()}</a>
 		</div>
 	</div>
 </div>
