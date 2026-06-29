@@ -26,7 +26,6 @@ import java.security.SecureRandom;
 import java.util.Base64;
 import java.util.Map;
 import java.util.UUID;
-import java.util.regex.Pattern;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -103,25 +102,30 @@ class LocalLoginIT {
                         .header("Accept", "text/html").build(),
                 HttpResponse.BodyHandlers.discarding());
 
-        // Step 2: Fetch the login page to obtain the CSRF token for the session
-        var loginPageResponse = httpClient.send(
-                HttpRequest.newBuilder().uri(URI.create("http://localhost:" + port + "/login")).GET().build(),
-                HttpResponse.BodyHandlers.ofString());
-        var csrfToken = extractCsrf(loginPageResponse.body());
+        // Step 2: Simulate the SPA's first backend call; SpaCsrfTokenRequestHandler writes the XSRF-TOKEN cookie
+        httpClient.send(
+                HttpRequest.newBuilder()
+                        .uri(URI.create("http://localhost:" + port + "/v1/auth/providers"))
+                        .GET()
+                        .build(),
+                HttpResponse.BodyHandlers.discarding());
 
-        // Step 3: Submit credentials; Spring authenticates and redirects to the saved /oauth2/authorize URL
+        // Step 3: Read the XSRF-TOKEN cookie set by Spring Security's SpaCsrfTokenRequestHandler
+        var csrfToken = extractXsrfTokenFromCookies(cookieManager);
+
+        // Step 4: Submit credentials; Spring authenticates and redirects to the saved /oauth2/authorize URL
         var loginBody = "username=" + URLEncoder.encode(email, UTF_8)
-                + "&password=" + URLEncoder.encode(password, UTF_8)
-                + "&_csrf=" + URLEncoder.encode(csrfToken, UTF_8);
+                + "&password=" + URLEncoder.encode(password, UTF_8);
         httpClient.send(
                 HttpRequest.newBuilder()
                         .uri(URI.create("http://localhost:" + port + "/login"))
                         .POST(HttpRequest.BodyPublishers.ofString(loginBody))
                         .header("Content-Type", "application/x-www-form-urlencoded")
+                        .header("X-XSRF-TOKEN", csrfToken)
                         .build(),
                 HttpResponse.BodyHandlers.discarding());
 
-        // Step 4: Hit /oauth2/authorize again; Spring issues the code and redirects to the callback
+        // Step 5: Hit /oauth2/authorize again; Spring issues the code and redirects to the callback
         var codeRedirect = httpClient.send(
                 HttpRequest.newBuilder().uri(URI.create(authorizeUri)).GET()
                         .header("Accept", "text/html").build(),
@@ -173,13 +177,12 @@ class LocalLoginIT {
         return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
     }
 
-    private String extractCsrf(String html) {
-        // DefaultLoginPageGeneratingFilter generates: <input name="_csrf" type="hidden" value="TOKEN" />
-        var matcher = Pattern.compile("<input[^>]*name=\"_csrf\"[^>]*value=\"([^\"]+)\"").matcher(html);
-        if (matcher.find()) return matcher.group(1);
-        // Fallback for reversed attribute order
-        matcher = Pattern.compile("<input[^>]*value=\"([^\"]+)\"[^>]*name=\"_csrf\"").matcher(html);
-        return matcher.find() ? matcher.group(1) : "";
+    private String extractXsrfTokenFromCookies(CookieManager cookieManager) {
+        return cookieManager.getCookieStore().getCookies().stream()
+                .filter(c -> "XSRF-TOKEN".equals(c.getName()))
+                .map(java.net.HttpCookie::getValue)
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("XSRF-TOKEN cookie not set by Spring Security"));
     }
 
     private String extractQueryParam(String url, String name) {

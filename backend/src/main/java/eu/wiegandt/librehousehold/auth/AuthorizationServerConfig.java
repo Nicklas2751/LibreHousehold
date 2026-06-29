@@ -1,5 +1,7 @@
 package eu.wiegandt.librehousehold.auth;
 
+import jakarta.servlet.http.HttpServletResponse;
+import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -8,9 +10,11 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.security.config.Customizer;
-import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -27,9 +31,11 @@ import org.springframework.security.oauth2.server.authorization.client.Registere
 import org.springframework.security.oauth2.server.authorization.settings.ClientSettings;
 import org.springframework.security.oauth2.server.authorization.settings.TokenSettings;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
 
+import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
@@ -102,30 +108,56 @@ class AuthorizationServerConfig {
      */
     @Bean
     @Order(2)
+    @SuppressWarnings("java:S4502")
     @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
     SecurityFilterChain defaultSecurityFilterChain(HttpSecurity httpSecurity,
                                                    FederatedIdentityOidcUserService federatedIdentityOidcUserService,
                                                    ObjectProvider<ClientRegistrationRepository> clientRegistrations) {
         httpSecurity
+                .csrf(csrf -> csrf
+                        .spa()
+                        // It's safe to disable CSRF for the API since we use header based JWT Authentication
+                        .ignoringRequestMatchers("/v1/**"))
                 .authorizeHttpRequests(registry -> registry
                         .requestMatchers("/v1/auth/providers").permitAll()
                         .anyRequest().authenticated())
-                .formLogin(Customizer.withDefaults())
+                .formLogin(form -> form
+                        .loginPage("/login")
+                        .failureHandler(createLoginFormFailureHandler()))
                 .oauth2ResourceServer(resourceServerConfigurer -> resourceServerConfigurer.jwt(Customizer.withDefaults()));
 
         // oauth2Login is only activated when at least one provider (e.g. Google) is configured
         if (clientRegistrations.getIfAvailable() != null) {
             httpSecurity.oauth2Login(oauth2 -> oauth2
                     .userInfoEndpoint(uie -> uie.oidcUserService(federatedIdentityOidcUserService))
-                    .failureHandler((_, response, exception) -> {
-                        var errorCode = (exception instanceof OAuth2AuthenticationException oae)
-                                ? oae.getError().getErrorCode()
-                                : "authentication_error";
-                        response.sendRedirect("/login?error=" + URLEncoder.encode(errorCode, StandardCharsets.UTF_8));
-                    }));
+                    .failureHandler(createOauth2FailureHandler()));
         }
 
         return httpSecurity.build();
+    }
+
+    private @NonNull AuthenticationFailureHandler createOauth2FailureHandler() {
+        return (_, response, exception) -> {
+            var errorCode = (exception instanceof OAuth2AuthenticationException oae)
+                    ? oae.getError().getErrorCode()
+                    : "authentication_error";
+            redirectToLoginWithError(response, errorCode);
+        };
+    }
+
+    private void redirectToLoginWithError(HttpServletResponse response, String errorCode) throws IOException {
+        response.sendRedirect("/login?error=" + URLEncoder.encode(errorCode, StandardCharsets.UTF_8));
+    }
+
+    private @NonNull AuthenticationFailureHandler createLoginFormFailureHandler() {
+        return (_, response, exception) -> {
+            var code = switch (exception) {
+                case BadCredentialsException _ -> "bad_credentials";
+                case LockedException _ -> "account_locked";
+                default -> "authentication_error";
+            };
+            redirectToLoginWithError(response, code);
+        };
     }
 
     /**
