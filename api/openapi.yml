@@ -58,6 +58,48 @@ paths:
               schema:
                 $ref: '#/components/schemas/AuthProviders'
 
+  /auth/register:
+    post:
+      summary: Register a new local user and set up their household
+      description: >
+        Public endpoint. Creates an AccountEntity and a Household+Member atomically.
+        Used for local (email/password) registration during the setup wizard.
+      tags:
+        - auth
+      operationId: registerLocal
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LocalRegistration'
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HouseholdSetupResponse'
+        "400":
+          description: The data for the new registration is invalid.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        "409":
+          description: E-mail address is already registered.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        default:
+          description: An error occurred - see the status code and problem for more information.
+          content:
+            "application/problem+json":
+              schema:
+                $ref: '#/components/schemas/Problem'
+
   /household/setup:
     post:
       summary: Setup a new household
@@ -1740,6 +1782,11 @@ components:
           minLength: 1
           maxLength: 100
           description: The name of the member.
+        email:
+          type: string
+          format: email
+          description: The email address of the member's account.
+          example: "john.doe@example.com"
         avatar:
           type: string
           format: base64
@@ -2332,6 +2379,41 @@ components:
             done: 5
             open: 7
 
+    LocalRegistration:
+      type: object
+      required:
+        - householdName
+        - memberName
+        - email
+        - password
+      properties:
+        householdName:
+          type: string
+          minLength: 3
+          maxLength: 100
+          example: "Die Müllers"
+        memberName:
+          type: string
+          minLength: 1
+          maxLength: 100
+          example: "Max Mustermann"
+        email:
+          type: string
+          format: email
+          example: "max@example.com"
+        password:
+          type: string
+          minLength: 8
+          example: "supersecret123"
+        householdImage:
+          type: string
+          format: base64
+          example: "data:image/png;base64,iVBORw0KGgo="
+        memberAvatar:
+          type: string
+          format: base64
+          example: "data:image/png;base64,iVBORw0KGgo="
+
     HouseholdSetup:
       type: object
       required:
@@ -2434,6 +2516,11 @@ components:
         name:
           type: string
           example: "Max Mustermann"
+        email:
+          type: string
+          format: email
+          description: Email address for local account creation when joining via invite link.
+          example: "max.mustermann@example.com"
         avatar:
           type: string
           example: "data:image/jpeg;base64,/9j/4AAQ..."

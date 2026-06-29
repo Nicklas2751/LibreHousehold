@@ -63,4 +63,16 @@ public class HouseholdSetupService {
                 invite.validUntil()
         );
     }
+
+    @Transactional
+    public HouseholdSetupResponse setupHousehold(UUID adminId, String householdName, String householdImage,
+                                                  String memberName, String memberAvatar) {
+        var householdId = UUID.randomUUID();
+        var savedHousehold = householdRepository.save(new HouseholdEntity(householdId, householdName, householdImage));
+        memberRepository.save(new MemberEntity(adminId, memberName, memberAvatar, householdId, true));
+        var invite = inviteRepository.save(new InviteEntity(
+                null, householdId, UUID.randomUUID(), LocalDate.now().plusDays(INVITE_VALIDITY_DAYS)));
+        return new HouseholdSetupResponse(
+                householdSetupMapper.toApiModel(savedHousehold), invite.token(), invite.validUntil());
+    }
 }

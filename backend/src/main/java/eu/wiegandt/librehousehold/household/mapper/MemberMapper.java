@@ -3,6 +3,7 @@ package eu.wiegandt.librehousehold.household.mapper;
 import eu.wiegandt.librehousehold.household.model.MemberEntity;
 import eu.wiegandt.librehousehold.model.Member;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 
 import java.util.Optional;
 
@@ -21,5 +22,7 @@ public interface MemberMapper {
         return Optional.of(value);
     }
 
+    // Email is stored on AccountEntity, not MemberEntity — populated by the service layer if needed
+    @Mapping(target = "email", ignore = true)
     Member toMember(MemberEntity entity);
 }

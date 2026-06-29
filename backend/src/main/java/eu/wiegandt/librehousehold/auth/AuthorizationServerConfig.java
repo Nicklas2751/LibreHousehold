@@ -119,7 +119,7 @@ class AuthorizationServerConfig {
                         // It's safe to disable CSRF for the API since we use header based JWT Authentication
                         .ignoringRequestMatchers("/v1/**"))
                 .authorizeHttpRequests(registry -> registry
-                        .requestMatchers("/v1/auth/providers").permitAll()
+                        .requestMatchers("/v1/auth/providers", "/v1/auth/register").permitAll()
                         .anyRequest().authenticated())
                 .formLogin(form -> form
                         .loginPage("/login")
