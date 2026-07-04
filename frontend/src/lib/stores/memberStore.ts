@@ -1,10 +1,10 @@
 import { type Writable, writable } from 'svelte/store';
-import { Configuration, type Member, MembersApi } from '../../generated-sources/openapi';
+import { type Member, MembersApi } from '../../generated-sources/openapi';
+import { createApiConfig } from '$lib/api';
 
 export const members: Writable<Member[]> = writable([]);
 
-const apiConfig = new Configuration({ basePath: '/api' });
-const api = new MembersApi(apiConfig);
+const api = new MembersApi(createApiConfig());
 
 export const addMember = async (householdId: string, member: Member): Promise<Member> => {
 	const savedMember = await api.createMember({ householdId: householdId, member: member });

@@ -5,7 +5,8 @@
 	import { CopyIcon } from '@indaco/svelte-iconoir/copy';
 	import { ShareIosIcon } from '@indaco/svelte-iconoir/share-ios';
 	import { QRCode } from '@castlenine/svelte-qrcode';
-	import { Configuration, HouseholdApi } from '../../generated-sources/openapi';
+	import { HouseholdApi } from '../../generated-sources/openapi';
+	import { createApiConfig } from '$lib/api';
 	import {
 		generateInviteUrl,
 		checkCanBrowserShareInviteLink,
@@ -47,7 +48,7 @@
 			if (raw) {
 				const { householdName, householdImage, memberName } = JSON.parse(raw);
 				const authUser = getUser()!;
-				const householdApi = new HouseholdApi(new Configuration({ basePath: '/api' }));
+				const householdApi = new HouseholdApi(createApiConfig());
 				const response = await householdApi.setupHousehold({
 					householdSetup: {
 						household: { id: crypto.randomUUID(), name: householdName, image: householdImage },

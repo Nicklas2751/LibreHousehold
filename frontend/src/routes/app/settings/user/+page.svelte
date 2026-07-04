@@ -7,17 +7,13 @@
 	import { loadMembers, members } from '$lib/stores/memberStore';
 	import { addToast } from '$lib/stores/toastStore';
 	import { Toast } from '$lib/toast';
-	import {
-		Configuration,
-		HouseholdApi,
-		MembersApi,
-		UsersettingsApi
-	} from '../../../../generated-sources/openapi';
+	import { HouseholdApi, MembersApi, UsersettingsApi } from '../../../../generated-sources/openapi';
 	import { goto } from '$app/navigation';
+	import { createApiConfig } from '$lib/api';
 
-	const householdApi = new HouseholdApi(new Configuration({ basePath: '/api' }));
-	const membersApi = new MembersApi(new Configuration({ basePath: '/api' }));
-	const userSettingsApi = new UsersettingsApi(new Configuration({ basePath: '/api' }));
+	const householdApi = new HouseholdApi(createApiConfig());
+	const membersApi = new MembersApi(createApiConfig());
+	const userSettingsApi = new UsersettingsApi(createApiConfig());
 
 	const householdId = $derived($householdState?.id ?? '');
 	const memberId = $derived($userState?.id ?? '');

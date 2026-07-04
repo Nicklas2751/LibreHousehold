@@ -7,7 +7,6 @@
 	import { QRCode } from '@castlenine/svelte-qrcode';
 	import { ShareIosIcon } from '@indaco/svelte-iconoir/share-ios';
 	import {
-		Configuration,
 		type Household,
 		type HouseholdSetup,
 		HouseholdApi,
@@ -16,6 +15,7 @@
 		ResponseError,
 		type AuthProviders
 	} from '../generated-sources/openapi';
+	import { createApiConfig } from '$lib/api';
 	import { v4 as uuidv4 } from 'uuid';
 	import { updateHouseholdState } from '$lib/stores/householdState.svelte';
 	import {
@@ -27,7 +27,7 @@
 		generateInviteUrl,
 		readFileAsDataURL
 	} from '$lib/setupWizardLogic';
-	import { goto } from '$app/navigation';
+	import { login } from '$lib/stores/authStore.svelte';
 	import { updateUserState } from '$lib/stores/userState';
 
 	const householdId: string = uuidv4();
@@ -49,7 +49,7 @@
 	let providers = $state<AuthProviders | null>(null);
 
 	onMount(async () => {
-		const api = new AuthApi(new Configuration({ basePath: '/api' }));
+		const api = new AuthApi(createApiConfig());
 		providers = await api.getAuthProviders();
 	});
 
@@ -122,7 +122,7 @@
 		serverEmailError = null;
 		submitting = true;
 		try {
-			const authApi = new AuthApi(new Configuration({ basePath: '/api' }));
+			const authApi = new AuthApi(createApiConfig());
 			const response = await authApi.registerLocal({
 				localRegistration: {
 					householdName,
@@ -331,7 +331,7 @@
 				</button>
 			{/if}
 		</div>
-		<button class="btn w-full rounded-lg p-6 btn-primary" onclick={() => goto('/app/dashboard')}
+		<button class="btn w-full rounded-lg p-6 btn-primary" onclick={login}
 			>{m['setup.finish_step.close_setup_button']()}</button
 		>
 	{/if}

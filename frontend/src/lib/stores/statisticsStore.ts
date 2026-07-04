@@ -1,10 +1,10 @@
 import { writable } from 'svelte/store';
 import {
-	Configuration,
 	GetStatisticsPeriodEnum,
 	StatisticsApi,
 	type StatisticsResponse
 } from '../../generated-sources/openapi';
+import { createApiConfig } from '$lib/api';
 
 export { GetStatisticsPeriodEnum } from '../../generated-sources/openapi';
 export type StatisticsPeriod =
@@ -14,8 +14,7 @@ export const statistics = writable<StatisticsResponse | null>(null);
 export const statisticsLoading = writable<boolean>(false);
 export const statisticsError = writable<boolean>(false);
 
-const apiConfig = new Configuration({ basePath: '/api' });
-const api = new StatisticsApi(apiConfig);
+const api = new StatisticsApi(createApiConfig());
 
 export const loadStatistics = async (
 	householdId: string,

@@ -4,6 +4,7 @@ import { page } from 'vitest/browser';
 
 const mockGetAuthProviders = vi.hoisted(() => vi.fn());
 const mockLogin = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
+const mockGoto = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 const mockSearchParamsGet = vi.hoisted(() => vi.fn().mockReturnValue(null));
 const mockFetch = vi.hoisted(() => vi.fn());
 
@@ -16,6 +17,8 @@ vi.mock('../../generated-sources/openapi', async (importOriginal) => {
 		})
 	};
 });
+
+vi.mock('$app/navigation', () => ({ goto: mockGoto }));
 
 vi.mock('$lib/stores/authStore.svelte', () => ({
 	login: mockLogin,
@@ -96,7 +99,7 @@ describe('Login Page', () => {
 	it('submitForm_postsToApiLogin', async () => {
 		// given
 		mockGetAuthProviders.mockResolvedValue({ local: true, socialProviders: [] });
-		vi.stubGlobal('fetch', mockFetch.mockResolvedValue(new Response()));
+		vi.stubGlobal('fetch', mockFetch.mockResolvedValue({ url: 'http://localhost:5173/callback?code=x' }));
 		render(Page);
 		await expect.element(page.getByRole('textbox', { name: 'Email address' })).toBeVisible();
 
@@ -116,7 +119,7 @@ describe('Login Page', () => {
 		// given
 		mockGetAuthProviders.mockResolvedValue({ local: true, socialProviders: [] });
 		document.cookie = 'XSRF-TOKEN=test-csrf-token';
-		vi.stubGlobal('fetch', mockFetch.mockResolvedValue(new Response()));
+		vi.stubGlobal('fetch', mockFetch.mockResolvedValue({ url: 'http://localhost:5173/callback?code=x' }));
 		render(Page);
 		await expect.element(page.getByRole('textbox', { name: 'Email address' })).toBeVisible();
 
@@ -132,5 +135,22 @@ describe('Login Page', () => {
 				headers: expect.objectContaining({ 'X-XSRF-TOKEN': 'test-csrf-token' })
 			})
 		);
+	});
+
+	it('submitForm_navigatesToResponseUrl', async () => {
+		// given
+		const callbackUrl = 'http://localhost:5173/callback?code=test-code&state=test-state';
+		mockGetAuthProviders.mockResolvedValue({ local: true, socialProviders: [] });
+		vi.stubGlobal('fetch', mockFetch.mockResolvedValue({ url: callbackUrl }));
+		render(Page);
+		await expect.element(page.getByRole('textbox', { name: 'Email address' })).toBeVisible();
+
+		// when
+		await page.getByRole('textbox', { name: 'Email address' }).fill('test@example.com');
+		await page.getByLabelText('Password').fill('secret123');
+		await page.getByRole('button', { name: 'Sign In' }).click();
+
+		// then
+		expect(mockGoto).toHaveBeenCalledWith('/callback?code=test-code&state=test-state');
 	});
 });

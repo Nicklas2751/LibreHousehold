@@ -1,8 +1,10 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { login } from '$lib/stores/authStore.svelte';
-	import { AuthApi, Configuration } from '../../generated-sources/openapi';
+	import { AuthApi } from '../../generated-sources/openapi';
+	import { createApiConfig } from '$lib/api';
 	import { m } from '$lib/paraglide/messages.js';
 	import type { AuthProviders } from '../../generated-sources/openapi';
 
@@ -26,7 +28,7 @@
 		event.preventDefault();
 		submitting = true;
 		try {
-			await fetch('/api/login', {
+			const response = await fetch('/api/login', {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/x-www-form-urlencoded',
@@ -36,6 +38,8 @@
 				credentials: 'include',
 				redirect: 'follow'
 			});
+			const destination = new URL(response.url);
+			await goto(destination.pathname + destination.search);
 		} finally {
 			submitting = false;
 		}
@@ -47,7 +51,7 @@
 			await login();
 			return;
 		}
-		const api = new AuthApi(new Configuration({ basePath: '/api' }));
+		const api = new AuthApi(createApiConfig());
 		providers = await api.getAuthProviders();
 	});
 </script>
@@ -153,8 +157,8 @@
 				{/if}
 			</div>
 		</div>
-		<div class="mt-4 text-center">
-			<a href="/" class="link link-neutral text-sm">{m['login.back_to_start']()}</a>
+		<div class="mt-4 flex justify-center">
+			<a href="/" class="btn btn-outline">{m['login.back_to_start']()}</a>
 		</div>
 	</div>
 </div>

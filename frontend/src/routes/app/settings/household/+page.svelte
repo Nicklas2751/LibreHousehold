@@ -13,7 +13,7 @@
 	import { members, loadMembers } from '$lib/stores/memberStore';
 	import { addToast } from '$lib/stores/toastStore';
 	import { Toast } from '$lib/toast';
-	import { Configuration, HouseholdApi, MembersApi } from '../../../../generated-sources/openapi';
+	import { HouseholdApi, MembersApi } from '../../../../generated-sources/openapi';
 	import {
 		generateInviteUrl,
 		createInviteLinkShareData,
@@ -21,9 +21,10 @@
 	} from '$lib/setupWizardLogic';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
+	import { createApiConfig } from '$lib/api';
 
-	const api = new HouseholdApi(new Configuration({ basePath: '/api' }));
-	const membersApi = new MembersApi(new Configuration({ basePath: '/api' }));
+	const api = new HouseholdApi(createApiConfig());
+	const membersApi = new MembersApi(createApiConfig());
 
 	const householdId = $derived($householdState?.id ?? '');
 	const otherMembers = $derived($members.filter((mb) => mb.id !== $userState?.id));

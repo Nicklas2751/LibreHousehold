@@ -1,18 +1,12 @@
 import { type Writable, writable } from 'svelte/store';
-import {
-	Configuration,
-	type Task,
-	type TaskEdit,
-	TasksApi,
-	type TaskUpdate
-} from '../../generated-sources/openapi';
+import { type Task, type TaskEdit, TasksApi, type TaskUpdate } from '../../generated-sources/openapi';
 import { addToast } from './toastStore';
 import { Toast } from '$lib/toast';
+import { createApiConfig } from '$lib/api';
 
 export const tasks: Writable<Task[]> = writable([]);
 
-const apiConfig = new Configuration({ basePath: '/api' });
-const api = new TasksApi(apiConfig);
+const api = new TasksApi(createApiConfig());
 
 export const addTask = async (householdId: string, task: Task): Promise<Task> => {
 	try {

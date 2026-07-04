@@ -41,3 +41,13 @@ export function getAccessToken(): string | null {
 export function getUser(): User | null {
 	return get(userStore);
 }
+
+export async function restoreUser(): Promise<User | null> {
+	if (!userManager) return null;
+	const stored = await userManager.getUser();
+	if (stored && !stored.expired) {
+		userStore.set(stored);
+		return stored;
+	}
+	return null;
+}

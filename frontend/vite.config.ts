@@ -23,10 +23,10 @@ export default defineConfig({
 		proxy: {
 			'/api/login': {
 				target: apiProxyTarget,
-				changeOrigin: true,
+				changeOrigin: false,
 				rewrite: (path) => path.replace(/^\/api/, '')
 			},
-			'/oauth2': { target: apiProxyTarget, changeOrigin: true },
+			'/oauth2': { target: apiProxyTarget, changeOrigin: false },
 			'/login/oauth2': { target: apiProxyTarget, changeOrigin: true },
 			'/.well-known': { target: apiProxyTarget, changeOrigin: true },
 			'/api': {
