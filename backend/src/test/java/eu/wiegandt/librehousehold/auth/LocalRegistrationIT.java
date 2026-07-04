@@ -162,6 +162,40 @@ class LocalRegistrationIT {
         }
     }
 
+    @Nested
+    class resolveInvite {
+
+        @Test
+        void withTokenFromRegistration_isAccessibleWithoutAuthentication() {
+            // given
+            var email = "invite-" + UUID.randomUUID() + "@example.com";
+            var requestBody = Map.of(
+                    "householdName", "Invite Haushalt",
+                    "memberName", "Invite Admin",
+                    "email", email,
+                    "password", "supersecret123"
+            );
+            var registration = restTestClient.post()
+                    .uri("/v1/auth/register")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(requestBody)
+                    .exchange()
+                    .expectStatus().isOk()
+                    .expectBody(new ParameterizedTypeReference<Map<String, Object>>() {
+                    })
+                    .returnResult();
+            var inviteToken = registration.getResponseBody().get("inviteToken");
+
+            // when
+            var response = restTestClient.get()
+                    .uri("/v1/invite/{token}", inviteToken)
+                    .exchange();
+
+            // then
+            response.expectStatus().isOk();
+        }
+    }
+
     private String generateCodeVerifier() {
         var bytes = new byte[32];
         new SecureRandom().nextBytes(bytes);
