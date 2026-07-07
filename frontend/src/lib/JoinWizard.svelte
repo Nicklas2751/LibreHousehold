@@ -2,13 +2,20 @@
 	import { m } from '$lib/paraglide/messages.js';
 	import { addToast } from '$lib/stores/toastStore';
 	import { Toast } from '$lib/toast';
-	import { MembersApi, type InviteInfo, ResponseError } from '../generated-sources/openapi';
+	import {
+		MembersApi,
+		AuthApi,
+		type AuthProviders,
+		type InviteInfo,
+		ResponseError
+	} from '../generated-sources/openapi';
 	import { updateHouseholdState } from '$lib/stores/householdState.svelte';
 	import { updateUserState } from '$lib/stores/userState';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import MemberProfileForm from '$lib/MemberProfileForm.svelte';
 	import { createApiConfig } from '$lib/api';
+	import { navigateToSocialProvider } from '$lib/setupWizardLogic';
 
 	interface Props {
 		token: string;
@@ -23,6 +30,9 @@
 	let step = $state(0);
 	let joining = $state(false);
 	let serverEmailError = $state<string | null>(null);
+	let providers = $state<AuthProviders | null>(null);
+	let memberName = $state('');
+	let memberAvatar = $state('');
 
 	onMount(async () => {
 		try {
@@ -30,18 +40,20 @@
 		} catch {
 			invalidLink = true;
 		}
+		const authApi = new AuthApi(createApiConfig());
+		providers = await authApi.getAuthProviders();
 	});
 
-	async function join(data: { name: string; email: string; avatar: string }) {
+	async function join(data: { name: string; email: string; avatar: string; password?: string }) {
 		joining = true;
 		serverEmailError = null;
 		try {
 			const member = await membersApi.joinHousehold({
 				token,
-				memberRegistration: {
-					id: crypto.randomUUID(),
+				localMemberRegistration: {
 					name: data.name,
 					email: data.email,
+					password: data.password ?? '',
 					avatar: data.avatar || undefined
 				}
 			});
@@ -68,6 +80,21 @@
 		} finally {
 			joining = false;
 		}
+	}
+
+	function startSocialJoin(provider: string) {
+		if (!inviteInfo) return;
+		sessionStorage.setItem(
+			'lh_pending_join',
+			JSON.stringify({
+				token,
+				memberName,
+				memberAvatar,
+				householdId: inviteInfo.householdId,
+				householdName: inviteInfo.householdName
+			})
+		);
+		navigateToSocialProvider(provider);
 	}
 </script>
 
@@ -105,6 +132,13 @@
 				emailPlaceholder={m['invite.email_placeholder']()}
 				backLabel={m['setup.create_step.back_button']()}
 				submitLabel={m['invite.join_button']()}
+				requirePassword
+				passwordLabel={m['setup.registration_step.password_label']()}
+				passwordPlaceholder={m['setup.registration_step.password_placeholder']()}
+				passwordConfirmLabel={m['setup.registration_step.password_confirm_label']()}
+				passwordMismatchError={m['setup.registration_step.password_mismatch']()}
+				bind:name={memberName}
+				bind:avatar={memberAvatar}
 				{serverEmailError}
 				onClearEmailError={() => {
 					serverEmailError = null;
@@ -113,6 +147,24 @@
 				onformsubmit={join}
 				onback={() => goto('/')}
 			/>
+
+			{#if providers !== null && providers.socialProviders.length > 0}
+				<div class="divider">{m['setup.registration_step.social_separator']()}</div>
+				<div class="flex flex-col gap-2">
+					{#each providers.socialProviders as provider (provider)}
+						<button
+							type="button"
+							class="btn btn-neutral w-full"
+							onclick={() => startSocialJoin(provider)}
+							disabled={memberName.trim().length < 3}
+						>
+							{m['login.social_button']({
+								provider: provider.charAt(0).toUpperCase() + provider.slice(1)
+							})}
+						</button>
+					{/each}
+				</div>
+			{/if}
 		{:else if step === 1}
 			<h2 class="text-xl font-bold text-base-content">{m['invite.success_title']()}</h2>
 			<p>{m['invite.success_text']({ name: inviteInfo.householdName })}</p>

@@ -6,7 +6,7 @@ import eu.wiegandt.librehousehold.tasks.repository.*;
 import eu.wiegandt.librehousehold.tasks.service.*;
 
 import eu.wiegandt.librehousehold.api.TasksApiController;
-import eu.wiegandt.librehousehold.auth.CurrentUserIdProvider;
+import eu.wiegandt.librehousehold.core.CurrentUserIdProvider;
 import eu.wiegandt.librehousehold.model.Task;
 import eu.wiegandt.librehousehold.model.TaskEdit;
 import eu.wiegandt.librehousehold.model.TaskUpdate;

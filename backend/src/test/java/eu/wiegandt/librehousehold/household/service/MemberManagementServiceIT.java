@@ -5,6 +5,8 @@ import eu.wiegandt.librehousehold.household.model.*;
 import eu.wiegandt.librehousehold.household.repository.*;
 
 import eu.wiegandt.librehousehold.TestcontainersConfiguration;
+import eu.wiegandt.librehousehold.auth.model.AccountEntity;
+import eu.wiegandt.librehousehold.auth.repository.AccountRepository;
 import eu.wiegandt.librehousehold.model.*;
 import org.instancio.Instancio;
 import org.instancio.junit.InstancioExtension;
@@ -15,6 +17,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.time.LocalDate;
 import java.util.UUID;
@@ -23,7 +26,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.instancio.Select.field;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
 @Import(TestcontainersConfiguration.class)
 @ExtendWith(InstancioExtension.class)
 class MemberManagementServiceIT {
@@ -39,6 +42,9 @@ class MemberManagementServiceIT {
 
     @Autowired
     private InviteRepository inviteRepository;
+
+    @Autowired
+    private AccountRepository accountRepository;
 
     private HouseholdSetupResponse setupResponse;
     private Household existingHousehold;
@@ -67,8 +73,8 @@ class MemberManagementServiceIT {
         void additionalMemberJoined_returnsBothMembers() {
             // given
             var token = setupResponse.getInviteToken();
-            var registration = Instancio.create(MemberRegistration.class);
-            memberManagementService.joinHousehold(token, registration);
+            var registration = Instancio.create(LocalMemberRegistration.class);
+            memberManagementService.joinHouseholdLocal(token, registration);
 
             // when
             var result = memberManagementService.getMembers(existingHousehold.getId());
@@ -79,19 +85,68 @@ class MemberManagementServiceIT {
     }
 
     @Nested
-    class joinHousehold {
+    class joinHouseholdLocal {
 
         @Test
-        void validToken_persistsMemberInDatabase() {
+        void validToken_persistsMemberAndAccountWithSameId() {
             // given
             var token = setupResponse.getInviteToken();
-            var registration = Instancio.create(MemberRegistration.class);
+            var registration = Instancio.create(LocalMemberRegistration.class);
 
             // when
-            memberManagementService.joinHousehold(token, registration);
+            var member = memberManagementService.joinHouseholdLocal(token, registration);
 
             // then
-            assertThat(memberRepository.findById(registration.getId()))
+            assertThat(memberRepository.findById(member.getId()))
+                    .hasValueSatisfying(m -> {
+                        assertThat(m.householdId()).isEqualTo(existingHousehold.getId());
+                        assertThat(m.isAdmin()).isFalse();
+                    });
+            assertThat(accountRepository.findById(member.getId()))
+                    .hasValueSatisfying(a -> assertThat(a.email()).isEqualTo(registration.getEmail()));
+        }
+
+        @Test
+        void expiredToken_throwsInvalidInviteException_doesNotCreateAccount() {
+            // given — create an expired invite directly
+            var expiredInvite = inviteRepository.save(new InviteEntity(
+                    null, existingHousehold.getId(), UUID.randomUUID(), LocalDate.now().minusDays(1)
+            ));
+            var registration = Instancio.create(LocalMemberRegistration.class);
+
+            // when / then
+            assertThatThrownBy(() -> memberManagementService.joinHouseholdLocal(expiredInvite.token(), registration))
+                    .isInstanceOf(InvalidInviteException.class);
+            assertThat(accountRepository.findByEmail(registration.getEmail())).isEmpty();
+        }
+
+        @Test
+        void duplicateEmail_propagatesAsDataIntegrityViolation() {
+            // given
+            var token = setupResponse.getInviteToken();
+            var registration = Instancio.create(LocalMemberRegistration.class);
+            accountRepository.save(new AccountEntity(UUID.randomUUID(), registration.getEmail(), "hash"));
+
+            // when / then
+            assertThatThrownBy(() -> memberManagementService.joinHouseholdLocal(token, registration))
+                    .isInstanceOf(DataIntegrityViolationException.class);
+        }
+    }
+
+    @Nested
+    class joinHouseholdAuthenticated {
+
+        @Test
+        void validRequest_persistsMemberWithGivenAccountId() {
+            // given
+            var token = setupResponse.getInviteToken();
+            var accountId = UUID.randomUUID();
+
+            // when
+            memberManagementService.joinHouseholdAuthenticated(accountId, token, "Max Mustermann", null);
+
+            // then
+            assertThat(memberRepository.findById(accountId))
                     .hasValueSatisfying(m -> {
                         assertThat(m.householdId()).isEqualTo(existingHousehold.getId());
                         assertThat(m.isAdmin()).isFalse();
@@ -99,18 +154,22 @@ class MemberManagementServiceIT {
         }
 
         @Test
-        void expiredToken_throwsInvalidInviteException() {
-            // given — create an expired invite directly
-            var expiredInvite = inviteRepository.save(new InviteEntity(
-                    null, existingHousehold.getId(), UUID.randomUUID(), LocalDate.now().minusDays(1)
-            ));
-            var registration = Instancio.create(MemberRegistration.class);
+        void accountAlreadyMemberOfOtherHousehold_throwsMemberAlreadyExistsException_doesNotAlterExistingMembership() {
+            // given
+            var firstToken = setupResponse.getInviteToken();
+            var accountId = UUID.randomUUID();
+            memberManagementService.joinHouseholdAuthenticated(accountId, firstToken, "Max Mustermann", null);
+            var otherHousehold = Instancio.create(Household.class);
+            var otherAdmin = Instancio.create(Member.class);
+            var otherSetupResponse = setupService.setupHousehold(new HouseholdSetup(otherHousehold, otherAdmin));
 
             // when / then
-            assertThatThrownBy(() -> memberManagementService.joinHousehold(expiredInvite.token(), registration))
-                    .isInstanceOf(InvalidInviteException.class);
+            assertThatThrownBy(() -> memberManagementService.joinHouseholdAuthenticated(
+                    accountId, otherSetupResponse.getInviteToken(), "Max Mustermann", null))
+                    .isInstanceOf(MemberAlreadyExistsException.class);
+            assertThat(memberRepository.findById(accountId))
+                    .hasValueSatisfying(m -> assertThat(m.householdId()).isEqualTo(existingHousehold.getId()));
         }
-
     }
 
     @Nested
@@ -120,14 +179,14 @@ class MemberManagementServiceIT {
         void memberFound_removesFromDatabase() {
             // given
             var token = setupResponse.getInviteToken();
-            var registration = Instancio.create(MemberRegistration.class);
-            memberManagementService.joinHousehold(token, registration);
+            var registration = Instancio.create(LocalMemberRegistration.class);
+            var member = memberManagementService.joinHouseholdLocal(token, registration);
 
             // when
-            memberManagementService.removeMember(registration.getId());
+            memberManagementService.removeMember(member.getId());
 
             // then
-            assertThat(memberRepository.existsById(registration.getId())).isFalse();
+            assertThat(memberRepository.existsById(member.getId())).isFalse();
         }
 
         @Test

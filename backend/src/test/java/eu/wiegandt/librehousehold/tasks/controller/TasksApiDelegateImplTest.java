@@ -1,6 +1,6 @@
 package eu.wiegandt.librehousehold.tasks.controller;
 
-import eu.wiegandt.librehousehold.auth.CurrentUserIdProvider;
+import eu.wiegandt.librehousehold.core.CurrentUserIdProvider;
 import eu.wiegandt.librehousehold.model.Task;
 import eu.wiegandt.librehousehold.model.TaskUpdate;
 import eu.wiegandt.librehousehold.tasks.exception.TaskBodyIsRequiredException;

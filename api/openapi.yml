@@ -1484,11 +1484,14 @@ paths:
 
   /invite/{token}/join:
     post:
-      summary: Join a household via invite token
-      description: Validates the invite token and creates a new member in the associated household.
+      summary: Join a household via invite token (local registration)
+      description: >
+        Public endpoint. Creates an AccountEntity and a MemberEntity atomically,
+        then establishes a session - mirrors POST /v1/auth/register for the join case.
       tags:
         - members
       operationId: joinHousehold
+      security: []
       parameters:
         - name: token
           in: path
@@ -1502,7 +1505,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/MemberRegistration'
+              $ref: '#/components/schemas/LocalMemberRegistration'
       responses:
         "201":
           description: Member created.
@@ -1512,6 +1515,55 @@ paths:
                 $ref: '#/components/schemas/Member'
         "404":
           description: Token not found or expired.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        "409":
+          description: E-mail address is already registered.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        default:
+          description: An error occurred.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
+  /household/join:
+    post:
+      summary: Complete household join after social login
+      description: >
+        Authenticated-only endpoint. Attaches the already-authenticated account
+        (provisioned via OAuth2 JIT provisioning) as a member of the household
+        referenced by the invite token. Mirrors POST /household/setup for the
+        social-continuation half of the setup flow.
+      tags:
+        - members
+      operationId: joinHouseholdAuthenticated
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HouseholdJoin'
+      responses:
+        "201":
+          description: Member created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Member'
+        "404":
+          description: Token not found or expired.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        "409":
+          description: The authenticated account is already a member of a household.
           content:
             application/problem+json:
               schema:
@@ -2503,26 +2555,50 @@ components:
           format: date
           example: "2026-06-07"
 
-    MemberRegistration:
+    LocalMemberRegistration:
       type: object
       required:
-        - id
         - name
+        - email
+        - password
       properties:
-        id:
-          type: string
-          format: uuid
-          example: "c9a4b5d6-e7f8-9012-cdef-ab3456789012"
         name:
           type: string
+          minLength: 1
+          maxLength: 100
           example: "Max Mustermann"
         email:
           type: string
           format: email
-          description: Email address for local account creation when joining via invite link.
+          description: Email address used to create the joining member's local account.
           example: "max.mustermann@example.com"
+        password:
+          type: string
+          minLength: 8
+          example: "supersecret123"
         avatar:
           type: string
+          format: base64
+          example: "data:image/jpeg;base64,/9j/4AAQ..."
+
+    HouseholdJoin:
+      type: object
+      required:
+        - token
+        - memberName
+      properties:
+        token:
+          type: string
+          format: uuid
+          example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+        memberName:
+          type: string
+          minLength: 1
+          maxLength: 100
+          example: "Max Mustermann"
+        memberAvatar:
+          type: string
+          format: base64
           example: "data:image/jpeg;base64,/9j/4AAQ..."
 
     MemberUpdate:

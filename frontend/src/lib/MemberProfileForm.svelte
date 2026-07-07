@@ -14,7 +14,19 @@
 		nameMinLength?: number;
 		serverEmailError?: string | null;
 		submitting?: boolean;
-		onformsubmit: (data: { name: string; email: string; avatar: string }) => void | Promise<void>;
+		requirePassword?: boolean;
+		passwordLabel?: string;
+		passwordPlaceholder?: string;
+		passwordConfirmLabel?: string;
+		passwordMismatchError?: string;
+		name?: string;
+		avatar?: string;
+		onformsubmit: (data: {
+			name: string;
+			email: string;
+			avatar: string;
+			password?: string;
+		}) => void | Promise<void>;
 		onback: () => void;
 		onClearEmailError?: () => void;
 	}
@@ -32,14 +44,22 @@
 		nameMinLength = 3,
 		serverEmailError = null,
 		submitting = false,
+		requirePassword = false,
+		passwordLabel,
+		passwordPlaceholder,
+		passwordConfirmLabel,
+		passwordMismatchError,
+		name = $bindable(''),
+		avatar = $bindable(''),
 		onformsubmit,
 		onback,
 		onClearEmailError
 	}: Props = $props();
 
-	let name = $state('');
 	let email = $state('');
-	let avatar = $state('');
+	let password = $state('');
+	let passwordConfirm = $state('');
+	let passwordMismatch = $state(false);
 	let emailInput: HTMLInputElement | undefined = $state();
 
 	$effect(() => {
@@ -64,7 +84,14 @@
 
 	function submit(event: SubmitEvent) {
 		event.preventDefault();
-		onformsubmit({ name, email, avatar });
+		if (requirePassword) {
+			if (password !== passwordConfirm) {
+				passwordMismatch = true;
+				return;
+			}
+			passwordMismatch = false;
+		}
+		onformsubmit({ name, email, avatar, password: requirePassword ? password : undefined });
 	}
 </script>
 
@@ -110,6 +137,39 @@
 		/>
 		<p class="validator-hint">{serverEmailError ?? emailHint}</p>
 	</fieldset>
+	{#if requirePassword}
+		<fieldset class="fieldset">
+			<legend class="fieldset-legend">{passwordLabel} *</legend>
+			<input
+				type="password"
+				aria-label={passwordLabel}
+				class="input-bordered validator input w-full"
+				minlength="8"
+				placeholder={passwordPlaceholder}
+				bind:value={password}
+				autocomplete="new-password"
+				required
+			/>
+		</fieldset>
+		<fieldset class="fieldset">
+			<legend class="fieldset-legend">{passwordConfirmLabel} *</legend>
+			<input
+				type="password"
+				aria-label={passwordConfirmLabel}
+				class="input-bordered validator input w-full"
+				minlength="8"
+				placeholder={passwordPlaceholder}
+				bind:value={passwordConfirm}
+				autocomplete="new-password"
+				required
+			/>
+			{#if passwordMismatch}
+				<div class="label">
+					<span class="label-text-alt text-error">{passwordMismatchError}</span>
+				</div>
+			{/if}
+		</fieldset>
+	{/if}
 	<div class="mt-4 flex justify-between gap-3">
 		<button type="button" class="btn flex-1 btn-outline" onclick={onback}>{backLabel}</button>
 		<button type="submit" class="btn flex-1 btn-primary" disabled={submitting}>

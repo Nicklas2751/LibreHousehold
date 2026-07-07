@@ -121,6 +121,14 @@ export function isValidEmail(email: string): boolean {
 }
 
 /**
+ * Navigates the browser to the OAuth2 authorization endpoint for the given social provider.
+ * Extracted so tests can mock the actual navigation instead of triggering it for real.
+ */
+export function navigateToSocialProvider(provider: string): void {
+	window.location.href = `/oauth2/authorization/${provider}`;
+}
+
+/**
  * Reads a file and converts it to a base64 data URL
  */
 export function readFileAsDataURL(file: File): Promise<string> {

@@ -28,6 +28,8 @@ import org.springframework.security.oauth2.server.authorization.OAuth2Authorizat
 import org.springframework.security.oauth2.server.authorization.client.InMemoryRegisteredClientRepository;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClient;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository;
+import org.springframework.security.web.util.matcher.DispatcherTypeRequestMatcher;
+import jakarta.servlet.DispatcherType;
 import org.springframework.security.oauth2.server.authorization.settings.ClientSettings;
 import org.springframework.security.oauth2.server.authorization.settings.TokenSettings;
 import org.springframework.security.web.SecurityFilterChain;
@@ -119,6 +121,11 @@ class AuthorizationServerConfig {
                         // It's safe to disable CSRF for the API since we use header based JWT Authentication
                         .ignoringRequestMatchers("/v1/**"))
                 .authorizeHttpRequests(registry -> registry
+                        // ERROR-dispatched requests must stay permitAll: an ErrorResponseException (e.g.
+                        // InvalidInviteException) resolved on a permitAll endpoint triggers an internal
+                        // forward to the error dispatcher, which would otherwise be blocked by
+                        // anyRequest().authenticated() and mask the real status code with a 401/302.
+                        .requestMatchers(new DispatcherTypeRequestMatcher(DispatcherType.ERROR)).permitAll()
                         .requestMatchers("/v1/auth/providers", "/v1/auth/register", "/v1/invite/**").permitAll()
                         .anyRequest().authenticated())
                 .formLogin(form -> form

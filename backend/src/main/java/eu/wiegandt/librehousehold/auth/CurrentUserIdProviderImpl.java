@@ -1,5 +1,6 @@
 package eu.wiegandt.librehousehold.auth;
 
+import eu.wiegandt.librehousehold.core.CurrentUserIdProvider;
 import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
@@ -8,8 +9,9 @@ import org.springframework.stereotype.Component;
 import java.util.UUID;
 
 @Component
-public class CurrentUserIdProvider {
+class CurrentUserIdProviderImpl implements CurrentUserIdProvider {
 
+    @Override
     public UUID getCurrentUserId() {
         var auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth instanceof JwtAuthenticationToken jwtAuth) {

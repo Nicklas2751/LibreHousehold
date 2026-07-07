@@ -1,14 +1,20 @@
 package eu.wiegandt.librehousehold.household.service;
-import eu.wiegandt.librehousehold.household.HouseholdDeleted;
+
+import eu.wiegandt.librehousehold.core.AccountRegistration;
 import eu.wiegandt.librehousehold.household.MemberEmailChanged;
 import eu.wiegandt.librehousehold.household.MemberRemoved;
-import eu.wiegandt.librehousehold.household.exception.*;
-import eu.wiegandt.librehousehold.household.mapper.*;
-import eu.wiegandt.librehousehold.household.model.*;
-import eu.wiegandt.librehousehold.household.repository.*;
-
+import eu.wiegandt.librehousehold.household.exception.InvalidInviteException;
+import eu.wiegandt.librehousehold.household.exception.MemberAlreadyExistsException;
+import eu.wiegandt.librehousehold.household.exception.MemberNotFoundException;
+import eu.wiegandt.librehousehold.household.mapper.MemberMapper;
+import eu.wiegandt.librehousehold.household.model.InviteEntity;
+import eu.wiegandt.librehousehold.household.model.MemberEntity;
+import eu.wiegandt.librehousehold.household.model.MemberNameProjection;
+import eu.wiegandt.librehousehold.household.repository.HouseholdRepository;
+import eu.wiegandt.librehousehold.household.repository.InviteRepository;
+import eu.wiegandt.librehousehold.household.repository.MemberRepository;
+import eu.wiegandt.librehousehold.model.LocalMemberRegistration;
 import eu.wiegandt.librehousehold.model.Member;
-import eu.wiegandt.librehousehold.model.MemberRegistration;
 import eu.wiegandt.librehousehold.model.MemberUpdate;
 import org.instancio.Instancio;
 import org.instancio.Model;
@@ -17,12 +23,13 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mapstruct.factory.Mappers;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
-
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.LocalDate;
 import java.util.*;
@@ -50,6 +57,12 @@ class MemberManagementServiceTest {
 
     @Mock
     private ApplicationEventPublisher eventPublisher;
+
+    @Mock
+    private AccountRegistration accountRegistration;
+
+    @Mock
+    private PasswordEncoder passwordEncoder;
 
     @InjectMocks
     private MemberManagementService service;
@@ -172,17 +185,17 @@ class MemberManagementServiceTest {
     }
 
     @Nested
-    class joinHousehold {
+    class joinHouseholdLocal {
 
         @Test
         void tokenNotFound_throwsInvalidInviteException() {
             // given
             var token = UUID.randomUUID();
-            var registration = Instancio.create(MemberRegistration.class);
+            var registration = Instancio.create(LocalMemberRegistration.class);
             doReturn(Optional.empty()).when(inviteRepository).findByToken(token);
 
             // when / then
-            assertThatThrownBy(() -> service.joinHousehold(token, registration))
+            assertThatThrownBy(() -> service.joinHouseholdLocal(token, registration))
                     .isInstanceOf(InvalidInviteException.class);
         }
 
@@ -190,15 +203,58 @@ class MemberManagementServiceTest {
         void tokenExpired_throwsInvalidInviteException() {
             // given
             var token = UUID.randomUUID();
-            var registration = Instancio.create(MemberRegistration.class);
+            var registration = Instancio.create(LocalMemberRegistration.class);
             var expiredInvite = Instancio.of(InviteEntity.class)
                     .set(field(InviteEntity::validUntil), LocalDate.now().minusDays(1))
                     .create();
             doReturn(Optional.of(expiredInvite)).when(inviteRepository).findByToken(token);
 
             // when / then
-            assertThatThrownBy(() -> service.joinHousehold(token, registration))
+            assertThatThrownBy(() -> service.joinHouseholdLocal(token, registration))
                     .isInstanceOf(InvalidInviteException.class);
+        }
+
+        @Test
+        void validToken_registersAccountViaPortWithGeneratedIdAndEncodedPassword() {
+            // given
+            var token = UUID.randomUUID();
+            var registration = Instancio.create(LocalMemberRegistration.class);
+            var encodedPassword = "encoded-hash";
+            var invite = Instancio.of(InviteEntity.class)
+                    .set(field(InviteEntity::validUntil), LocalDate.now().plusDays(3))
+                    .create();
+            var savedEntity = Instancio.of(memberEntityModel).create();
+            doReturn(Optional.of(invite)).when(inviteRepository).findByToken(token);
+            doReturn(encodedPassword).when(passwordEncoder).encode(registration.getPassword());
+            doReturn(savedEntity).when(memberRepository).save(any(MemberEntity.class));
+
+            // when
+            service.joinHouseholdLocal(token, registration);
+
+            // then
+            verify(accountRegistration).registerLocalAccount(
+                    any(UUID.class), eq(registration.getEmail()), eq(encodedPassword));
+        }
+
+        @Test
+        void validToken_savesMemberWithSameIdAsRegisteredAccount() {
+            // given
+            var token = UUID.randomUUID();
+            var registration = Instancio.create(LocalMemberRegistration.class);
+            var invite = Instancio.of(InviteEntity.class)
+                    .set(field(InviteEntity::validUntil), LocalDate.now().plusDays(3))
+                    .create();
+            var savedEntity = Instancio.of(memberEntityModel).create();
+            doReturn(Optional.of(invite)).when(inviteRepository).findByToken(token);
+            doReturn(savedEntity).when(memberRepository).save(any(MemberEntity.class));
+
+            // when
+            service.joinHouseholdLocal(token, registration);
+
+            // then
+            var accountIdCaptor = ArgumentCaptor.forClass(UUID.class);
+            verify(accountRegistration).registerLocalAccount(accountIdCaptor.capture(), any(), any());
+            verify(memberRepository).save(argThat(e -> e.id().equals(accountIdCaptor.getValue())));
         }
 
         @Test
@@ -206,7 +262,7 @@ class MemberManagementServiceTest {
             // given
             var token = UUID.randomUUID();
             var householdId = UUID.randomUUID();
-            var registration = Instancio.create(MemberRegistration.class);
+            var registration = Instancio.create(LocalMemberRegistration.class);
             var invite = Instancio.of(InviteEntity.class)
                     .set(field(InviteEntity::householdId), householdId)
                     .set(field(InviteEntity::validUntil), LocalDate.now().plusDays(3))
@@ -216,11 +272,82 @@ class MemberManagementServiceTest {
             doReturn(savedEntity).when(memberRepository).save(any(MemberEntity.class));
 
             // when
-            service.joinHousehold(token, registration);
+            service.joinHouseholdLocal(token, registration);
 
             // then
             verify(memberRepository).save(argThat(e ->
                     e.householdId().equals(householdId) && !e.isAdmin()
+            ));
+        }
+    }
+
+    @Nested
+    class joinHouseholdAuthenticated {
+
+        @Test
+        void accountAlreadyMember_throwsMemberAlreadyExistsException() {
+            // given
+            var accountId = UUID.randomUUID();
+            var token = UUID.randomUUID();
+            doReturn(true).when(memberRepository).existsById(accountId);
+
+            // when / then
+            assertThatThrownBy(() -> service.joinHouseholdAuthenticated(accountId, token, "Max Mustermann", null))
+                    .isInstanceOf(MemberAlreadyExistsException.class);
+            verify(inviteRepository, never()).findByToken(any());
+        }
+
+        @Test
+        void tokenNotFound_throwsInvalidInviteException() {
+            // given
+            var accountId = UUID.randomUUID();
+            var token = UUID.randomUUID();
+            doReturn(false).when(memberRepository).existsById(accountId);
+            doReturn(Optional.empty()).when(inviteRepository).findByToken(token);
+
+            // when / then
+            assertThatThrownBy(() -> service.joinHouseholdAuthenticated(accountId, token, "Max Mustermann", null))
+                    .isInstanceOf(InvalidInviteException.class);
+        }
+
+        @Test
+        void tokenExpired_throwsInvalidInviteException() {
+            // given
+            var accountId = UUID.randomUUID();
+            var token = UUID.randomUUID();
+            var expiredInvite = Instancio.of(InviteEntity.class)
+                    .set(field(InviteEntity::validUntil), LocalDate.now().minusDays(1))
+                    .create();
+            doReturn(false).when(memberRepository).existsById(accountId);
+            doReturn(Optional.of(expiredInvite)).when(inviteRepository).findByToken(token);
+
+            // when / then
+            assertThatThrownBy(() -> service.joinHouseholdAuthenticated(accountId, token, "Max Mustermann", null))
+                    .isInstanceOf(InvalidInviteException.class);
+        }
+
+        @Test
+        void validRequest_savesMemberWithGivenAccountIdHouseholdIdFromTokenAndIsAdminFalse() {
+            // given
+            var accountId = UUID.randomUUID();
+            var token = UUID.randomUUID();
+            var householdId = UUID.randomUUID();
+            var invite = Instancio.of(InviteEntity.class)
+                    .set(field(InviteEntity::householdId), householdId)
+                    .set(field(InviteEntity::validUntil), LocalDate.now().plusDays(3))
+                    .create();
+            var savedEntity = Instancio.of(memberEntityModel).create();
+            doReturn(false).when(memberRepository).existsById(accountId);
+            doReturn(Optional.of(invite)).when(inviteRepository).findByToken(token);
+            doReturn(savedEntity).when(memberRepository).save(any(MemberEntity.class));
+
+            // when
+            service.joinHouseholdAuthenticated(accountId, token, "Max Mustermann", null);
+
+            // then
+            verify(memberRepository).save(argThat(e ->
+                    e.id().equals(accountId) && e.householdId().equals(householdId)
+                            && e.name().equals("Max Mustermann") && !e.isAdmin()
             ));
         }
     }

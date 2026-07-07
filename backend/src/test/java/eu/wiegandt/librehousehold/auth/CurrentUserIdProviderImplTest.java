@@ -13,9 +13,9 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-class CurrentUserIdProviderTest {
+class CurrentUserIdProviderImplTest {
 
-    private final CurrentUserIdProvider provider = new CurrentUserIdProvider();
+    private final CurrentUserIdProviderImpl provider = new CurrentUserIdProviderImpl();
 
     @AfterEach
     void clearSecurityContext() {

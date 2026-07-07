@@ -1,13 +1,13 @@
 package eu.wiegandt.librehousehold.household.controller;
 
 import eu.wiegandt.librehousehold.api.MembersApiDelegate;
+import eu.wiegandt.librehousehold.core.CurrentUserIdProvider;
+import eu.wiegandt.librehousehold.core.SessionEstablishment;
 import eu.wiegandt.librehousehold.household.service.MemberManagementService;
-import org.springframework.security.access.prepost.PreAuthorize;
-import eu.wiegandt.librehousehold.model.InviteInfo;
-import eu.wiegandt.librehousehold.model.Member;
-import eu.wiegandt.librehousehold.model.MemberRegistration;
-import eu.wiegandt.librehousehold.model.MemberUpdate;
+import eu.wiegandt.librehousehold.model.*;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Component;
 
 import java.net.URI;
@@ -18,9 +18,15 @@ import java.util.UUID;
 public class MembersApiDelegateImpl implements MembersApiDelegate {
 
     private final MemberManagementService memberManagementService;
+    private final SessionEstablishment sessionEstablishment;
+    private final CurrentUserIdProvider currentUserIdProvider;
 
-    public MembersApiDelegateImpl(MemberManagementService memberManagementService) {
+    public MembersApiDelegateImpl(MemberManagementService memberManagementService,
+                                  SessionEstablishment sessionEstablishment,
+                                  CurrentUserIdProvider currentUserIdProvider) {
         this.memberManagementService = memberManagementService;
+        this.sessionEstablishment = sessionEstablishment;
+        this.currentUserIdProvider = currentUserIdProvider;
     }
 
     @Override
@@ -41,10 +47,20 @@ public class MembersApiDelegateImpl implements MembersApiDelegate {
     }
 
     @Override
-    public ResponseEntity<Member> joinHousehold(UUID token, MemberRegistration memberRegistration) {
-        var member = memberManagementService.joinHousehold(token, memberRegistration);
+    public ResponseEntity<Member> joinHousehold(UUID token, LocalMemberRegistration localMemberRegistration) {
+        var member = memberManagementService.joinHouseholdLocal(token, localMemberRegistration);
+        sessionEstablishment.establishSession(localMemberRegistration.getEmail());
         return ResponseEntity.created(URI.create("/household/" + member.getId() + "/members/" + member.getId()))
                 .body(member);
+    }
+
+    @Override
+    public ResponseEntity<Member> joinHouseholdAuthenticated(HouseholdJoin householdJoin) {
+        var accountId = currentUserIdProvider.getCurrentUserId();
+        var member = memberManagementService.joinHouseholdAuthenticated(
+                accountId, householdJoin.getToken(), householdJoin.getMemberName(),
+                householdJoin.getMemberAvatar().orElse(null));
+        return ResponseEntity.status(HttpStatus.CREATED).body(member);
     }
 
     @Override

@@ -28,7 +28,8 @@ import static org.assertj.core.api.InstanceOfAssertFactories.list;
 class AuthorizationServerIT {
 
     private static final ParameterizedTypeReference<Map<String, Object>> DISCOVERY_DOC_TYPE =
-            new ParameterizedTypeReference<>() {};
+            new ParameterizedTypeReference<>() {
+            };
 
     @Autowired
     private RestTestClient restTestClient;
@@ -71,8 +72,8 @@ class AuthorizationServerIT {
 
         private static Stream<Arguments> discoveryDocumentListClaims() {
             return Stream.of(
-                    Arguments.of("grant_types_supported",            new String[]{"authorization_code", "refresh_token"}),
-                    Arguments.of("scopes_supported",                 new String[]{"openid"}),
+                    Arguments.of("grant_types_supported", new String[]{"authorization_code", "refresh_token"}),
+                    Arguments.of("scopes_supported", new String[]{"openid"}),
                     Arguments.of("code_challenge_methods_supported", new String[]{"S256"})
             );
         }
@@ -96,9 +97,17 @@ class AuthorizationServerIT {
 
         @Test
         void redirectsUnauthenticatedHtmlRequestToLoginPage() {
-            // given / when
+            // when
             var response = restTestClient.get()
-                    .uri("/oauth2/authorize")
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/oauth2/authorize")
+                            .queryParam("response_type", "code")
+                            .queryParam("client_id", "librehousehold-spa")
+                            .queryParam("redirect_uri", "http://localhost:5173/callback")
+                            .queryParam("scope", "openid")
+                            .queryParam("code_challenge", "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM")
+                            .queryParam("code_challenge_method", "S256")
+                            .build())
                     .header(HttpHeaders.ACCEPT, MediaType.TEXT_HTML_VALUE)
                     .exchange();
 

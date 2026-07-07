@@ -5,7 +5,7 @@
 	import { CopyIcon } from '@indaco/svelte-iconoir/copy';
 	import { ShareIosIcon } from '@indaco/svelte-iconoir/share-ios';
 	import { QRCode } from '@castlenine/svelte-qrcode';
-	import { HouseholdApi } from '../../generated-sources/openapi';
+	import { HouseholdApi, MembersApi } from '../../generated-sources/openapi';
 	import { createApiConfig } from '$lib/api';
 	import {
 		generateInviteUrl,
@@ -16,13 +16,19 @@
 	import { Toast } from '$lib/toast';
 	import { m } from '$lib/paraglide/messages.js';
 	import { updateHouseholdState } from '$lib/stores/householdState.svelte';
+	import { updateUserState } from '$lib/stores/userState';
 
 	let error = $state<string | null>(null);
 	let setupComplete = $state(false);
+	let joinComplete = $state(false);
+	let joinedHouseholdName = $state('');
 	let inviteUrl = $state('');
 
 	function canBrowserShare(): boolean {
-		const shareData = createInviteLinkShareData(inviteUrl, m['setup.finish_step.invite_link_share_text']());
+		const shareData = createInviteLinkShareData(
+			inviteUrl,
+			m['setup.finish_step.invite_link_share_text']()
+		);
 		return checkCanBrowserShareInviteLink(shareData);
 	}
 
@@ -33,20 +39,27 @@
 	}
 
 	async function shareInviteLink() {
-		const shareData = createInviteLinkShareData(inviteUrl, m['setup.finish_step.invite_link_share_text']());
-		await navigator.share(shareData).then(() => {
-			addToast(new Toast(m['setup.finish_step.invite_link_shared_toast'](), 'success'));
-		}).catch((err) => {
-			addToast(new Toast(m['setup.finish_step.invite_link_cant_shared_toast'](err), 'error'));
-		});
+		const shareData = createInviteLinkShareData(
+			inviteUrl,
+			m['setup.finish_step.invite_link_share_text']()
+		);
+		await navigator
+			.share(shareData)
+			.then(() => {
+				addToast(new Toast(m['setup.finish_step.invite_link_shared_toast'](), 'success'));
+			})
+			.catch((err) => {
+				addToast(new Toast(m['setup.finish_step.invite_link_cant_shared_toast'](err), 'error'));
+			});
 	}
 
 	onMount(async () => {
 		try {
 			await handleCallback();
-			const raw = sessionStorage.getItem('lh_pending_setup');
-			if (raw) {
-				const { householdName, householdImage, memberName } = JSON.parse(raw);
+			const pendingSetup = sessionStorage.getItem('lh_pending_setup');
+			const pendingJoin = sessionStorage.getItem('lh_pending_join');
+			if (pendingSetup) {
+				const { householdName, householdImage, memberName } = JSON.parse(pendingSetup);
 				const authUser = getUser()!;
 				const householdApi = new HouseholdApi(createApiConfig());
 				const response = await householdApi.setupHousehold({
@@ -60,6 +73,18 @@
 				inviteUrl = generateInviteUrl(baseUrl, response.inviteToken);
 				updateHouseholdState(response.household);
 				setupComplete = true;
+			} else if (pendingJoin) {
+				const { token, memberName, memberAvatar, householdId, householdName } =
+					JSON.parse(pendingJoin);
+				const membersApi = new MembersApi(createApiConfig());
+				const member = await membersApi.joinHouseholdAuthenticated({
+					householdJoin: { token, memberName, memberAvatar: memberAvatar || undefined }
+				});
+				sessionStorage.removeItem('lh_pending_join');
+				updateHouseholdState({ id: householdId, name: householdName });
+				updateUserState(member);
+				joinedHouseholdName = householdName;
+				joinComplete = true;
 			} else {
 				await goto('/app/dashboard');
 			}
@@ -77,7 +102,9 @@
 	{:else if setupComplete}
 		<div class="md:card md:w-96 md:bg-base-100 md:shadow-sm">
 			<div class="md:card-body flex flex-col gap-4">
-				<h2 class="text-xl font-bold text-base-content">{m['setup.callback_setup_success.title']()}</h2>
+				<h2 class="text-xl font-bold text-base-content">
+					{m['setup.callback_setup_success.title']()}
+				</h2>
 				<p>{m['setup.callback_setup_success.invite_text']()}</p>
 				<QRCode isResponsive={true} dispatchDownloadUrl={true} data={inviteUrl} />
 				<div class="join">
@@ -96,6 +123,16 @@
 				</div>
 				<button class="btn btn-primary w-full" onclick={() => goto('/app/dashboard')}>
 					{m['setup.callback_setup_success.dashboard_button']()}
+				</button>
+			</div>
+		</div>
+	{:else if joinComplete}
+		<div class="md:card md:w-96 md:bg-base-100 md:shadow-sm">
+			<div class="md:card-body flex flex-col gap-4">
+				<h2 class="text-xl font-bold text-base-content">{m['invite.success_title']()}</h2>
+				<p>{m['invite.success_text']({ name: joinedHouseholdName })}</p>
+				<button class="btn btn-primary w-full" onclick={() => goto('/app/dashboard')}>
+					{m['invite.success_button']()}
 				</button>
 			</div>
 		</div>

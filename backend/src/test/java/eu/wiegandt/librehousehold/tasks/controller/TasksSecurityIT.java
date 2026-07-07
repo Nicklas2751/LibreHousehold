@@ -1,7 +1,7 @@
 package eu.wiegandt.librehousehold.tasks.controller;
 
 import eu.wiegandt.librehousehold.api.TasksApiController;
-import eu.wiegandt.librehousehold.auth.CurrentUserIdProvider;
+import eu.wiegandt.librehousehold.core.CurrentUserIdProvider;
 import eu.wiegandt.librehousehold.auth.MethodSecurityTestConfig;
 import eu.wiegandt.librehousehold.tasks.service.TaskService;
 import org.junit.jupiter.api.Nested;

@@ -2,7 +2,9 @@ package eu.wiegandt.librehousehold.household.controller;
 
 import eu.wiegandt.librehousehold.api.MembersApiController;
 import eu.wiegandt.librehousehold.auth.MethodSecurityTestConfig;
+import eu.wiegandt.librehousehold.core.CurrentUserIdProvider;
 import eu.wiegandt.librehousehold.core.ResourceOwnerQuery;
+import eu.wiegandt.librehousehold.core.SessionEstablishment;
 import eu.wiegandt.librehousehold.household.service.MemberManagementService;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -21,9 +23,7 @@ import java.util.UUID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(controllers = MembersApiController.class)
@@ -39,6 +39,12 @@ class MembersSecurityIT {
 
     @MockitoBean
     ResourceOwnerQuery resourceOwnerQuery;
+
+    @MockitoBean
+    SessionEstablishment sessionEstablishment;
+
+    @MockitoBean
+    CurrentUserIdProvider currentUserIdProvider;
 
     @Nested
     class getMembers {
