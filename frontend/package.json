@@ -23,7 +23,7 @@
 		"@inlang/paraglide-js": "^2.20.2",
 		"@openapitools/openapi-generator-cli": "^2.39.1",
 		"@sveltejs/adapter-auto": "^7.0.0",
-		"@sveltejs/kit": "^2.69.0",
+		"@sveltejs/kit": "^2.69.1",
 		"@sveltejs/vite-plugin-svelte": "^7.1.2",
 		"@tailwindcss/vite": "^4.3.2",
 		"@types/node": "^26",
