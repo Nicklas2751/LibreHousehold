@@ -1,0 +1,69 @@
+:jbake-title: ADR 012: Account-Household cardinality (1:1)
+:jbake-type: page_toc
+:jbake-status: published
+:jbake-menu: adrs
+:jbake-order: 12
+
+[[adr-012]]
+= ADR 012: Account-Household cardinality (1:1)
+
+== Context
+
+Implementing authentication requires a decision about the relationship between an *account* (login identity: e-mail + password) and a *household*.
+Real-world usage patterns exist where a person is part of more than one household at the same time (moving between a shared flat and a family home, a second residence, ...), which would argue for an account that can belong to several households independently.
+
+This decision also determines module boundaries: if an account can belong to multiple households, it is an independent concept that outlives any single household membership and arguably deserves its own module. If an account is scoped to exactly one household, it is just an attribute of a membership and can stay inside the `household` module, where `AccountRegistration`/`MemberManagementService` already live.
+
+The decision was deferred as an open question (see `AGENTS.md`, "Account & Email Model") until authentication needed to be implemented.
+
+== Considered Options
+
+Option A: 1 Account : 1 Household; Option B: 1 Account : N Households
+
+== Decision Outcome
+
+Option A is chosen: an account is scoped to exactly one household. There is no cross-household login; a person who is active in two households needs two separate accounts.
+
+This keeps `AccountRegistration` where it already is — inside the `household` module, as part of the membership lifecycle — instead of introducing a separate Account/Identity module purely to support a scenario the product does not need yet xref:../chapters/01_introduction_and_goals.adoc#QG4[(QG4 - Maintainable)]. It follows the same KISS/YAGNI reasoning already applied in xref:adr-011.adoc[ADR 011]: build for the multi-household case when it is actually required, not speculatively.
+
+== Pros and Cons of the Options
+
+.Overview of the pros and cons of the considered options
+[cols="2a,2a"]
+|===
+|Pros |Cons
+
+2+^s|Option A: 1 Account : 1 Household (chosen)
+
+|
+- No new module: `AccountRegistration` stays a natural part of the `household` module's membership lifecycle
+- System-wide e-mail uniqueness falls out for free — one e-mail identifies exactly one account/household, no per-household scoping logic needed
+- Simplest possible model for the current product scope
+|
+- A person active in multiple households (shared flat + family home, ...) needs a separate account per household — no single login across households
+- Revisiting this later means extracting Account into an independent concept and migrating existing memberships
+
+2+^s|Option B: 1 Account : N Households
+
+|
+- Matches real-world multi-household usage without workarounds
+- Login identity is decoupled from any single household's lifecycle
+|
+- Requires a genuine Account/Identity module (or Named Interface) independent of `household`, adding a module boundary for a scenario that is not yet a validated requirement
+- Complicates e-mail uniqueness (globally unique account vs. per-household membership) and the setup/invite flow
+- Speculative complexity: no current user story requires it
+
+|===
+
+== Consequences
+
+**Positive:**
+
+- `household` remains the single place responsible for account registration and membership — no premature Account/Identity module.
+- E-mail uniqueness stays a simple system-wide UNIQUE constraint on `member.email`.
+- The setup wizard and registration flow have an unambiguous rule: an e-mail with an existing account can never start a second household — this must be rejected with a clear, actionable error instead of a generic 409 (see `AGENTS.md`, "Missing endpoint").
+
+**Negative:**
+
+- Multi-household usage by a single person is explicitly out of scope; users must register a distinct account per household.
+- If multi-household support is ever required, this is a breaking model change: Account needs to be extracted from `household` into its own concept, and every place that currently treats "account" and "household member" as the same thing needs to be revisited.

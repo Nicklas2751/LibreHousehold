@@ -13,25 +13,69 @@
 [[section-technical-risks]]
 == Risks and Technical Debts
 
+This chapter collects the technical risks and technical debts that have already surfaced elsewhere in this documentation (ADRs, Chapter 5) and in the project's implementation notes, so they are visible in one place instead of scattered across individual decision records. Each entry is ordered by priority within its table and links back to where it was originally identified.
 
-ifdef::arc42help[]
-[role="arc42help"]
-****
-.Contents
-A list of identified technical risks or technical debts, ordered by priority
+* A **Technical Debt** is a known, already-accepted shortcut or gap in the current implementation.
+* A **Risk** is something that has not happened yet but could, if the architecture is not watched.
 
-.Motivation
-“Risk management is project management for grown-ups” (Tim Lister, Atlantic Systems Guild.) 
+=== Technical Debt
 
-This should be your motto for systematic detection and evaluation of risks and technical debts in the architecture, which will be needed by management stakeholders (e.g. project managers, product owners) as part of the overall risk analysis and measurement planning.
+[cols="1,4,2,1,3", options="header"]
+|===
+|ID |Description |Affects |Priority |Mitigation / Next Step
 
-.Form
-List of risks and/or technical debts, probably including suggested measures to minimize, mitigate or avoid risks or reduce technical debts.
+|TD1
+|Module boundaries are not yet technically enforced: no `package-info.java` with `@ApplicationModule(allowedDependencies = ...)` exists in the backend yet, even though xref:../adrs/adr-011.adoc[ADR 011] mandates explicit, declared dependencies between modules. Right now, nothing but code review discipline stops a module from importing another module's internals.
+|xref:01_introduction_and_goals.adoc#QG4[QG4 - Maintainable]
+|High
+|Add `package-info.java` per module declaring `allowedDependencies`, and add a `ApplicationModules.verify()` test so violations fail the build, as already specified in ADR 011.
 
+|TD2
+|No server-side limit on uploaded image size: `server.tomcat.max-http-post-size` is set to unbounded (`-1`) and the OpenAPI `image`/`avatar` fields have no `maxLength` constraint, so a client can currently upload an arbitrarily large base64-encoded image.
+|xref:01_introduction_and_goals.adoc#QG2[QG2 - Secure]
+|High
+|Enforce a maximum image size (recommended: 5 MB) via Bean Validation or a servlet filter.
 
-.Further Information
+|TD3
+|No image content validation: uploaded `image`/`avatar` base64 payloads are not checked to actually be a valid JPEG/PNG/WebP file (no magic-byte or MIME-type detection).
+|xref:01_introduction_and_goals.adoc#QG2[QG2 - Secure]
+|Medium
+|Add magic-byte or MIME-type detection before persisting an uploaded image.
 
-See https://docs.arc42.org/section-11/[Risks and Technical Debt] in the arc42 documentation.
+|TD4
+|`tasks` and `expenses` have a compile-time dependency on `household`'s public interfaces (Named Interfaces). This is an intentional, accepted trade-off (see xref:../adrs/adr-011.adoc[ADR 011]), not an oversight.
+|xref:01_introduction_and_goals.adoc#QG4[QG4 - Maintainable]
+|Low _(accepted)_
+|No action needed now. Keep the interfaces narrow (see xref:05_building_block_view.adoc#section-subdomain-classification[Chapter 5, Bounded Context Map]) so extraction to microservices stays cheap if that is ever needed.
+|===
 
-****
-endif::arc42help[]
+=== Risks
+
+[cols="1,4,2,1,3", options="header"]
+|===
+|ID |Description |Affects |Priority |Mitigation / Next Step
+
+|R1
+|`Household`'s Named Interfaces could grow into a coupling bottleneck if future consumers are given bespoke, per-consumer query methods instead of narrow, generic ones (see xref:05_building_block_view.adoc[Chapter 5, Bounded Context Map]).
+|xref:01_introduction_and_goals.adoc#QG4[QG4 - Maintainable]
+|Medium
+|Review new Named Interface methods for genuine reuse before adding them; if the interface grows wide, redesign it rather than splitting `Household`.
+
+|R2
+|The eventual-consistency window between a producing transaction's commit and the asynchronous `@ApplicationModuleListener` execution (xref:../adrs/adr-011.adoc[ADR 011]) could silently be relied upon somewhere that actually needs immediate consistency.
+|xref:01_introduction_and_goals.adoc#QG2[QG2 - Secure], xref:01_introduction_and_goals.adoc#QG4[QG4 - Maintainable]
+|Medium
+|Enforce in code review: Domain Events are for reactive cleanup/notifications only, never for logic that needs read-your-write consistency within the same request.
+
+|R3
+|The 1 Account : 1 Household model (xref:../adrs/adr-012.adoc[ADR 012]) is a deliberate scope decision. If multi-household usage under a single login is ever required, this becomes a breaking model change (extracting `Account` out of `household`).
+|xref:01_introduction_and_goals.adoc#QG4[QG4 - Maintainable]
+|Low
+|No action needed now; revisit only if this product requirement actually materializes.
+
+|R4
+|Java is more verbose than modern alternatives such as Kotlin (accepted trade-off in xref:../adrs/adr-002.adoc[ADR 002]), which can increase boilerplate and slow down new contributors.
+|xref:01_introduction_and_goals.adoc#QG4[QG4 - Maintainable]
+|Low
+|Favor idiomatic modern Java (records, `var`, pattern matching) to keep boilerplate low; no framework change planned.
+|===

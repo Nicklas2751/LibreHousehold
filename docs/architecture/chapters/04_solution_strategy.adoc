@@ -37,5 +37,7 @@
 - xref:../adrs/adr-004.adoc[ADR 004 - Modular Monolith (Modulith) as architecture style]
 - xref:../adrs/adr-006.adoc[ADR 006 - Progressive Web App (PWA) for the Frontend]
 - xref:../adrs/adr-008.adoc[ADR 008 - TypeScript as the main language for frontend development]
+- xref:../adrs/adr-011.adoc[ADR 011 - Cross-Module Communication Strategy]
+- xref:../adrs/adr-012.adoc[ADR 012 - Account-Household cardinality (1:1)]
 |===
 // end::solution-strategy-mapping[]

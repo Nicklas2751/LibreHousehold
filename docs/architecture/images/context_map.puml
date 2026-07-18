@@ -1,0 +1,52 @@
+@startuml
+left to right direction
+skinparam componentFontColor automatic
+skinparam component {
+  backgroundColor<<core>> #B3E5C1
+  backgroundColor<<supporting>> #FFE9A8
+  backgroundColor<<generic>> #D6D6D6
+}
+skinparam nodesep 30
+skinparam ranksep 40
+
+package "Backend" {
+    component "Household" <<core>> as household
+    component "Tasks" <<core>> as tasks
+    component "Expenses" <<core>> as expenses
+    component "Statistics" <<supporting>> as statistics
+    component "Setup" <<supporting>> as setup
+    component "Administration\n(planned)" <<supporting>> as administration
+    component "UserSettings" <<generic>> as usersettings
+    component "Notifications\n(planned)" <<generic>> as notifications
+}
+
+tasks -> household : Named Interface\n(MemberQuery)
+expenses -> household : Named Interface\n(MemberQuery)
+statistics -> household : Named Interface\n(HouseholdQuery)
+statistics -> expenses : Named Interface\n(financial aggregation)
+
+household ..> tasks : Domain Event\n(HouseholdDeleted, MemberRemoved)
+household ..> expenses : Domain Event\n(HouseholdDeleted, MemberRemoved)
+household ..> notifications : Domain Event\n(planned)
+
+note bottom of household
+  Household is the central reference point for membership.
+  The inbound arrows are deliberately kept narrow
+  (only exists()/membership queries) - see ADR-011.
+end note
+
+note as N1
+  Authentication/Authorization is deliberately **not** shown as
+  its own bounded context on this map; it is treated as a
+  cross-cutting concern instead (see Chapter 8, Cross-cutting
+  Concepts).
+end note
+
+note as N2
+  Colour = subdomain type: Core (green) / Supporting (yellow) / Generic (grey)
+  Solid arrow = Named Interface (synchronous query)
+  Dotted arrow = Domain Event (reactive)
+  "(planned)" = module exists only as an empty scaffold, not yet implemented
+end note
+
+@enduml

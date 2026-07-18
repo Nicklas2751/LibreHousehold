@@ -18,3 +18,12 @@ Architecture Decision Records (ADRs) are a way to document important architectur
 === Modular Monolith (Modulith)
 
 A modular monolith, or "modulith", is an architectural style where the application is structured into distinct modules within a single deployable unit. Each module encapsulates specific functionality and can interact with other modules through well-defined interfaces. This approach combines the benefits of modularity with the simplicity of a monolithic deployment. For more information see the https://spring.io/blog/2022/10/21/introducing-spring-modulith[Spring Modulith blog post] or https://entwickler.de/software-architektur/microservices-oder-monolithen-beides[this german Entwickler.de article about moduliths].
+
+=== Authentication and Authorization
+
+Authentication and authorization are treated as a cross-cutting concern rather than a bounded context in xref:05_building_block_view.adoc[Chapter 5]: they have no ubiquitous language relevant to household members and exist purely to support every other module, not to model household business. Concretely, this has two consequences for how the code is structured:
+
+* **No dedicated "Authentication" module in the building block view.** Framework-level building blocks (password hashing, session/token issuance, security filters) are infrastructure, documented here rather than listed as a fachliches module alongside `Tasks` or `Expenses`.
+* **Framework/utility types are injected directly, not wrapped in a Named Interface.** A generic Spring bean type such as `PasswordEncoder` is not a module-owned construct, so any module may inject it directly — the same way `ApplicationEventPublisher` is already used directly across modules. Introducing a `core` Named Interface (e.g. a `PasswordEncoding` abstraction) purely to let another module reuse a framework type would add an `ApplicationModule` dependency (verified by Spring Modulith) for no domain benefit and is deliberately avoided. Named Interfaces (xref:../adrs/adr-011.adoc[ADR 011]) are reserved for genuine domain operations of a module — such as `AccountRegistration` in `Household` — not for technical helpers.
+
+The one genuine domain operation in this area, registering an account as part of a household membership, is therefore not part of an "auth module" at all — it lives in `Household`, where the 1:1 account-household relationship was decided in xref:../adrs/adr-012.adoc[ADR 012].

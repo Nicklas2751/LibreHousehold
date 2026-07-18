@@ -22,17 +22,38 @@ plantuml::{imagesdir}/building_block_level1.puml[format=svg, alt="Building Block
 
 LibreHousehold breaks down into two subsystems with multiple modules as shown above. The arrows indicate logical dependencies between the modules. The squared boxes on the membrane of the subsystems indicate ports. Modules shown in both subsystems with the same name are responsible for the same topic and can be seen as one module split into two parts. These modules don't share any code but communicate via the defined ports.
 
-[cols="1,2" options="header"]
+[cols="1,2,1" options="header"]
 |===
-| **Name** | **Responsibility**
-|Progressive Web App (PWA) |The PWA is the user interface of LibreHousehold. It is responsible for displaying data to the user and sending user commands to the backend.
-|Backend |The backend is responsible for processing user commands, managing data, and communicating with external services such as the database and authentication provider.
-|Expenses |The Expenses module is responsible for managing the expenses (CRUD)
-|Tasks |The Tasks module is responsible for managing the tasks (CRUD)
-|User Settings |The User Settings module is responsible for managing user-specific settings such as preferences and changing log in data like email or password.
-|App Settings |The App Settings module is a special module only in the frontend for managing frontend (App) specific settings
-|Household |The Household module is responsible for creating and managing households including inviting and removing users.
-|Setup |The Setup module is responsible initially setting up the application and guiding the administrator through the setup process.
-|Administration |The Administration module is responsible for managing the application, including user management and system settings.
-|Notifications |The Notifications module is responsible for sending and showing notifications to the user. It also allows users to configure their notification settings.
+| **Name** | **Responsibility** | **Subdomain Type**
+|Progressive Web App (PWA) |The PWA is the user interface of LibreHousehold. It is responsible for displaying data to the user and sending user commands to the backend. |
+|Backend |The backend is responsible for processing user commands, managing data, and communicating with external services such as the database and authentication provider. |
+|Expenses |The Expenses module is responsible for managing household expenses and the debt-settlement (reimbursement) process between household members. |Core
+|Tasks |The Tasks module is responsible for managing household tasks, including recurrence and due-date calculation. |Core
+|Household |The Household module is responsible for forming and maintaining a household community: creating a household, inviting and removing members, and account registration as part of a membership. It is the central reference other modules validate membership and existence against. |Core
+|Statistics |The Statistics module aggregates data from Household and Expenses into reporting views; it has no business rules of its own. |Supporting
+|Setup |The Setup module is responsible initially setting up the application and guiding the administrator through the setup process. |Supporting
+|Administration |The Administration module is responsible for managing the application, including user management and system settings. |Supporting
+|User Settings |The User Settings module is responsible for managing user-specific preferences (e.g. language, theme, notification channels). |Generic
+|App Settings |The App Settings module is a special module only in the frontend for managing frontend (App) specific settings. It has no shared business rules and is not a bounded context. |_(technical, frontend-only)_
+|Notifications |The Notifications module is responsible for sending and showing notifications to the user. It also allows users to configure their notification settings. |Generic
 |===
+
+See <<section-subdomain-classification>> below for what these types mean and why they were assigned this way.
+
+[[section-subdomain-classification]]
+=== Subdomain Classification
+
+* **Core Domain** — what makes LibreHousehold what it is. `Household` (forming and maintaining a household community), `Tasks`, and `Expenses` (including reimbursement/debt settlement) each encapsulate a genuine business process with its own ubiquitous language and invariants. These modules deserve careful tactical DDD (aggregates, invariants, language).
+* **Supporting Subdomain** — necessary and specific to this product, but not its differentiator. `Setup` and `Administration` encapsulate real processes (guided first-time setup; instance administration) tied to a distinct actor (the Administrator, see <<section-context-and-scope>>), but they are not what users come to LibreHousehold for. `Statistics` is supporting in a different sense: it is a pure read-model/aggregation over Core modules with no business rules of its own.
+* **Generic Subdomain** — a standard problem with a standard solution; it could be replaced by a third-party library or service without losing competitive advantage. `User Settings` (preferences) and `Notifications` (delivery channels and rules) fall here. A simple, pragmatic implementation is fine for these — they do not need the same modelling depth as the Core Domain.
+
+**Authentication and Authorization are intentionally not listed as a module or bounded context.** They have no ubiquitous language relevant to household members ("login", "session", "token" are technical, not domain terms) and are treated as a cross-cutting concern instead — see xref:08_concepts.adoc#section-concepts[Chapter 8, Cross-cutting Concepts]. The one genuine domain operation, registering an account, lives inside `Household` as part of the membership process (see xref:../adrs/adr-012.adoc[ADR 012]) rather than in a separate module built around the "Account" entity.
+
+=== Bounded Context Map
+
+The following diagram shows the backend modules from the table above as bounded contexts, coloured by subdomain type, together with how they actually depend on each other per xref:../adrs/adr-011.adoc[ADR 011] (Named Interfaces for synchronous queries, Domain Events for reactive lifecycle notifications). Modules marked "(planned)" exist only as an empty package scaffold today and are not yet implemented.
+
+.Bounded Context Map
+plantuml::{imagesdir}/context_map.puml[format=svg, alt="Bounded Context Map"]
+
+The map is deliberately asymmetric: several modules query `Household` (narrow, read-only membership/existence checks), while `Household` itself does not query anyone back and instead publishes events that `Tasks` and `Expenses` react to. This fan-in is not treated as a bottleneck as long as the inbound interface stays narrow (`exists()`, membership checks) — it is the expected shape of a Core module that other contexts depend on. It would become a problem only if the interface grew wide and bespoke per consumer, which would be the signal to redesign the interface, not to split `Household` itself.

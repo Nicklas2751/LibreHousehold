@@ -291,14 +291,17 @@ void updateName(@Param("id") UUID id, @Param("name") String name);
 
 For class-based entities the recommended update pattern is via MapStruct `@MappingTarget` — see **Update Pattern (Spring Data JDBC + MapStruct)** below.
 
-### Open Design Questions: Account & Email Model
+### Account & Email Model
 
-The following architectural questions need a decision before user management is implemented:
+**Account–Household relationship: resolved as 1 Account : 1 Household** (see [ADR-012](docs/architecture/adrs/adr-012.adoc)). An account is scoped to exactly one household; there is no cross-household login. Consequences:
 
-- **Email uniqueness scope**: Currently `member.email` is globally unique (system-wide UNIQUE constraint). It needs to be decided whether uniqueness should be system-wide or per-household.
-- **Account–Household relationship**: Should a user account be tied to one specific household, or can a single account belong to multiple households?
+- **Email uniqueness scope**: `member.email` staying globally unique (system-wide UNIQUE constraint) is the correct, natural fit for the 1:1 model — one e-mail identifies exactly one account/household. No per-household uniqueness needed.
+- **Existing accounts**: Resolved by the 1:1 model — an account can never join or set up a second household. The setup wizard and registration flow must reject an e-mail that already has an account with a clear error, not a generic 409.
+- **Account registration stays in `household`**: Since an account is just an attribute of a membership (not an independent, cross-household entity), `AccountRegistration`/`MemberManagementService` in the `household` module remains the correct place for it — no separate Identity/Account module is needed.
+
+Still open:
+
 - **Missing endpoint**: An endpoint is needed to check whether a given e-mail address is already registered before household setup — otherwise the client gets a generic 409 with no actionable information.
-- **Existing accounts**: It is unresolved whether a user with an existing account should be able to set up a new household or whether accounts are inherently household-scoped.
 
 ### Task Schema
 
@@ -351,6 +354,7 @@ Spring Data JDBC automatically derives methods such as `findByHouseholdId`, `del
 
 ### Pending Backend Implementations
 
-- **Maximale Bildgröße**: `server.tomcat.max-http-post-size` ist bewusst auf unbegrenzt gesetzt (Tomcat-Standard war 2 MB und führte zu stiller Trunkierung großer Base64-Bilder). Eine serverseitige Validierung der maximalen Bildgröße (empfohlen: 5 MB) fehlt noch — per Bean-Validation oder Filter.
-- **Bildtyp-Beschränkung**: Es wird noch nicht geprüft, ob ein hochgeladenes Bild ein valides JPEG/PNG/WebP ist. Magic-Bytes-Prüfung oder MIME-Detection fehlt.
-- **Invite-Link-Erneuerung**: `POST /household/{householdId}/invite` (operationId: `generateInviteLink`) ist in der OpenAPI-Spec und im generierten Delegate vorhanden, aber in `HouseholdApiDelegateImpl` noch nicht implementiert (`NOT_IMPLEMENTED`). Benötigt: Token regenerieren, alten invalidieren, neue URL zurückgeben.
+See [Chapter 11 - Risks and Technical Debts](docs/architecture/chapters/11_technical_risks.adoc) for the full, prioritized list (TD1-TD4). Summary of the two still-open items:
+
+- **Maximale Bildgröße** (TD2): `server.tomcat.max-http-post-size` ist bewusst auf unbegrenzt gesetzt (Tomcat-Standard war 2 MB und führte zu stiller Trunkierung großer Base64-Bilder). Eine serverseitige Validierung der maximalen Bildgröße (empfohlen: 5 MB) fehlt noch — per Bean-Validation oder Filter.
+- **Bildtyp-Beschränkung** (TD3): Es wird noch nicht geprüft, ob ein hochgeladenes Bild ein valides JPEG/PNG/WebP ist. Magic-Bytes-Prüfung oder MIME-Detection fehlt.
