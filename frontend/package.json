@@ -21,7 +21,7 @@
 		"@castlenine/svelte-qrcode": "^2.3.0",
 		"@eslint/js": "^10.0.0",
 		"@inlang/paraglide-js": "^2.22.0",
-		"@openapitools/openapi-generator-cli": "^2.40.0",
+		"@openapitools/openapi-generator-cli": "^2.40.1",
 		"@sveltejs/adapter-auto": "^7.0.0",
 		"@sveltejs/kit": "^2.70.1",
 		"@sveltejs/vite-plugin-svelte": "^7.2.0",
