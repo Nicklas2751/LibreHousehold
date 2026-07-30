@@ -14,7 +14,7 @@ Real-world usage patterns exist where a person is part of more than one househol
 
 This decision also determines module boundaries: if an account can belong to multiple households, it is an independent concept that outlives any single household membership and arguably deserves its own module. If an account is scoped to exactly one household, it is just an attribute of a membership and can stay inside the `household` module, where `AccountRegistration`/`MemberManagementService` already live.
 
-The decision was deferred as an open question (see `AGENTS.md`, "Account & Email Model") until authentication needed to be implemented.
+The decision was deferred as an open question until authentication needed to be implemented.
 
 == Considered Options
 
@@ -61,7 +61,7 @@ This keeps `AccountRegistration` where it already is — inside the `household` 
 
 - `household` remains the single place responsible for account registration and membership — no premature Account/Identity module.
 - E-mail uniqueness stays a simple system-wide UNIQUE constraint on `member.email`.
-- The setup wizard and registration flow have an unambiguous rule: an e-mail with an existing account can never start a second household — this must be rejected with a clear, actionable error instead of a generic 409 (see `AGENTS.md`, "Missing endpoint").
+- The setup wizard and registration flow have an unambiguous rule: an e-mail with an existing account can never start a second household — this must be rejected with a clear, actionable error instead of a generic 409.
 
 **Negative:**
 

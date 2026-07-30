@@ -1,0 +1,24 @@
+:jbake-title: ADR 014: Session Strategy - Backend for Frontend (BFF) with httpOnly Cookies
+:jbake-type: page_toc
+:jbake-status: published
+:jbake-menu: adrs
+:jbake-order: 14
+
+[[adr-014]]
+= ADR 014: Session Strategy - Backend for Frontend (BFF) with httpOnly Cookies
+
+== Context
+
+After the OAuth2/PKCE login flow decided in xref:adr-013.adoc[ADR 013], the SPA needs a way to stay authenticated against the backend for subsequent requests. The tokens issued by Spring Authorization Server could either be handed to the frontend to hold and send itself (the classic SPA bearer-token pattern), or kept entirely on the backend, exposing only an opaque session identifier to the browser. This also has to fit the project's existing rule that no state is persisted in `localStorage`/`sessionStorage` in the frontend.
+
+== Considered Options
+
+Backend for Frontend (BFF) pattern with an httpOnly, SameSite session cookie (tokens never leave the backend); tokens held directly in the frontend (`localStorage`, `sessionStorage`, or an in-memory JS variable, the classic SPA bearer-token pattern).
+
+== Decision Outcome
+
+The BFF pattern is used: access and refresh tokens are stored and managed entirely on the backend, and the browser only ever receives an opaque, httpOnly, SameSite session cookie. This is consistent with the project's already-established rule that no state is persisted in `localStorage`/`sessionStorage` on the frontend - a token-in-frontend model would need exactly that, or an equally exposed in-memory JS variable, either of which is reachable by an XSS payload. Keeping tokens out of the JavaScript context entirely removes that attack surface and matches the pattern recommended by IETF's "OAuth 2.0 for Browser-Based Apps" BCP for browser-based OAuth2 clients.
+
+Because cookies are sent automatically by the browser, the BFF must guard explicitly against CSRF: Spring Security's cookie-based CSRF protection is used, i.e. a readable `XSRF-TOKEN` cookie plus a matching `X-XSRF-TOKEN` request header that the SPA echoes back on state-changing requests; the server rejects requests where the header is missing or does not match.
+
+Logout does not just delete the session cookie client-side. It actively calls Spring Authorization Server's token revocation endpoint, invalidating the underlying access/refresh token server-side immediately - a cached or previously leaked token cannot be replayed after logout.
