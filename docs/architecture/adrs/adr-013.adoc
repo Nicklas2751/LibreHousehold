@@ -1,0 +1,28 @@
+:jbake-title: ADR 013: Spring Authorization Server for Authentication
+:jbake-type: page_toc
+:jbake-status: published
+:jbake-menu: adrs
+:jbake-order: 13
+
+[[adr-013]]
+= ADR 013: Spring Authorization Server for Authentication
+
+== Context
+
+Authentication needs an architectural basis: how users log in, how sessions/tokens are issued and validated, and whether the app supports local password accounts, federated social login, or both. This decision determines whether an additional identity service has to be operated alongside the app, and whether the login flow follows the OAuth2/OIDC standard or a proprietary one.
+
+== Considered Options
+
+Spring Authorization Server (Authorization Server and Resource Server within the existing monolith); Keycloak (external, self-hosted IdP); Spring Security only (plain password/session login, no OAuth2/PKCE flow); social login only (no local accounts, exclusively external IdPs).
+
+== Decision Outcome
+
+Spring Authorization Server will be used as both Authorization Server and Resource Server within the existing monolith, using the Authorization Code Flow with PKCE for the SPA.
+
+Keycloak was rejected because operating and configuring a second, fairly complex service contradicts xref:../chapters/01_introduction_and_goals.adoc#QG3[QG3 - Easy to host] and xref:../chapters/01_introduction_and_goals.adoc#QG4[QG4 - Maintainable]: self-hosters would need to deploy, configure and keep a separate identity server up to date in addition to the app itself, which is not KISS. Spring Authorization Server integrates directly into the existing Spring Boot monolith and needs no additional deployment.
+
+A plain Spring Security password/session setup without an OAuth2/OIDC layer was rejected because it is not state of the art anymore: users expect to be able to sign in with an existing social account, and a passwordless/federated approach improves security without hurting - and arguably improves - the user experience. Retrofitting an OAuth2 flow onto a plain session-based login later would mean rebuilding the authentication layer instead of extending it.
+
+Relying exclusively on external IdPs, with no local accounts at all, was rejected because it would force every user to hold a third-party account, which contradicts the project's self-hosting and open-source character: LibreHousehold must work as a fully independent, self-hosted application without a mandatory dependency on an external provider.
+
+Spring Authorization Server supports both cases - local password accounts today and federated social login in the future - through the same standardized Authorization Code + PKCE flow, without operating an additional service.
