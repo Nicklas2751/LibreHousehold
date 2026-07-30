@@ -15,3 +15,6 @@
 === xref:adr-010.adoc[ADR 010: Use API first with OpenAPI Specification]
 === xref:adr-011.adoc[ADR 011: Cross-Module Communication Strategy]
 === xref:adr-012.adoc[ADR 012: Account-Household cardinality (1:1)]
+=== xref:adr-013.adoc[ADR 013: Spring Authorization Server for Authentication]
+=== xref:adr-014.adoc[ADR 014: Session Strategy - Backend for Frontend (BFF) with httpOnly Cookies]
+=== xref:adr-015.adoc[ADR 015: Credential Storage in a dedicated `account` table]

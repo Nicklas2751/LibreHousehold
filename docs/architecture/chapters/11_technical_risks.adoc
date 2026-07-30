@@ -78,4 +78,10 @@ This chapter collects the technical risks and technical debts that have already 
 |xref:01_introduction_and_goals.adoc#QG4[QG4 - Maintainable]
 |Low
 |Favor idiomatic modern Java (records, `var`, pattern matching) to keep boilerplate low; no framework change planned.
+
+|R5
+|No check against known/breached passwords is performed at registration or password change (ASVS 5.0 V6.2.4/V6.2.12), a deliberate choice to avoid an external dependency (e.g. an online breach-check API) or a wordlist to maintain (see xref:08_concepts.adoc#section-security-controls-authentication[Chapter 8, Security Controls (Authentication), PW3]). Users can therefore still choose a password that is already known to be compromised.
+|xref:01_introduction_and_goals.adoc#QG2[QG2 - Secure]
+|Medium _(accepted)_
+|No action planned. If weak/breached passwords become an actual problem, consider a static top-N common-password blocklist bundled at build time (no runtime external dependency) before reaching for an online breach-check API.
 |===

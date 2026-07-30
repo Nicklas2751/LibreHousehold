@@ -21,9 +21,99 @@ A modular monolith, or "modulith", is an architectural style where the applicati
 
 === Authentication and Authorization
 
-Authentication and authorization are treated as a cross-cutting concern rather than a bounded context in xref:05_building_block_view.adoc[Chapter 5]: they have no ubiquitous language relevant to household members and exist purely to support every other module, not to model household business. Concretely, this has two consequences for how the code is structured:
+Authentication and authorization are treated as a cross-cutting concern rather than a bounded context in xref:05_building_block_view.adoc[Chapter 5]: they have no ubiquitous language relevant to household members and exist purely to support every other module, not to model household business. The overall authentication architecture - Spring Authorization Server as Authorization Server and Resource Server within the existing monolith - is decided in xref:../adrs/adr-013.adoc[ADR 013]; the session strategy towards the SPA (BFF pattern with httpOnly cookies, CSRF protection, logout revocation) is decided in xref:../adrs/adr-014.adoc[ADR 014]. Concretely, this has two consequences for how the code is structured:
 
 * **No dedicated "Authentication" module in the building block view.** Framework-level building blocks (password hashing, session/token issuance, security filters) are infrastructure, documented here rather than listed as a fachliches module alongside `Tasks` or `Expenses`.
 * **Framework/utility types are injected directly, not wrapped in a Named Interface.** A generic Spring bean type such as `PasswordEncoder` is not a module-owned construct, so any module may inject it directly — the same way `ApplicationEventPublisher` is already used directly across modules. Introducing a `core` Named Interface (e.g. a `PasswordEncoding` abstraction) purely to let another module reuse a framework type would add an `ApplicationModule` dependency (verified by Spring Modulith) for no domain benefit and is deliberately avoided. Named Interfaces (xref:../adrs/adr-011.adoc[ADR 011]) are reserved for genuine domain operations of a module — such as `AccountRegistration` in `Household` — not for technical helpers.
 
-The one genuine domain operation in this area, registering an account as part of a household membership, is therefore not part of an "auth module" at all — it lives in `Household`, where the 1:1 account-household relationship was decided in xref:../adrs/adr-012.adoc[ADR 012].
+The one genuine domain operation in this area, registering an account as part of a household membership, is therefore not part of an "auth module" at all — it lives in `Household`, where the 1:1 account-household relationship was decided in xref:../adrs/adr-012.adoc[ADR 012]. Credentials themselves are stored in a dedicated `account` table, separate from `member`, as decided in xref:../adrs/adr-015.adoc[ADR 015].
+
+[[section-security-controls-authentication]]
+=== Security Controls (Authentication)
+
+Authentication-related security controls are tracked against an https://github.com/OWASP/ASVS[OWASP ASVS] 5.0 Level 2 baseline (the recommended baseline for applications handling sensitive data, matching xref:01_introduction_and_goals.adoc#QG2[QG2 - Secure]). This table doubles as the threat model for authentication: each entry maps a concrete threat directly to the ASVS requirement that mitigates it, instead of a separate abstract diagram. A few requirements are deliberately verified above the L2 baseline (see ENUM1). Controls already covered by an architectural decision reference the corresponding ADR; controls deliberately not implemented are tracked as a risk in xref:11_technical_risks.adoc[Chapter 11]; everything else is still open.
+
+[cols="1,4,3,3", options="header"]
+|===
+|ID |Control |ASVS 5.0 Reference |Status
+
+|PW1
+|Password minimum length, no forced complexity rules, checked exactly as entered (no truncation or case transformation), at least 64 characters accepted.
+|V6.2.1 (L1), V6.2.5 (L1), V6.2.8 (L1), V6.2.9 (L2)
+|Decided (NIST-style policy)
+
+|PW2
+|No forced periodic password rotation.
+|V6.2.10 (L2)
+|Decided (NIST-style policy)
+
+|PW3
+|Check new passwords against a list of known or breached passwords.
+|V6.2.4 (L1), V6.2.12 (L2)
+|Deliberately not implemented, to avoid an external dependency or a wordlist to maintain. Tracked as xref:11_technical_risks.adoc[Risk R5].
+
+|PW4
+|Masked password field with an optional reveal toggle; paste and password-manager input allowed.
+|V6.2.6 (L1), V6.2.7 (L1)
+|Open
+
+|SES1
+|Secure cookie attributes (`Secure`, `HttpOnly`, `SameSite`, `__Host-` prefix).
+|V3.3.1 (L1), V3.3.2 (L2), V3.3.3 (L2), V3.3.4 (L2)
+|Decided, see xref:../adrs/adr-014.adoc[ADR 014]
+
+|SES2
+|CSRF protection for cookie-based requests.
+|V3.5.1 (L1), V10.2.1 (L2)
+|Decided, see xref:../adrs/adr-014.adoc[ADR 014] (Spring Security cookie-based CSRF)
+
+|SES3
+|No sensitive data or session tokens in `localStorage`/`sessionStorage`.
+|V14.3.3 (L2)
+|Decided, see xref:../adrs/adr-014.adoc[ADR 014] and the project's frontend state-management rule
+
+|CORS1
+|Fixed/validated `Access-Control-Allow-Origin`, no wildcard combined with credentials.
+|V3.4.2 (L1), V3.5.1 (L1), V3.5.2 (L1)
+|Largely moot due to the deployment topology (Nginx reverse proxy, same origin, see xref:07_deployment_view.adoc[Chapter 7]); backend CORS is still restricted explicitly to known origin(s) as defense in depth
+
+|RED1
+|OAuth `redirect_uri` exact allow-list matching.
+|V10.4.1 (L1)
+|Enforced natively by Spring Authorization Server's registered-client configuration
+
+|RED2
+|No automatic redirect to untrusted hosts (invite links).
+|V3.7.2 (L2)
+|Open
+
+|ENUM1
+|No inference of existing accounts from login, registration, or password-reset responses (error messages, status codes, timing).
+|V6.3.8 (**L3**, deliberately raised above the L2 baseline)
+|Decided
+
+|ERR1
+|Generic error message on unexpected or security-sensitive errors, no stack traces or internal details exposed.
+|V16.5.1 (L2)
+|Open
+
+|RATE1
+|Rate limiting / anti-automation against credential stuffing and brute force.
+|V6.1.1 (L1), V6.3.1 (L1)
+|Deliberately deferred to a dedicated future hardening effort
+
+|HASH1
+|Password hashing with a computationally intensive key derivation function.
+|V11.4.2 (L2)
+|Decided, see xref:../adrs/adr-009.adoc[ADR 009] (Argon2id)
+
+|PKCE1
+|Authorization Code Flow with PKCE against code interception.
+|V10.4.6 (L2)
+|Decided, see xref:../adrs/adr-013.adoc[ADR 013]
+
+|AC1
+|Object-/field-level access control per household (IDOR protection).
+|V8.2.2 (L1)
+|Open
+|===
