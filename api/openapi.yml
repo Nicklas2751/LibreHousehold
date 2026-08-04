@@ -33,6 +33,10 @@ tags:
     description: Operations related to households
   - name: members
     description: Operations related to members
+  - name: accounts
+    description: Operations related to login credentials, independent of household membership
+  - name: session
+    description: Operations related to the authenticated session
 
   - name: administration
     description: Operations related to administration
@@ -66,11 +70,29 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
         "409":
-          description: The household already exists.
+          description: >
+            Either the household already exists, or an account already exists for
+            the given member email. The `type` field on the returned problem
+            distinguishes the two cases so the client can show a specific message.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+              examples:
+                householdAlreadyExists:
+                  summary: Household already exists
+                  value:
+                    type: "/problems/household-already-exists"
+                    title: "Household already exists"
+                    status: 409
+                    detail: "A household with this id already exists."
+                accountAlreadyExists:
+                  summary: Account already exists for this email
+                  value:
+                    type: "/problems/account-already-exists"
+                    title: "Account already exists"
+                    status: 409
+                    detail: "An account for this email address already exists."
         default:
           description: An error occurred - see the status code and problem for more information.
           content:
@@ -1451,11 +1473,109 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
         "409":
-          description: A member with this email already exists.
+          description: An account already exists for the given member email.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+              examples:
+                accountAlreadyExists:
+                  summary: Account already exists for this email
+                  value:
+                    type: "/problems/account-already-exists"
+                    title: "Account already exists"
+                    status: 409
+                    detail: "An account for this email address already exists."
+        default:
+          description: An error occurred.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
+  /accounts/availability:
+    get:
+      summary: Check whether an email is already registered
+      description: >
+        Checks whether an account already exists for the given email address.
+        Used by the household setup wizard and the invite-join flow to give
+        feedback before submitting the form.
+      tags:
+        - accounts
+      operationId: checkEmailAvailability
+      parameters:
+        - name: email
+          in: query
+          required: true
+          schema:
+            type: string
+            format: email
+            example: "max@example.com"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailAvailability'
+        "400":
+          description: The email address is not a valid email address.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        default:
+          description: An error occurred.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
+  /me:
+    get:
+      summary: Get the current authenticated user
+      description: >
+        Returns the member, household and preferences data for the currently
+        authenticated session.
+      tags:
+        - session
+      operationId: getCurrentUser
+      security:
+        - sessionCookie: [ ]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentUser'
+        "401":
+          description: No authenticated session.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        default:
+          description: An error occurred.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
+  /logout:
+    post:
+      summary: Log out the current session
+      description: >
+        Ends the current session. Idempotent - always succeeds, even without
+        an active session.
+      tags:
+        - session
+      operationId: logout
+      security:
+        - sessionCookie: [ ]
+      responses:
+        "204":
+          description: Session ended.
         default:
           description: An error occurred.
           content:
@@ -2320,16 +2440,48 @@ components:
             done: 5
             open: 7
 
+    Password:
+      type: string
+      format: password
+      minLength: 8
+      maxLength: 128
+      description: The account's password.
+      example: "correct horse battery staple"
+
+    LocalRegistration:
+      type: object
+      required:
+        - password
+      description: Credential payload for password-based registration.
+      properties:
+        password:
+          $ref: "#/components/schemas/Password"
+
+    EmailAvailability:
+      type: object
+      required:
+        - available
+      properties:
+        available:
+          type: boolean
+          description: >
+            True if no account exists yet for the given email address, i.e.
+            it is free to use for household setup or joining a household.
+          example: true
+
     HouseholdSetup:
       type: object
       required:
         - household
         - member
+        - localRegistration
       properties:
         household:
           $ref: "#/components/schemas/Household"
         member:
           $ref: "#/components/schemas/Member"
+        localRegistration:
+          $ref: "#/components/schemas/LocalRegistration"
 
     HouseholdSetupResponse:
       type: object
@@ -2415,6 +2567,7 @@ components:
         - id
         - name
         - email
+        - localRegistration
       properties:
         id:
           type: string
@@ -2430,6 +2583,8 @@ components:
         avatar:
           type: string
           example: "data:image/jpeg;base64,/9j/4AAQ..."
+        localRegistration:
+          $ref: "#/components/schemas/LocalRegistration"
 
     MemberUpdate:
       type: object
@@ -2455,10 +2610,7 @@ components:
           format: password
           example: "oldSecurePassword123"
         newPassword:
-          type: string
-          format: password
-          minLength: 8
-          example: "newSecurePassword456"
+          $ref: "#/components/schemas/Password"
 
     UserPreferences:
       type: object
@@ -2471,3 +2623,30 @@ components:
           type: string
           enum: [ en, de ]
           example: "de"
+
+    CurrentUser:
+      type: object
+      required:
+        - member
+        - householdId
+        - preferences
+      description: Member, household and preferences data for the authenticated session.
+      properties:
+        member:
+          $ref: "#/components/schemas/Member"
+        householdId:
+          type: string
+          format: uuid
+          description: The household the current member belongs to.
+          example: "f3ce1a6b-aba1-478d-9f01-ec484f23ce60"
+        preferences:
+          $ref: "#/components/schemas/UserPreferences"
+
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: SESSION
+      description: >
+        Session cookie required for authenticated requests. State-changing
+        requests additionally require a matching `X-XSRF-TOKEN` header.
