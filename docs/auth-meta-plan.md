@@ -58,12 +58,13 @@ muss aber sauber neu aus der überarbeiteten OpenAPI-Spec generiert werden.
 
 ## Phase 1 — Lokale Accounts: Kernflow (Authorization Code + PKCE, BFF-Cookie-Session)
 
-- **P1.1 — OpenAPI: Registrierung & Credentials.** Passwort in `HouseholdSetup` und
+- ✅ **P1.1 — OpenAPI: Registrierung & Credentials.** Passwort in `HouseholdSetup` und
   `MemberRegistration` (Invite-Join) ergänzen, neuer Endpoint „E-Mail bereits registriert?"
   (bisher fehlend, siehe AGENTS.md), Passwort-Policy, non-enumerating Error-Responses.
-- **P1.2 — OpenAPI: Session-Oberfläche.** Vertrag für „current user/me" und Logout festlegen
+  Siehe [Detailplan](auth-plan-p1.1-p1.2.md).
+- ✅ **P1.2 — OpenAPI: Session-Oberfläche.** Vertrag für „current user/me" und Logout festlegen
   (Login/Callback selbst laufen über Spring-Authorization-Server-Endpunkte, nicht im
-  Business-Contract).
+  Business-Contract). Siehe [Detailplan](auth-plan-p1.1-p1.2.md).
 - **P1.3 — Backend: `AccountRegistration` im `household`-Modul.** Argon2id-Hashing bei Setup &
   Join, `UserDetailsService` auf Member/Account, E-Mail-Verfügbarkeitsprüfung. TDD.
 - **P1.4 — Backend: Spring Authorization Server Setup.** Filter-Chain-Reihenfolge, Registered
