@@ -57,3 +57,27 @@ The following diagram shows the backend modules from the table above as bounded 
 plantuml::{imagesdir}/context_map.puml[format=svg, alt="Bounded Context Map"]
 
 The map is deliberately asymmetric: several modules query `Household` (narrow, read-only membership/existence checks), while `Household` itself does not query anyone back and instead publishes events that `Tasks` and `Expenses` react to. This fan-in is not treated as a bottleneck as long as the inbound interface stays narrow (`exists()`, membership checks) — it is the expected shape of a Core module that other contexts depend on. It would become a problem only if the interface grew wide and bespoke per consumer, which would be the signal to redesign the interface, not to split `Household` itself.
+
+[[section-module-dependency-direction]]
+=== Module Dependency Direction
+
+On top of the query/event distinction from xref:../adrs/adr-011.adoc[ADR 011], an explicit rule
+governs the *direction* of allowed dependencies, to keep the module graph acyclic as the system
+grows:
+
+* `eu.wiegandt.librehousehold.core` is purely technical (shared helpers such as
+  `CoreOptionalMapper`; not a bounded context and therefore not shown as a component in the map
+  above) and must **never depend on any other module**. Any module may depend on `core`.
+* `Household`, as the module other modules already query for membership/existence, may depend on
+  `core` only — it must **not** depend on any other business module. Publishing Domain Events to
+  `Tasks`/`Expenses`/`Notifications` does not violate this rule, since `Household` does not depend
+  on its listeners; it merely announces facts.
+* No fixed rule exists yet for dependencies *among* the remaining business modules (`Tasks`,
+  `Expenses`, `Statistics`, `Setup`, `Administration`, `UserSettings`, `Notifications`); the
+  guiding principle is to keep dependencies as few as possible, extending them only via Named
+  Interfaces (ADR 011) when a genuine cross-module query is needed.
+
+This rule is currently enforced only by convention and code review, not by an automated check —
+see xref:11_technical_risks.adoc[Chapter 11, Risk/Technical Debt TD1] for the still-missing
+`ApplicationModules.verify()` test that would make violations fail the build. It should be treated
+as binding regardless of the missing automation.
