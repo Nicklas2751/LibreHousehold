@@ -49,4 +49,12 @@ note as N2
   "(planned)" = module exists only as an empty scaffold, not yet implemented
 end note
 
+note as N3
+  Module dependency direction (not shown as an arrow, see Chapter 5,
+  "Module Dependency Direction"): the purely technical `core` package
+  (not a bounded context, not shown above) may be depended on by any
+  module but must never depend on one itself. Household may depend on
+  `core` only, never on another business module.
+end note
+
 @enduml

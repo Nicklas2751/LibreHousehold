@@ -67,22 +67,26 @@ muss aber sauber neu aus der überarbeiteten OpenAPI-Spec generiert werden.
   Business-Contract). Siehe [Detailplan](auth-plan-p1.1-p1.2.md).
 - **P1.3 — Backend: `AccountRegistration` im `household`-Modul.** Argon2id-Hashing bei Setup &
   Join, `UserDetailsService` auf Member/Account, E-Mail-Verfügbarkeitsprüfung. TDD.
+  Siehe [Detailplan](auth-plan-p1.3-p1.6.md).
 - **P1.4 — Backend: Spring Authorization Server Setup.** Filter-Chain-Reihenfolge, Registered
   Client fürs SPA, PKCE, Token-Settings, Login gegen lokale Accounts.
+  Siehe [Detailplan](auth-plan-p1.3-p1.6.md).
 - **P1.5 — Backend: Resource-Server-/BFF-Absicherung bestehender Endpunkte.** Cookie-Session,
   CSRF, CORS — alle heute offenen Endpunkte werden geschlossen.
+  Siehe [Detailplan](auth-plan-p1.3-p1.6.md).
 - **P1.6 — Backend: Access Control je Haushalt/Rolle.** Jeder haushaltsgebundene Endpunkt prüft
   Zugehörigkeit; Admin-only-Operationen (Invite, Ownership-Transfer, Löschen). OWASP „Broken
-  Access Control". TDD + IT.
+  Access Control". TDD + IT. Siehe [Detailplan](auth-plan-p1.3-p1.6.md).
 - **P1.7 — Frontend: SetupWizard um Passwort erweitern.** Inkl. E-Mail-Verfügbarkeits-Check,
-  „Account existiert bereits"-Fehlerbild.
+  „Account existiert bereits"-Fehlerbild. Siehe [Detailplan](auth-plan-p1.7-p1.10.md).
 - **P1.8 — Frontend: Login, Session-Bootstrap, Route-Guards, Logout.** `/login`-Route real
   anbinden (aktuell toter Link in `WelcomeScreen`), Current-User-Hydration nach Reload
   (heute geht der State beim Reload verloren), Guards für `/app/*`.
-- **P1.9 — Frontend: Invite-Join mit Passwortvergabe.**
+  Siehe [Detailplan](auth-plan-p1.7-p1.10.md).
+- **P1.9 — Frontend: Invite-Join mit Passwortvergabe.** Siehe [Detailplan](auth-plan-p1.7-p1.10.md).
 - **P1.10 — Frontend: API-Client & Guards.** Cookie-Requests (`credentials: 'include'`),
   CSRF-Header, zentrales 401-Handling/Redirect statt der aktuell verstreuten
-  `new Configuration({...})`-Instanzen.
+  `new Configuration({...})`-Instanzen. Siehe [Detailplan](auth-plan-p1.7-p1.10.md).
 
 ## Phase 2 — Lokale Accounts: Lifecycle-Härtung (OWASP ASVS)
 
