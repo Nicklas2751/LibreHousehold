@@ -2,6 +2,7 @@ package eu.wiegandt.librehousehold.household.controller;
 
 import eu.wiegandt.librehousehold.api.MembersApiDelegate;
 import eu.wiegandt.librehousehold.household.service.MemberManagementService;
+import eu.wiegandt.librehousehold.model.EmailAvailability;
 import eu.wiegandt.librehousehold.model.InviteInfo;
 import eu.wiegandt.librehousehold.model.Member;
 import eu.wiegandt.librehousehold.model.MemberRegistration;
@@ -20,6 +21,11 @@ public class MembersApiDelegateImpl implements MembersApiDelegate {
 
     public MembersApiDelegateImpl(MemberManagementService memberManagementService) {
         this.memberManagementService = memberManagementService;
+    }
+
+    @Override
+    public ResponseEntity<EmailAvailability> checkEmailAvailability(String email) {
+        return ResponseEntity.ok(new EmailAvailability(memberManagementService.isEmailAvailable(email)));
     }
 
     @Override

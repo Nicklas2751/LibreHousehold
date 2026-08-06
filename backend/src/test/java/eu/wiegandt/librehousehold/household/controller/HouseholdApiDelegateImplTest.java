@@ -1,10 +1,8 @@
 package eu.wiegandt.librehousehold.household.controller;
-import eu.wiegandt.librehousehold.household.exception.*;
-import eu.wiegandt.librehousehold.household.mapper.*;
-import eu.wiegandt.librehousehold.household.model.*;
-import eu.wiegandt.librehousehold.household.repository.*;
-import eu.wiegandt.librehousehold.household.service.*;
 
+import eu.wiegandt.librehousehold.household.exception.HouseholdSetupIsRequiredException;
+import eu.wiegandt.librehousehold.household.service.HouseholdManagementService;
+import eu.wiegandt.librehousehold.household.service.HouseholdSetupService;
 import eu.wiegandt.librehousehold.model.HouseholdSetup;
 import eu.wiegandt.librehousehold.model.HouseholdSetupResponse;
 import org.instancio.Instancio;

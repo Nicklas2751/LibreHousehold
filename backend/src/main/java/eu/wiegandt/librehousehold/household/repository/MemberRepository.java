@@ -16,6 +16,10 @@ public interface MemberRepository extends CrudRepository<MemberEntity, UUID> {
 
     List<MemberEntity> findByHouseholdId(UUID householdId);
 
+    boolean existsByEmail(String email);
+
+    Optional<MemberEntity> findByEmail(String email);
+
     Optional<MemberEntity> findByHouseholdIdAndIsAdminTrue(UUID householdId);
 
     void deleteByHouseholdId(UUID householdId);

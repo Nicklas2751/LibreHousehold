@@ -67,8 +67,8 @@ bereits aus der aktuellen Spec generiert vorhanden):
 - `LocalRegistration { password: string }` (`api/openapi.yml:2451-2458`) — Pflichtfeld in
   `HouseholdSetup` (`api/openapi.yml:2472-2484`) **und** `MemberRegistration`
   (`api/openapi.yml:2564-2587`).
-- `EmailAvailability { available: boolean }`, Endpoint `GET /accounts/availability?email=...`
-  → `AccountsApi.checkEmailAvailability({ email })` (`.../apis/AccountsApi.ts:41-77`).
+- `EmailAvailability { available: boolean }`, Endpoint `GET /members/availability?email=...`
+  → `MembersApi.checkEmailAvailability({ email })` (`.../apis/MembersApi.ts:41-77`).
 - `CurrentUser { member, householdId, preferences }`, Endpoint `GET /me`
   → `SessionApi.getCurrentUser()` (`.../apis/SessionApi.ts:37-62`), wirft bei 401 einen
   `ResponseError` (401 ist im OpenAPI-Vertrag explizit als „No authenticated session" spezifiziert,
@@ -115,7 +115,7 @@ ergänzen); das ist kein zusätzlicher Scope, sondern der Kern der Aufgabe.
   `Problem.type`-Feld wird nirgends ausgewertet.
 - Der Status-Extraktions-Codeblock (`err instanceof ResponseError ? err.response.status : ...`,
   `SetupWizard.svelte:129-134`) ist **identisch dupliziert** in `JoinWizard.svelte:61-66`.
-- Kein E-Mail-Verfügbarkeits-Check vorhanden (`AccountsApi` wird nirgends importiert).
+- Kein E-Mail-Verfügbarkeits-Check vorhanden (`MembersApi` wird nirgends importiert).
 - Eigene `Configuration`-Instanz: `SetupWizard.svelte:103`.
 
 ### 2.4 JoinWizard / Invite-Join (P1.9-relevant)
@@ -584,7 +584,7 @@ nicht anders vermerkt.
 - `SetupWizard.svelte` anpassen: `MemberProfileForm`-Aufruf um `PasswordField` ergänzen (entweder
   direkt in `MemberProfileForm.svelte` eingebettet oder als zusätzlicher Slot/Prop — Umsetzung
   gemäß Entscheidung 3.2), `localRegistration: { password }` in `HouseholdSetup` ergänzen,
-  `AccountsApi.checkEmailAvailability` beim E-Mail-`oninput` (debounced) aufrufen, 409-Handling auf
+  `MembersApi.checkEmailAvailability` beim E-Mail-`oninput` (debounced) aufrufen, 409-Handling auf
   `classifyConflictProblem` + `extractErrorStatus` umstellen (dabei muss der rohe `Problem`-Body
   aus der `ResponseError.response` gelesen werden — `await err.response.json()` — um an
   `problem.type` zu kommen).
@@ -595,7 +595,7 @@ nicht anders vermerkt.
     - `it('E-Mail bereits vergeben (account-already-exists) — zeigt spezifische Fehlermeldung am E-Mail-Feld')`
     - `it('Haushalt existiert bereits (household-already-exists) — zeigt allgemeine Fehlermeldung per Toast')`
     - `it('E-Mail-Verfügbarkeits-Check — ruft checkEmailAvailability nach Debounce-Zeit auf')`
-  - Rot: Komponente hat noch kein Passwortfeld/keine `AccountsApi`-Anbindung → Selektoren/Assertions
+  - Rot: Komponente hat noch kein Passwortfeld/keine `MembersApi`-Anbindung → Selektoren/Assertions
     schlagen fehl.
   - Grün: minimale Verdrahtung wie oben beschrieben.
   - Refactor: Duplizierte Statusauswertung durch `extractErrorStatus`/`classifyConflictProblem`
