@@ -5,6 +5,7 @@ import eu.wiegandt.librehousehold.household.model.*;
 import eu.wiegandt.librehousehold.household.repository.*;
 import eu.wiegandt.librehousehold.household.service.*;
 
+import eu.wiegandt.librehousehold.model.EmailAvailability;
 import eu.wiegandt.librehousehold.model.InviteInfo;
 import eu.wiegandt.librehousehold.model.Member;
 import eu.wiegandt.librehousehold.model.MemberRegistration;
@@ -34,6 +35,38 @@ class MembersApiDelegateImplTest {
 
     @InjectMocks
     private MembersApiDelegateImpl delegate;
+
+    @Nested
+    class checkEmailAvailability {
+
+        @Test
+        void availableEmail_returnsEmailAvailabilityWithTrue() {
+            // given
+            var email = "max@example.com";
+            doReturn(true).when(memberManagementService).isEmailAvailable(email);
+
+            // when
+            var result = delegate.checkEmailAvailability(email);
+
+            // then
+            assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
+            assertThat(result.getBody()).isEqualTo(new EmailAvailability(true));
+        }
+
+        @Test
+        void unavailableEmail_returnsEmailAvailabilityWithFalse() {
+            // given
+            var email = "max@example.com";
+            doReturn(false).when(memberManagementService).isEmailAvailable(email);
+
+            // when
+            var result = delegate.checkEmailAvailability(email);
+
+            // then
+            assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
+            assertThat(result.getBody()).isEqualTo(new EmailAvailability(false));
+        }
+    }
 
     @Nested
     class getMembers {

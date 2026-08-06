@@ -4,7 +4,7 @@
 
 Feinplan zu [`docs/auth-meta-plan.md`](auth-meta-plan.md), Punkte **P1.3–P1.6** ("Phase 1 — Lokale
 Accounts: Kernflow"). Baut auf dem bereits umgesetzten Vertrag aus P1.1/P1.2 auf (`LocalRegistration`,
-`EmailAvailability`, `CurrentUser`, `Password`-Schema, `GET /accounts/availability`, `GET /me`,
+`EmailAvailability`, `CurrentUser`, `Password`-Schema, `GET /members/availability`, `GET /me`,
 `POST /logout`, `components.securitySchemes.sessionCookie` in `api/openapi.yml`). P1.7–P1.10
 (Frontend) werden parallel geplant; dieses Dokument referenziert deren Schnittstellen nur, dupliziert
 sie aber nicht. P0.x, P2.x, P3.x sind explizit nicht Teil dieses Plans.
@@ -82,7 +82,7 @@ entscheidung (siehe DD-P1.4-1).
 - `LocalRegistration` (`password`-Pflichtfeld, `api/openapi.yml:2451`) ist bereits Pflichtbestandteil
   von `HouseholdSetup` (`api/openapi.yml:2472`, `required: [household, member, localRegistration]`)
   und `MemberRegistration` (`api/openapi.yml:2564`, `required: [..., localRegistration]`).
-- `GET /accounts/availability` (`api/openapi.yml:1496`), `GET /me` (`:1534`, bereits
+- `GET /members/availability` (`api/openapi.yml:1496`), `GET /me` (`:1534`, bereits
   `security: [sessionCookie]`), `POST /logout` (`:1565`, bereits `security: [sessionCookie]`) sind
   spezifiziert, aber **backend-seitig nicht implementiert** (siehe unten).
 - `PUT /household/{householdId}/members/{memberId}/password` (`:1623`, `changePassword`) ist
@@ -593,95 +593,65 @@ Analog für `MemberManagementService.joinHousehold`: neue Testmethode in
 Implementierung ergänzt den `AccountService.createAccount(...)`-Aufruf nach dem
 `memberRepository.save(...)` in `joinHousehold`.
 
-#### P1.3.6 — `AccountsApiDelegateImpl` / E-Mail-Verfügbarkeit
+#### P1.3.6 — E-Mail-Verfügbarkeit — ⚠️ überholt, siehe finale Fassung unten
 
-**Testklasse:** `eu.wiegandt.librehousehold.household.service.EmailAvailabilityServiceTest` (Unit)
-— oder als Methode auf einem bestehenden Service, falls im Zuge der Umsetzung ein sinnvollerer Ort
-gefunden wird (z. B. direkt auf `AccountService`, um keine Ein-Methoden-Klasse zu erzeugen; das ist
-eine Implementierungsdetail-Entscheidung, keine Design-Entscheidung, die hier vorab getroffen werden
-muss).
+**Diese Unterpunkt-Beschreibung ist durch mehrere Review-Runden überholt.** Ursprünglich war hier
+`AccountService.isEmailAvailable` + eine eigene `AccountsApiDelegateImpl` (Tag `accounts`)
+vorgesehen. Nach Diskussion wurde erkannt, dass "existiert bereits ein Member mit dieser E-Mail?"
+eine reine `member`/`household`-Fachfrage ist (unabhängig von der Authentifizierungsart, siehe auch
+P3), nicht Teil der Account-Domäne. **Finaler Stand:**
 
-- **Rot:** `@Nested class isEmailAvailable { void isEmailAvailable_unknownEmail_true() {...}
-  void isEmailAvailable_existingMemberEmail_false() {...} }` — Methode/Service existiert noch nicht.
-  ```java
-  @Test
-  void isEmailAvailable_existingMemberEmail_false() {
-      // given
-      var email = "max@example.com";
-      doReturn(true).when(memberRepository).existsByEmail(email);
+- `boolean isEmailAvailable(String email)` lebt auf `MemberQuery`/`MemberManagementService`
+  (nicht mehr auf `AccountService`), implementiert über das bereits vorhandene
+  `MemberRepository.existsByEmail`.
+- `api/openapi.yml`: der Endpunkt wurde von `GET /accounts/availability` (Tag `accounts`) auf
+  `GET /members/availability` (Tag `members`) verschoben; der jetzt leere `accounts`-Tag wurde aus
+  der Spec entfernt.
+- Die separate Klasse `AccountsApiDelegateImpl` entfällt; `checkEmailAvailability` wird stattdessen
+  eine weitere Methode auf der bereits bestehenden `MembersApiDelegateImpl`.
+- `AccountService` hat dadurch **keine** Abhängigkeit zu `MemberQuery` mehr (löst den zuvor per
+  `@Lazy` überbrückten Zirkelbezug zwischen `AccountService` und `MemberManagementService` an der
+  Wurzel auf, statt ihn nur zu verdecken).
 
-      // when
-      var result = accountService.isEmailAvailable(email);
-
-      // then
-      assertThat(result).isFalse();
-  }
-  ```
-- **Grün:** `MemberRepository` um abgeleitete Methode `boolean existsByEmail(String email)`
-  ergänzen; `AccountService.isEmailAvailable(String email) { return
-  !memberRepository.existsByEmail(email); }` (siehe DD-5 für die Begründung, warum über
-  `MemberRepository` statt `AccountRepository` geprüft wird).
-- **Refactor:** keiner erwartet.
-
-Neue Datei `AccountsApiDelegateImpl implements AccountsApiDelegate`
-(`eu.wiegandt.librehousehold.household.controller`), `checkEmailAvailability(String email)` ruft
-`accountService.isEmailAvailable(email)` auf und mapped auf `EmailAvailability`. Kein eigener
+`checkEmailAvailability(String email)` wird eine weitere Methode auf der bereits bestehenden
+`MembersApiDelegateImpl`, ruft `memberQuery.isEmailAvailable(email)` (oder die konkrete
+`MemberManagementService`-Methode) auf und mapped auf `EmailAvailability`. Kein eigener
 Service-Test nötig für den Delegate selbst (dünner Adapter, analog zu den bestehenden
-`*ApiDelegateImpl`-Klassen, die ebenfalls ohne eigene Unit-Tests bleiben — die Logik steckt im
-Service).
+`*ApiDelegateImpl`-Klassen).
 
-#### P1.3.7 — `AccountUserDetailsService`
+#### P1.3.7 — `AccountUserDetailsService` — ⚠️ überholt, siehe finale Fassung unten
 
-**Testklasse:** `AccountUserDetailsServiceTest` (Unit).
+**Diese Unterpunkt-Beschreibung ist überholt.** Ursprünglich war ein `@Query`-JOIN über
+`member`↔`account` (`AccountRepository.findAccountDetailsByEmail`) vorgesehen, der Ergebnis in eine
+`AccountDetailsProjection` liefert, aus der ein `AccountPrincipal` mit `memberId`/`householdId`/
+`isAdmin`/`email`/`passwordHash` gebaut wird. Nach Analyse, wofür `AccountPrincipal` tatsächlich
+gebraucht wird (nur für den internen Login-Schritt gegen den eingebetteten Authorization Server,
+siehe DD-7 — `memberId`/`householdId`/`isAdmin` werden dabei nie gelesen und in P1.4.5 ohnehin
+erneut und unabhängig aus `MemberRepository.findByEmail` geladen), wurde das vereinfacht:
 
-- **Rot:**
-  ```java
-  @Nested
-  class loadUserByUsername {
+- **`AccountPrincipal`** trägt nur noch `email` und `passwordHash` (`implements UserDetails`,
+  `getUsername()`→`email`, `getPassword()`→`passwordHash`).
+- **`AccountDetailsProjection` entfällt vollständig.**
+- **`AccountRepository.findAccountDetailsByEmail` (der `@Query`-JOIN) entfällt vollständig** —
+  `AccountRepository` bleibt ein reines `CrudRepository<AccountEntity, UUID>` ohne eigene Queries.
+- **`AccountUserDetailsService.loadUserByUsername(email)`** löst stattdessen zweistufig auf, ohne
+  jemals einen SQL-JOIN über zwei Aggregate zu bilden (konsistent mit Spring Data JDBCs
+  "ein Repository = ein Aggregat"-Prinzip):
+  1. `memberId = memberQuery.findMemberIdByEmail(email)` (neue Methode auf `MemberQuery`/
+     `MemberManagementService`, delegiert an eine neue abgeleitete Query auf `MemberRepository`) —
+     `UsernameNotFoundException`, falls kein Member mit dieser E-Mail existiert.
+  2. `account = accountRepository.findById(memberId)` (Standard-`CrudRepository`-Methode, reiner
+     PK-Zugriff) — `UsernameNotFoundException`, falls der Member (noch) keinen Account hat.
+  3. `new AccountPrincipal(email, account.passwordHash())` — direkte Konstruktion, kein
+     MapStruct-Mapper nötig (kein Feld-für-Feld-Mapping eines übereinstimmenden Quellobjekts,
+     sondern Komposition aus zwei unabhängigen Werten, analog zu
+     `AccountService.createAccount`s `new AccountEntity(memberId, passwordEncoder.encode(...))`).
+- Ein bereits angelegter `AccountPrincipalMapper`/`AccountPrincipalMapperTest` aus einer früheren
+  Runde entfällt ersatzlos (siehe oben, kein Mapping-Fall mehr).
 
-      @Test
-      void loadUserByUsername_existingEmail_returnsAccountPrincipal() {
-          // given
-          var memberId = UUID.randomUUID();
-          var householdId = UUID.randomUUID();
-          var email = "max@example.com";
-          var passwordHash = "$argon2id$...";
-          var projection = new AccountDetailsProjection(memberId, householdId, true, passwordHash);
-          var expectedPrincipal = new AccountPrincipal(memberId, householdId, true, email, passwordHash);
-          doReturn(Optional.of(projection)).when(accountRepository).findAccountDetailsByEmail(email);
-
-          // when
-          var result = accountUserDetailsService.loadUserByUsername(email);
-
-          // then
-          assertThat(result).usingRecursiveComparison().isEqualTo(expectedPrincipal);
-      }
-
-      @Test
-      void loadUserByUsername_unknownEmail_throwsUsernameNotFoundException() {
-          // given
-          var email = "unknown@example.com";
-          doReturn(Optional.empty()).when(accountRepository).findAccountDetailsByEmail(email);
-
-          // when / then
-          assertThatThrownBy(() -> accountUserDetailsService.loadUserByUsername(email))
-                  .isInstanceOf(UsernameNotFoundException.class);
-      }
-  }
-  ```
-  (Zwei Testmethoden in einer `@Nested`-Klasse für `loadUserByUsername` — konsistent mit der
-  Projekt-Regel "ab drei Methoden gruppieren"; hier bereits vorab so gruppiert, weil beide Tests
-  eindeutig zur selben Methode gehören und die Struktur mit P1.3.4 konsistent bleibt.)
-- **Grün:** `AccountRepository.findAccountDetailsByEmail(String email)` per `@Query` (Join über
-  `member`↔`account`, siehe Ist-Zustand-Hinweis "Spring Data JDBC: `@Query` nur für Joins"),
-  `AccountPrincipal` implementieren (DD-6), `AccountUserDetailsService implements
-  UserDetailsService` mit `loadUserByUsername`.
-- **Refactor:** keiner erwartet.
-
-**IT-Testklasse:** `AccountUserDetailsServiceIT` (analog zu `AccountServiceIT`), ein Happy-Path-Test
-`loadUserByUsername_memberWithAccount_returnsMatchingData`, der den echten SQL-Join gegen
-Testcontainers-Postgres verifiziert (Pflicht laut AGENTS.md: "jede DB-lesende/-schreibende
-Service-Methode braucht mindestens einen Happy-Path-IT").
+**IT-Testklasse:** `AccountUserDetailsServiceIT`, Happy-Path-Test
+`loadUserByUsername_memberWithAccount_returnsAccountPrincipalWithPasswordHash` gegen echtes
+Testcontainers-Postgres (deckt beide Repository-Zugriffe ab, kein JOIN mehr zu verifizieren).
 
 ### P1.4 — Spring Authorization Server Setup
 
@@ -833,7 +803,7 @@ SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http) th
 SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
     http.authorizeHttpRequests((authorize) -> authorize
                 .requestMatchers("/login", "/household/setup", "/invite/**",
-                                  "/accounts/availability").permitAll()
+                                  "/members/availability").permitAll()
                 .anyRequest().authenticated())
         .formLogin(Customizer.withDefaults())
         .oauth2Login((login) -> login.userInfoEndpoint((userInfo) ->
@@ -1003,7 +973,7 @@ Baut auf der in P1.4.4 begonnenen `defaultSecurityFilterChain`-Konfiguration auf
 | `/household/setup` | `POST` | Erster Admin hat noch keinen Account |
 | `/invite/{token}` | `GET` | Invite-Vorschau vor Registrierung |
 | `/invite/{token}/join` | `POST` | Neues Mitglied hat noch keinen Account |
-| `/accounts/availability` | `GET` | Wird vor Setup/Join aufgerufen |
+| `/members/availability` | `GET` | Wird vor Setup/Join aufgerufen |
 
 Zusätzlich technisch bedingt (nicht im Auftrag einzeln genannt, aber notwendig, da sonst der
 Login-Flow selbst blockiert wäre): `/login` (Formular-Login-Seite und -Processing-URL),
@@ -1060,7 +1030,7 @@ void protectedEndpoint_noSession_returns401() {
 gefordert), `CsrfTokenRequestAttributeHandler` Default. Keine `permitAll()`-Ausnahme von CSRF nötig,
 außer für `/household/setup`, `/invite/{token}/join` (state-changing, aber ohne vorherige Session,
 also ohne vorherigen `XSRF-TOKEN`-Cookie) — hierzu: Spring Security stellt bei jedem `GET`-Request
-(z. B. dem vorgelagerten `GET /invite/{token}` bzw. `GET /accounts/availability`) bereits einen
+(z. B. dem vorgelagerten `GET /invite/{token}` bzw. `GET /members/availability`) bereits einen
 frischen `XSRF-TOKEN`-Cookie aus, den die SPA für den darauffolgenden `POST` mitschicken kann — keine
 CSRF-Ausnahme für diese beiden `POST`-Endpunkte nötig, nur sicherstellen, dass der vorgelagerte
 `GET`-Aufruf im Frontend-Flow tatsächlich passiert (Abstimmungspunkt mit P1.7/P1.9, hier nur
@@ -1323,7 +1293,7 @@ undokumentierte Abhängigkeitsrichtung hinzu, die TD1 bei seiner Behebung zusät
 - [ ] Setup (`POST /household/setup`) und Invite-Join (`POST /invite/{token}/join`) hashen das
       übergebene Passwort mit Argon2id (OWASP-Parameter, siehe DD-3) und legen einen `account`-
       Datensatz an; kein Klartext-Passwort wird je persistiert oder geloggt.
-- [ ] `GET /accounts/availability` liefert korrekt `available: false`, sobald irgendein `member`
+- [ ] `GET /members/availability` liefert korrekt `available: false`, sobald irgendein `member`
       (nicht nur `account`) mit der E-Mail existiert.
 - [ ] `AccountUserDetailsService` lädt Login-Daten korrekt per E-Mail; unbekannte E-Mail wirft
       `UsernameNotFoundException` ohne Unterscheidung zu "falsches Passwort" in der resultierenden

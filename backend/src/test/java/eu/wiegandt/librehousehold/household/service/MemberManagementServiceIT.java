@@ -1,13 +1,18 @@
 package eu.wiegandt.librehousehold.household.service;
-import eu.wiegandt.librehousehold.household.exception.*;
-import eu.wiegandt.librehousehold.household.mapper.*;
-import eu.wiegandt.librehousehold.household.model.*;
-import eu.wiegandt.librehousehold.household.repository.*;
 
 import eu.wiegandt.librehousehold.TestcontainersConfiguration;
+import eu.wiegandt.librehousehold.household.exception.InvalidInviteException;
+import eu.wiegandt.librehousehold.household.exception.MemberAlreadyExistsException;
+import eu.wiegandt.librehousehold.household.exception.MemberNotFoundException;
+import eu.wiegandt.librehousehold.household.model.InviteEntity;
+import eu.wiegandt.librehousehold.household.repository.AccountRepository;
+import eu.wiegandt.librehousehold.household.repository.HouseholdRepository;
+import eu.wiegandt.librehousehold.household.repository.InviteRepository;
+import eu.wiegandt.librehousehold.household.repository.MemberRepository;
 import eu.wiegandt.librehousehold.model.*;
 import org.instancio.Instancio;
 import org.instancio.junit.InstancioExtension;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -15,8 +20,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -35,19 +43,40 @@ class MemberManagementServiceIT {
     private HouseholdSetupService setupService;
 
     @Autowired
+    private HouseholdRepository householdRepository;
+
+    @Autowired
     private MemberRepository memberRepository;
 
     @Autowired
     private InviteRepository inviteRepository;
 
+    @Autowired
+    private AccountRepository accountRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
     private HouseholdSetupResponse setupResponse;
     private Household existingHousehold;
+    private final List<UUID> createdHouseholdIds = new ArrayList<>();
 
     @BeforeEach
     void setUp() {
         var member = Instancio.create(Member.class);
         existingHousehold = Instancio.create(Household.class);
-        setupResponse = setupService.setupHousehold(new HouseholdSetup(existingHousehold, member));
+        var localRegistration = Instancio.create(LocalRegistration.class);
+        setupResponse = setupService.setupHousehold(new HouseholdSetup(existingHousehold, member, localRegistration));
+        createdHouseholdIds.add(existingHousehold.getId());
+    }
+
+    @AfterEach
+    void tearDown() {
+        for (var householdId : createdHouseholdIds) {
+            inviteRepository.deleteByHouseholdId(householdId);
+            memberRepository.deleteByHouseholdId(householdId);
+            householdRepository.deleteById(householdId);
+        }
     }
 
     @Nested
@@ -99,6 +128,21 @@ class MemberManagementServiceIT {
         }
 
         @Test
+        void validRegistration_persistsHashedPasswordInAccountTable() {
+            // given
+            var token = setupResponse.getInviteToken();
+            var registration = Instancio.create(MemberRegistration.class);
+
+            // when
+            memberManagementService.joinHousehold(token, registration);
+
+            // then
+            assertThat(accountRepository.findById(registration.getId()))
+                    .hasValueSatisfying(account -> assertThat(passwordEncoder.matches(
+                            registration.getLocalRegistration().getPassword(), account.passwordHash())).isTrue());
+        }
+
+        @Test
         void expiredToken_throwsInvalidInviteException() {
             // given — create an expired invite directly
             var expiredInvite = inviteRepository.save(new InviteEntity(
@@ -115,20 +159,83 @@ class MemberManagementServiceIT {
         void duplicateEmail_throwsMemberAlreadyExistsException() {
             // given
             var token = setupResponse.getInviteToken();
-            var registration1 = Instancio.create(MemberRegistration.class);
-            memberManagementService.joinHousehold(token, registration1);
+            var registration = Instancio.create(MemberRegistration.class);
+            memberManagementService.joinHousehold(token, registration);
 
+            var household = Instancio.create(Household.class);
+            createdHouseholdIds.add(household.getId());
             var token2 = setupService.setupHousehold(new HouseholdSetup(
-                    Instancio.create(Household.class),
-                    Instancio.create(Member.class)
+                    household,
+                    Instancio.create(Member.class),
+                    Instancio.create(LocalRegistration.class)
             )).getInviteToken();
             var registration2 = Instancio.of(MemberRegistration.class)
-                    .set(field(MemberRegistration::getEmail), registration1.getEmail())
+                    .set(field(MemberRegistration::getEmail), registration.getEmail())
                     .create();
 
             // when / then
             assertThatThrownBy(() -> memberManagementService.joinHousehold(token2, registration2))
                     .isInstanceOf(MemberAlreadyExistsException.class);
+        }
+    }
+
+    @Nested
+    class isEmailAvailable {
+
+        @Test
+        void availableEmail_returnsTrue() {
+            // given
+            var email = "unknown-" + UUID.randomUUID() + "@example.com";
+
+            // when
+            var result = memberManagementService.isEmailAvailable(email);
+
+            // then
+            assertThat(result).isTrue();
+        }
+
+        @Test
+        void existingMemberEmail_returnsFalse() {
+            // given
+            var token = setupResponse.getInviteToken();
+            var registration = Instancio.create(MemberRegistration.class);
+            memberManagementService.joinHousehold(token, registration);
+
+            // when
+            var result = memberManagementService.isEmailAvailable(registration.getEmail());
+
+            // then
+            assertThat(result).isFalse();
+        }
+    }
+
+    @Nested
+    class findMemberIdByEmail {
+
+        @Test
+        void unknownEmail_returnsEmptyOptional() {
+            // given
+            var email = "unknown-" + UUID.randomUUID() + "@example.com";
+
+            // when
+            var result = memberManagementService.findMemberIdByEmail(email);
+
+            // then
+            assertThat(result).isEmpty();
+        }
+
+        @Test
+        void knownEmail_returnsMemberId() {
+            // given
+            var token = setupResponse.getInviteToken();
+            var registration = Instancio.create(MemberRegistration.class);
+            memberManagementService.joinHousehold(token, registration);
+
+            // when
+            var result = memberManagementService.findMemberIdByEmail(registration.getEmail());
+
+            // then
+            assertThat(result).contains(registration.getId());
         }
     }
 
