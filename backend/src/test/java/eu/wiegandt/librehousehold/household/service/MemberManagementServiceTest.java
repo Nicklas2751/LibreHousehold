@@ -47,8 +47,14 @@ class MemberManagementServiceTest {
     @Spy
     MemberMapper memberMapper = Mappers.getMapper(MemberMapper.class);
 
+    @Spy
+    MemberRegistrationMapper memberRegistrationMapper = Mappers.getMapper(MemberRegistrationMapper.class);
+
     @Mock
     private ApplicationEventPublisher eventPublisher;
+
+    @Mock
+    private AccountService accountService;
 
     @InjectMocks
     private MemberManagementService service;
@@ -238,6 +244,25 @@ class MemberManagementServiceTest {
                     e.householdId().equals(householdId) && !e.isAdmin()
             ));
         }
+
+        @Test
+        void validToken_createsAccountForSavedMemberWithProvidedPassword() {
+            // given
+            var token = UUID.randomUUID();
+            var registration = Instancio.create(MemberRegistration.class);
+            var invite = Instancio.of(InviteEntity.class)
+                    .set(field(InviteEntity::validUntil), LocalDate.now().plusDays(3))
+                    .create();
+            var savedEntity = Instancio.of(memberEntityModel).create();
+            doReturn(Optional.of(invite)).when(inviteRepository).findByToken(token);
+            doReturn(savedEntity).when(memberRepository).save(any(MemberEntity.class));
+
+            // when
+            service.joinHousehold(token, registration);
+
+            // then
+            verify(accountService).createAccount(savedEntity.id(), registration.getLocalRegistration().getPassword());
+        }
     }
 
     @Nested
@@ -398,6 +423,99 @@ class MemberManagementServiceTest {
 
             // then
             assertThat(result).isTrue();
+        }
+    }
+
+    @Nested
+    class existsByEmail {
+
+        @Test
+        void unknownEmail_returnsFalse() {
+            // given
+            var email = "unknown@example.com";
+            doReturn(false).when(memberRepository).existsByEmail(email);
+
+            // when
+            var result = service.existsByEmail(email);
+
+            // then
+            assertThat(result).isFalse();
+        }
+
+        @Test
+        void knownEmail_returnsTrue() {
+            // given
+            var email = "max@example.com";
+            doReturn(true).when(memberRepository).existsByEmail(email);
+
+            // when
+            var result = service.existsByEmail(email);
+
+            // then
+            assertThat(result).isTrue();
+        }
+    }
+
+    @Nested
+    class isEmailAvailable {
+
+        @Test
+        void unknownEmail_returnsTrue() {
+            // given
+            var email = "unknown@example.com";
+            doReturn(false).when(memberRepository).existsByEmail(email);
+
+            // when
+            var result = service.isEmailAvailable(email);
+
+            // then
+            assertThat(result).isTrue();
+        }
+
+        @Test
+        void knownEmail_returnsFalse() {
+            // given
+            var email = "max@example.com";
+            doReturn(true).when(memberRepository).existsByEmail(email);
+
+            // when
+            var result = service.isEmailAvailable(email);
+
+            // then
+            assertThat(result).isFalse();
+        }
+    }
+
+    @Nested
+    class findMemberIdByEmail {
+
+        @Test
+        void unknownEmail_returnsEmptyOptional() {
+            // given
+            var email = "unknown@example.com";
+            doReturn(Optional.empty()).when(memberRepository).findByEmail(email);
+
+            // when
+            var result = service.findMemberIdByEmail(email);
+
+            // then
+            assertThat(result).isEmpty();
+        }
+
+        @Test
+        void knownEmail_returnsMemberId() {
+            // given
+            var email = "max@example.com";
+            var entity = Instancio.of(memberEntityModel)
+                    .set(field(MemberEntity::email), email)
+                    .create();
+            doReturn(Optional.of(entity)).when(memberRepository).findByEmail(email);
+
+            // when
+            var result = service.findMemberIdByEmail(email);
+
+            // then
+            assertThat(result).contains(entity.id());
         }
     }
 
