@@ -22,3 +22,9 @@ CREATE TABLE invite
     token        UUID NOT NULL UNIQUE,
     valid_until  DATE NOT NULL
 );
+
+CREATE TABLE account
+(
+    member_id     UUID PRIMARY KEY REFERENCES member (id) ON DELETE CASCADE,
+    password_hash TEXT NOT NULL
+);

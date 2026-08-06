@@ -3,6 +3,7 @@ package eu.wiegandt.librehousehold.household.service;
 import eu.wiegandt.librehousehold.household.exception.HouseholdAlreadyExistsException;
 import eu.wiegandt.librehousehold.household.exception.MemberAlreadyExistsException;
 import eu.wiegandt.librehousehold.household.mapper.HouseholdSetupMapper;
+import eu.wiegandt.librehousehold.household.mapper.MemberMapper;
 import eu.wiegandt.librehousehold.household.model.HouseholdEntity;
 import eu.wiegandt.librehousehold.household.model.InviteEntity;
 import eu.wiegandt.librehousehold.household.model.MemberEntity;
@@ -22,18 +23,24 @@ import java.util.UUID;
 public class HouseholdSetupService {
 
     private static final int INVITE_VALIDITY_DAYS = 7;
+    private static final boolean SETUP_MEMBER_IS_ADMIN = true;
 
     private final HouseholdRepository householdRepository;
     private final MemberRepository memberRepository;
     private final InviteRepository inviteRepository;
     private final HouseholdSetupMapper householdSetupMapper;
+    private final MemberMapper memberMapper;
+    private final AccountService accountService;
 
     public HouseholdSetupService(HouseholdRepository householdRepository, MemberRepository memberRepository,
-                          InviteRepository inviteRepository, HouseholdSetupMapper householdSetupMapper) {
+                          InviteRepository inviteRepository, HouseholdSetupMapper householdSetupMapper,
+                          MemberMapper memberMapper, AccountService accountService) {
         this.householdRepository = householdRepository;
         this.memberRepository = memberRepository;
         this.inviteRepository = inviteRepository;
         this.householdSetupMapper = householdSetupMapper;
+        this.memberMapper = memberMapper;
+        this.accountService = accountService;
     }
 
     @Transactional
@@ -44,18 +51,14 @@ public class HouseholdSetupService {
         } catch (DataIntegrityViolationException e) {
             throw new HouseholdAlreadyExistsException();
         }
+        MemberEntity savedMember;
         try {
-            memberRepository.save(new MemberEntity(
-                    setup.getMember().getId(),
-                    setup.getMember().getName(),
-                    setup.getMember().getEmail(),
-                    setup.getMember().getAvatar().orElse(null),
-                    savedHousehold.id(),
-                    true
-            ));
+            savedMember = memberRepository.save(
+                    memberMapper.toMemberEntity(setup.getMember(), savedHousehold.id(), SETUP_MEMBER_IS_ADMIN));
         } catch (DataIntegrityViolationException e) {
             throw new MemberAlreadyExistsException();
         }
+        accountService.createAccount(savedMember.getId(), setup.getLocalRegistration().getPassword());
         var invite = inviteRepository.save(new InviteEntity(
                 null,
                 savedHousehold.id(),

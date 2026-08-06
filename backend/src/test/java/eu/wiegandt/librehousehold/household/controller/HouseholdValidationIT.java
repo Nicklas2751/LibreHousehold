@@ -9,6 +9,7 @@ import eu.wiegandt.librehousehold.api.HouseholdApiController;
 import eu.wiegandt.librehousehold.model.Household;
 import eu.wiegandt.librehousehold.model.HouseholdSetup;
 import eu.wiegandt.librehousehold.model.HouseholdUpdate;
+import eu.wiegandt.librehousehold.model.LocalRegistration;
 import eu.wiegandt.librehousehold.model.Member;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -53,7 +54,7 @@ class HouseholdValidationIT {
             // given
             var household = new Household(UUID.randomUUID(), "x".repeat(101));
             var member = new Member(UUID.randomUUID(), "Max Mustermann", "max@example.com");
-            var setup = new HouseholdSetup(household, member);
+            var setup = new HouseholdSetup(household, member, new LocalRegistration("correct horse battery staple"));
 
             // when / then
             mockMvc.perform(post("/v1/household/setup")
@@ -67,7 +68,7 @@ class HouseholdValidationIT {
             // given
             var household = new Household(UUID.randomUUID(), "ab");
             var member = new Member(UUID.randomUUID(), "Max Mustermann", "max@example.com");
-            var setup = new HouseholdSetup(household, member);
+            var setup = new HouseholdSetup(household, member, new LocalRegistration("correct horse battery staple"));
 
             // when / then
             mockMvc.perform(post("/v1/household/setup")

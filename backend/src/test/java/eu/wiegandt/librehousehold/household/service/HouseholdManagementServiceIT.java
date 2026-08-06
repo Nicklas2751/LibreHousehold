@@ -8,9 +8,11 @@ import eu.wiegandt.librehousehold.TestcontainersConfiguration;
 import eu.wiegandt.librehousehold.model.Household;
 import eu.wiegandt.librehousehold.model.HouseholdSetup;
 import eu.wiegandt.librehousehold.model.HouseholdUpdate;
+import eu.wiegandt.librehousehold.model.LocalRegistration;
 import eu.wiegandt.librehousehold.model.Member;
 import org.instancio.Instancio;
 import org.instancio.junit.InstancioExtension;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -52,7 +54,16 @@ class HouseholdManagementServiceIT {
     void setUp() {
         var member = Instancio.create(Member.class);
         existingHousehold = Instancio.create(Household.class);
-        setupService.setupHousehold(new HouseholdSetup(existingHousehold, member));
+        var localRegistration = Instancio.create(LocalRegistration.class);
+        setupService.setupHousehold(new HouseholdSetup(existingHousehold, member, localRegistration));
+    }
+
+    @AfterEach
+    void tearDown() {
+        // idempotent: some tests (e.g. deleteHousehold) already remove these rows themselves
+        inviteRepository.deleteByHouseholdId(existingHousehold.getId());
+        memberRepository.deleteByHouseholdId(existingHousehold.getId());
+        householdRepository.deleteById(existingHousehold.getId());
     }
 
     @Nested
