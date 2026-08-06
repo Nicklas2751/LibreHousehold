@@ -1,25 +1,21 @@
 package eu.wiegandt.librehousehold.household.mapper;
 
+import eu.wiegandt.librehousehold.core.CoreOptionalMapper;
 import eu.wiegandt.librehousehold.household.model.MemberEntity;
 import eu.wiegandt.librehousehold.model.Member;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 
-import java.util.Optional;
+import java.util.UUID;
 
 @Mapper
-public interface MemberMapper {
+public interface MemberMapper extends CoreOptionalMapper {
 
-    default String fromOptional(Optional<String> value) {
-        return value.orElse(null);
-    }
-
-    default Optional<String> toOptional(String value) {
-        return Optional.ofNullable(value);
-    }
-
-    default Optional<Boolean> toOptionalBoolean(boolean value) {
-        return Optional.of(value);
-    }
-
+    @Mapping(target = "avatar", source = "avatar", qualifiedByName = "toOptionalString")
+    @Mapping(target = "isAdmin", source = "isAdmin", qualifiedByName = "toOptionalBoolean")
     Member toMember(MemberEntity entity);
+
+    @Mapping(target = "avatar", source = "member.avatar", qualifiedByName = "fromOptionalString")
+    @Mapping(target = "isAdmin", source = "isAdmin")
+    MemberEntity toMemberEntity(Member member, UUID householdId, boolean isAdmin);
 }

@@ -5,6 +5,7 @@ import eu.wiegandt.librehousehold.household.model.*;
 import eu.wiegandt.librehousehold.household.repository.*;
 
 import eu.wiegandt.librehousehold.model.HouseholdSetup;
+import eu.wiegandt.librehousehold.model.LocalRegistration;
 import eu.wiegandt.librehousehold.model.Member;
 import org.instancio.Instancio;
 import org.instancio.junit.InstancioExtension;
@@ -38,8 +39,14 @@ class HouseholdSetupServiceTest {
     @Mock
     private InviteRepository inviteRepository;
 
+    @Mock
+    private AccountService accountService;
+
     @Spy
     private HouseholdSetupMapper householdSetupMapper = Mappers.getMapper(HouseholdSetupMapper.class);
+
+    @Spy
+    private MemberMapper memberMapper = Mappers.getMapper(MemberMapper.class);
 
     @InjectMocks
     private HouseholdSetupService service;
@@ -146,6 +153,22 @@ class HouseholdSetupServiceTest {
         }
 
         @Test
+        void validSetup_createsAccountForSavedMemberWithProvidedPassword() {
+            // given
+            var savedMember = Instancio.create(MemberEntity.class);
+            doReturn(Instancio.create(HouseholdEntity.class)).when(householdRepository).save(any(HouseholdEntity.class));
+            doReturn(savedMember).when(memberRepository).save(any(MemberEntity.class));
+            doReturn(Instancio.create(InviteEntity.class)).when(inviteRepository).save(any(InviteEntity.class));
+            var setup = buildSetup();
+
+            // when
+            service.setupHousehold(setup);
+
+            // then
+            verify(accountService).createAccount(savedMember.getId(), setup.getLocalRegistration().getPassword());
+        }
+
+        @Test
         void validSetup_inviteTokenReturnedInResponse() {
             // given
             doReturn(Instancio.create(HouseholdEntity.class)).when(householdRepository).save(any(HouseholdEntity.class));
@@ -164,6 +187,7 @@ class HouseholdSetupServiceTest {
     private HouseholdSetup buildSetup() {
         var member = Instancio.create(Member.class);
         var household = Instancio.create(eu.wiegandt.librehousehold.model.Household.class);
-        return new HouseholdSetup(household, member);
+        var localRegistration = Instancio.create(LocalRegistration.class);
+        return new HouseholdSetup(household, member, localRegistration);
     }
 }

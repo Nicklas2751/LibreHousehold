@@ -7,6 +7,7 @@ import eu.wiegandt.librehousehold.household.exception.InvalidInviteException;
 import eu.wiegandt.librehousehold.household.exception.MemberAlreadyExistsException;
 import eu.wiegandt.librehousehold.household.exception.MemberNotFoundException;
 import eu.wiegandt.librehousehold.household.mapper.MemberMapper;
+import eu.wiegandt.librehousehold.household.mapper.MemberRegistrationMapper;
 import eu.wiegandt.librehousehold.household.model.MemberEntity;
 import eu.wiegandt.librehousehold.household.model.MemberNameProjection;
 import eu.wiegandt.librehousehold.household.repository.HouseholdRepository;
@@ -25,6 +26,7 @@ import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 import static java.util.stream.Collectors.toMap;
@@ -32,22 +34,30 @@ import static java.util.stream.Collectors.toMap;
 @Service
 public class MemberManagementService implements MemberQuery, MemberDeletion {
 
+    private static final boolean JOINED_MEMBER_IS_ADMIN = false;
+
     private final MemberRepository memberRepository;
     private final HouseholdRepository householdRepository;
     private final InviteRepository inviteRepository;
     private final MemberMapper memberMapper;
+    private final MemberRegistrationMapper memberRegistrationMapper;
     private final ApplicationEventPublisher eventPublisher;
+    private final AccountService accountService;
 
     public MemberManagementService(MemberRepository memberRepository,
-                            HouseholdRepository householdRepository,
-                            InviteRepository inviteRepository,
-                            MemberMapper memberMapper,
-                            ApplicationEventPublisher eventPublisher) {
+                                   HouseholdRepository householdRepository,
+                                   InviteRepository inviteRepository,
+                                   MemberMapper memberMapper,
+                                   MemberRegistrationMapper memberRegistrationMapper,
+                                   ApplicationEventPublisher eventPublisher,
+                                   AccountService accountService) {
         this.memberRepository = memberRepository;
         this.householdRepository = householdRepository;
         this.inviteRepository = inviteRepository;
         this.memberMapper = memberMapper;
+        this.memberRegistrationMapper = memberRegistrationMapper;
         this.eventPublisher = eventPublisher;
+        this.accountService = accountService;
     }
 
     public List<Member> getMembers(UUID householdId) {
@@ -75,33 +85,32 @@ public class MemberManagementService implements MemberQuery, MemberDeletion {
         var invite = inviteRepository.findByToken(token)
                 .filter(i -> !i.validUntil().isBefore(LocalDate.now()))
                 .orElseThrow(InvalidInviteException::new);
+        MemberEntity saved;
         try {
-            var saved = memberRepository.save(new MemberEntity(
-                    registration.getId(),
-                    registration.getName(),
-                    registration.getEmail(),
-                    registration.getAvatar().orElse(null),
-                    invite.householdId(),
-                    false
-            ));
-            return memberMapper.toMember(saved);
-        } catch (DataIntegrityViolationException e) {
+            saved = memberRepository.save(
+                    memberRegistrationMapper.toMemberEntity(registration, invite.householdId(), JOINED_MEMBER_IS_ADMIN));
+        } catch (DataIntegrityViolationException _) {
             throw new MemberAlreadyExistsException();
         }
+        accountService.createAccount(saved.getId(), registration.getLocalRegistration().getPassword());
+        return memberMapper.toMember(saved);
     }
 
     @Transactional
     public void updateMember(UUID memberId, MemberUpdate update) {
         try {
-            if (update.getName().isPresent()) {
-                var rows = memberRepository.updateName(memberId, update.getName().get());
+            var name = update.getName();
+            if (name.isPresent()) {
+                var rows = memberRepository.updateName(memberId, name.get());
                 if (rows == 0) throw new MemberNotFoundException();
             }
-            if (update.getEmail().isPresent()) {
-                var rows = memberRepository.updateEmail(memberId, update.getEmail().get());
+
+            var email = update.getEmail();
+            if (email.isPresent()) {
+                var rows = memberRepository.updateEmail(memberId, email.get());
                 if (rows == 0) throw new MemberNotFoundException();
             }
-        } catch (DataIntegrityViolationException e) {
+        } catch (DataIntegrityViolationException _) {
             throw new MemberAlreadyExistsException();
         }
     }
@@ -142,5 +151,17 @@ public class MemberManagementService implements MemberQuery, MemberDeletion {
         return memberRepository.findById(memberId)
                 .map(MemberEntity::isAdmin)
                 .orElse(false);
+    }
+
+    public boolean existsByEmail(String email) {
+        return memberRepository.existsByEmail(email);
+    }
+
+    public boolean isEmailAvailable(String email) {
+        return !existsByEmail(email);
+    }
+
+    public Optional<UUID> findMemberIdByEmail(String email) {
+        return memberRepository.findByEmail(email).map(MemberEntity::getId);
     }
 }
