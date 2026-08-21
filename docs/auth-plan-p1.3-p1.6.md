@@ -208,10 +208,11 @@ Sache des P2.1-Feinplans, nicht mehr dieses Plans.
 die leichteste der von OWASP im „Password Storage Cheat Sheet" gelisteten Argon2id-Konfigurationen,
 sondern die **stärkste**, die OWASP dort selbst als Erstwahl nennt ("use this if you can afford the
 memory"): `new Argon2PasswordEncoder(16, 32, 1, 47 * 1024, 1)` (Salt-Länge 16 Byte, Hash-Länge
-32 Byte, Parallelität 1, Speicher 46 MiB, 1 Iteration). OWASP listet mehrere gleichwertig
-akzeptierte Abstufungen (Speicher runter, Iterationen rauf); `m=46 MiB, t=1` ist darin die oberste,
-speicherstärkste Empfehlung — stärker als die zuvor angesetzten `m=19 MiB, t=2`. Bleibt weiterhin
-exakt innerhalb der in ADR-009 zitierten OWASP-Quelle, nur an deren oberem statt unterem Ende.
+32 Byte, Parallelität 1, Speicher 47 MiB, 1 Iteration). OWASP listet als oberste, speicherstärkste
+Empfehlung exakt `m=47104 KiB` (≈ 46 MiB) `t=1`; der Code rundet auf `47 * 1024 KiB` (= 47 MiB) —
+geringfügig *mehr* Speicher als der OWASP-Literalwert, also mindestens ebenso stark, nur kein
+byte-identisches Zitat. Deutlich stärker als die zuvor angesetzten `m=19 MiB, t=2`. Bleibt weiterhin
+im Sinne der in ADR-009 zitierten OWASP-Quelle, nur an deren oberem statt unterem Ende.
 
 **Verworfene Alternativen:** `m=19 MiB, t=2` (OWASP-Minimalabstufung) sowie Spring Securitys
 `Argon2PasswordEncoder.defaultsForSpringSecurity_v5_8()` (`m=16 MiB, t=2`, unterschreitet sogar die
