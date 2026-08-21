@@ -1,5 +1,6 @@
 package eu.wiegandt.librehousehold.household.model;
 
+import org.jspecify.annotations.NonNull;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.domain.Persistable;
 import org.springframework.data.relational.core.mapping.Column;
@@ -21,5 +22,10 @@ public record AccountEntity(
     @Override
     public boolean isNew() {
         return true;
+    }
+
+    @Override
+    public @NonNull String toString() {
+        return "AccountEntity[memberId=" + memberId + "]";
     }
 }

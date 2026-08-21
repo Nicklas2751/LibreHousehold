@@ -1,5 +1,6 @@
 package eu.wiegandt.librehousehold.household;
 
+import org.jspecify.annotations.NonNull;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
@@ -46,5 +47,10 @@ public record AccountPrincipal(String email, String passwordHash) implements Use
     @Override
     public boolean isEnabled() {
         return true;
+    }
+
+    @Override
+    public @NonNull String toString() {
+        return "AccountPrincipal[email=" + email + "]";
     }
 }
