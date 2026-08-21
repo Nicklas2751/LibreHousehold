@@ -298,10 +298,7 @@ For class-based entities the recommended update pattern is via MapStruct `@Mappi
 - **Email uniqueness scope**: `member.email` staying globally unique (system-wide UNIQUE constraint) is the correct, natural fit for the 1:1 model — one e-mail identifies exactly one account/household. No per-household uniqueness needed.
 - **Existing accounts**: Resolved by the 1:1 model — an account can never join or set up a second household. The setup wizard and registration flow must reject an e-mail that already has an account with a clear error, not a generic 409.
 - **Account registration stays in `household`**: Since an account is just an attribute of a membership (not an independent, cross-household entity), `AccountRegistration`/`MemberManagementService` in the `household` module remains the correct place for it — no separate Identity/Account module is needed.
-
-Still open:
-
-- **Missing endpoint**: An endpoint is needed to check whether a given e-mail address is already registered before household setup — otherwise the client gets a generic 409 with no actionable information.
+- **Email availability check**: `GET /members/availability` lets a client check whether a given e-mail address is already registered before household setup/invite-join, avoiding a generic 409 with no actionable information. Implemented via `MemberManagementService.isEmailAvailable`, not a separate account-scoped endpoint — "does a member with this email exist" is a `member`/`household` fact, independent of authentication method.
 
 ### Task Schema
 

@@ -103,5 +103,5 @@ hs_err_pid*
 replay_pid*
 build/
 .gradle
-.agent-plans/*.DS_Store
+.DS_Store
 .playwright-mcp
