@@ -11,6 +11,7 @@ import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcOperations;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configurers.CsrfConfigurer;
 import org.springframework.security.config.annotation.web.configurers.oauth2.server.authorization.OAuth2AuthorizationServerConfigurer;
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserService;
 import org.springframework.security.oauth2.client.registration.ClientRegistration;
@@ -26,9 +27,15 @@ import org.springframework.security.oauth2.server.authorization.settings.Authori
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
+import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
 import org.springframework.security.web.util.matcher.AnyRequestMatcher;
 import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.List;
 
 /**
  * Composition root for the Spring Security / Spring Authorization Server wiring (see ADR-013,
@@ -86,6 +93,27 @@ public class SecurityConfig {
         return new InMemoryClientRegistrationRepository(clientRegistration);
     }
 
+    /**
+     * Origin allowlist for cookie-authenticated cross-origin requests (see CORS1 in Arc42 Chapter 8).
+     * {@code allowCredentials(true)} is required for the session cookie to be sent at all, which is
+     * why {@code allowedOrigins} must stay an explicit list — Spring rejects a wildcard origin
+     * combined with credentials. Empty by default: the target deployment puts frontend and backend
+     * behind the same Nginx reverse proxy (same-origin), so self-hosters serving them
+     * from different origins must opt in explicitly via {@code librehousehold.security.cors.allowed-origins}.
+     */
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource(
+            @Value("${librehousehold.security.cors.allowed-origins:}") List<String> allowedOrigins) {
+        var configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(allowedOrigins);
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE"));
+        configuration.setAllowedHeaders(List.of("*"));
+        configuration.setAllowCredentials(true);
+        var source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
+    }
+
     @Bean
     @Order(1)
     @ConditionalOnWebApplication(type = Type.SERVLET)
@@ -126,6 +154,15 @@ public class SecurityConfig {
                                 basePath + "/members/availability")
                         .permitAll()
                         .anyRequest().authenticated())
+                .cors(Customizer.withDefaults())
+                // ADR-014: XSRF-TOKEN must be JS-readable (spa() wires a cookie-based repository plus
+                // a request handler that resolves the raw, unmasked token value, matching what the SPA
+                // reads straight from the cookie). No permitAll exception from CSRF is added here for
+                // /household/setup or /invite/{token}/join even though they are unauthenticated: the
+                // SPA already performs a preceding GET (e.g. /members/availability, /invite/{token})
+                // that hands it a fresh XSRF-TOKEN cookie before the POST (see P1.5.2).
+                .csrf(CsrfConfigurer::spa)
+                .addFilterAfter(new CsrfCookieFilter(), CsrfFilter.class)
                 .formLogin(Customizer.withDefaults())
                 .oauth2Login((login) -> login.userInfoEndpoint((userInfo) ->
                         userInfo.oidcUserService(oidcUserService)))

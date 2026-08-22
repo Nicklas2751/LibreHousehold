@@ -19,7 +19,13 @@ sie aber nicht. P0.x, P2.x, P3.x sind explizit nicht Teil dieses Plans.
   Korrekturen gegenüber der ursprünglichen Aufgabenbeschreibung unten, u. a. eine kritische, erst
   durch echtes Durchspielen des Flows (nicht nur Testsuite) gefundene Regression. Noch nicht
   committet.
-- 🟡 **P1.5 / P1.6.** Noch nicht begonnen.
+- ✅ **P1.5 — Resource-Server-/BFF-Absicherung bestehender Endpunkte.** Umgesetzt, unabhängig
+  reviewt (keine blockierenden Funde, App real gestartet und CSRF/CORS/Cookies per `curl`
+  gegengeprüft). P1.5.5 (ursprünglich bewusst nicht Teil des Plans) wurde auf Nutzerwunsch direkt
+  mit umgesetzt, ebenso eine vom Review gefundene, sicherheitsrelevante Deployment-Lücke
+  (`server.forward-headers-strategy`). Siehe "Tatsächliche Umsetzung & Abweichungen vom Plan" am
+  Ende des P1.5-Abschnitts. Noch nicht committet.
+- 🟡 **P1.6.** Noch nicht begonnen.
 
 **Wichtiger methodischer Fund (gilt für P1.5/P1.6 genauso):** `./mvnw clean test` führt in diesem
 Projekt die `*IT`-Klassen NICHT aus (`maven-failsafe-plugin` läuft ungebunden an eigene Phasen,
@@ -1029,7 +1035,7 @@ ursprünglichen Aufgabenbeschreibung (alle mit Begründung, keine stillschweigen
   den beiden web-abhängigen `@Bean`-Methoden (nicht klassenweit, da `RegisteredClientRepository`/
   `AuthorizationServerSettings`/`ClientRegistrationRepository` auch ohne Web-Kontext gebraucht werden).
 
-### P1.5 — Resource-Server-/BFF-Absicherung bestehender Endpunkte
+### P1.5 — Resource-Server-/BFF-Absicherung bestehender Endpunkte — ✅ umgesetzt (siehe Abweichungen am Ende dieses Abschnitts)
 
 **Ziel:** Cookie-Session, CSRF, CORS für alle bestehenden Endpunkte; explizite `permitAll`-Ausnahmen.
 
@@ -1135,15 +1141,44 @@ in `application.yaml` bzw. `CookieSerializer`-Bean, falls nicht per Property abb
 `SessionCookieAttributesIT`) `login_successful_setsSessionCookieWithSecureHttpOnlySameSite` —
 prüft den `Set-Cookie`-Response-Header per String-Assertion auf die drei Attribute.
 
-#### P1.5.5 — Dokumentations-Nacharbeit an `api/openapi.yml` (nur benennen, nicht umsetzen)
+#### P1.5.5 — Dokumentations-Nacharbeit an `api/openapi.yml` — ✅ umgesetzt (auf Nutzerwunsch doch direkt, nicht erst als Folgeaufgabe)
 
-`security: [sessionCookie]` fehlt aktuell auf allen Operationen außer `getCurrentUser`/`logout`
-(P1.2-Ergebnis). Muss nachgetragen werden — entweder pro Operation oder global via
-`security: [sessionCookie]` auf Root-Ebene mit `security: []`-Override für die vier
-`permitAll`-Endpunkte plus `setupHousehold`/`resolveInvite`/`joinHousehold`/
-`checkEmailAvailability`. **Diese Spec-Änderung ist ausdrücklich nicht Teil der Implementierung
-dieses Plans** — wird als kleine Folgeaufgabe nach P1.5 vermerkt, damit der Vertrag den tatsächlichen
-Sicherheitsstatus korrekt dokumentiert.
+Global `security: [sessionCookie]` auf Root-Ebene ergänzt, mit `security: []`-Override für die vier
+`permitAll`-Endpunkte (`setupHousehold`, `resolveInvite`, `joinHousehold`, `checkEmailAvailability`).
+Die zuvor auf `getCurrentUser`/`logout` einzeln deklarierte `security: [sessionCookie]` (P1.2) wurde
+entfernt, da jetzt redundant zum neuen globalen Default. Frontend/Backend neu generiert, alle 20
+IT-Klassen weiterhin grün.
+
+#### P1.5 — Tatsächliche Umsetzung & Abweichungen vom Plan
+
+- **P1.5.1 war beim Start bereits faktisch erledigt** — die `permitAll()`-Liste mit korrektem
+  `/v1`-Präfix wurde schon im Zuge der P1.4-Bugfix-Runde gebaut (siehe dortiger Abweichungsblock).
+  Einzige noch offene Lücke: ein Test gegen einen echten, geschützten Business-Endpunkt (nicht nur
+  `/me`) fehlte — ergänzt als `protectedBusinessEndpoint.noSession_returns401` in
+  `AuthorizationServerConfigurationIT`.
+- **P1.5.2 (CSRF):** `.csrf(CsrfConfigurer::spa)` (Spring Security 7.0/Boot 4.1 Convenience-Methode)
+  statt manuellem `CookieCsrfTokenRepository`-Wiring aus dem ursprünglichen Plantext — laut Context7
+  aktueller, offizieller Weg. Zusätzlich ein neuer `CsrfCookieFilter` (`addFilterAfter(...,
+  CsrfFilter.class)`), da Spring das CSRF-Cookie sonst nur bei gerenderten Formularen schreibt, nicht
+  bei reinen JSON-`GET`-Requests einer SPA — vom Review als notwendig und korrekt platziert bestätigt.
+- **P1.5.3 (CORS):** `librehousehold.security.cors.allowed-origins` (Default leer), `allowCredentials(true)`,
+  kein Wildcard-Origin. Vom Review empirisch verifiziert: Spring spiegelt bei
+  `allowedHeaders(List.of("*"))` + Credentials korrekt die tatsächlich angefragten Header zurück,
+  nie ein literales `"*"` — kein Bug.
+- **P1.5.4 (Cookie-Attribute):** `server.servlet.session.cookie.{http-only,secure,same-site}` =
+  `true`/`true`/`lax`. Per echtem Login-Roundtrip verifiziert (`Secure; HttpOnly; SameSite=Lax`).
+- **Vom Review gefundene, zusätzliche Deployment-Lücke (nicht im ursprünglichen Plantext):** Ohne
+  `server.forward-headers-strategy` verliert das CSRF-Cookie hinter dem geplanten
+  TLS-terminierenden Nginx-Reverse-Proxy (Kapitel 7) sein `Secure`-Flag, weil Spring
+  `X-Forwarded-Proto` sonst ignoriert (die statisch gesetzte Session-Cookie ist davon nicht
+  betroffen). Auf Nutzerwunsch direkt behoben: `server.forward-headers-strategy: framework`
+  (per Context7 als für dieses Deployment-Szenario korrekt bestätigt, keine zusätzliche
+  Trusted-Proxy-Allowlist nötig).
+- **Bekannte, bewusst nicht behobene Lücke (unverändert seit Planerstellung):** Der allererste
+  anonyme `POST {basePath}/household/setup` (ganz ohne vorherigen Request im selben Zug) scheitert
+  an CSRF, da noch kein `XSRF-TOKEN`-Cookie existiert. Vom Review empirisch reproduziert, aber
+  explizit auf P1.7–P1.10 (Frontend) verschoben — dort muss ein vorgelagerter `GET`-Aufruf das Cookie
+  setzen, bevor der Setup-Wizard abschickt.
 
 ### P1.6 — Access Control je Haushalt/Rolle
 

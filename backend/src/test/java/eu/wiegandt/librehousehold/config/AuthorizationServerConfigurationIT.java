@@ -30,6 +30,7 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -203,6 +204,56 @@ class AuthorizationServerConfigurationIT {
     }
 
     /**
+     * P1.5.4: the session cookie itself (not the CSRF cookie, see {@link CsrfProtectionIT}) must
+     * carry {@code Secure}/{@code HttpOnly}/{@code SameSite=Lax} (ADR-014, DD-7: {@code Lax} because
+     * the login flow relies on a cross-site {@code GET} navigation, which {@code Strict} would break).
+     */
+    @Nested
+    class sessionCookie {
+
+        @Test
+        void afterSuccessfulLogin_isSecureHttpOnlySameSiteLax() {
+            // given
+            var email = "authtest-" + UUID.randomUUID() + "@example.com";
+            createMemberWithAccount(email, RAW_PASSWORD);
+
+            // when
+            var setCookieHeaders = allSetCookieHeadersDuringLogin(email, RAW_PASSWORD);
+
+            // then
+            assertThat(setCookieHeaders)
+                    .filteredOn(header -> header.startsWith("JSESSIONID="))
+                    .isNotEmpty()
+                    .allSatisfy(header -> assertThat(header)
+                            .contains("Secure")
+                            .containsIgnoringCase("HttpOnly")
+                            .contains("SameSite=Lax"));
+        }
+    }
+
+    /**
+     * P1.5.1: the {@code permitAll()} coverage above only ever exercised {@code {basePath}/me} — a
+     * dedicated session endpoint. This closes the gap by proving a real, haushaltsgebundener
+     * business endpoint also requires a session, not just the session-specific ones.
+     */
+    @Nested
+    class protectedBusinessEndpoint {
+
+        @Test
+        void noSession_returns401() {
+            // when
+            var response = restTestClient.get()
+                    .uri(BASE_PATH + "/household/" + UUID.randomUUID() + "/tasks")
+                    .accept(MediaType.APPLICATION_JSON)
+                    .exchange()
+                    .returnResult(String.class);
+
+            // then
+            assertThat(response.getStatus().value()).isEqualTo(401);
+        }
+    }
+
+    /**
      * Nice-to-have companions to the earlier "does it redirect to /login" tests: proves that the
      * three endpoints that must be usable before any account exists are actually reachable at their
      * real, prefixed paths — the exact regression this test class previously missed (see P1.4.4
@@ -280,6 +331,32 @@ class AuthorizationServerConfigurationIT {
         var cookiesAfterLogin = mergeCookies(loginPage.cookies(), loginResult);
         var authorizeAgain = get(cookiesAfterLogin, loginResult.getResponseHeaders().getLocation());
         return get(authorizeAgain.cookies(), authorizeAgain.response().getResponseHeaders().getLocation());
+    }
+
+    /**
+     * Same flow as {@link #performLoginAndFollowToCallback}, but collects every {@code Set-Cookie}
+     * response header along the way instead of only the final cookie values — needed because the
+     * session cookie's attributes (Secure/HttpOnly/SameSite) are only present on the single response
+     * that actually creates the {@code HttpSession}, not on every subsequent response that merely
+     * reuses it.
+     */
+    private List<String> allSetCookieHeadersDuringLogin(String email, String rawPassword) {
+        var allHeaders = new ArrayList<String>();
+        var authorizationRequest = get(NO_COOKIES, URI.create("/oauth2/authorization/" + CLIENT_ID));
+        allHeaders.addAll(authorizationRequest.response().getResponseHeaders().getOrEmpty("Set-Cookie"));
+        var authorizeRequest = get(authorizationRequest.cookies(), authorizationRequest.response().getResponseHeaders().getLocation());
+        allHeaders.addAll(authorizeRequest.response().getResponseHeaders().getOrEmpty("Set-Cookie"));
+        var loginPageRequest = get(authorizeRequest.cookies(), authorizeRequest.response().getResponseHeaders().getLocation());
+        allHeaders.addAll(loginPageRequest.response().getResponseHeaders().getOrEmpty("Set-Cookie"));
+        var csrfToken = extractCsrfToken(loginPageRequest.response().getResponseBody());
+        var loginResult = submitLogin(loginPageRequest.cookies(), csrfToken, email, rawPassword);
+        allHeaders.addAll(loginResult.getResponseHeaders().getOrEmpty("Set-Cookie"));
+        var cookiesAfterLogin = mergeCookies(loginPageRequest.cookies(), loginResult);
+        var authorizeAgain = get(cookiesAfterLogin, loginResult.getResponseHeaders().getLocation());
+        allHeaders.addAll(authorizeAgain.response().getResponseHeaders().getOrEmpty("Set-Cookie"));
+        var callback = get(authorizeAgain.cookies(), authorizeAgain.response().getResponseHeaders().getLocation());
+        allHeaders.addAll(callback.response().getResponseHeaders().getOrEmpty("Set-Cookie"));
+        return allHeaders;
     }
 
     private HttpStep get(Map<String, String> cookies, URI uri) {
