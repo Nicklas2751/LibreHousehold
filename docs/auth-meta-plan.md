@@ -71,7 +71,7 @@ muss aber sauber neu aus der überarbeiteten OpenAPI-Spec generiert werden.
 - ✅ **P1.4 — Backend: Spring Authorization Server Setup.** Filter-Chain-Reihenfolge, Registered
   Client fürs SPA, PKCE, Token-Settings, Login gegen lokale Accounts.
   Siehe [Detailplan](auth-plan-p1.3-p1.6.md).
-- **P1.5 — Backend: Resource-Server-/BFF-Absicherung bestehender Endpunkte.** Cookie-Session,
+- ✅ **P1.5 — Backend: Resource-Server-/BFF-Absicherung bestehender Endpunkte.** Cookie-Session,
   CSRF, CORS — alle heute offenen Endpunkte werden geschlossen.
   Siehe [Detailplan](auth-plan-p1.3-p1.6.md).
 - **P1.6 — Backend: Access Control je Haushalt/Rolle.** Jeder haushaltsgebundene Endpunkt prüft
