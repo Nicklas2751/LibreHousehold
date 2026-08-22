@@ -8,3 +8,13 @@ spring:
 server:
   tomcat:
     max-http-post-size: -1
+
+librehousehold:
+  security:
+    oauth2-authorization-server:
+      issuer: http://localhost:8080
+    oauth2-client:
+      redirect-uri: http://localhost:8080/login/oauth2/code/spa-backend-client
+      # No default on purpose (fail-fast): a confidential OAuth2 client secret must never ship with
+      # a committed, publicly-known default value. Self-hosters must set this explicitly, e.g. via
+      # LIBREHOUSEHOLD_SECURITY_OAUTH2_CLIENT_CLIENT_SECRET or an untracked application.yaml.
