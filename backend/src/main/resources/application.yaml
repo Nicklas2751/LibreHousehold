@@ -6,8 +6,24 @@ spring:
       flyway-enabled: true
 
 server:
+  # Nginx terminates TLS and forwards internally over plain HTTP (see Kapitel 7). Without this,
+  # Spring ignores X-Forwarded-Proto and treats every request as insecure, so CookieCsrfTokenRepository
+  # would omit the Secure flag on XSRF-TOKEN (the session cookie is unaffected, its Secure flag is set
+  # statically below). "framework" uses Spring's own ForwardedHeaderFilter instead of a Tomcat-specific
+  # mechanism (e.g. RemoteIpValve's "native" strategy) and needs no trusted-proxy IP allowlist: the
+  # backend is only reachable from Nginx on the internal Docker network, never directly from clients.
+  forward-headers-strategy: framework
   tomcat:
     max-http-post-size: -1
+  servlet:
+    session:
+      cookie:
+        http-only: true
+        secure: true
+        # Lax, not Strict (see DD-7/ADR-014): the login flow relies on a cross-site GET navigation
+        # (e.g. the SPA navigating to /oauth2/authorization/spa-backend-client), which Strict would
+        # not send the cookie for.
+        same-site: lax
 
 librehousehold:
   security:
@@ -18,3 +34,10 @@ librehousehold:
       # No default on purpose (fail-fast): a confidential OAuth2 client secret must never ship with
       # a committed, publicly-known default value. Self-hosters must set this explicitly, e.g. via
       # LIBREHOUSEHOLD_SECURITY_OAUTH2_CLIENT_CLIENT_SECRET or an untracked application.yaml.
+    cors:
+      # Comma-separated allow-list of origins permitted to send credentialed cross-origin requests
+      # (see CORS1 in Arc42 Chapter 8). Empty by default (locked down): the target deployment serves
+      # frontend and backend from the same origin via an Nginx reverse proxy. Self-hosters serving
+      # them from different origins must set this explicitly, e.g.
+      # LIBREHOUSEHOLD_SECURITY_CORS_ALLOWED_ORIGINS=https://household.example.com.
+      allowed-origins: ""
