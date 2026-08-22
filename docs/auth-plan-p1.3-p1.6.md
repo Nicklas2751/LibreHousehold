@@ -11,8 +11,23 @@ sie aber nicht. P0.x, P2.x, P3.x sind explizit nicht Teil dieses Plans.
 
 ## Status
 
-Entwurf. Noch nicht umgesetzt. Enthält eine zentrale, vom Nutzer zu bestätigende Architektur-
-entscheidung (siehe DD-P1.4-1).
+- ✅ **P1.3 — `AccountRegistration` im `household`-Modul.** Umgesetzt, zweifach unabhängig reviewt,
+  alle offenen Punkte (Mapper-Dedup, Service-Kapselung, `toString()`-Maskierung, `.gitignore`,
+  Migrationskonsolidierung) nachgezogen. Committet (`4d23863`, `940921d`).
+- ✅ **P1.4 — Spring Authorization Server Setup.** Umgesetzt, unabhängig reviewt. Siehe
+  "Tatsächliche Umsetzung & Abweichungen vom Plan" am Ende des P1.4-Abschnitts — mehrere
+  Korrekturen gegenüber der ursprünglichen Aufgabenbeschreibung unten, u. a. eine kritische, erst
+  durch echtes Durchspielen des Flows (nicht nur Testsuite) gefundene Regression. Noch nicht
+  committet.
+- 🟡 **P1.5 / P1.6.** Noch nicht begonnen.
+
+**Wichtiger methodischer Fund (gilt für P1.5/P1.6 genauso):** `./mvnw clean test` führt in diesem
+Projekt die `*IT`-Klassen NICHT aus (`maven-failsafe-plugin` läuft ungebunden an eigene Phasen,
+`integration-test`/`verify`, ohne Override in `pom.xml`; `maven-surefire-plugin` hat keine
+`<includes>`-Anpassung, schließt `*IT.java` also standardmäßig aus). **Für jede Aussage "Tests sind
+grün" ist zwingend `./mvnw clean verify` nötig, nie nur `./mvnw clean test`.** Das hat in P1.4 eine
+echte Regression (sechs kaputte IT-Klassen, 33 Testfehler) mehrere Runden lang verdeckt, obwohl
+mehrfach "alle Tests grün" gemeldet wurde.
 
 ## Bindende Vorgaben
 
@@ -463,7 +478,8 @@ Integrationstests aus P1.3.4/P1.3.5 abgesichert (ein Migrationsfehler lässt jed
 `@SpringBootTest` mit Testcontainers sofort beim Kontextstart fehlschlagen — das *ist* die rote
 Phase für Migrationscode).
 
-Neue Datei `backend/src/main/resources/db/migration/household/V2__local_auth.sql`:
+Ergänzung (kein Release, daher kein `ALTER TABLE`, direkt in die bestehende Datei) in
+`backend/src/main/resources/db/migration/household/V1__create_household_and_member.sql`:
 
 ```sql
 CREATE TABLE account
@@ -479,7 +495,7 @@ CREATE TABLE account
 **Hinweis zur Datei (siehe DD-2/DD-9-Klarstellung):** Da es noch kein Release gibt, ist dies bewusst
 die **einzige** Migrationsdatei für den gesamten lokalen-Auth-Datenbestand von Phase 1 — P1.4 fügt
 die Spring-Authorization-Server-Tabellen (`oauth2_registered_client`, `oauth2_authorization`,
-`oauth2_authorization_consent`) per Nachtrag in **dieselbe** `V2__local_auth.sql` ein, statt eine
+`oauth2_authorization_consent`) per Nachtrag in **dieselbe** `V1__create_household_and_member.sql` ein, statt eine
 eigene Migrationsdatei anzulegen (siehe P1.4.2). Der Dateiname wurde deshalb bereits jetzt allgemein
 (`local_auth`, nicht `create_account`) gewählt, statt ihn nach P1.4 umzubenennen.
 
@@ -654,7 +670,7 @@ erneut und unabhängig aus `MemberRepository.findByEmail` geladen), wurde das ve
 `loadUserByUsername_memberWithAccount_returnsAccountPrincipalWithPasswordHash` gegen echtes
 Testcontainers-Postgres (deckt beide Repository-Zugriffe ab, kein JOIN mehr zu verifizieren).
 
-### P1.4 — Spring Authorization Server Setup
+### P1.4 — Spring Authorization Server Setup — ✅ umgesetzt (siehe Abweichungen am Ende dieses Abschnitts)
 
 **Ziel:** Filter-Chain-Reihenfolge, Registered Client fürs SPA, PKCE, Token-Settings, Login gegen
 lokale Accounts. Siehe DD-7 für die zentrale, zu bestätigende Architekturentscheidung — die folgenden
@@ -671,7 +687,7 @@ nötig). **Vor dem Hinzufügen beim Nutzer nachfragen** (globale Dependency-Rege
 
 **Entscheidung (vom Nutzer bestätigt, siehe DD-2-Klarstellung):** Keine eigene, neue Migrationsdatei.
 Da es noch kein Release gibt, werden die folgenden drei Tabellen als Nachtrag an die bereits in
-P1.3.2 angelegte `backend/src/main/resources/db/migration/household/V2__local_auth.sql` angehängt
+P1.3.2 angelegte `backend/src/main/resources/db/migration/household/V1__create_household_and_member.sql` angehängt
 (gleiche Datei, gleiches `household`-Flyway-Verzeichnis wie `account` — bewusst nicht in einem
 separaten `__root`-Verzeichnis, um nicht zwei Migrationsdateien für denselben, noch unveröffentlichten
 Auth-Datenbestand zu haben). Tabellennamen und Spaltennamen von `oauth2_registered_client` sind über die offizielle
@@ -959,6 +975,59 @@ void logout_authenticatedSession_revokesAuthorizedClientBeforeInvalidatingSessio
 ```
 
 - **Rot/Grün/Refactor:** analog zu den vorherigen Mustern.
+
+#### P1.4 — Tatsächliche Umsetzung & Abweichungen vom Plan
+
+P1.4 wurde vollständig umgesetzt und unabhängig reviewt. Wichtigste Abweichungen von der obigen,
+ursprünglichen Aufgabenbeschreibung (alle mit Begründung, keine stillschweigenden Änderungen):
+
+- **Confidential Client statt Public Client (DD-7-Korrektur):** `RegisteredClientSeeder` registriert
+  `ClientAuthenticationMethod.CLIENT_SECRET_BASIC`, nicht `NONE` — ein Public Client bekäme laut
+  offizieller Spring-Authorization-Server-Doku grundsätzlich keine Refresh-Tokens. Secret wird über
+  den bestehenden `PasswordEncoder` gehasht abgelegt.
+- **`SecurityConfig` liegt im Root-Package `eu.wiegandt.librehousehold.config`** (Composition-Root),
+  nicht in `core`/`household` — Begründung wie in DD-7 beschrieben (referenziert zwangsläufig
+  `household`-Typen). Hängt nur von Framework-Interfaces ab (`UserDetailsService`, `OidcUserService`),
+  nicht von konkreten `household`-Klassen — das war nötig, weil ein bereits bestehender
+  `ApplicationModules.verify()`-Test `config` selbst als verifiziertes Modul behandelt, nicht als von
+  Modulgrenzen ausgenommenes Root-Package (Korrektur einer ursprünglichen Plan-Annahme).
+- **Neues `session`-Modul** (`session/controller/SessionApiDelegateImpl`) für `GET /me`, da dieser
+  Endpunkt Daten aus `household` UND `usersettings` aggregiert und keines der beiden Module vom
+  anderen abhängen darf (Modul-Abhängigkeitsregel). Neue, echte Cross-Modul-Methoden dafür:
+  `MemberQuery.getMember(UUID)` und die neue Named Interface `usersettings.PreferencesQuery`.
+- **`POST /logout` hat keine eigene Delegate-Implementierung** — Spring Securitys `LogoutFilter` fängt
+  den Request ab, bevor er den generierten MVC-Delegate erreicht (`RevokeAuthorizedClientLogoutHandler`
+  widerruft das Token davor, siehe ADR-014).
+- **Test-Client `RestTestClient` statt `TestRestTemplate`** (`AuthorizationServerConfigurationIT`) —
+  auf Nutzerwunsch, da `TestRestTemplate` nicht mehr SOTA ist. Zusätzliche, neue Dependency
+  `spring-boot-starter-restclient` (freigegeben) für die zugrunde liegende `RestClient`-Autokonfiguration
+  in Spring Boot 4. `RestTestClient` hat dabei mehrere zuvor mühsam stabilisierte Testprobleme
+  strukturell aufgelöst (kein automatischer Cookie-Jar, kein automatisches Redirect-Following).
+- **Client-Secret ohne Default (Fail-Fast statt Klartext-Default in `application.yaml`):**
+  `librehousehold.security.oauth2-client.client-secret` hat bewusst keinen Default-Wert mehr —
+  die Anwendung schlägt beim Start fehl, wenn er nicht gesetzt ist, statt dass alle Self-Hoster
+  stillschweigend dasselbe aus der Git-Historie bekannte Secret teilen. Für Tests wird der Wert pro
+  betroffener `*IT`-Klasse direkt über `@SpringBootTest(properties = {...})` gesetzt, **nicht**
+  zentral in `TestcontainersConfiguration` (das ist rein für Testcontainer-Infrastruktur zuständig,
+  ein Security-Property dort zu setzen war thematisch falsch einsortiert).
+- **Kritischer Bug, per echtem Durchspielen des Flows (nicht nur Testsuite) gefunden:** Die
+  `permitAll()`-Liste in `SecurityConfig` verwendete die Business-Pfade ohne das reale
+  `${openapi.libreHousehold.base-path:/v1}`-Präfix, mit dem die generierten Controller tatsächlich
+  gemountet sind — dadurch war `POST /household/setup`, `GET/POST /invite/**` und
+  `GET /members/availability` in der echten Anwendung unerreichbar (Henne-Ei-Deadlock: kein Setup
+  möglich). Behoben durch dynamisches Einlesen derselben Property statt hartkodierter Pfade; neue
+  Tests (`membersAvailability_noSession_returnsOk`, `householdSetup_noSession_isReachable`,
+  `resolveInvite_noSession_isReachable`) prüfen jetzt die echten, präfigierten Pfade. Ebenso ergänzt:
+  `afterSuccessfulLogin_returnsCurrentUser`, ein echter Ende-zu-Ende-Login-Test — vorher gab es keinen
+  einzigen Test, der einen tatsächlich erfolgreichen (statt nur "keine Tokens im Body") Login-Roundtrip
+  bewies.
+- **Weitere, per `./mvnw clean verify` (nicht `test`!) gefundene Regression:** `SecurityConfig`s
+  `SecurityFilterChain`-Beans brauchen `HttpSecurity`, das in `@SpringBootTest(webEnvironment=NONE)`-
+  Kontexten (die etablierte Konvention für die meisten `household`-Service-ITs) nicht existiert — hat
+  beim erstmaligen `verify`-Lauf zunächst das komplette bestehende `household`-IT-Testset zerschossen
+  (6 Klassen, 33 Fehler). Behoben durch `@ConditionalOnWebApplication(type = Type.SERVLET)` auf genau
+  den beiden web-abhängigen `@Bean`-Methoden (nicht klassenweit, da `RegisteredClientRepository`/
+  `AuthorizationServerSettings`/`ClientRegistrationRepository` auch ohne Web-Kontext gebraucht werden).
 
 ### P1.5 — Resource-Server-/BFF-Absicherung bestehender Endpunkte
 
@@ -1286,9 +1355,9 @@ undokumentierte Abhängigkeitsrichtung hinzu, die TD1 bei seiner Behebung zusät
 
 - [ ] `account`-Tabelle existiert (1:1 zu `member`, `member_id` als PK+FK `ON DELETE CASCADE`,
       `password_hash NOT NULL`, ohne `email_verified` — kommt erst bei P2.1, siehe DD-2), angelegt
-      per Flyway-Migration `household/V2__local_auth.sql`.
+      per Flyway-Migration `household/V1__create_household_and_member.sql`.
 - [ ] `oauth2_registered_client`, `oauth2_authorization`, `oauth2_authorization_consent` existieren,
-      angelegt als Nachtrag in derselben `household/V2__local_auth.sql` (keine eigene Migrationsdatei,
+      angelegt als Nachtrag in derselben `household/V1__create_household_and_member.sql` (keine eigene Migrationsdatei,
       siehe DD-2-Klarstellung/P1.4.2), mit den offiziellen, versionsgenau übernommenen Spaltennamen
       (kein Schema-Autogen).
 - [ ] Setup (`POST /household/setup`) und Invite-Join (`POST /invite/{token}/join`) hashen das

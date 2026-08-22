@@ -88,8 +88,12 @@ This regenerates the API interfaces and models into `backend/target/generated-so
 - **Translating:** Run `npm run paraglide` after updating/adding keys in `messages/de.json` or `messages/en.json`
 
 **Backend (`backend/`):**
-- **Tests:** `./mvnw test` (JUnit 5, Testcontainers)
+- **Tests:** `./mvnw verify` (JUnit 5, Testcontainers). **Not** `./mvnw test` — `*IT` classes run via
+  `maven-failsafe-plugin`, bound to the `integration-test`/`verify` phases, which `test` never
+  reaches. `./mvnw test` silently compiles but skips every `*IT` class; only `./mvnw verify` (or
+  `./mvnw clean verify`) actually proves integration tests pass. See Findings & Notes below.
 - **Format:** `./mvnw sortpom:sort` (for `pom.xml`)
+
 
 ## Development Context
 
@@ -276,6 +280,19 @@ modal?.close();
 - Background saves should not block user interaction.
 
 ## Findings & Notes
+
+### `./mvnw test` runs without integration tests — use `./mvnw verify`
+
+`backend/pom.xml` binds `maven-failsafe-plugin` with the `integration-test`+`verify` goals without
+its own `<phase>` override, so it runs in their default phases — both come **after** `test` in the
+Maven lifecycle. `maven-surefire-plugin` has no `<configuration>` of its own, so it uses its default
+include pattern (`**/*Test.java` etc.), which excludes `*IT.java` classes. Consequence: `./mvnw test`
+compiles every `*IT` class without complaint but executes **none** of them — a green `test` run
+proves nothing about integration tests. Only `./mvnw verify` (or `./mvnw clean verify`) actually runs
+both unit and integration tests. This gap silently hid a real regression during the auth
+implementation (P1.4) — six broken IT classes in the `household` module, 33 test failures — across
+several rounds, even though "all tests green" was reported repeatedly; those reports only ever
+covered `test`, never `verify`.
 
 ### Spring Data JDBC Records mit client-generierten UUIDs
 

@@ -65,10 +65,10 @@ muss aber sauber neu aus der überarbeiteten OpenAPI-Spec generiert werden.
 - ✅ **P1.2 — OpenAPI: Session-Oberfläche.** Vertrag für „current user/me" und Logout festlegen
   (Login/Callback selbst laufen über Spring-Authorization-Server-Endpunkte, nicht im
   Business-Contract). Siehe [Detailplan](auth-plan-p1.1-p1.2.md).
-- **P1.3 — Backend: `AccountRegistration` im `household`-Modul.** Argon2id-Hashing bei Setup &
+- ✅ **P1.3 — Backend: `AccountRegistration` im `household`-Modul.** Argon2id-Hashing bei Setup &
   Join, `UserDetailsService` auf Member/Account, E-Mail-Verfügbarkeitsprüfung. TDD.
   Siehe [Detailplan](auth-plan-p1.3-p1.6.md).
-- **P1.4 — Backend: Spring Authorization Server Setup.** Filter-Chain-Reihenfolge, Registered
+- ✅ **P1.4 — Backend: Spring Authorization Server Setup.** Filter-Chain-Reihenfolge, Registered
   Client fürs SPA, PKCE, Token-Settings, Login gegen lokale Accounts.
   Siehe [Detailplan](auth-plan-p1.3-p1.6.md).
 - **P1.5 — Backend: Resource-Server-/BFF-Absicherung bestehender Endpunkte.** Cookie-Session,
