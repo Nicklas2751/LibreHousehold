@@ -66,6 +66,7 @@ public class MemberManagementService implements MemberQuery, MemberDeletion {
                 .toList();
     }
 
+    @Override
     public Member getMember(UUID memberId) {
         return memberRepository.findById(memberId)
                 .map(memberMapper::toMember)

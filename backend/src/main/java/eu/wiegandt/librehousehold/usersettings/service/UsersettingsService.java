@@ -4,6 +4,7 @@ import eu.wiegandt.librehousehold.household.MemberDeletion;
 import eu.wiegandt.librehousehold.household.MemberQuery;
 import eu.wiegandt.librehousehold.household.MemberRemoved;
 import eu.wiegandt.librehousehold.model.UserPreferences;
+import eu.wiegandt.librehousehold.usersettings.PreferencesQuery;
 import eu.wiegandt.librehousehold.usersettings.exception.AdminCannotDeleteAccountException;
 import eu.wiegandt.librehousehold.usersettings.exception.MemberNotFoundException;
 import eu.wiegandt.librehousehold.usersettings.mapper.UserPreferencesMapper;
@@ -16,7 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.UUID;
 
 @Service
-public class UsersettingsService {
+public class UsersettingsService implements PreferencesQuery {
 
     private final UserPreferencesRepository preferencesRepository;
     private final UserPreferencesMapper preferencesMapper;
@@ -55,6 +56,13 @@ public class UsersettingsService {
             throw new AdminCannotDeleteAccountException();
         }
         memberDeletion.removeMember(memberId);
+    }
+
+    @Override
+    public UserPreferences getPreferencesOrDefault(UUID memberId) {
+        return preferencesRepository.findById(memberId)
+                .map(preferencesMapper::toUserPreferences)
+                .orElseGet(UserPreferences::new);
     }
 
     @ApplicationModuleListener

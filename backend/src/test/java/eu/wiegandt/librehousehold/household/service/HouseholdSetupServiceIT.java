@@ -1,15 +1,17 @@
 package eu.wiegandt.librehousehold.household.service;
-import eu.wiegandt.librehousehold.household.exception.*;
-import eu.wiegandt.librehousehold.household.mapper.*;
-import eu.wiegandt.librehousehold.household.model.*;
-import eu.wiegandt.librehousehold.household.repository.*;
 
 import eu.wiegandt.librehousehold.TestcontainersConfiguration;
+import eu.wiegandt.librehousehold.household.exception.HouseholdAlreadyExistsException;
+import eu.wiegandt.librehousehold.household.exception.MemberAlreadyExistsException;
+import eu.wiegandt.librehousehold.household.mapper.HouseholdSetupMapper;
+import eu.wiegandt.librehousehold.household.repository.AccountRepository;
+import eu.wiegandt.librehousehold.household.repository.HouseholdRepository;
+import eu.wiegandt.librehousehold.household.repository.InviteRepository;
+import eu.wiegandt.librehousehold.household.repository.MemberRepository;
 import eu.wiegandt.librehousehold.model.Household;
 import eu.wiegandt.librehousehold.model.HouseholdSetup;
 import eu.wiegandt.librehousehold.model.LocalRegistration;
 import eu.wiegandt.librehousehold.model.Member;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.instancio.Instancio;
 import org.instancio.junit.InstancioExtension;
 import org.junit.jupiter.api.AfterEach;
@@ -18,6 +20,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.LocalDate;
 import java.util.UUID;
@@ -26,7 +29,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.instancio.Select.field;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, properties = {"librehousehold.security.oauth2-client.client-secret=test-client-secret"})
 @Import(TestcontainersConfiguration.class)
 @ExtendWith(InstancioExtension.class)
 class HouseholdSetupServiceIT {

@@ -1,15 +1,12 @@
 package eu.wiegandt.librehousehold.household.service;
-import eu.wiegandt.librehousehold.household.exception.*;
-import eu.wiegandt.librehousehold.household.mapper.*;
-import eu.wiegandt.librehousehold.household.model.*;
-import eu.wiegandt.librehousehold.household.repository.*;
 
 import eu.wiegandt.librehousehold.TestcontainersConfiguration;
-import eu.wiegandt.librehousehold.model.Household;
-import eu.wiegandt.librehousehold.model.HouseholdSetup;
-import eu.wiegandt.librehousehold.model.HouseholdUpdate;
-import eu.wiegandt.librehousehold.model.LocalRegistration;
-import eu.wiegandt.librehousehold.model.Member;
+import eu.wiegandt.librehousehold.household.exception.HouseholdNotFoundException;
+import eu.wiegandt.librehousehold.household.model.MemberEntity;
+import eu.wiegandt.librehousehold.household.repository.HouseholdRepository;
+import eu.wiegandt.librehousehold.household.repository.InviteRepository;
+import eu.wiegandt.librehousehold.household.repository.MemberRepository;
+import eu.wiegandt.librehousehold.model.*;
 import org.instancio.Instancio;
 import org.instancio.junit.InstancioExtension;
 import org.junit.jupiter.api.AfterEach;
@@ -28,7 +25,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.instancio.Select.field;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, properties = {"librehousehold.security.oauth2-client.client-secret=test-client-secret"})
 @Import(TestcontainersConfiguration.class)
 @ExtendWith(InstancioExtension.class)
 class HouseholdManagementServiceIT {
