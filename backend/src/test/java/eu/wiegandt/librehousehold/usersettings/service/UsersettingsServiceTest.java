@@ -142,6 +142,41 @@ class UsersettingsServiceTest {
     }
 
     @Nested
+    class getPreferencesOrDefault {
+
+        @Test
+        void existingPreferences_returnsMappedPreferences() {
+            // given
+            var memberId = UUID.randomUUID();
+            doReturn(Optional.of(new UserPreferencesEntity(memberId, "dark", "de")))
+                    .when(preferencesRepository).findById(memberId);
+            var expected = new UserPreferences()
+                    .theme(UserPreferences.ThemeEnum.DARK)
+                    .language(UserPreferences.LanguageEnum.DE);
+
+            // when
+            var result = service.getPreferencesOrDefault(memberId);
+
+            // then
+            assertThat(result).usingRecursiveComparison().isEqualTo(expected);
+        }
+
+        @Test
+        void noExistingPreferences_returnsEmptyPreferences() {
+            // given
+            var memberId = UUID.randomUUID();
+            doReturn(Optional.empty()).when(preferencesRepository).findById(memberId);
+            var expected = new UserPreferences();
+
+            // when
+            var result = service.getPreferencesOrDefault(memberId);
+
+            // then
+            assertThat(result).usingRecursiveComparison().isEqualTo(expected);
+        }
+    }
+
+    @Nested
     class onMemberRemoved {
 
         @Test
