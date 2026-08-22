@@ -41,6 +41,9 @@ tags:
   - name: statistics
     description: Aggregated statistics for a household over a given time period
 
+security:
+  - sessionCookie: []
+
 paths:
   /household/setup:
     post:
@@ -49,6 +52,7 @@ paths:
       tags:
         - household
       operationId: setupHousehold
+      security: []
       requestBody:
         content:
           application/json:
@@ -1408,6 +1412,7 @@ paths:
       tags:
         - members
       operationId: resolveInvite
+      security: []
       parameters:
         - name: token
           in: path
@@ -1443,6 +1448,7 @@ paths:
       tags:
         - members
       operationId: joinHousehold
+      security: []
       parameters:
         - name: token
           in: path
@@ -1501,6 +1507,7 @@ paths:
       tags:
         - members
       operationId: checkEmailAvailability
+      security: []
       parameters:
         - name: email
           in: query
@@ -1538,8 +1545,6 @@ paths:
       tags:
         - session
       operationId: getCurrentUser
-      security:
-        - sessionCookie: [ ]
       responses:
         "200":
           description: OK
@@ -1569,8 +1574,6 @@ paths:
       tags:
         - session
       operationId: logout
-      security:
-        - sessionCookie: [ ]
       responses:
         "204":
           description: Session ended.
