@@ -1,5 +1,7 @@
 package eu.wiegandt.librehousehold.household;
 
+import eu.wiegandt.librehousehold.model.Member;
+
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -38,4 +40,13 @@ public interface MemberQuery {
      * Returns true if the member with the given ID is the household admin.
      */
     boolean isAdmin(UUID memberId);
+
+    /**
+     * Returns the member with the given ID.
+     *
+     * @param memberId the ID of the member
+     * @return the member
+     * @throws eu.wiegandt.librehousehold.household.exception.MemberNotFoundException if no member with this ID exists
+     */
+    Member getMember(UUID memberId);
 }
