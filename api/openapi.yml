@@ -139,57 +139,6 @@ paths:
             "application/problem+json":
               schema:
                 $ref: '#/components/schemas/Problem'
-    post:
-      summary: Add a new member to a household
-      description: Adds a new member to the specified household.
-      tags:
-        - members
-      operationId: createMember
-      parameters:
-        - name: householdId
-          in: path
-          required: true
-          description: The unique identifier of the household.
-          schema:
-            type: string
-            format: uuid
-            example: "f3ce1a6b-aba1-478d-9f01-ec484f23ce60"
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/Member"
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Member"
-        "400":
-          description: The data for the new member is invalid.
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/Problem'
-        "404":
-          description: No household found with the specified ID.
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/Problem'
-        "409":
-          description: The member already exists.
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/Problem'
-        default:
-          description: An error occurred - see the status code and problem for more information.
-          content:
-            "application/problem+json":
-              schema:
-                $ref: '#/components/schemas/Problem'
 
   /household/{householdId}/members/{memberId}:
     get:

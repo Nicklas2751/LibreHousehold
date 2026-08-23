@@ -17,7 +17,7 @@ function getRandomOtherUserId() {
     return otherUserIds[Math.floor(Math.random() * otherUserIds.length)];
 }
 
-export default function() {
+export default function () {
     // 1. Faker customization for generic data
     const root = findByName(ROOT_NAME);
     root.children.unshift({
@@ -40,7 +40,7 @@ export default function() {
             const count = Math.floor(Math.random() * 3) + 1;
             const selected = new Set();
             if (Math.random() < 0.5) selected.add(myUserId);
-            while(selected.size < count) {
+            while (selected.size < count) {
                 selected.add(getRandomUserId());
             }
             return Array.from(selected);
@@ -49,36 +49,36 @@ export default function() {
 
 
     // 2. HTTP Interception for Schema consistency
-    on('http', function(request, response) {
+    on('http', function (request, response) {
         // Intercept Member generation
         // Check identifying features of the request (e.g. OperationID or Path)
         // We can inspect request.operationId if available, or regex the path
-        
+
 
         // Example: List Members
         if (request.operationId === 'getMembers') {
-             // We can generate a consistent list here
-             const list = [];
-             // Add me
-             list.push({
+            // We can generate a consistent list here
+            const list = [];
+            // Add me
+            list.push({
                 id: myUserId,
                 name: 'It is Me',
                 email: 'me@household.app',
                 avatar: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='
-             });
-             // Add others
-             for (const uid of otherUserIds) {
-                 list.push({
-                     id: uid,
-                     name: 'Member ' + uid.substring(0, 5),
-                     email: 'user-' + uid.substring(0, 5) + '@household.app',
-                     avatar: ''
-                 });
-             }
-             response.data = list;
-             return true;
+            });
+            // Add others
+            for (const uid of otherUserIds) {
+                list.push({
+                    id: uid,
+                    name: 'Member ' + uid.substring(0, 5),
+                    email: 'user-' + uid.substring(0, 5) + '@household.app',
+                    avatar: ''
+                });
+            }
+            response.data = list;
+            return true;
         }
-        
+
         // Example: Get Member
         if (request.operationId === 'getMember') {
             // Check path param? 
@@ -87,14 +87,14 @@ export default function() {
             const memberId = segments[segments.length - 1]; // rough guess
 
             if (memberId === myUserId) {
-                 response.data = {
+                response.data = {
                     id: myUserId,
                     name: 'It is Me',
                     email: 'me@household.app',
                     avatar: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='
                 };
             } else {
-                 response.data = {
+                response.data = {
                     id: memberId,
                     name: 'Member ' + memberId.substring(0, 5),
                     email: 'user-' + memberId.substring(0, 5) + '@household.app',
@@ -103,22 +103,14 @@ export default function() {
             }
         }
 
-        // Example: Create Member
-        if (request.operationId === 'createMember') {
-            // Ensure the created member always has myUserId
-            const newMember = request.body || {};
-            newMember.id = myUserId;
-            response.data = newMember;
-        }
-
         // --- FINANCIALS MOCKS ---
 
         // Mock: Financial Summary
         if (request.operationId === 'getFinancialSummary') {
-             response.data = {
-                 youOwe: 45.50,
-                 owedToYou: 120.00
-             };
+            response.data = {
+                youOwe: 45.50,
+                owedToYou: 120.00
+            };
         }
 
         // Mock: Member Balances
@@ -158,7 +150,7 @@ export default function() {
                     notes: 'Pizza von gestern'
                 });
             }
-            
+
             // Case 2: Abgeschlossene Zahlung
             if (otherUserIds.length > 1) {
                 list.push({
@@ -179,17 +171,17 @@ export default function() {
         if (request.operationId === 'updateReimbursement') {
             // Wir lesen die ID aus dem Pfad (mockapi macht das intern über path parameters oft automatisch, 
             // aber wir müssen sicherstellen, dass wir was zurückgeben)
-            
+
             // Default verhalten: Wir nehmen an es klappt und geben das aktualisierte Objekt zurück
             const updated = request.body || {};
-            
+
             // Falls status im Body ist, übernehmen wir ihn
-             response.data = {
+            response.data = {
                 id: request.path.reimbursementId || '11111111-2222-3333-4444-555555555555', // Fallback ID
                 amount: 20.00,
                 creditorId: myUserId,
                 debtorId: otherUserIds[0],
-                status: updated.status || 'CONFIRMED', 
+                status: updated.status || 'CONFIRMED',
                 timestamp: new Date().toISOString(),
                 notes: 'Updated via Mock'
             };
@@ -198,50 +190,50 @@ export default function() {
 
         // Example: List Tasks (Manual override to ensure distribution)
         if (request.operationId === 'getTasks') {
-             const tasks = [];
-             const verbs = ['Clean', 'Buy', 'Fix', 'Wash', 'Pay'];
-             const nouns = ['Dishes', 'Groceries', 'Lamp', 'Car', 'Bills', 'Windows', 'Floor'];
-             
-             for (let i = 0; i < 15; i++) {
-                 const isAssignedToMe = Math.random() < 0.4; // 40% me
-                 let assignedTo = undefined;
-                 
-                 if (isAssignedToMe) {
-                     assignedTo = myUserId;
-                 } else if (Math.random() < 0.8) { // Remaining 60%: 0.8 * 0.6 = 48% others, 12% unassigned
-                     assignedTo = getRandomOtherUserId();
-                 }
+            const tasks = [];
+            const verbs = ['Clean', 'Buy', 'Fix', 'Wash', 'Pay'];
+            const nouns = ['Dishes', 'Groceries', 'Lamp', 'Car', 'Bills', 'Windows', 'Floor'];
 
-                 // Generate generic UUID like string for ID
-                 const id = '00000000-0000-0000-0000-' + (100000000000 + i).toString();
-                 const isRecurring = i % 3 === 0;
-                 const isDone = i % 4 === 0;
+            for (let i = 0; i < 15; i++) {
+                const isAssignedToMe = Math.random() < 0.4; // 40% me
+                let assignedTo = undefined;
 
-                 const task = {
-                     id: id,
-                     title: `${verbs[i % verbs.length]} ${nouns[i % nouns.length]}`,
-                     dueDate: new Date(Date.now() + (i - 5) * 86400000).toISOString().split('T')[0],
-                     description: 'Auto-generated mock task for testing.',
-                     recurring: isRecurring
-                 };
-                 
-                 if (assignedTo) {
-                     task.assignedTo = assignedTo;
-                 }
+                if (isAssignedToMe) {
+                    assignedTo = myUserId;
+                } else if (Math.random() < 0.8) { // Remaining 60%: 0.8 * 0.6 = 48% others, 12% unassigned
+                    assignedTo = getRandomOtherUserId();
+                }
 
-                 if (isRecurring) {
-                     task.recurrenceUnit = 'weeks';
-                     task.recurrenceInterval = 1;
-                 }
-                 
-                 if (isDone) {
-                     task.done = new Date(Date.now() - 86400000).toISOString().split('T')[0];
-                 }
+                // Generate generic UUID like string for ID
+                const id = '00000000-0000-0000-0000-' + (100000000000 + i).toString();
+                const isRecurring = i % 3 === 0;
+                const isDone = i % 4 === 0;
 
-                 tasks.push(task);
-             }
-             response.data = tasks;
-             return true;
+                const task = {
+                    id: id,
+                    title: `${verbs[i % verbs.length]} ${nouns[i % nouns.length]}`,
+                    dueDate: new Date(Date.now() + (i - 5) * 86400000).toISOString().split('T')[0],
+                    description: 'Auto-generated mock task for testing.',
+                    recurring: isRecurring
+                };
+
+                if (assignedTo) {
+                    task.assignedTo = assignedTo;
+                }
+
+                if (isRecurring) {
+                    task.recurrenceUnit = 'weeks';
+                    task.recurrenceInterval = 1;
+                }
+
+                if (isDone) {
+                    task.done = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+                }
+
+                tasks.push(task);
+            }
+            response.data = tasks;
+            return true;
         }
 
     });
