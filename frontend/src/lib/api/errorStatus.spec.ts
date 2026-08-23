@@ -3,7 +3,7 @@ import { ResponseError } from '../../generated-sources/openapi';
 import { extractErrorStatus } from './errorStatus';
 
 describe('extractErrorStatus', () => {
-	it('liest den Status aus einem ResponseError', () => {
+	it('reads the status from a ResponseError', () => {
 		// given
 		const error = new ResponseError(new Response(null, { status: 409 }));
 
@@ -14,7 +14,7 @@ describe('extractErrorStatus', () => {
 		expect(result).toBe(409);
 	});
 
-	it('liest den Status aus einem objektartigen Fehler mit status-Property', () => {
+	it('reads the status from an object-like error with a status property', () => {
 		// given
 		const error = { status: 404 };
 
@@ -25,7 +25,7 @@ describe('extractErrorStatus', () => {
 		expect(result).toBe(404);
 	});
 
-	it('gibt undefined zurück für einen Fehler ohne erkennbaren Status', () => {
+	it('returns undefined for an error without a recognizable status', () => {
 		// given
 		const error = new Error('boom');
 

@@ -10,9 +10,14 @@
 		type HouseholdSetup,
 		HouseholdApi,
 		type Member,
+		MembersApi,
+		type Problem,
 		ResponseError
 	} from '../generated-sources/openapi';
 	import { apiConfiguration } from '$lib/api/httpClient';
+	import { extractErrorStatus } from '$lib/api/errorStatus';
+	import { classifyConflictProblem } from '$lib/api/problemMapping';
+	import { createDebouncedAvailabilityChecker } from '$lib/emailAvailability';
 	import { v4 as uuidv4 } from 'uuid';
 	import { updateHouseholdState } from '$lib/stores/householdState.svelte';
 	import {
@@ -28,6 +33,8 @@
 	import { updateUserState } from '$lib/stores/userState';
 	import MemberProfileForm from '$lib/MemberProfileForm.svelte';
 
+	const EMAIL_AVAILABILITY_DEBOUNCE_MS = 400;
+
 	const householdId: string = uuidv4();
 	let inviteUrl: string = $state('');
 	const maxSteps: number = 3;
@@ -36,6 +43,19 @@
 	let householdName: string = $state('');
 	let householdImage: string = $state('');
 	let serverEmailError: string | null = $state(null);
+
+	const membersApi = new MembersApi(apiConfiguration);
+	const checkEmailAvailability = createDebouncedAvailabilityChecker(
+		(email: string) => membersApi.checkEmailAvailability({ email }),
+		EMAIL_AVAILABILITY_DEBOUNCE_MS
+	);
+
+	async function handleEmailInput(email: string) {
+		const { available } = await checkEmailAvailability(email);
+		if (!available) {
+			serverEmailError = m['setup.create_account_step.account_exists_error']();
+		}
+	}
 
 	function nextStep() {
 		step = calculateNextStep(step, maxSteps);
@@ -99,7 +119,7 @@
 			});
 	}
 
-	async function finish(data: { name: string; email: string; avatar: string }) {
+	async function finish(data: { name: string; email: string; avatar: string; password?: string }) {
 		const householdApi = new HouseholdApi(apiConfiguration);
 
 		const adminMember: Member = {
@@ -114,7 +134,11 @@
 			name: householdName,
 			image: householdImage
 		};
-		const householdSetup: HouseholdSetup = { household, member: adminMember };
+		const householdSetup: HouseholdSetup = {
+			household,
+			member: adminMember,
+			localRegistration: { password: data.password ?? '' }
+		};
 
 		serverEmailError = null;
 		try {
@@ -125,17 +149,43 @@
 			updateUserState(adminMember);
 			nextStep();
 		} catch (err: unknown) {
-			const status =
-				err instanceof ResponseError
-					? err.response.status
-					: typeof err === 'object' && err !== null && 'status' in err
-						? (err as { status: unknown }).status
-						: undefined;
-			if (status === 409) {
-				serverEmailError = m['invite.email_taken']();
-			} else {
+			await handleSetupError(err);
+		}
+	}
+
+	async function handleSetupError(err: unknown) {
+		const status = extractErrorStatus(err);
+		if (status !== 409) {
+			addToast(new Toast(m['setup.create_account_step.setup_error'](), 'error'));
+			return;
+		}
+		const problem = await readConflictProblem(err);
+		if (!problem) {
+			addToast(new Toast(m['setup.create_account_step.setup_error'](), 'error'));
+			return;
+		}
+		switch (classifyConflictProblem(problem.type)) {
+			case 'account-exists':
+				serverEmailError = m['setup.create_account_step.account_exists_error']();
+				break;
+			case 'household-exists':
+				addToast(new Toast(m['setup.create_account_step.household_exists_error'](), 'error'));
+				break;
+			default:
 				addToast(new Toast(m['setup.create_account_step.setup_error'](), 'error'));
-			}
+		}
+	}
+
+	async function readConflictProblem(err: unknown): Promise<Problem | undefined> {
+		if (!(err instanceof ResponseError)) {
+			return undefined;
+		}
+		try {
+			return await err.response.json();
+		} catch {
+			// Body was not valid JSON (e.g. empty body or a proxy error page instead of Problem JSON) —
+			// fall back to the generic error instead of an unhandled exception.
+			return undefined;
 		}
 	}
 </script>
@@ -204,10 +254,14 @@
 			emailPlaceholder={m['setup.create_account_step.admin_email_placeholder']()}
 			backLabel={m['setup.create_account_step.back_button']()}
 			submitLabel={m['setup.finish_step.finish_button']()}
+			passwordLabel={m['setup.create_account_step.password_label']()}
+			passwordHint={m['setup.create_account_step.password_hint']()}
+			passwordPlaceholder={m['setup.create_account_step.password_placeholder']()}
 			{serverEmailError}
 			onClearEmailError={() => {
 				serverEmailError = null;
 			}}
+			onEmailInput={handleEmailInput}
 			onformsubmit={finish}
 			onback={() => goBackToStep(step - 1)}
 		/>
