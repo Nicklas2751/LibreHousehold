@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { getCsrfTokenFromCookieHeader, isStateChangingMethod } from './csrf';
 
 describe('getCsrfTokenFromCookieHeader', () => {
-	it('liest den XSRF-TOKEN-Wert aus einem Cookie-String mit mehreren Cookies', () => {
+	it('reads the XSRF-TOKEN value from a cookie string with multiple cookies', () => {
 		// given
 		const cookieHeader = 'SESSION=abc123; XSRF-TOKEN=token-value; other=value';
 
@@ -13,7 +13,7 @@ describe('getCsrfTokenFromCookieHeader', () => {
 		expect(result).toBe('token-value');
 	});
 
-	it('gibt null zurück, wenn kein XSRF-TOKEN-Cookie vorhanden ist', () => {
+	it('returns null when no XSRF-TOKEN cookie is present', () => {
 		// given
 		const cookieHeader = 'SESSION=abc123; other=value';
 
@@ -24,7 +24,7 @@ describe('getCsrfTokenFromCookieHeader', () => {
 		expect(result).toBeNull();
 	});
 
-	it('dekodiert einen URL-kodierten Cookie-Wert', () => {
+	it('decodes a URL-encoded cookie value', () => {
 		// given
 		const cookieHeader = 'XSRF-TOKEN=token%2Fwith%2Fslashes';
 
@@ -37,7 +37,7 @@ describe('getCsrfTokenFromCookieHeader', () => {
 });
 
 describe('isStateChangingMethod', () => {
-	it.each(['POST', 'PUT', 'PATCH', 'DELETE'])('gibt true für %s zurück', (method) => {
+	it.each(['POST', 'PUT', 'PATCH', 'DELETE'])('returns true for %s', (method) => {
 		// when
 		const result = isStateChangingMethod(method);
 
@@ -45,7 +45,7 @@ describe('isStateChangingMethod', () => {
 		expect(result).toBe(true);
 	});
 
-	it.each(['GET', 'HEAD', 'OPTIONS'])('gibt false für %s zurück', (method) => {
+	it.each(['GET', 'HEAD', 'OPTIONS'])('returns false for %s', (method) => {
 		// when
 		const result = isStateChangingMethod(method);
 

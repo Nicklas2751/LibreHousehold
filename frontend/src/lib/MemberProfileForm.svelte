@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { readFileAsDataURL } from '$lib/setupWizardLogic';
+	import { isValidPassword } from '$lib/passwordValidation';
+	import PasswordField from '$lib/PasswordField.svelte';
 
 	interface Props {
 		contextHint: string;
@@ -14,9 +16,18 @@
 		nameMinLength?: number;
 		serverEmailError?: string | null;
 		submitting?: boolean;
-		onformsubmit: (data: { name: string; email: string; avatar: string }) => void | Promise<void>;
+		passwordLabel?: string;
+		passwordHint?: string;
+		passwordPlaceholder?: string;
+		onformsubmit: (data: {
+			name: string;
+			email: string;
+			avatar: string;
+			password?: string;
+		}) => void | Promise<void>;
 		onback: () => void;
 		onClearEmailError?: () => void;
+		onEmailInput?: (email: string) => void;
 	}
 
 	let {
@@ -32,15 +43,23 @@
 		nameMinLength = 3,
 		serverEmailError = null,
 		submitting = false,
+		passwordLabel,
+		passwordHint,
+		passwordPlaceholder,
 		onformsubmit,
 		onback,
-		onClearEmailError
+		onClearEmailError,
+		onEmailInput
 	}: Props = $props();
 
 	let name = $state('');
 	let email = $state('');
 	let avatar = $state('');
+	let password = $state('');
 	let emailInput: HTMLInputElement | undefined = $state();
+
+	// Defense-in-depth in addition to PasswordField's native minlength/maxlength validation.
+	let passwordValid = $derived(!passwordLabel || isValidPassword(password));
 
 	$effect(() => {
 		if (serverEmailError) {
@@ -64,7 +83,7 @@
 
 	function submit(event: SubmitEvent) {
 		event.preventDefault();
-		onformsubmit({ name, email, avatar });
+		onformsubmit({ name, email, avatar, password: passwordLabel ? password : undefined });
 	}
 </script>
 
@@ -105,14 +124,23 @@
 			oninput={() => {
 				emailInput?.setCustomValidity('');
 				onClearEmailError?.();
+				onEmailInput?.(email);
 			}}
 			required
 		/>
 		<p class="validator-hint">{serverEmailError ?? emailHint}</p>
 	</fieldset>
+	{#if passwordLabel}
+		<PasswordField
+			label={passwordLabel}
+			hint={passwordHint ?? ''}
+			placeholder={passwordPlaceholder}
+			bind:value={password}
+		/>
+	{/if}
 	<div class="mt-4 flex justify-between gap-3">
 		<button type="button" class="btn flex-1 btn-outline" onclick={onback}>{backLabel}</button>
-		<button type="submit" class="btn flex-1 btn-primary" disabled={submitting}>
+		<button type="submit" class="btn flex-1 btn-primary" disabled={submitting || !passwordValid}>
 			{#if submitting}
 				<span class="loading loading-xs loading-spinner"></span>
 			{/if}
