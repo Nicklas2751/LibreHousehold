@@ -4,7 +4,6 @@ import eu.wiegandt.librehousehold.usersettings.mapper.*;
 import eu.wiegandt.librehousehold.usersettings.model.*;
 import eu.wiegandt.librehousehold.usersettings.repository.*;
 
-import eu.wiegandt.librehousehold.household.MemberDeletion;
 import eu.wiegandt.librehousehold.household.MemberQuery;
 import eu.wiegandt.librehousehold.household.MemberRemoved;
 import eu.wiegandt.librehousehold.model.UserPreferences;
@@ -35,9 +34,6 @@ class UsersettingsServiceTest {
 
     @Mock
     private MemberQuery memberQuery;
-
-    @Mock
-    private MemberDeletion memberDeletion;
 
     @InjectMocks
     private UsersettingsService service;
@@ -97,47 +93,6 @@ class UsersettingsServiceTest {
             // then
             verify(preferencesRepository).save(any(UserPreferencesEntity.class));
             assertThat(result).usingRecursiveComparison().isEqualTo(expected);
-        }
-    }
-
-    @Nested
-    class deleteAccount {
-
-        @Test
-        void memberNotFound_throwsMemberNotFoundException() {
-            // given
-            var memberId = UUID.randomUUID();
-            doReturn(false).when(memberQuery).memberExistsById(memberId);
-
-            // when / then
-            assertThatThrownBy(() -> service.deleteAccount(memberId))
-                    .isInstanceOf(MemberNotFoundException.class);
-        }
-
-        @Test
-        void memberIsAdmin_throwsAdminCannotDeleteAccountException() {
-            // given
-            var memberId = UUID.randomUUID();
-            doReturn(true).when(memberQuery).memberExistsById(memberId);
-            doReturn(true).when(memberQuery).isAdmin(memberId);
-
-            // when / then
-            assertThatThrownBy(() -> service.deleteAccount(memberId))
-                    .isInstanceOf(AdminCannotDeleteAccountException.class);
-        }
-
-        @Test
-        void validMember_callsRemoveMember() {
-            // given
-            var memberId = UUID.randomUUID();
-            doReturn(true).when(memberQuery).memberExistsById(memberId);
-            doReturn(false).when(memberQuery).isAdmin(memberId);
-
-            // when
-            service.deleteAccount(memberId);
-
-            // then
-            verify(memberDeletion).removeMember(memberId);
         }
     }
 

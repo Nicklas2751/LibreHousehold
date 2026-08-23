@@ -1,6 +1,7 @@
 package eu.wiegandt.librehousehold.household.service;
 
 import eu.wiegandt.librehousehold.TestcontainersConfiguration;
+import eu.wiegandt.librehousehold.household.exception.HouseholdAdminCannotBeRemovedException;
 import eu.wiegandt.librehousehold.household.exception.InvalidInviteException;
 import eu.wiegandt.librehousehold.household.exception.MemberAlreadyExistsException;
 import eu.wiegandt.librehousehold.household.exception.MemberNotFoundException;
@@ -240,7 +241,7 @@ class MemberManagementServiceIT {
     }
 
     @Nested
-    class removeMember {
+    class leaveHousehold {
 
         @Test
         void memberFound_removesFromDatabase() {
@@ -250,7 +251,7 @@ class MemberManagementServiceIT {
             memberManagementService.joinHousehold(token, registration);
 
             // when
-            memberManagementService.removeMember(registration.getId());
+            memberManagementService.leaveHousehold(registration.getId());
 
             // then
             assertThat(memberRepository.existsById(registration.getId())).isFalse();
@@ -259,8 +260,19 @@ class MemberManagementServiceIT {
         @Test
         void memberNotFound_throwsMemberNotFoundException() {
             // when / then
-            assertThatThrownBy(() -> memberManagementService.removeMember(UUID.randomUUID()))
+            assertThatThrownBy(() -> memberManagementService.leaveHousehold(UUID.randomUUID()))
                     .isInstanceOf(MemberNotFoundException.class);
+        }
+
+        @Test
+        void memberIsAdmin_throwsHouseholdAdminCannotBeRemovedExceptionAndLeavesMemberInDatabase() {
+            // given — the admin created in setUp() is the only member of existingHousehold
+            var adminMemberId = memberManagementService.getMembers(existingHousehold.getId()).getFirst().getId();
+
+            // when / then
+            assertThatThrownBy(() -> memberManagementService.leaveHousehold(adminMemberId))
+                    .isInstanceOf(HouseholdAdminCannotBeRemovedException.class);
+            assertThat(memberRepository.existsById(adminMemberId)).isTrue();
         }
     }
 
@@ -283,7 +295,18 @@ class MemberManagementServiceIT {
     }
 
     @Nested
-    class removeMemberWithHouseholdId {
+    class removeMember {
+
+        @Test
+        void memberIsAdmin_throwsHouseholdAdminCannotBeRemovedExceptionAndLeavesMemberInDatabase() {
+            // given — the admin created in setUp() is the only member of existingHousehold
+            var adminMemberId = memberManagementService.getMembers(existingHousehold.getId()).getFirst().getId();
+
+            // when / then
+            assertThatThrownBy(() -> memberManagementService.removeMember(existingHousehold.getId(), adminMemberId))
+                    .isInstanceOf(HouseholdAdminCannotBeRemovedException.class);
+            assertThat(memberRepository.existsById(adminMemberId)).isTrue();
+        }
 
         @Test
         void memberBelongsToDifferentHousehold_throwsMemberNotFoundExceptionAndLeavesMemberInDatabase() {

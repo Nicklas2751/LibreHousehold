@@ -1,8 +1,8 @@
 package eu.wiegandt.librehousehold.household.service;
 
-import eu.wiegandt.librehousehold.household.MemberDeletion;
 import eu.wiegandt.librehousehold.household.MemberQuery;
 import eu.wiegandt.librehousehold.household.MemberRemoved;
+import eu.wiegandt.librehousehold.household.exception.HouseholdAdminCannotBeRemovedException;
 import eu.wiegandt.librehousehold.household.exception.InvalidInviteException;
 import eu.wiegandt.librehousehold.household.exception.MemberAlreadyExistsException;
 import eu.wiegandt.librehousehold.household.exception.MemberNotFoundException;
@@ -28,7 +28,7 @@ import java.util.*;
 import static java.util.stream.Collectors.toMap;
 
 @Service
-public class MemberManagementService implements MemberQuery, MemberDeletion {
+public class MemberManagementService implements MemberQuery {
 
     private static final boolean JOINED_MEMBER_IS_ADMIN = false;
 
@@ -113,12 +113,12 @@ public class MemberManagementService implements MemberQuery, MemberDeletion {
         }
     }
 
-    @Override
     @Transactional
-    public void removeMember(UUID memberId) {
+    public void leaveHousehold(UUID memberId) {
         if (!memberRepository.existsById(memberId)) {
             throw new MemberNotFoundException();
         }
+        assertMemberIsNotHouseholdAdmin(memberId);
         deleteMemberAndPublishEvent(memberId);
     }
 
@@ -127,7 +127,14 @@ public class MemberManagementService implements MemberQuery, MemberDeletion {
         if (!memberRepository.existsByIdAndHouseholdId(memberId, householdId)) {
             throw new MemberNotFoundException();
         }
+        assertMemberIsNotHouseholdAdmin(memberId);
         deleteMemberAndPublishEvent(memberId);
+    }
+
+    private void assertMemberIsNotHouseholdAdmin(UUID memberId) {
+        if (isAdmin(memberId)) {
+            throw new HouseholdAdminCannotBeRemovedException();
+        }
     }
 
     private void deleteMemberAndPublishEvent(UUID memberId) {
