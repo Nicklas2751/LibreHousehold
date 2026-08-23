@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 
@@ -113,11 +114,26 @@ class TaskServiceIT {
             taskService.createTask(householdId, new Task(taskId, "Clean", LocalDate.of(2024, 7, 1)).assignedTo(memberId));
 
             // when
-            taskService.updateTask(taskId, new TaskUpdate().done(doneDate));
+            taskService.updateTask(householdId, taskId, new TaskUpdate().done(doneDate));
 
             // then
             assertThat(taskCompletionRepository.findFirstByTaskIdOrderByDoneDateDesc(taskId))
                     .hasValueSatisfying(c -> assertThat(c.doneDate()).isEqualTo(doneDate));
+        }
+
+        @Test
+        void taskBelongsToDifferentHousehold_throwsTaskNotFoundExceptionAndLeavesTaskUnchanged() {
+            // given
+            var ownHouseholdId = UUID.randomUUID();
+            var otherHouseholdId = UUID.randomUUID();
+            var taskId = UUID.randomUUID();
+            doReturn(true).when(householdQuery).householdExists(otherHouseholdId);
+            taskService.createTask(otherHouseholdId, new Task(taskId, "Clean", LocalDate.of(2024, 7, 1)));
+
+            // when / then
+            assertThatThrownBy(() -> taskService.updateTask(ownHouseholdId, taskId, new TaskUpdate().done(LocalDate.of(2024, 7, 5))))
+                    .isInstanceOf(TaskNotFoundException.class);
+            assertThat(taskCompletionRepository.findFirstByTaskIdOrderByDoneDateDesc(taskId)).isEmpty();
         }
 
         @Test
@@ -136,7 +152,7 @@ class TaskServiceIT {
                     .recurrenceInterval(1));
 
             // when
-            taskService.updateTask(taskId, new TaskUpdate().done(doneDate));
+            taskService.updateTask(householdId, taskId, new TaskUpdate().done(doneDate));
 
             // then
             assertThat(taskRepository.findById(taskId))
@@ -162,8 +178,8 @@ class TaskServiceIT {
                     .recurring(true)
                     .recurrenceUnit(Task.RecurrenceUnitEnum.WEEKS)
                     .recurrenceInterval(1));
-            taskService.updateTask(taskId, new TaskUpdate().done(LocalDate.of(2024, 7, 5)));
-            taskService.updateTask(taskId, new TaskUpdate().done(LocalDate.of(2024, 7, 12)));
+            taskService.updateTask(householdId, taskId, new TaskUpdate().done(LocalDate.of(2024, 7, 5)));
+            taskService.updateTask(householdId, taskId, new TaskUpdate().done(LocalDate.of(2024, 7, 12)));
             var expected = new TaskStatsByMember(memberId, "Alice", 2, 0);
 
             // when

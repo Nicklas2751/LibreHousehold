@@ -4,6 +4,7 @@ import eu.wiegandt.librehousehold.api.UsersettingsApiDelegate;
 import eu.wiegandt.librehousehold.model.UserPreferences;
 import eu.wiegandt.librehousehold.usersettings.service.UsersettingsService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Component;
 
 import java.util.UUID;
@@ -18,6 +19,7 @@ public class UsersettingsApiDelegateImpl implements UsersettingsApiDelegate {
     }
 
     @Override
+    @PreAuthorize("@householdAccessGuard.isSelf(#memberId, authentication)")
     public ResponseEntity<UserPreferences> updatePreferences(UUID householdId,
                                                              UUID memberId,
                                                              UserPreferences userPreferences) {
@@ -25,6 +27,7 @@ public class UsersettingsApiDelegateImpl implements UsersettingsApiDelegate {
     }
 
     @Override
+    @PreAuthorize("@householdAccessGuard.isSelf(#memberId, authentication)")
     public ResponseEntity<Void> deleteAccount(UUID householdId, UUID memberId) {
         service.deleteAccount(memberId);
         return ResponseEntity.noContent().build();

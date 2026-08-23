@@ -25,9 +25,18 @@ sie aber nicht. P0.x, P2.x, P3.x sind explizit nicht Teil dieses Plans.
   mit umgesetzt, ebenso eine vom Review gefundene, sicherheitsrelevante Deployment-Lücke
   (`server.forward-headers-strategy`). Siehe "Tatsächliche Umsetzung & Abweichungen vom Plan" am
   Ende des P1.5-Abschnitts. Noch nicht committet.
-- 🟡 **P1.6.** Noch nicht begonnen.
+- ✅ **P1.6 — Access Control je Haushalt/Rolle.** Umgesetzt. Ein erster Review-Durchlauf fand vier
+  kritische, live per `curl` nachgewiesene Broken-Access-Control-Lücken (Task-/Member-Cross-
+  Household-Zugriff, eine `transferOwnership`-Lücke mit dauerhaftem, irreversiblem Admin-Verlust,
+  ein veraltetes `isAdmin`-Session-Claim) — alle behoben, vom Fix-Agenten selbst erneut per `curl`
+  gegen die echte Anwendung re-verifiziert (vorher reproduziert, nachher blockiert). Siehe
+  "Tatsächliche Umsetzung & Abweichungen vom Plan" am Ende des P1.6-Abschnitts. Ein zweiter,
+  unabhängiger Re-Review wurde bewusst nicht mehr angefordert (Nutzerentscheidung: Fix-Agenten-
+  Verifikation reicht). Noch nicht committet.
 
-**Wichtiger methodischer Fund (gilt für P1.5/P1.6 genauso):** `./mvnw clean test` führt in diesem
+**Damit ist der gesamte Plan P1.3–P1.6 inhaltlich abgeschlossen.**
+
+**Wichtiger methodischer Fund (gilt auch für alle folgenden Phasen, P1.7 ff.):** `./mvnw clean test` führt in diesem
 Projekt die `*IT`-Klassen NICHT aus (`maven-failsafe-plugin` läuft ungebunden an eigene Phasen,
 `integration-test`/`verify`, ohne Override in `pom.xml`; `maven-surefire-plugin` hat keine
 `<includes>`-Anpassung, schließt `*IT.java` also standardmäßig aus). **Für jede Aussage "Tests sind
@@ -1180,7 +1189,7 @@ IT-Klassen weiterhin grün.
   explizit auf P1.7–P1.10 (Frontend) verschoben — dort muss ein vorgelagerter `GET`-Aufruf das Cookie
   setzen, bevor der Setup-Wizard abschickt.
 
-### P1.6 — Access Control je Haushalt/Rolle
+### P1.6 — Access Control je Haushalt/Rolle — ✅ umgesetzt (siehe Abweichungen am Ende dieses Abschnitts)
 
 **Ziel:** Jeder haushaltsgebundene Endpunkt prüft Zugehörigkeit; Admin-only-Operationen.
 
@@ -1363,6 +1372,46 @@ Ein vollständiges `package-info.java` je Modul plus `ApplicationModules.verify(
 eine separate, größere, hier nicht mitzuerledigende Aufgabe. Dieser Plan fügt keine neue,
 undokumentierte Abhängigkeitsrichtung hinzu, die TD1 bei seiner Behebung zusätzlich erschweren würde.
 
+#### P1.6 — Tatsächliche Umsetzung & Abweichungen vom Plan
+
+- **`isMemberOfHousehold` NICHT auf `MemberQuery`** (Korrektur ggü. dem wörtlichen P1.6.1-Plantext):
+  Analog zur P1.3-Korrektur bei `existsByEmail` — der einzige Konsument ist `HouseholdAccessGuard`
+  selbst, der bereits in `household` liegt. Der Guard nutzt stattdessen direkt eine neue
+  `MemberRepository.existsByIdAndHouseholdId`-Query.
+- **Kritischer Nachbesserungs-Zyklus:** Ein erster Review-Durchlauf hat die Anwendung real gestartet
+  und per `curl` vier Broken-Access-Control-Lücken (OWASP A01, Chapter-8-Control AC1) live
+  nachgewiesen, die von `HouseholdAccessGuard`/`@PreAuthorize` selbst nicht abgedeckt waren, weil
+  dieser Mechanismus nur die `householdId` aus der URL prüft, nicht eine zweite, mitgegebene
+  Sub-Ressourcen-ID:
+  1. **Task-Cross-Household:** `TaskService` suchte nur per `taskId`, ohne `householdId`-Abgleich —
+     ein Mitglied von Haushalt A konnte Aufgaben von Haushalt B über die eigene, korrekte
+     `householdId` in der URL manipulieren.
+  2. **Member-Cross-Household:** `MemberManagementService.getMember/updateMember/removeMember`
+     hatten dasselbe Problem — PII-Leak und Manipulation fremder Haushalts-Mitglieder möglich.
+  3. **`transferOwnership`-Korruption (am schwersten):** Eine `memberId` aus einem fremden Haushalt
+     im Ownership-Transfer-Body führte zu einem Teil-Effekt (Admin-Entzug beim eigenen Haushalt ohne
+     korrekten Empfänger) — **dauerhafter, irreversibler Admin-Verlust** für den aufrufenden
+     Haushalt, ausgelöst durch den eigenen, legitimen Admin selbst.
+  4. **Veraltetes `isAdmin`-Session-Claim:** `HouseholdAccessGuard.isAdminOfHousehold` vertraute dem
+     beim Login einmalig gecachten `AccountOidcPrincipal.isAdmin()` statt live nachzuschlagen — ein
+     per `revokeAdmin` entzogenes Admin-Recht wirkte auf bereits offene Sessions nicht sofort.
+
+  Fix (nach demselben, bereits in `ExpenseService`/`CategoryService` etablierten
+  `findByIdAndHouseholdId`-Muster): `TaskRepository`/`MemberRepository` um `...AndHouseholdId`-Queries
+  ergänzt, `TaskService`/`MemberManagementService` entsprechend umgestellt (bei `getMember`/
+  `removeMember` als zusätzliche, household-gescopte Overloads neben den ungescopten
+  Named-Interface-Methoden, um die Cross-Modul-Semantik für `session`/`MemberQuery` nicht zu
+  brechen — dort stammt die `memberId` immer aus dem eigenen Principal, nie aus Fremd-Input).
+  `HouseholdManagementService.transferOwnership` prüft die Haushalts-Zugehörigkeit jetzt vor jeder
+  Mutation. `HouseholdAccessGuard.isAdminOfHousehold` nutzt jetzt eine Live-Query
+  (`existsByIdAndHouseholdIdAndIsAdminTrue`) statt des gecachten Principal-Felds. Alle vier Exploits
+  wurden vom Fix-Agenten erneut live per `curl` gegen die echte Anwendung durchgespielt (vorher
+  reproduziert, nachher blockiert). Ein zusätzlicher, echter CSRF-Doppel-Cookie-Bug im Test-Harness
+  selbst (`HouseholdAccessControlIT`) wurde dabei gefunden und behoben.
+- **`createMember` (`POST /household/{id}/members`) hat keine Delegate-Implementierung** (501-
+  Fallback) — ein Bestandsproblem, nicht durch P1.6 verursacht, jetzt aber explizit unten in
+  "Out of Scope" nachgetragen (war zuvor nirgends vermerkt, obwohl in der Rollentabelle gelistet).
+
 ## Out of Scope
 
 - **P0.x, P1.1/P1.2, P1.7–P1.10, P2.x, P3.x** — siehe Meta-Plan.
@@ -1385,6 +1434,11 @@ undokumentierte Abhängigkeitsrichtung hinzu, die TD1 bei seiner Behebung zusät
   relevant wird.
 - **Rate-Limiting/Lockout, E-Mail-Verifikations-Logik, Passwort-Reset** — explizit P2.x.
 - **Social Login / föderierte Provider** — explizit P3.x.
+- **`POST /household/{householdId}/members` (`createMember`)** — in `api/openapi.yml` spezifiziert,
+  aber `MembersApiDelegateImpl` implementiert die Methode nicht (Generator-Default-Fallback liefert
+  `501`). Ein Bestandsproblem, nicht durch P1.6 verursacht — im Zuge des P1.6-Access-Control-Reviews
+  gefunden, aber bewusst nicht in diesem Plan mit umgesetzt (Scope-Erweiterung). Empfehlung: als
+  eigener kleiner Folge-Task einplanen, analog `changePassword`.
 
 ## Akzeptanzkriterien
 
@@ -1421,15 +1475,30 @@ undokumentierte Abhängigkeitsrichtung hinzu, die TD1 bei seiner Behebung zusät
       Requests liefern einen lesbaren `XSRF-TOKEN`-Cookie.
 - [ ] CORS akzeptiert nur konfigurierte Origins; kein Wildcard-Origin in Kombination mit
       `Access-Control-Allow-Credentials: true`.
-- [ ] Jeder haushaltsgebundene Endpunkt lehnt Zugriffe von authentifizierten Nutzern ab, die nicht
+- [x] Jeder haushaltsgebundene Endpunkt lehnt Zugriffe von authentifizierten Nutzern ab, die nicht
       Mitglied des in der URL referenzierten Haushalts sind (`403`), verifiziert durch den
       parametrisierten `HouseholdAccessControlIT`-Test über alle in der Rollenzuordnungstabelle
       gelisteten Endpunkte.
-- [ ] Admin-only-Operationen (Invite erzeugen/lesen, Ownership-Transfer, Mitglied entfernen,
+- [x] Admin-only-Operationen (Invite erzeugen/lesen, Ownership-Transfer, Mitglied entfernen,
       Haushalt umbenennen/löschen) lehnen Zugriffe von Nicht-Admin-Mitgliedern desselben Haushalts
       ab (`403`), ebenfalls über denselben parametrisierten Test verifiziert.
-- [ ] Self-only-Operationen (Passwort ändern, eigenen Account löschen, eigene Preferences) lehnen
+- [x] Self-only-Operationen (Passwort ändern, eigenen Account löschen, eigene Preferences) lehnen
       Zugriffe von anderen Mitgliedern (auch Admins) auf eine fremde `memberId` ab (`403`).
+- [x] **(P1.6-Nachtrag, Security-Review-Fund):** Jeder haushaltsgebundene Endpunkt, der zusätzlich
+      eine Sub-Ressourcen-ID aus Pfad oder Body referenziert (`taskId`, `memberId` als Zielspieler
+      des Admin-Transfers), lehnt eine Sub-Ressourcen-ID ab, die zu einem *anderen* Haushalt gehört
+      — auch wenn die `householdId` in der URL korrekt und die eigene ist (`404`, kein `200`/`204`).
+      Betrifft `TaskService.updateTask/editTask/deleteTask`, `MemberManagementService.getMember/
+      updateMember/removeMember` (household-scoped Overloads) und
+      `HouseholdManagementService.transferOwnership`. Zusätzlich: `HouseholdAccessGuard.
+      isAdminOfHousehold` prüft live gegen die Datenbank statt gegen das beim Login gecachte
+      `isAdmin`-Claim, damit ein `transferOwnership`-Entzug sofort wirkt, nicht erst nach Re-Login.
+      Verifiziert durch `HouseholdAccessControlIT` (neue parametrisierte Fallgruppe plus
+      `transferOwnership_memberIdFromDifferentHousehold_returns404` und
+      `adminOnlyEndpoint_afterAdminRevokedInSameSession_returns403WithoutReLogin`) sowie Unit-/
+      IT-Tests in `TaskServiceTest`/`TaskServiceIT`, `MemberManagementServiceTest`/
+      `MemberManagementServiceIT`, `HouseholdManagementServiceTest`/`HouseholdManagementServiceIT`,
+      `HouseholdAccessGuardTest`.
 - [ ] Alle neuen Service-Methoden mit DB-Zugriff haben mindestens einen Happy-Path-`*ServiceIT`-Test
       gegen echtes Postgres via Testcontainers; alle neuen reinen Logikbausteine
       (`HouseholdAccessGuard`, `AccountService`, `AccountOidcUserService`, `AccountUserDetailsService`)
