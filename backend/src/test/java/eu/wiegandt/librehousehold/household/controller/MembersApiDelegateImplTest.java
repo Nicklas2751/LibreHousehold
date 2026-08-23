@@ -10,6 +10,7 @@ import eu.wiegandt.librehousehold.model.InviteInfo;
 import eu.wiegandt.librehousehold.model.Member;
 import eu.wiegandt.librehousehold.model.MemberRegistration;
 import eu.wiegandt.librehousehold.model.MemberUpdate;
+import eu.wiegandt.librehousehold.model.PasswordChangeRequest;
 import org.instancio.Instancio;
 import org.instancio.junit.InstancioExtension;
 import org.junit.jupiter.api.Nested;
@@ -32,6 +33,9 @@ class MembersApiDelegateImplTest {
 
     @Mock
     private MemberManagementService memberManagementService;
+
+    @Mock
+    private AccountService accountService;
 
     @InjectMocks
     private MembersApiDelegateImpl delegate;
@@ -183,6 +187,43 @@ class MembersApiDelegateImplTest {
 
             // then
             verify(memberManagementService).removeMember(householdId, memberId);
+            assertThat(result.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        }
+    }
+
+    @Nested
+    class leaveHousehold {
+
+        @Test
+        void validRequest_delegatesToServiceAndReturns204() {
+            // given
+            var householdId = UUID.randomUUID();
+            var memberId = UUID.randomUUID();
+
+            // when
+            var result = delegate.leaveHousehold(householdId, memberId);
+
+            // then
+            verify(memberManagementService).leaveHousehold(memberId);
+            assertThat(result.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        }
+    }
+
+    @Nested
+    class changePassword {
+
+        @Test
+        void validRequest_delegatesToServiceAndReturns204() {
+            // given
+            var householdId = UUID.randomUUID();
+            var memberId = UUID.randomUUID();
+            var request = new PasswordChangeRequest("oldPassword", "newPassword");
+
+            // when
+            var result = delegate.changePassword(householdId, memberId, request);
+
+            // then
+            verify(accountService).changePassword(memberId, "oldPassword", "newPassword");
             assertThat(result.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
         }
     }

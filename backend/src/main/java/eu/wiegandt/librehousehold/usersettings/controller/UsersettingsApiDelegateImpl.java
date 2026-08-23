@@ -25,11 +25,4 @@ public class UsersettingsApiDelegateImpl implements UsersettingsApiDelegate {
                                                              UserPreferences userPreferences) {
         return ResponseEntity.ok(service.updatePreferences(memberId, userPreferences));
     }
-
-    @Override
-    @PreAuthorize("@householdAccessGuard.isSelf(#memberId, authentication)")
-    public ResponseEntity<Void> deleteAccount(UUID householdId, UUID memberId) {
-        service.deleteAccount(memberId);
-        return ResponseEntity.noContent().build();
-    }
 }

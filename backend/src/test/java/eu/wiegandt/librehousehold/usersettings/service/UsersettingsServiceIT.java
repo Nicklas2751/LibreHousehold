@@ -4,7 +4,6 @@ import eu.wiegandt.librehousehold.usersettings.mapper.*;
 import eu.wiegandt.librehousehold.usersettings.model.*;
 import eu.wiegandt.librehousehold.usersettings.repository.*;
 
-import eu.wiegandt.librehousehold.household.MemberDeletion;
 import eu.wiegandt.librehousehold.household.MemberQuery;
 import eu.wiegandt.librehousehold.household.MemberRemoved;
 import eu.wiegandt.librehousehold.model.UserPreferences;
@@ -25,9 +24,7 @@ import org.testcontainers.utility.DockerImageName;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.verify;
 
 @DataJdbcTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -49,9 +46,6 @@ class UsersettingsServiceIT {
 
     @MockitoBean
     private MemberQuery memberQuery;
-
-    @MockitoBean
-    private MemberDeletion memberDeletion;
 
     @Nested
     class updatePreferences {
@@ -95,36 +89,6 @@ class UsersettingsServiceIT {
 
             // then
             assertThat(result).usingRecursiveComparison().isEqualTo(expected);
-        }
-    }
-
-    @Nested
-    class deleteAccount {
-
-        @Test
-        void validMember_callsRemoveMember() {
-            // given
-            var memberId = UUID.randomUUID();
-            doReturn(true).when(memberQuery).memberExistsById(memberId);
-            doReturn(false).when(memberQuery).isAdmin(memberId);
-
-            // when
-            service.deleteAccount(memberId);
-
-            // then
-            verify(memberDeletion).removeMember(memberId);
-        }
-
-        @Test
-        void memberIsAdmin_throwsAdminCannotDeleteAccountException() {
-            // given
-            var memberId = UUID.randomUUID();
-            doReturn(true).when(memberQuery).memberExistsById(memberId);
-            doReturn(true).when(memberQuery).isAdmin(memberId);
-
-            // when / then
-            assertThatThrownBy(() -> service.deleteAccount(memberId))
-                    .isInstanceOf(AdminCannotDeleteAccountException.class);
         }
     }
 
