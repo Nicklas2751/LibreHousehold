@@ -80,6 +80,9 @@ public class HouseholdManagementService {
 
     @Transactional
     public void transferOwnership(UUID householdId, UUID newAdminId) {
+        if (!memberRepository.existsByIdAndHouseholdId(newAdminId, householdId)) {
+            throw new MemberNotFoundException();
+        }
         var revokedRows = memberRepository.revokeAdmin(householdId);
         if (revokedRows == 0) {
             throw new HouseholdNotFoundException();

@@ -97,13 +97,13 @@ class MembersApiDelegateImplTest {
             var householdId = UUID.randomUUID();
             var memberId = UUID.randomUUID();
             var member = Instancio.create(Member.class);
-            doReturn(member).when(memberManagementService).getMember(memberId);
+            doReturn(member).when(memberManagementService).getMember(householdId, memberId);
 
             // when
             var result = delegate.getMember(householdId, memberId);
 
             // then
-            verify(memberManagementService).getMember(memberId);
+            verify(memberManagementService).getMember(householdId, memberId);
             assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
             assertThat(result.getBody()).isEqualTo(member);
         }
@@ -164,7 +164,7 @@ class MembersApiDelegateImplTest {
             var result = delegate.updateMember(householdId, memberId, update);
 
             // then
-            verify(memberManagementService).updateMember(memberId, update);
+            verify(memberManagementService).updateMember(householdId, memberId, update);
             assertThat(result.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
         }
     }
@@ -182,7 +182,7 @@ class MembersApiDelegateImplTest {
             var result = delegate.removeMember(householdId, memberId);
 
             // then
-            verify(memberManagementService).removeMember(memberId);
+            verify(memberManagementService).removeMember(householdId, memberId);
             assertThat(result.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
         }
     }

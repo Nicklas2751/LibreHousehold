@@ -125,7 +125,7 @@ class TasksApiDelegateImplIT {
             var taskId = UUID.randomUUID();
             var taskEdit = new TaskEdit("Clean kitchen", LocalDate.of(2024, 8, 1));
             var updatedTask = new Task(taskId, "Clean kitchen", LocalDate.of(2024, 8, 1));
-            doReturn(updatedTask).when(taskService).editTask(eq(taskId), any(TaskEdit.class));
+            doReturn(updatedTask).when(taskService).editTask(eq(householdId), eq(taskId), any(TaskEdit.class));
 
             // when / then
             mockMvc.perform(put("/v1/household/{householdId}/tasks/{taskId}", householdId, taskId)
@@ -152,7 +152,7 @@ class TasksApiDelegateImplIT {
             // given
             var householdId = UUID.randomUUID();
             var taskId = UUID.randomUUID();
-            doNothing().when(taskService).deleteTask(taskId);
+            doNothing().when(taskService).deleteTask(householdId, taskId);
 
             // when / then
             mockMvc.perform(delete("/v1/household/{householdId}/tasks/{taskId}", householdId, taskId))
@@ -169,10 +169,11 @@ class TasksApiDelegateImplIT {
             var taskId = UUID.randomUUID();
             var doneDate = LocalDate.of(2024, 7, 5);
             var updated = new Task(taskId, "Clean", LocalDate.of(2024, 7, 1)).done(doneDate);
-            doReturn(updated).when(taskService).updateTask(eq(taskId), any(TaskUpdate.class));
+            var householdId = UUID.randomUUID();
+            doReturn(updated).when(taskService).updateTask(eq(householdId), eq(taskId), any(TaskUpdate.class));
 
             // when / then
-            mockMvc.perform(patch("/v1/household/{householdId}/tasks/{taskId}", UUID.randomUUID(), taskId)
+            mockMvc.perform(patch("/v1/household/{householdId}/tasks/{taskId}", householdId, taskId)
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(new TaskUpdate().done(doneDate))))
                     .andExpect(status().isOk())
