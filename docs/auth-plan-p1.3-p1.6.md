@@ -1411,17 +1411,38 @@ undokumentierte Abhängigkeitsrichtung hinzu, die TD1 bei seiner Behebung zusät
 - **`createMember` (`POST /household/{id}/members`) hat keine Delegate-Implementierung** (501-
   Fallback) — ein Bestandsproblem, nicht durch P1.6 verursacht, jetzt aber explizit unten in
   "Out of Scope" nachgetragen (war zuvor nirgends vermerkt, obwohl in der Rollentabelle gelistet).
+- **(Nachtrag nach P1.6) `createMember` entfernt, `changePassword`/`leaveHousehold` nach `household`
+  verschoben und umgesetzt.** Auslöser: Bei der Durchsicht der „Out of Scope"-Punkte stellte sich
+  `createMember` als totes Konzept heraus (siehe „Out of Scope" unten) und wurde ersatzlos aus der
+  API entfernt. Bei der anschließenden Frage, wo `changePassword` fachlich hingehört, ergab eine
+  DDD-Analyse (Arc42-Modulbeschreibungen, `architecture-critic`-Konsultation): sowohl
+  `changePassword` als auch das bisherige `deleteAccount` sind Account-/Membership-Lifecycle-
+  Operationen und gehören damit zur Core Domain `household`, nicht zur Generic Subdomain
+  `usersettings` (die nur Sprache/Theme/Benachrichtigungen verwaltet). `deleteAccount` wurde dabei
+  zu `leaveHousehold` umbenannt und als expliziter Self-Service-Gegenpart zu `removeMember`
+  dokumentiert (Admin-initiierte Entfernung). Zusätzlich fand die Analyse einen echten Bug:
+  `removeMember` hatte — anders als `deleteAccount` — keinen Schutz dagegen, den amtierenden Admin
+  zu entfernen. Umgesetzt: beide Entfernungswege (`leaveHousehold`, `removeMember`) teilen sich jetzt
+  einen privaten Check (`MemberManagementService.assertMemberIsNotHouseholdAdmin`), der `409`
+  (`HouseholdAdminCannotBeRemovedException`) wirft, wenn das Zielmitglied aktuell Admin ist; Admin-
+  Rechte müssen erst per Ownership-Transfer abgegeben werden. Die Named Interface `MemberDeletion`
+  wurde komplett gelöscht (kein Cross-Modul-Aufruf mehr nötig, da die Logik vollständig in
+  `household` liegt). `changePassword` (`AccountService.changePassword`, Argon2id-`matches`/
+  `encode`, `403 InvalidPasswordException` bei falschem Altpasswort) liegt ebenfalls vollständig in
+  `household`. Verifiziert durch migrierte/neue Unit- und IT-Tests sowie manuelle `curl`-
+  Verifikation aller sieben Szenarien (korrektes/falsches Passwort, Self-Service-Leave als Admin/
+  Nicht-Admin, Admin-Removal gegen Admin/Nicht-Admin, Fremdzugriff via `isSelf`-Guard) gegen die
+  echte, laufende Anwendung inkl. vollem OIDC-Authorization-Code-Flow.
 
 ## Out of Scope
 
 - **P0.x, P1.1/P1.2, P1.7–P1.10, P2.x, P3.x** — siehe Meta-Plan.
-- **`PUT /household/{householdId}/members/{memberId}/password` (`changePassword`)** — bereits in
-  `api/openapi.yml` spezifiziert, aber weder Delegate-Methode noch Service-Logik existieren aktuell
-  (`UsersettingsApiDelegateImpl` implementiert nur `updatePreferences`/`deleteAccount`). Baut auf
-  demselben `AccountRepository`/`PasswordEncoder`, den P1.3 hier einführt, wird aber bewusst nicht in
-  diesem Plan mit umgesetzt, da er im Auftrag nicht als P1.3-Bestandteil genannt ist und eher zum
-  bestehenden `usersettings`-Modul-Scope gehört als zu `AccountRegistration`. Empfehlung: als
-  eigener kleiner Folge-Task nach P1.3 einplanen.
+- ~~**`PUT /household/{householdId}/members/{memberId}/password` (`changePassword`)**~~ —
+  **umgesetzt** (Nachtrag, siehe „Tatsächliche Umsetzung & Abweichungen vom Plan" unten). Liegt
+  entgegen der ursprünglichen Einschätzung nicht in `usersettings`, sondern in `household`
+  (`MembersApiDelegateImpl`/`AccountService`) — DDD-Analyse ergab, dass Account-/Membership-
+  Lifecycle-Operationen zur Core Domain `household` gehören, nicht zur Generic Subdomain
+  `usersettings`.
 - **Vollständige TD1-Behebung** (Modulgrenzen für *alle* Module technisch erzwingen) — nur der durch
   diesen Plan neu entstehende `core`→`household`-Fall wird deklariert (P1.6.4).
 - **`security: sessionCookie` global/pro Operation in `api/openapi.yml` nachtragen** — wird benannt
@@ -1434,11 +1455,11 @@ undokumentierte Abhängigkeitsrichtung hinzu, die TD1 bei seiner Behebung zusät
   relevant wird.
 - **Rate-Limiting/Lockout, E-Mail-Verifikations-Logik, Passwort-Reset** — explizit P2.x.
 - **Social Login / föderierte Provider** — explizit P3.x.
-- **`POST /household/{householdId}/members` (`createMember`)** — in `api/openapi.yml` spezifiziert,
-  aber `MembersApiDelegateImpl` implementiert die Methode nicht (Generator-Default-Fallback liefert
-  `501`). Ein Bestandsproblem, nicht durch P1.6 verursacht — im Zuge des P1.6-Access-Control-Reviews
-  gefunden, aber bewusst nicht in diesem Plan mit umgesetzt (Scope-Erweiterung). Empfehlung: als
-  eigener kleiner Folge-Task einplanen, analog `changePassword`.
+- ~~**`POST /household/{householdId}/members` (`createMember`)**~~ — **entfernt**, nicht umgesetzt.
+  War totes Konzept: unimplementiert (501-Fallback), das `Member`-Request-Schema hatte kein
+  Passwort-Feld (strukturelle Sackgasse — Mitglieder können nur über Setup oder Invite-Join einen
+  Account erhalten), und der zugehörige Frontend-Wrapper `addMember` wurde nirgends aufgerufen.
+  Endgültig aus `api/openapi.yml` entfernt.
 
 ## Akzeptanzkriterien
 

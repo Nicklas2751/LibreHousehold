@@ -1,11 +1,9 @@
 package eu.wiegandt.librehousehold.usersettings.service;
 
-import eu.wiegandt.librehousehold.household.MemberDeletion;
 import eu.wiegandt.librehousehold.household.MemberQuery;
 import eu.wiegandt.librehousehold.household.MemberRemoved;
 import eu.wiegandt.librehousehold.model.UserPreferences;
 import eu.wiegandt.librehousehold.usersettings.PreferencesQuery;
-import eu.wiegandt.librehousehold.usersettings.exception.AdminCannotDeleteAccountException;
 import eu.wiegandt.librehousehold.usersettings.exception.MemberNotFoundException;
 import eu.wiegandt.librehousehold.usersettings.mapper.UserPreferencesMapper;
 import eu.wiegandt.librehousehold.usersettings.model.UserPreferencesEntity;
@@ -22,16 +20,13 @@ public class UsersettingsService implements PreferencesQuery {
     private final UserPreferencesRepository preferencesRepository;
     private final UserPreferencesMapper preferencesMapper;
     private final MemberQuery memberQuery;
-    private final MemberDeletion memberDeletion;
 
     public UsersettingsService(UserPreferencesRepository preferencesRepository,
                                UserPreferencesMapper preferencesMapper,
-                               MemberQuery memberQuery,
-                               MemberDeletion memberDeletion) {
+                               MemberQuery memberQuery) {
         this.preferencesRepository = preferencesRepository;
         this.preferencesMapper = preferencesMapper;
         this.memberQuery = memberQuery;
-        this.memberDeletion = memberDeletion;
     }
 
     @Transactional
@@ -45,17 +40,6 @@ public class UsersettingsService implements PreferencesQuery {
         preferencesMapper.updateEntityFromPreferences(request, entity);
         preferencesRepository.save(entity);
         return preferencesMapper.toUserPreferences(entity);
-    }
-
-    @Transactional
-    public void deleteAccount(UUID memberId) {
-        if (!memberQuery.memberExistsById(memberId)) {
-            throw new MemberNotFoundException();
-        }
-        if (memberQuery.isAdmin(memberId)) {
-            throw new AdminCannotDeleteAccountException();
-        }
-        memberDeletion.removeMember(memberId);
     }
 
     @Override
