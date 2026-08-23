@@ -1,10 +1,10 @@
 import { type Writable, writable } from 'svelte/store';
-import { Configuration, type Member, MembersApi } from '../../generated-sources/openapi';
+import { type Member, MembersApi } from '../../generated-sources/openapi';
+import { apiConfiguration } from '$lib/api/httpClient';
 
 export const members: Writable<Member[]> = writable([]);
 
-const apiConfig = new Configuration({ basePath: '/api' });
-const api = new MembersApi(apiConfig);
+const api = new MembersApi(apiConfiguration);
 
 /**
  *

@@ -6,13 +6,13 @@
 	import { QRCode } from '@castlenine/svelte-qrcode';
 	import { ShareIosIcon } from '@indaco/svelte-iconoir/share-ios';
 	import {
-		Configuration,
 		type Household,
 		type HouseholdSetup,
 		HouseholdApi,
 		type Member,
 		ResponseError
 	} from '../generated-sources/openapi';
+	import { apiConfiguration } from '$lib/api/httpClient';
 	import { v4 as uuidv4 } from 'uuid';
 	import { updateHouseholdState } from '$lib/stores/householdState.svelte';
 	import {
@@ -100,8 +100,7 @@
 	}
 
 	async function finish(data: { name: string; email: string; avatar: string }) {
-		const apiConfig = new Configuration({ basePath: '/api' });
-		const householdApi = new HouseholdApi(apiConfig);
+		const householdApi = new HouseholdApi(apiConfiguration);
 
 		const adminMember: Member = {
 			id: uuidv4(),

@@ -2,12 +2,8 @@
 	import { m } from '$lib/paraglide/messages.js';
 	import { addToast } from '$lib/stores/toastStore';
 	import { Toast } from '$lib/toast';
-	import {
-		Configuration,
-		MembersApi,
-		type InviteInfo,
-		ResponseError
-	} from '../generated-sources/openapi';
+	import { MembersApi, type InviteInfo, ResponseError } from '../generated-sources/openapi';
+	import { apiConfiguration } from '$lib/api/httpClient';
 	import { updateHouseholdState } from '$lib/stores/householdState.svelte';
 	import { updateUserState } from '$lib/stores/userState';
 	import { goto } from '$app/navigation';
@@ -20,7 +16,7 @@
 
 	const { token }: Props = $props();
 
-	const membersApi = new MembersApi(new Configuration({ basePath: '/api' }));
+	const membersApi = new MembersApi(apiConfiguration);
 
 	let inviteInfo: InviteInfo | null = $state(null);
 	let invalidLink = $state(false);

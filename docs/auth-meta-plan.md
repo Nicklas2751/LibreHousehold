@@ -23,6 +23,16 @@ Bindende Leitplanken für alle Punkte:
   „kein localStorage/sessionStorage"-Regel. Lifecycle-Härtung (E-Mail-Verifikation,
   Passwort-Reset, Rate-Limiting) wird als vollwertige Phase (P2) mit eingeplant, nicht auf
   „später" verschoben.
+- **Sofort-Rückfrage-Pflicht, kein eigenmächtiges "Out of Scope".** Fällt während der Umsetzung
+  eines Punkts etwas auf — ein Bug, eine Lücke, ein Zielkonflikt mit einer bereits getroffenen
+  Entscheidung, eine fehlende Spezifikation o. Ä. — wird die Umsetzung sofort unterbrochen und der
+  Nutzer aktiv gefragt, wie weiter verfahren werden soll. Es ist **nicht** erlaubt, einen solchen
+  Punkt eigenmächtig als "Out of Scope"/"Follow-up-Task" zu dokumentieren und ohne Rückfrage
+  weiterzumachen. Grund: genau das ist bereits einmal passiert (`createMember`/`removeMember` beim
+  P1.6-Review wurden zunächst als Folge-Tasks vermerkt statt sofort zu klären; siehe
+  `auth-plan-p1.3-p1.6.md`) und musste in einer eigenen, nachträglichen Runde aufgearbeitet werden.
+  "Out of Scope" darf ausschließlich für Punkte verwendet werden, die im Auftrag/Plan bereits
+  explizit als bewusst-nicht-jetzt markiert sind, nicht für neu entdeckte, ungeklärte Fragen.
 
 Hinweis: `frontend/src/generated-sources` ist gitignored und enthielt (Stand 4. Juli, nicht in
 `api/openapi.yml`/git) bereits einen verwaisten Entwurf (`AuthApi`, `LocalRegistration`,
