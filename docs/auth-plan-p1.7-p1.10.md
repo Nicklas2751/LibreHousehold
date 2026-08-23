@@ -824,8 +824,13 @@ weitere 409-Typen ergänzt).
       `/app`.
 - [ ] Für jede in Abschnitt 5 aufgeführte Business-Logik-Funktion existiert mindestens ein
       Vitest-Testfall pro Verzweigung (positiv + je Fehlerpfad negativ), Namensmuster
-      `methodName_input_expectedOutput`-Äquivalent in den `describe`/`it`-Titeln (deutschsprachig,
-      wie im bestehenden Code üblich, siehe `JoinWizard.svelte.spec.ts`).
+      `methodName_input_expectedOutput`-Äquivalent in den `describe`/`it`-Titeln. **Korrektur
+      (Nutzer-Feedback nach P1.7):** `describe`/`it`-Titel und Code-Kommentare sind **Englisch**,
+      wie sämtlicher Code — `JoinWizard.svelte.spec.ts` war hier fälschlich als Vorbild
+      referenziert; diese vorbestehende Datei nutzt selbst noch deutsche Titel und ist damit kein
+      Vorbild, sondern selbst nicht konform (Retrofit optional, außerhalb dieses Plans). String-
+      Literale/Selektoren, die tatsächlich gerenderten deutschen UI-Text matchen (App-Standard-
+      Locale ist Deutsch), sind davon unberührt — nur Testnamen und Kommentare betrifft die Regel.
 - [ ] `npm run test`, `npm run lint`, `npm run check` sind grün.
 - [ ] Neue i18n-Keys sind in `messages/de.json` **und** `messages/en.json` gepflegt,
       `npm run paraglide` wurde ausgeführt.

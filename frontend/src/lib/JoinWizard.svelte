@@ -2,8 +2,15 @@
 	import { m } from '$lib/paraglide/messages.js';
 	import { addToast } from '$lib/stores/toastStore';
 	import { Toast } from '$lib/toast';
-	import { MembersApi, type InviteInfo, ResponseError } from '../generated-sources/openapi';
+	import {
+		MembersApi,
+		type InviteInfo,
+		type Problem,
+		ResponseError
+	} from '../generated-sources/openapi';
 	import { apiConfiguration } from '$lib/api/httpClient';
+	import { extractErrorStatus } from '$lib/api/errorStatus';
+	import { classifyConflictProblem } from '$lib/api/problemMapping';
 	import { updateHouseholdState } from '$lib/stores/householdState.svelte';
 	import { updateUserState } from '$lib/stores/userState';
 	import { goto } from '$app/navigation';
@@ -32,7 +39,7 @@
 		}
 	});
 
-	async function join(data: { name: string; email: string; avatar: string }) {
+	async function join(data: { name: string; email: string; avatar: string; password?: string }) {
 		joining = true;
 		serverEmailError = null;
 		try {
@@ -42,7 +49,8 @@
 					id: crypto.randomUUID(),
 					name: data.name,
 					email: data.email,
-					avatar: data.avatar || undefined
+					avatar: data.avatar || undefined,
+					localRegistration: { password: data.password ?? '' }
 				}
 			});
 			updateUserState(member);
@@ -54,19 +62,42 @@
 			}
 			step = 1;
 		} catch (err: unknown) {
-			const status =
-				err instanceof ResponseError
-					? err.response.status
-					: typeof err === 'object' && err !== null && 'status' in err
-						? (err as { status: unknown }).status
-						: undefined;
-			if (status === 409) {
-				serverEmailError = m['invite.email_taken']();
-			} else {
-				addToast(new Toast(m['invite.join_error'](), 'error'));
-			}
+			await handleJoinError(err);
 		} finally {
 			joining = false;
+		}
+	}
+
+	async function handleJoinError(err: unknown) {
+		const status = extractErrorStatus(err);
+		if (status !== 409) {
+			addToast(new Toast(m['invite.join_error'](), 'error'));
+			return;
+		}
+		const problem = await readConflictProblem(err);
+		if (!problem) {
+			addToast(new Toast(m['invite.join_error'](), 'error'));
+			return;
+		}
+		switch (classifyConflictProblem(problem.type)) {
+			case 'account-exists':
+				serverEmailError = m['invite.email_taken']();
+				break;
+			default:
+				addToast(new Toast(m['invite.join_error'](), 'error'));
+		}
+	}
+
+	async function readConflictProblem(err: unknown): Promise<Problem | undefined> {
+		if (!(err instanceof ResponseError)) {
+			return undefined;
+		}
+		try {
+			return await err.response.json();
+		} catch {
+			// Body was not valid JSON (e.g. empty body or a proxy error page instead of Problem JSON) —
+			// fall back to the generic error instead of an unhandled exception.
+			return undefined;
 		}
 	}
 </script>
@@ -105,6 +136,9 @@
 				emailPlaceholder={m['invite.email_placeholder']()}
 				backLabel={m['setup.create_step.back_button']()}
 				submitLabel={m['invite.join_button']()}
+				passwordLabel={m['invite.password_label']()}
+				passwordHint={m['invite.password_hint']()}
+				passwordPlaceholder={m['invite.password_placeholder']()}
 				{serverEmailError}
 				onClearEmailError={() => {
 					serverEmailError = null;
