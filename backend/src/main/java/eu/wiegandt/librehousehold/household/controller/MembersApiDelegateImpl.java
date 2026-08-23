@@ -1,12 +1,14 @@
 package eu.wiegandt.librehousehold.household.controller;
 
 import eu.wiegandt.librehousehold.api.MembersApiDelegate;
+import eu.wiegandt.librehousehold.household.service.AccountService;
 import eu.wiegandt.librehousehold.household.service.MemberManagementService;
 import eu.wiegandt.librehousehold.model.EmailAvailability;
 import eu.wiegandt.librehousehold.model.InviteInfo;
 import eu.wiegandt.librehousehold.model.Member;
 import eu.wiegandt.librehousehold.model.MemberRegistration;
 import eu.wiegandt.librehousehold.model.MemberUpdate;
+import eu.wiegandt.librehousehold.model.PasswordChangeRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Component;
@@ -19,9 +21,11 @@ import java.util.UUID;
 public class MembersApiDelegateImpl implements MembersApiDelegate {
 
     private final MemberManagementService memberManagementService;
+    private final AccountService accountService;
 
-    public MembersApiDelegateImpl(MemberManagementService memberManagementService) {
+    public MembersApiDelegateImpl(MemberManagementService memberManagementService, AccountService accountService) {
         this.memberManagementService = memberManagementService;
+        this.accountService = accountService;
     }
 
     @Override
@@ -65,6 +69,20 @@ public class MembersApiDelegateImpl implements MembersApiDelegate {
     @PreAuthorize("@householdAccessGuard.isAdminOfHousehold(#householdId, authentication)")
     public ResponseEntity<Void> removeMember(UUID householdId, UUID memberId) {
         memberManagementService.removeMember(householdId, memberId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @Override
+    @PreAuthorize("@householdAccessGuard.isSelf(#memberId, authentication)")
+    public ResponseEntity<Void> leaveHousehold(UUID householdId, UUID memberId) {
+        memberManagementService.leaveHousehold(memberId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @Override
+    @PreAuthorize("@householdAccessGuard.isSelf(#memberId, authentication)")
+    public ResponseEntity<Void> changePassword(UUID householdId, UUID memberId, PasswordChangeRequest passwordChangeRequest) {
+        accountService.changePassword(memberId, passwordChangeRequest.getOldPassword(), passwordChangeRequest.getNewPassword());
         return ResponseEntity.noContent().build();
     }
 }

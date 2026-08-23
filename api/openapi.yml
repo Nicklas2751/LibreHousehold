@@ -225,7 +225,12 @@ paths:
                 $ref: '#/components/schemas/Problem'
     delete:
       summary: Remove a member from the household
-      description: Removes the specified member from the household. Can only be performed by the household admin.
+      description: >
+        Admin-initiated removal of another member from the household — e.g. because that member
+        has moved out but has not left on their own. Can only be performed by the household admin,
+        and cannot be used by the admin to remove themselves (the household must always have an
+        admin); an admin who wants to leave must transfer ownership first, then use
+        `leaveHousehold` on their own membership. For self-service removal, see `leaveHousehold`.
       tags:
         - members
       operationId: removeMember
@@ -247,6 +252,12 @@ paths:
           description: Member removed.
         "404":
           description: Member not found.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        "409":
+          description: The specified member is the household admin and cannot be removed without transferring ownership first.
           content:
             application/problem+json:
               schema:
@@ -1573,9 +1584,11 @@ paths:
   /household/{householdId}/members/{memberId}/password:
     put:
       summary: Change a member's password
-      description: Changes the password for the specified member. Requires the current password for verification.
+      description: >
+        Changes the password for the specified member. Self-service only — a member can only
+        change their own password. Requires the current password for verification.
       tags:
-        - usersettings
+        - members
       operationId: changePassword
       parameters:
         - name: householdId
@@ -1620,11 +1633,15 @@ paths:
 
   /household/{householdId}/members/{memberId}/account:
     delete:
-      summary: Delete own account
-      description: Permanently deletes the member's own account. If the member is the household admin, ownership must be transferred or the household deleted beforehand.
+      summary: Leave the household (self-service)
+      description: >
+        Self-service removal — a member permanently removes their own membership and account.
+        Cannot be used by the household admin: ownership must be transferred first (see
+        `PUT /household/{householdId}/admin`), then the former admin can leave using this
+        endpoint. For an admin removing a *different* member, see `removeMember`.
       tags:
-        - usersettings
-      operationId: deleteAccount
+        - members
+      operationId: leaveHousehold
       parameters:
         - name: householdId
           in: path

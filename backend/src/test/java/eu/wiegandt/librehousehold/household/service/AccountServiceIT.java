@@ -71,4 +71,24 @@ class AccountServiceIT {
                     assertThat(passwordEncoder.matches(rawPassword, account.passwordHash())).isTrue();
                 });
     }
+
+    @Test
+    void changePassword_correctOldPassword_persistsNewHashedPassword() {
+        // given
+        var household = householdRepository.save(Instancio.create(HouseholdEntity.class));
+        createdHouseholdId = household.id();
+        var member = memberRepository.save(Instancio.of(MemberEntity.class)
+                .set(field(MemberEntity::householdId), household.id())
+                .create());
+        var oldPassword = "correct horse battery staple";
+        var newPassword = "new correct horse battery staple";
+        accountService.createAccount(member.getId(), oldPassword);
+
+        // when
+        accountService.changePassword(member.getId(), oldPassword, newPassword);
+
+        // then
+        assertThat(accountRepository.findById(member.getId()))
+                .hasValueSatisfying(account -> assertThat(passwordEncoder.matches(newPassword, account.passwordHash())).isTrue());
+    }
 }

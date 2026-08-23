@@ -1,7 +1,10 @@
 package eu.wiegandt.librehousehold.household.service;
 import eu.wiegandt.librehousehold.household.HouseholdDeleted;
 import eu.wiegandt.librehousehold.household.MemberRemoved;
-import eu.wiegandt.librehousehold.household.exception.*;
+import eu.wiegandt.librehousehold.household.exception.HouseholdAdminCannotBeRemovedException;
+import eu.wiegandt.librehousehold.household.exception.InvalidInviteException;
+import eu.wiegandt.librehousehold.household.exception.MemberAlreadyExistsException;
+import eu.wiegandt.librehousehold.household.exception.MemberNotFoundException;
 import eu.wiegandt.librehousehold.household.mapper.*;
 import eu.wiegandt.librehousehold.household.model.*;
 import eu.wiegandt.librehousehold.household.repository.*;
@@ -595,7 +598,7 @@ class MemberManagementServiceTest {
     }
 
     @Nested
-    class removeMember {
+    class leaveHousehold {
 
         @Test
         void memberNotFound_throwsMemberNotFoundException() {
@@ -604,18 +607,38 @@ class MemberManagementServiceTest {
             doReturn(false).when(memberRepository).existsById(memberId);
 
             // when / then
-            assertThatThrownBy(() -> service.removeMember(memberId))
+            assertThatThrownBy(() -> service.leaveHousehold(memberId))
                     .isInstanceOf(MemberNotFoundException.class);
+        }
+
+        @Test
+        void memberIsAdmin_throwsHouseholdAdminCannotBeRemovedExceptionWithoutDeleting() {
+            // given
+            var memberId = UUID.randomUUID();
+            var entity = Instancio.of(memberEntityModel)
+                    .set(field(MemberEntity::isAdmin), true)
+                    .create();
+            doReturn(true).when(memberRepository).existsById(memberId);
+            doReturn(Optional.of(entity)).when(memberRepository).findById(memberId);
+
+            // when / then
+            assertThatThrownBy(() -> service.leaveHousehold(memberId))
+                    .isInstanceOf(HouseholdAdminCannotBeRemovedException.class);
+            verify(memberRepository, never()).deleteById(any());
         }
 
         @Test
         void memberFound_publishesMemberRemovedEvent() {
             // given
             var memberId = UUID.randomUUID();
+            var entity = Instancio.of(memberEntityModel)
+                    .set(field(MemberEntity::isAdmin), false)
+                    .create();
             doReturn(true).when(memberRepository).existsById(memberId);
+            doReturn(Optional.of(entity)).when(memberRepository).findById(memberId);
 
             // when
-            service.removeMember(memberId);
+            service.leaveHousehold(memberId);
 
             // then
             verify(eventPublisher).publishEvent(new MemberRemoved(memberId));
@@ -625,10 +648,14 @@ class MemberManagementServiceTest {
         void memberFound_deletesMemberById() {
             // given
             var memberId = UUID.randomUUID();
+            var entity = Instancio.of(memberEntityModel)
+                    .set(field(MemberEntity::isAdmin), false)
+                    .create();
             doReturn(true).when(memberRepository).existsById(memberId);
+            doReturn(Optional.of(entity)).when(memberRepository).findById(memberId);
 
             // when
-            service.removeMember(memberId);
+            service.leaveHousehold(memberId);
 
             // then
             verify(memberRepository).deleteById(memberId);
@@ -636,7 +663,7 @@ class MemberManagementServiceTest {
     }
 
     @Nested
-    class removeMemberWithHouseholdId {
+    class removeMember {
 
         @Test
         void memberBelongsToDifferentHousehold_throwsMemberNotFoundExceptionWithoutDeleting() {
@@ -652,11 +679,32 @@ class MemberManagementServiceTest {
         }
 
         @Test
+        void memberIsAdmin_throwsHouseholdAdminCannotBeRemovedExceptionWithoutDeleting() {
+            // given
+            var householdId = UUID.randomUUID();
+            var memberId = UUID.randomUUID();
+            var entity = Instancio.of(memberEntityModel)
+                    .set(field(MemberEntity::isAdmin), true)
+                    .create();
+            doReturn(true).when(memberRepository).existsByIdAndHouseholdId(memberId, householdId);
+            doReturn(Optional.of(entity)).when(memberRepository).findById(memberId);
+
+            // when / then
+            assertThatThrownBy(() -> service.removeMember(householdId, memberId))
+                    .isInstanceOf(HouseholdAdminCannotBeRemovedException.class);
+            verify(memberRepository, never()).deleteById(any());
+        }
+
+        @Test
         void memberBelongsToHousehold_deletesMemberAndPublishesEvent() {
             // given
             var householdId = UUID.randomUUID();
             var memberId = UUID.randomUUID();
+            var entity = Instancio.of(memberEntityModel)
+                    .set(field(MemberEntity::isAdmin), false)
+                    .create();
             doReturn(true).when(memberRepository).existsByIdAndHouseholdId(memberId, householdId);
+            doReturn(Optional.of(entity)).when(memberRepository).findById(memberId);
 
             // when
             service.removeMember(householdId, memberId);

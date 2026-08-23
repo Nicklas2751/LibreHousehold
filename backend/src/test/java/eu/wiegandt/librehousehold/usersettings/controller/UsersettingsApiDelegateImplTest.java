@@ -1,7 +1,6 @@
 package eu.wiegandt.librehousehold.usersettings.controller;
 
 import eu.wiegandt.librehousehold.model.UserPreferences;
-import eu.wiegandt.librehousehold.usersettings.exception.AdminCannotDeleteAccountException;
 import eu.wiegandt.librehousehold.usersettings.exception.MemberNotFoundException;
 import eu.wiegandt.librehousehold.usersettings.service.UsersettingsService;
 import org.instancio.Instancio;
@@ -62,48 +61,6 @@ class UsersettingsApiDelegateImplTest {
 
             // when / then
             assertThatThrownBy(() -> delegate.updatePreferences(householdId, memberId, request))
-                    .isInstanceOf(MemberNotFoundException.class);
-        }
-    }
-
-    @Nested
-    class deleteAccount {
-
-        @Test
-        void validInput_delegatesToServiceAndReturns204() {
-            // given
-            var householdId = UUID.randomUUID();
-            var memberId = UUID.randomUUID();
-
-            // when
-            var result = delegate.deleteAccount(householdId, memberId);
-
-            // then
-            verify(service).deleteAccount(memberId);
-            assertThat(result.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
-        }
-
-        @Test
-        void memberIsAdmin_throwsAdminCannotDeleteAccountException() {
-            // given
-            var householdId = UUID.randomUUID();
-            var memberId = UUID.randomUUID();
-            doThrow(new AdminCannotDeleteAccountException()).when(service).deleteAccount(memberId);
-
-            // when / then
-            assertThatThrownBy(() -> delegate.deleteAccount(householdId, memberId))
-                    .isInstanceOf(AdminCannotDeleteAccountException.class);
-        }
-
-        @Test
-        void memberNotFound_throwsMemberNotFoundException() {
-            // given
-            var householdId = UUID.randomUUID();
-            var memberId = UUID.randomUUID();
-            doThrow(new MemberNotFoundException()).when(service).deleteAccount(memberId);
-
-            // when / then
-            assertThatThrownBy(() -> delegate.deleteAccount(householdId, memberId))
                     .isInstanceOf(MemberNotFoundException.class);
         }
     }

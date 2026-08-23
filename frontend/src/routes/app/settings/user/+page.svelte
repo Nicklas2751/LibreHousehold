@@ -7,17 +7,11 @@
 	import { loadMembers, members } from '$lib/stores/memberStore';
 	import { addToast } from '$lib/stores/toastStore';
 	import { Toast } from '$lib/toast';
-	import {
-		Configuration,
-		HouseholdApi,
-		MembersApi,
-		UsersettingsApi
-	} from '../../../../generated-sources/openapi';
+	import { Configuration, HouseholdApi, MembersApi } from '../../../../generated-sources/openapi';
 	import { goto } from '$app/navigation';
 
 	const householdApi = new HouseholdApi(new Configuration({ basePath: '/api' }));
 	const membersApi = new MembersApi(new Configuration({ basePath: '/api' }));
-	const userSettingsApi = new UsersettingsApi(new Configuration({ basePath: '/api' }));
 
 	const householdId = $derived($householdState?.id ?? '');
 	const memberId = $derived($userState?.id ?? '');
@@ -73,7 +67,7 @@
 		if (passwordMismatch) return;
 		passwordSaving = true;
 		try {
-			await userSettingsApi.changePassword({
+			await membersApi.changePassword({
 				householdId,
 				memberId,
 				passwordChangeRequest: { oldPassword, newPassword }
@@ -121,7 +115,7 @@
 			} else if (isOwner && deleteHousehold) {
 				await householdApi.deleteHousehold({ householdId });
 			}
-			await userSettingsApi.deleteAccount({ householdId, memberId });
+			await membersApi.leaveHousehold({ householdId, memberId });
 			await goto('/');
 		} catch {
 			addToast(new Toast(m['settings.user.danger.delete_error'](), 'error'));
