@@ -74,7 +74,7 @@ muss aber sauber neu aus der überarbeiteten OpenAPI-Spec generiert werden.
 - ✅ **P1.5 — Backend: Resource-Server-/BFF-Absicherung bestehender Endpunkte.** Cookie-Session,
   CSRF, CORS — alle heute offenen Endpunkte werden geschlossen.
   Siehe [Detailplan](auth-plan-p1.3-p1.6.md).
-- **P1.6 — Backend: Access Control je Haushalt/Rolle.** Jeder haushaltsgebundene Endpunkt prüft
+- ✅ **P1.6 — Backend: Access Control je Haushalt/Rolle.** Jeder haushaltsgebundene Endpunkt prüft
   Zugehörigkeit; Admin-only-Operationen (Invite, Ownership-Transfer, Löschen). OWASP „Broken
   Access Control". TDD + IT. Siehe [Detailplan](auth-plan-p1.3-p1.6.md).
 - **P1.7 — Frontend: SetupWizard um Passwort erweitern.** Inkl. E-Mail-Verfügbarkeits-Check,

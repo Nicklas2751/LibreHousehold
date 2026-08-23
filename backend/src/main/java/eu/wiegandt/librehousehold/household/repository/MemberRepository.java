@@ -18,6 +18,12 @@ public interface MemberRepository extends CrudRepository<MemberEntity, UUID> {
 
     boolean existsByEmail(String email);
 
+    boolean existsByIdAndHouseholdId(UUID id, UUID householdId);
+
+    boolean existsByIdAndHouseholdIdAndIsAdminTrue(UUID id, UUID householdId);
+
+    Optional<MemberEntity> findByIdAndHouseholdId(UUID id, UUID householdId);
+
     Optional<MemberEntity> findByEmail(String email);
 
     Optional<MemberEntity> findByHouseholdIdAndIsAdminTrue(UUID householdId);

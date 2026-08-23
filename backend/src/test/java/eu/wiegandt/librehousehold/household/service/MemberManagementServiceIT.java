@@ -263,4 +263,41 @@ class MemberManagementServiceIT {
                     .isInstanceOf(MemberNotFoundException.class);
         }
     }
+
+    @Nested
+    class getMemberWithHouseholdId {
+
+        @Test
+        void memberBelongsToDifferentHousehold_throwsMemberNotFoundException() {
+            // given — member joined a second, unrelated household
+            var otherHousehold = Instancio.create(Household.class);
+            createdHouseholdIds.add(otherHousehold.getId());
+            var otherToken = setupService.setupHousehold(new HouseholdSetup(
+                    otherHousehold, Instancio.create(Member.class), Instancio.create(LocalRegistration.class))).getInviteToken();
+            var memberOfOtherHousehold = memberManagementService.joinHousehold(otherToken, Instancio.create(MemberRegistration.class));
+
+            // when / then
+            assertThatThrownBy(() -> memberManagementService.getMember(existingHousehold.getId(), memberOfOtherHousehold.getId()))
+                    .isInstanceOf(MemberNotFoundException.class);
+        }
+    }
+
+    @Nested
+    class removeMemberWithHouseholdId {
+
+        @Test
+        void memberBelongsToDifferentHousehold_throwsMemberNotFoundExceptionAndLeavesMemberInDatabase() {
+            // given — member joined a second, unrelated household
+            var otherHousehold = Instancio.create(Household.class);
+            createdHouseholdIds.add(otherHousehold.getId());
+            var otherToken = setupService.setupHousehold(new HouseholdSetup(
+                    otherHousehold, Instancio.create(Member.class), Instancio.create(LocalRegistration.class))).getInviteToken();
+            var memberOfOtherHousehold = memberManagementService.joinHousehold(otherToken, Instancio.create(MemberRegistration.class));
+
+            // when / then
+            assertThatThrownBy(() -> memberManagementService.removeMember(existingHousehold.getId(), memberOfOtherHousehold.getId()))
+                    .isInstanceOf(MemberNotFoundException.class);
+            assertThat(memberRepository.existsById(memberOfOtherHousehold.getId())).isTrue();
+        }
+    }
 }

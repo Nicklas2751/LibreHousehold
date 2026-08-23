@@ -6,6 +6,7 @@ import eu.wiegandt.librehousehold.model.Reimbursement;
 import eu.wiegandt.librehousehold.model.ReimbursementCreate;
 import eu.wiegandt.librehousehold.model.ReimbursementUpdate;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -22,17 +23,20 @@ public class ReimbursementsApiDelegateImpl implements ReimbursementsApiDelegate 
     }
 
     @Override
+    @PreAuthorize("@householdAccessGuard.isMember(#householdId, authentication)")
     public ResponseEntity<List<Reimbursement>> getReimbursements(UUID householdId) {
         return ResponseEntity.ok(reimbursementService.getReimbursements(householdId));
     }
 
     @Override
+    @PreAuthorize("@householdAccessGuard.isMember(#householdId, authentication)")
     public ResponseEntity<Reimbursement> createReimbursement(UUID householdId, Optional<ReimbursementCreate> reimbursementCreate) {
         var create = reimbursementCreate.orElse(new ReimbursementCreate());
         return ResponseEntity.status(201).body(reimbursementService.createReimbursement(householdId, create));
     }
 
     @Override
+    @PreAuthorize("@householdAccessGuard.isMember(#householdId, authentication)")
     public ResponseEntity<Reimbursement> updateReimbursement(UUID householdId, UUID reimbursementId,
                                                               Optional<ReimbursementUpdate> reimbursementUpdate) {
         var update = reimbursementUpdate.orElse(new ReimbursementUpdate());

@@ -125,6 +125,38 @@ class MemberManagementServiceTest {
     }
 
     @Nested
+    class getMemberWithHouseholdId {
+
+        @Test
+        void memberNotInHousehold_throwsMemberNotFoundException() {
+            // given — covers both "member does not exist" and "member belongs to a different household":
+            // findByIdAndHouseholdId returns empty in both cases, which is exactly the point of the fix
+            var householdId = UUID.randomUUID();
+            var memberId = UUID.randomUUID();
+            doReturn(Optional.empty()).when(memberRepository).findByIdAndHouseholdId(memberId, householdId);
+
+            // when / then
+            assertThatThrownBy(() -> service.getMember(householdId, memberId))
+                    .isInstanceOf(MemberNotFoundException.class);
+        }
+
+        @Test
+        void memberBelongsToHousehold_returnsMappedMember() {
+            // given
+            var householdId = UUID.randomUUID();
+            var entity = Instancio.of(memberEntityModel)
+                    .set(field(MemberEntity::householdId), householdId).create();
+            doReturn(Optional.of(entity)).when(memberRepository).findByIdAndHouseholdId(entity.id(), householdId);
+
+            // when
+            var result = service.getMember(householdId, entity.id());
+
+            // then
+            assertThat(result.getId()).isEqualTo(entity.id());
+        }
+    }
+
+    @Nested
     class resolveInvite {
 
         @Test
@@ -269,50 +301,43 @@ class MemberManagementServiceTest {
     class updateMember {
 
         @Test
-        void nameUpdateWithZeroRows_throwsMemberNotFoundException() {
-            // given
+        void memberNotInHousehold_throwsMemberNotFoundExceptionWithoutUpdating() {
+            // given — the member exists (updateName would succeed), but not in this household
+            var householdId = UUID.randomUUID();
             var memberId = UUID.randomUUID();
             var update = new MemberUpdate().name("New Name");
-            doReturn(0).when(memberRepository).updateName(memberId, "New Name");
+            doReturn(false).when(memberRepository).existsByIdAndHouseholdId(memberId, householdId);
 
             // when / then
-            assertThatThrownBy(() -> service.updateMember(memberId, update))
+            assertThatThrownBy(() -> service.updateMember(householdId, memberId, update))
                     .isInstanceOf(MemberNotFoundException.class);
-        }
-
-        @Test
-        void emailUpdateWithZeroRows_throwsMemberNotFoundException() {
-            // given
-            var memberId = UUID.randomUUID();
-            var update = new MemberUpdate().email("new@example.com");
-            doReturn(0).when(memberRepository).updateEmail(memberId, "new@example.com");
-
-            // when / then
-            assertThatThrownBy(() -> service.updateMember(memberId, update))
-                    .isInstanceOf(MemberNotFoundException.class);
+            verify(memberRepository, never()).updateName(any(), any());
         }
 
         @Test
         void duplicateEmail_throwsMemberAlreadyExistsException() {
             // given
+            var householdId = UUID.randomUUID();
             var memberId = UUID.randomUUID();
             var update = new MemberUpdate().email("taken@example.com");
+            doReturn(true).when(memberRepository).existsByIdAndHouseholdId(memberId, householdId);
             doThrow(DataIntegrityViolationException.class).when(memberRepository).updateEmail(memberId, "taken@example.com");
 
             // when / then
-            assertThatThrownBy(() -> service.updateMember(memberId, update))
+            assertThatThrownBy(() -> service.updateMember(householdId, memberId, update))
                     .isInstanceOf(MemberAlreadyExistsException.class);
         }
 
         @Test
         void validNameUpdate_updatesNameInRepository() {
             // given
+            var householdId = UUID.randomUUID();
             var memberId = UUID.randomUUID();
             var update = new MemberUpdate().name("Updated Name");
-            doReturn(1).when(memberRepository).updateName(memberId, "Updated Name");
+            doReturn(true).when(memberRepository).existsByIdAndHouseholdId(memberId, householdId);
 
             // when
-            service.updateMember(memberId, update);
+            service.updateMember(householdId, memberId, update);
 
             // then
             verify(memberRepository).updateName(memberId, "Updated Name");
@@ -321,12 +346,13 @@ class MemberManagementServiceTest {
         @Test
         void validEmailUpdate_updatesEmailInRepository() {
             // given
+            var householdId = UUID.randomUUID();
             var memberId = UUID.randomUUID();
             var update = new MemberUpdate().email("updated@example.com");
-            doReturn(1).when(memberRepository).updateEmail(memberId, "updated@example.com");
+            doReturn(true).when(memberRepository).existsByIdAndHouseholdId(memberId, householdId);
 
             // when
-            service.updateMember(memberId, update);
+            service.updateMember(householdId, memberId, update);
 
             // then
             verify(memberRepository).updateEmail(memberId, "updated@example.com");
@@ -606,6 +632,38 @@ class MemberManagementServiceTest {
 
             // then
             verify(memberRepository).deleteById(memberId);
+        }
+    }
+
+    @Nested
+    class removeMemberWithHouseholdId {
+
+        @Test
+        void memberBelongsToDifferentHousehold_throwsMemberNotFoundExceptionWithoutDeleting() {
+            // given — the member exists (deletion would succeed), but not in this household
+            var householdId = UUID.randomUUID();
+            var memberId = UUID.randomUUID();
+            doReturn(false).when(memberRepository).existsByIdAndHouseholdId(memberId, householdId);
+
+            // when / then
+            assertThatThrownBy(() -> service.removeMember(householdId, memberId))
+                    .isInstanceOf(MemberNotFoundException.class);
+            verify(memberRepository, never()).deleteById(any());
+        }
+
+        @Test
+        void memberBelongsToHousehold_deletesMemberAndPublishesEvent() {
+            // given
+            var householdId = UUID.randomUUID();
+            var memberId = UUID.randomUUID();
+            doReturn(true).when(memberRepository).existsByIdAndHouseholdId(memberId, householdId);
+
+            // when
+            service.removeMember(householdId, memberId);
+
+            // then
+            verify(memberRepository).deleteById(memberId);
+            verify(eventPublisher).publishEvent(new MemberRemoved(memberId));
         }
     }
 }
