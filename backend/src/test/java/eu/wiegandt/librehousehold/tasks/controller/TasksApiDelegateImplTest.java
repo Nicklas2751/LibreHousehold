@@ -99,13 +99,13 @@ class TasksApiDelegateImplTest {
             var taskId = UUID.randomUUID();
             var update = Instancio.create(TaskUpdate.class);
             var updated = Instancio.create(Task.class);
-            doReturn(updated).when(taskService).updateTask(taskId, update);
+            doReturn(updated).when(taskService).updateTask(householdId, taskId, update);
 
             // when
             var result = tasksApiDelegate.updateTask(householdId, taskId, Optional.of(update));
 
             // then
-            verify(taskService).updateTask(taskId, update);
+            verify(taskService).updateTask(householdId, taskId, update);
             assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
             assertThat(result.getBody()).isEqualTo(updated);
         }

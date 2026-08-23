@@ -2,6 +2,8 @@ package eu.wiegandt.librehousehold.household.service;
 
 import eu.wiegandt.librehousehold.TestcontainersConfiguration;
 import eu.wiegandt.librehousehold.household.exception.HouseholdNotFoundException;
+import eu.wiegandt.librehousehold.household.exception.MemberNotFoundException;
+import eu.wiegandt.librehousehold.household.model.HouseholdEntity;
 import eu.wiegandt.librehousehold.household.model.MemberEntity;
 import eu.wiegandt.librehousehold.household.repository.HouseholdRepository;
 import eu.wiegandt.librehousehold.household.repository.InviteRepository;
@@ -192,13 +194,43 @@ class HouseholdManagementServiceIT {
     class transferOwnership {
 
         @Test
-        void householdNotFound_throwsHouseholdNotFoundException() {
-            // given
-            var unknownId = Instancio.create(UUID.class);
+        void householdWithoutAdmin_throwsHouseholdNotFoundException() {
+            // given — a real household that has no admin (e.g. through a lost invariant); the FK on
+            // member.household_id means a member can only ever reference a household that exists,
+            // so this is the only realistic way to make revokeAdmin() affect zero rows
+            var householdWithoutAdmin = householdRepository.save(Instancio.create(HouseholdEntity.class));
+            var memberOfThatHousehold = memberRepository.save(Instancio.of(MemberEntity.class)
+                    .set(field(MemberEntity::householdId), householdWithoutAdmin.id())
+                    .set(field(MemberEntity::isAdmin), false)
+                    .create());
 
             // when / then
-            assertThatThrownBy(() -> managementService.transferOwnership(unknownId, Instancio.create(UUID.class)))
+            assertThatThrownBy(() -> managementService.transferOwnership(householdWithoutAdmin.id(), memberOfThatHousehold.id()))
                     .isInstanceOf(HouseholdNotFoundException.class);
+
+            memberRepository.deleteById(memberOfThatHousehold.id());
+            householdRepository.deleteById(householdWithoutAdmin.id());
+        }
+
+        @Test
+        void newAdminBelongsToDifferentHousehold_throwsMemberNotFoundExceptionAndOriginalAdminKeepsAdminRights() {
+            // given — a member belonging to a completely unrelated household
+            var otherHousehold = householdRepository.save(Instancio.create(HouseholdEntity.class));
+            var memberOfOtherHousehold = memberRepository.save(Instancio.of(MemberEntity.class)
+                    .set(field(MemberEntity::householdId), otherHousehold.id())
+                    .set(field(MemberEntity::isAdmin), false)
+                    .create());
+            var originalAdminId = memberRepository.findByHouseholdIdAndIsAdminTrue(existingHousehold.getId())
+                    .orElseThrow().id();
+
+            // when / then
+            assertThatThrownBy(() -> managementService.transferOwnership(existingHousehold.getId(), memberOfOtherHousehold.id()))
+                    .isInstanceOf(MemberNotFoundException.class);
+            assertThat(memberRepository.findByHouseholdIdAndIsAdminTrue(existingHousehold.getId()))
+                    .hasValueSatisfying(admin -> assertThat(admin.id()).isEqualTo(originalAdminId));
+
+            memberRepository.deleteById(memberOfOtherHousehold.id());
+            householdRepository.deleteById(otherHousehold.id());
         }
 
         @Test

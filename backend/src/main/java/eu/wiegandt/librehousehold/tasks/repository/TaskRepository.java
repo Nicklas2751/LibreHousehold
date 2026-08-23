@@ -8,11 +8,14 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface TaskRepository extends CrudRepository<TaskEntity, UUID> {
 
     List<TaskEntity> findByHouseholdId(UUID householdId);
+
+    Optional<TaskEntity> findByIdAndHouseholdId(UUID id, UUID householdId);
 
     @Modifying
     @Query("UPDATE tasks.task SET due_date = :dueDate WHERE id = :id")

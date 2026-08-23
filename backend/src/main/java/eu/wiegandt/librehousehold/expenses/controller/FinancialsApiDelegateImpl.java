@@ -5,6 +5,7 @@ import eu.wiegandt.librehousehold.expenses.service.FinancialService;
 import eu.wiegandt.librehousehold.model.FinancialSummary;
 import eu.wiegandt.librehousehold.model.MemberBalance;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -20,11 +21,13 @@ public class FinancialsApiDelegateImpl implements FinancialsApiDelegate {
     }
 
     @Override
+    @PreAuthorize("@householdAccessGuard.isMember(#householdId, authentication)")
     public ResponseEntity<FinancialSummary> getFinancialSummary(UUID householdId, UUID userId) {
         return ResponseEntity.ok(financialService.getFinancialSummary(householdId, userId));
     }
 
     @Override
+    @PreAuthorize("@householdAccessGuard.isMember(#householdId, authentication)")
     public ResponseEntity<List<MemberBalance>> getMemberBalances(UUID householdId, UUID userId) {
         return ResponseEntity.ok(financialService.getMemberBalances(householdId, userId));
     }

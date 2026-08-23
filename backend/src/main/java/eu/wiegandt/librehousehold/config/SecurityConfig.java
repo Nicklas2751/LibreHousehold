@@ -10,6 +10,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcOperations;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.CsrfConfigurer;
 import org.springframework.security.config.annotation.web.configurers.oauth2.server.authorization.OAuth2AuthorizationServerConfigurer;
@@ -49,8 +50,13 @@ import java.util.List;
  * its {@code household}-internal concrete type, so this class itself has no compile-time
  * dependency on {@code household} either — verified by Spring Modulith's
  * {@code ApplicationModules.verify()} (see {@code ApplicationTests}).
+ *
+ * <p>{@code @EnableMethodSecurity} activates {@code @PreAuthorize} support (enabled by default
+ * alongside it), which the various {@code *ApiDelegateImpl} classes use together with
+ * {@code household.HouseholdAccessGuard} for per-household/role access control (P1.6, DD-8).
  */
 @Configuration
+@EnableMethodSecurity
 public class SecurityConfig {
 
     @Bean

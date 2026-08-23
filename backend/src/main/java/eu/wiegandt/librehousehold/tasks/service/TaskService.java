@@ -72,8 +72,8 @@ public class TaskService implements TaskStatisticsProvider {
         return taskMapper.toTask(saved);
     }
 
-    public Task updateTask(UUID taskId, TaskUpdate update) {
-        var entity = taskRepository.findById(taskId)
+    public Task updateTask(UUID householdId, UUID taskId, TaskUpdate update) {
+        var entity = taskRepository.findByIdAndHouseholdId(taskId, householdId)
                 .orElseThrow(TaskNotFoundException::new);
 
         var done = update.getDone();
@@ -99,8 +99,8 @@ public class TaskService implements TaskStatisticsProvider {
         }
     }
 
-    public Task editTask(UUID taskId, TaskEdit edit) {
-        var existing = taskRepository.findById(taskId)
+    public Task editTask(UUID householdId, UUID taskId, TaskEdit edit) {
+        var existing = taskRepository.findByIdAndHouseholdId(taskId, householdId)
                 .orElseThrow(TaskNotFoundException::new);
         taskMapper.updateEntityFromEdit(edit, existing);
         var saved = taskRepository.save(existing);
@@ -109,10 +109,9 @@ public class TaskService implements TaskStatisticsProvider {
         return taskMapper.toTask(saved).done(latestDone);
     }
 
-    public void deleteTask(UUID taskId) {
-        if (!taskRepository.existsById(taskId)) {
-            throw new TaskNotFoundException();
-        }
+    public void deleteTask(UUID householdId, UUID taskId) {
+        taskRepository.findByIdAndHouseholdId(taskId, householdId)
+                .orElseThrow(TaskNotFoundException::new);
         taskRepository.deleteById(taskId);
     }
 

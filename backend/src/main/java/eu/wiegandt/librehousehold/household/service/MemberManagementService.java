@@ -23,11 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 import static java.util.stream.Collectors.toMap;
 
@@ -73,6 +69,12 @@ public class MemberManagementService implements MemberQuery, MemberDeletion {
                 .orElseThrow(MemberNotFoundException::new);
     }
 
+    public Member getMember(UUID householdId, UUID memberId) {
+        return memberRepository.findByIdAndHouseholdId(memberId, householdId)
+                .map(memberMapper::toMember)
+                .orElseThrow(MemberNotFoundException::new);
+    }
+
     public InviteInfo resolveInvite(UUID token) {
         var invite = inviteRepository.findByToken(token)
                 .filter(i -> !i.validUntil().isBefore(LocalDate.now()))
@@ -98,19 +100,14 @@ public class MemberManagementService implements MemberQuery, MemberDeletion {
     }
 
     @Transactional
-    public void updateMember(UUID memberId, MemberUpdate update) {
+    public void updateMember(UUID householdId, UUID memberId, MemberUpdate update) {
+        if (!memberRepository.existsByIdAndHouseholdId(memberId, householdId)) {
+            throw new MemberNotFoundException();
+        }
         try {
-            var name = update.getName();
-            if (name.isPresent()) {
-                var rows = memberRepository.updateName(memberId, name.get());
-                if (rows == 0) throw new MemberNotFoundException();
-            }
+            update.getName().ifPresent(name -> memberRepository.updateName(memberId, name));
 
-            var email = update.getEmail();
-            if (email.isPresent()) {
-                var rows = memberRepository.updateEmail(memberId, email.get());
-                if (rows == 0) throw new MemberNotFoundException();
-            }
+            update.getEmail().ifPresent(email -> memberRepository.updateEmail(memberId, email));
         } catch (DataIntegrityViolationException _) {
             throw new MemberAlreadyExistsException();
         }
@@ -122,6 +119,18 @@ public class MemberManagementService implements MemberQuery, MemberDeletion {
         if (!memberRepository.existsById(memberId)) {
             throw new MemberNotFoundException();
         }
+        deleteMemberAndPublishEvent(memberId);
+    }
+
+    @Transactional
+    public void removeMember(UUID householdId, UUID memberId) {
+        if (!memberRepository.existsByIdAndHouseholdId(memberId, householdId)) {
+            throw new MemberNotFoundException();
+        }
+        deleteMemberAndPublishEvent(memberId);
+    }
+
+    private void deleteMemberAndPublishEvent(UUID memberId) {
         memberRepository.deleteById(memberId);
         eventPublisher.publishEvent(new MemberRemoved(memberId));
     }

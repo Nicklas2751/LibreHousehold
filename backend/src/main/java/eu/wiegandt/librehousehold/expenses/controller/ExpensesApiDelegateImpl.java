@@ -10,6 +10,7 @@ import eu.wiegandt.librehousehold.model.CategoryUpdate;
 import eu.wiegandt.librehousehold.model.Expense;
 import eu.wiegandt.librehousehold.model.ExpenseUpdate;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -28,57 +29,67 @@ public class ExpensesApiDelegateImpl implements ExpensesApiDelegate {
     }
 
     @Override
+    @PreAuthorize("@householdAccessGuard.isMember(#householdId, authentication)")
     public ResponseEntity<List<Category>> getCategories(UUID householdId) {
         return ResponseEntity.ok(categoryService.getCategories(householdId));
     }
 
     @Override
+    @PreAuthorize("@householdAccessGuard.isMember(#householdId, authentication)")
     public ResponseEntity<Category> createCategory(UUID householdId, Optional<Category> category) {
         var cat = category.orElseThrow(CategoryBodyIsRequiredException::new);
         return ResponseEntity.ok(categoryService.createCategory(householdId, cat));
     }
 
     @Override
+    @PreAuthorize("@householdAccessGuard.isMember(#householdId, authentication)")
     public ResponseEntity<Category> updateCategory(UUID householdId, UUID categoryId, Optional<CategoryUpdate> categoryUpdate) {
         var update = categoryUpdate.orElse(new CategoryUpdate());
         return ResponseEntity.ok(categoryService.updateCategory(householdId, categoryId, update));
     }
 
     @Override
+    @PreAuthorize("@householdAccessGuard.isMember(#householdId, authentication)")
     public ResponseEntity<Void> deleteCategory(UUID householdId, UUID categoryId) {
         categoryService.deleteCategory(householdId, categoryId);
         return ResponseEntity.noContent().build();
     }
 
     @Override
+    @PreAuthorize("@householdAccessGuard.isMember(#householdId, authentication)")
     public ResponseEntity<List<Expense>> getExpenses(UUID householdId) {
         return ResponseEntity.ok(expenseService.getExpenses(householdId));
     }
 
     @Override
+    @PreAuthorize("@householdAccessGuard.isMember(#householdId, authentication)")
     public ResponseEntity<Expense> getExpense(UUID householdId, UUID expenseId) {
         return ResponseEntity.ok(expenseService.getExpense(householdId, expenseId));
     }
 
     @Override
+    @PreAuthorize("@householdAccessGuard.isMember(#householdId, authentication)")
     public ResponseEntity<Expense> createExpense(UUID householdId, Optional<Expense> expense) {
         var exp = expense.orElseThrow(ExpenseBodyIsRequiredException::new);
         return ResponseEntity.ok(expenseService.createExpense(householdId, exp));
     }
 
     @Override
+    @PreAuthorize("@householdAccessGuard.isMember(#householdId, authentication)")
     public ResponseEntity<Expense> updateExpense(UUID householdId, UUID expenseId, Optional<ExpenseUpdate> expenseUpdate) {
         var update = expenseUpdate.orElse(new ExpenseUpdate());
         return ResponseEntity.ok(expenseService.updateExpense(householdId, expenseId, update));
     }
 
     @Override
+    @PreAuthorize("@householdAccessGuard.isMember(#householdId, authentication)")
     public ResponseEntity<Void> deleteExpense(UUID householdId, UUID expenseId) {
         expenseService.deleteExpense(householdId, expenseId);
         return ResponseEntity.noContent().build();
     }
 
     @Override
+    @PreAuthorize("@householdAccessGuard.isMember(#householdId, authentication)")
     public ResponseEntity<List<Expense>> getDebtorExpenses(UUID householdId, UUID payerId, UUID debtorId) {
         return ResponseEntity.ok(expenseService.getDebtorExpenses(householdId, payerId, debtorId));
     }

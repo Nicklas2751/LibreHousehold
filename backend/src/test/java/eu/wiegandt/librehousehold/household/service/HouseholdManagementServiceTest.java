@@ -227,10 +227,25 @@ class HouseholdManagementServiceTest {
     class transferOwnership {
 
         @Test
+        void newAdminBelongsToDifferentHousehold_throwsMemberNotFoundExceptionWithoutRevokingAdmin() {
+            // given — newAdminId exists (grantAdmin would succeed), but belongs to a different household
+            var householdId = UUID.randomUUID();
+            var newAdminId = UUID.randomUUID();
+            doReturn(false).when(memberRepository).existsByIdAndHouseholdId(newAdminId, householdId);
+
+            // when / then
+            assertThatThrownBy(() -> service.transferOwnership(householdId, newAdminId))
+                    .isInstanceOf(MemberNotFoundException.class);
+            verify(memberRepository, never()).revokeAdmin(any());
+            verify(memberRepository, never()).grantAdmin(any());
+        }
+
+        @Test
         void householdNotFound_throwsHouseholdNotFoundException() {
             // given
             var householdId = UUID.randomUUID();
             var newAdminId = UUID.randomUUID();
+            doReturn(true).when(memberRepository).existsByIdAndHouseholdId(newAdminId, householdId);
             doReturn(0).when(memberRepository).revokeAdmin(householdId);
 
             // when / then
@@ -243,6 +258,7 @@ class HouseholdManagementServiceTest {
             // given
             var householdId = UUID.randomUUID();
             var newAdminId = UUID.randomUUID();
+            doReturn(true).when(memberRepository).existsByIdAndHouseholdId(newAdminId, householdId);
             doReturn(1).when(memberRepository).revokeAdmin(householdId);
             doReturn(0).when(memberRepository).grantAdmin(newAdminId);
 
@@ -256,6 +272,7 @@ class HouseholdManagementServiceTest {
             // given
             var householdId = UUID.randomUUID();
             var newAdminId = UUID.randomUUID();
+            doReturn(true).when(memberRepository).existsByIdAndHouseholdId(newAdminId, householdId);
             doReturn(1).when(memberRepository).revokeAdmin(householdId);
             doReturn(1).when(memberRepository).grantAdmin(newAdminId);
 

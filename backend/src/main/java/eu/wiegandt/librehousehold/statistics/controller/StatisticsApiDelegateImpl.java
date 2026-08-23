@@ -12,6 +12,7 @@ import eu.wiegandt.librehousehold.statistics.StatisticsPeriodConverter;
 import eu.wiegandt.librehousehold.statistics.exception.HouseholdNotFoundException;
 import eu.wiegandt.librehousehold.tasks.TaskStatisticsProvider;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
@@ -35,6 +36,7 @@ public class StatisticsApiDelegateImpl implements StatisticsApiDelegate {
     }
 
     @Override
+    @PreAuthorize("@householdAccessGuard.isMember(#householdId, authentication)")
     public ResponseEntity<StatisticsResponse> getStatistics(UUID householdId, String period) {
         if (!householdQuery.householdExists(householdId)) {
             throw new HouseholdNotFoundException();
