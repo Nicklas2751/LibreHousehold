@@ -15,7 +15,7 @@ describe('csrfMiddleware', () => {
 		clearCookies();
 	});
 
-	it('setzt den X-XSRF-TOKEN-Header bei POST, wenn ein XSRF-TOKEN-Cookie gesetzt ist', async () => {
+	it('sets the X-XSRF-TOKEN header on POST when an XSRF-TOKEN cookie is set', async () => {
 		// given
 		document.cookie = 'XSRF-TOKEN=csrf-token-value';
 
@@ -32,7 +32,7 @@ describe('csrfMiddleware', () => {
 		);
 	});
 
-	it('setzt keinen Header bei GET, selbst wenn ein XSRF-TOKEN-Cookie gesetzt ist', async () => {
+	it('sets no header on GET even when an XSRF-TOKEN cookie is set', async () => {
 		// given
 		document.cookie = 'XSRF-TOKEN=csrf-token-value';
 
@@ -47,8 +47,8 @@ describe('csrfMiddleware', () => {
 		expect(result).toBeUndefined();
 	});
 
-	it('setzt keinen Header, wenn kein XSRF-TOKEN-Cookie vorhanden ist', async () => {
-		// given (kein Cookie gesetzt)
+	it('sets no header when no XSRF-TOKEN cookie is present', async () => {
+		// given (no cookie set)
 
 		// when
 		const result = await csrfMiddleware.pre?.({
@@ -63,7 +63,7 @@ describe('csrfMiddleware', () => {
 });
 
 describe('apiConfiguration', () => {
-	it('sendet Requests mit credentials include', () => {
+	it('sends requests with credentials include', () => {
 		// when
 		const result = apiConfiguration.credentials;
 
@@ -71,7 +71,7 @@ describe('apiConfiguration', () => {
 		expect(result).toBe('include');
 	});
 
-	it('registriert die csrfMiddleware', () => {
+	it('registers the csrfMiddleware', () => {
 		// when
 		const result = apiConfiguration.middleware;
 
