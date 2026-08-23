@@ -1,16 +1,11 @@
 import { get, writable } from 'svelte/store';
-import {
-	type Category,
-	type CategoryUpdate,
-	Configuration,
-	ExpensesApi
-} from '../../generated-sources/openapi';
+import { type Category, type CategoryUpdate, ExpensesApi } from '../../generated-sources/openapi';
 import { ResponseError } from '../../generated-sources/openapi/runtime';
+import { apiConfiguration } from '$lib/api/httpClient';
 import { addToast } from './toastStore';
 import { Toast } from '$lib/toast';
 
-const apiConfig = new Configuration({ basePath: '/api' });
-const expensesApi = new ExpensesApi(apiConfig);
+const expensesApi = new ExpensesApi(apiConfiguration);
 
 export const categories = writable<Category[]>([]);
 

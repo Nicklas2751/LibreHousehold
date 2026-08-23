@@ -1,17 +1,12 @@
 import { writable } from 'svelte/store';
-import {
-	Configuration,
-	type Expense,
-	ExpensesApi,
-	type ExpenseUpdate
-} from '../../generated-sources/openapi';
+import { type Expense, ExpensesApi, type ExpenseUpdate } from '../../generated-sources/openapi';
+import { apiConfiguration } from '$lib/api/httpClient';
 import { addToast } from '$lib/stores/toastStore';
 import { Toast } from '$lib/toast';
 
 export const expenses = writable<Expense[]>([]);
 
-const apiConfig = new Configuration({ basePath: '/api' });
-const api = new ExpensesApi(apiConfig);
+const api = new ExpensesApi(apiConfiguration);
 
 export const loadExpenses = async (householdId: string): Promise<void> => {
 	const result = await api.getExpenses({ householdId });

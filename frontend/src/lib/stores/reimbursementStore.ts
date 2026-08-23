@@ -1,18 +1,17 @@
 import { writable } from 'svelte/store';
 import {
-	Configuration,
 	type Reimbursement,
 	type ReimbursementCreate,
 	ReimbursementsApi,
 	type ReimbursementUpdate
 } from '../../generated-sources/openapi';
+import { apiConfiguration } from '$lib/api/httpClient';
 import { addToast } from '$lib/stores/toastStore';
 import { Toast } from '$lib/toast';
 
 export const reimbursements = writable<Reimbursement[]>([]);
 
-const apiConfig = new Configuration({ basePath: '/api' });
-const api = new ReimbursementsApi(apiConfig);
+const api = new ReimbursementsApi(apiConfiguration);
 
 export const loadReimbursements = async (householdId: string): Promise<void> => {
 	const result = await api.getReimbursements({ householdId });
