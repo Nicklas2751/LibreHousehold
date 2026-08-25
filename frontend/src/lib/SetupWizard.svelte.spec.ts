@@ -179,4 +179,17 @@ describe('SetupWizard', () => {
 			{ timeout: 2000 }
 		);
 	});
+
+	it('incomplete email — does not call checkEmailAvailability', async () => {
+		// given
+		mockCheckEmailAvailability.mockResolvedValue({ available: true });
+		await fillAndGoToAccountStep();
+
+		// when
+		await page.getByRole('textbox', { name: /Deine E-Mail/i }).fill('max');
+		await new Promise((resolve) => setTimeout(resolve, 600));
+
+		// then
+		expect(mockCheckEmailAvailability).not.toHaveBeenCalled();
+	});
 });
