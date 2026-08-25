@@ -100,4 +100,18 @@ describe('createDebouncedAvailabilityChecker', () => {
 		expect(secondResult).toEqual({ available: false });
 		expect(firstResolvedValue).toBeUndefined();
 	});
+
+	it('cancel — prevents a pending call from firing', async () => {
+		// given
+		const checkFn = vi.fn().mockResolvedValue({ available: true });
+		const debouncedCheck = createDebouncedAvailabilityChecker(checkFn, 400);
+
+		// when
+		debouncedCheck('max@example.com');
+		debouncedCheck.cancel();
+		await vi.advanceTimersByTimeAsync(400);
+
+		// then
+		expect(checkFn).not.toHaveBeenCalled();
+	});
 });
