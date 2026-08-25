@@ -1,11 +1,16 @@
+export interface DebouncedAvailabilityChecker<T> {
+	(email: string): Promise<T>;
+	cancel(): void;
+}
+
 export function createDebouncedAvailabilityChecker<T>(
 	checkFn: (email: string) => Promise<T>,
 	delayMs: number
-): (email: string) => Promise<T> {
+): DebouncedAvailabilityChecker<T> {
 	let timeoutId: ReturnType<typeof setTimeout> | undefined;
 	let latestCallId = 0;
 
-	return (email: string) => {
+	const debouncedCheck = ((email: string) => {
 		if (timeoutId) {
 			clearTimeout(timeoutId);
 		}
@@ -29,5 +34,16 @@ export function createDebouncedAvailabilityChecker<T>(
 				);
 			}, delayMs);
 		});
+	}) as DebouncedAvailabilityChecker<T>;
+
+	debouncedCheck.cancel = () => {
+		if (timeoutId) {
+			clearTimeout(timeoutId);
+		}
+		// Also invalidates a call whose timer already fired and whose request is in flight,
+		// so its result is discarded when it resolves (same mechanism as a superseded call).
+		latestCallId++;
 	};
+
+	return debouncedCheck;
 }

@@ -27,11 +27,13 @@
 		createInviteLinkShareData,
 		generateHouseholdNameInitials,
 		generateInviteUrl,
+		isValidEmail,
 		readFileAsDataURL
 	} from '$lib/setupWizardLogic';
 	import { goto } from '$app/navigation';
 	import { updateUserState } from '$lib/stores/userState';
 	import MemberProfileForm from '$lib/MemberProfileForm.svelte';
+	import { onDestroy } from 'svelte';
 
 	const EMAIL_AVAILABILITY_DEBOUNCE_MS = 400;
 
@@ -50,7 +52,14 @@
 		EMAIL_AVAILABILITY_DEBOUNCE_MS
 	);
 
+	onDestroy(() => {
+		checkEmailAvailability.cancel();
+	});
+
 	async function handleEmailInput(email: string) {
+		if (!isValidEmail(email)) {
+			return;
+		}
 		const { available } = await checkEmailAvailability(email);
 		if (!available) {
 			serverEmailError = m['setup.create_account_step.account_exists_error']();

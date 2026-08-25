@@ -6,6 +6,13 @@ spring:
       flyway-enabled: true
 
 server:
+  error:
+    # Defense-in-depth against leaking stacktraces to clients (OWASP A05): this already matches
+    # Spring Boot's own default, but is set explicitly so it can never regress via an environment-
+    # or tooling-specific default (e.g. spring-boot-devtools) — see ValidationExceptionHandler for
+    # the actual fix (jakarta.validation.ConstraintViolationException was falling through to this
+    # generic error page with a full stacktrace instead of being translated into a clean 400).
+    include-stacktrace: never
   # Nginx terminates TLS and forwards internally over plain HTTP (see Kapitel 7). Without this,
   # Spring ignores X-Forwarded-Proto and treats every request as insecure, so CookieCsrfTokenRepository
   # would omit the Secure flag on XSRF-TOKEN (the session cookie is unaffected, its Secure flag is set
