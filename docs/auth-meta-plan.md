@@ -87,16 +87,19 @@ muss aber sauber neu aus der überarbeiteten OpenAPI-Spec generiert werden.
 - ✅ **P1.6 — Backend: Access Control je Haushalt/Rolle.** Jeder haushaltsgebundene Endpunkt prüft
   Zugehörigkeit; Admin-only-Operationen (Invite, Ownership-Transfer, Löschen). OWASP „Broken
   Access Control". TDD + IT. Siehe [Detailplan](auth-plan-p1.3-p1.6.md).
-- **P1.7 — Frontend: SetupWizard um Passwort erweitern.** Inkl. E-Mail-Verfügbarkeits-Check,
+- ✅ **P1.7 — Frontend: SetupWizard um Passwort erweitern.** Inkl. E-Mail-Verfügbarkeits-Check,
   „Account existiert bereits"-Fehlerbild. Siehe [Detailplan](auth-plan-p1.7-p1.10.md).
 - **P1.8 — Frontend: Login, Session-Bootstrap, Route-Guards, Logout.** `/login`-Route real
   anbinden (aktuell toter Link in `WelcomeScreen`), Current-User-Hydration nach Reload
-  (heute geht der State beim Reload verloren), Guards für `/app/*`.
-  Siehe [Detailplan](auth-plan-p1.7-p1.10.md).
-- **P1.9 — Frontend: Invite-Join mit Passwortvergabe.** Siehe [Detailplan](auth-plan-p1.7-p1.10.md).
-- **P1.10 — Frontend: API-Client & Guards.** Cookie-Requests (`credentials: 'include'`),
+  (heute geht der State beim Reload verloren), Guards für `/app/*`. Umfasst auch **P1.10 Teil B**
+  (`sessionExpiredMiddleware`, siehe unten — kann architektonisch erst mit dem hier gebauten
+  Session-State fertig werden). Siehe [Detailplan](auth-plan-p1.7-p1.10.md).
+- ✅ **P1.9 — Frontend: Invite-Join mit Passwortvergabe.** Siehe [Detailplan](auth-plan-p1.7-p1.10.md).
+- 🟡 **P1.10 — Frontend: API-Client & Guards.** Cookie-Requests (`credentials: 'include'`),
   CSRF-Header, zentrales 401-Handling/Redirect statt der aktuell verstreuten
-  `new Configuration({...})`-Instanzen. Siehe [Detailplan](auth-plan-p1.7-p1.10.md).
+  `new Configuration({...})`-Instanzen. **Teil A** (zentrale `apiConfiguration`, CSRF-Middleware,
+  Umstellung aller Fundstellen) ✅ umgesetzt; **Teil B** (`sessionExpiredMiddleware`) folgt mit
+  P1.8. Siehe [Detailplan](auth-plan-p1.7-p1.10.md).
 
 ## Phase 2 — Lokale Accounts: Lifecycle-Härtung (OWASP ASVS)
 

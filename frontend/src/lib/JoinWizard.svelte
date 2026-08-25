@@ -11,11 +11,15 @@
 	import { apiConfiguration } from '$lib/api/httpClient';
 	import { extractErrorStatus } from '$lib/api/errorStatus';
 	import { classifyConflictProblem } from '$lib/api/problemMapping';
+	import { createDebouncedAvailabilityChecker } from '$lib/emailAvailability';
+	import { isValidEmail } from '$lib/setupWizardLogic';
 	import { updateHouseholdState } from '$lib/stores/householdState.svelte';
 	import { updateUserState } from '$lib/stores/userState';
 	import { goto } from '$app/navigation';
-	import { onMount } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
 	import MemberProfileForm from '$lib/MemberProfileForm.svelte';
+
+	const EMAIL_AVAILABILITY_DEBOUNCE_MS = 400;
 
 	interface Props {
 		token: string;
@@ -24,6 +28,14 @@
 	const { token }: Props = $props();
 
 	const membersApi = new MembersApi(apiConfiguration);
+	const checkEmailAvailability = createDebouncedAvailabilityChecker(
+		(email: string) => membersApi.checkEmailAvailability({ email }),
+		EMAIL_AVAILABILITY_DEBOUNCE_MS
+	);
+
+	onDestroy(() => {
+		checkEmailAvailability.cancel();
+	});
 
 	let inviteInfo: InviteInfo | null = $state(null);
 	let invalidLink = $state(false);
@@ -38,6 +50,16 @@
 			invalidLink = true;
 		}
 	});
+
+	async function handleEmailInput(email: string) {
+		if (!isValidEmail(email)) {
+			return;
+		}
+		const { available } = await checkEmailAvailability(email);
+		if (!available) {
+			serverEmailError = m['invite.email_taken']();
+		}
+	}
 
 	async function join(data: { name: string; email: string; avatar: string; password?: string }) {
 		joining = true;
@@ -143,6 +165,7 @@
 				onClearEmailError={() => {
 					serverEmailError = null;
 				}}
+				onEmailInput={handleEmailInput}
 				submitting={joining}
 				onformsubmit={join}
 				onback={() => goto('/')}

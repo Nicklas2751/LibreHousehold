@@ -3,12 +3,14 @@ import { render } from 'vitest-browser-svelte';
 import { page } from 'vitest/browser';
 import JoinWizard from './JoinWizard.svelte';
 
-const { mockResolveInvite, mockJoinHousehold, mockGoto, mockAddToast } = vi.hoisted(() => ({
-	mockResolveInvite: vi.fn(),
-	mockJoinHousehold: vi.fn(),
-	mockGoto: vi.fn(),
-	mockAddToast: vi.fn()
-}));
+const { mockResolveInvite, mockJoinHousehold, mockCheckEmailAvailability, mockGoto, mockAddToast } =
+	vi.hoisted(() => ({
+		mockResolveInvite: vi.fn(),
+		mockJoinHousehold: vi.fn(),
+		mockCheckEmailAvailability: vi.fn(),
+		mockGoto: vi.fn(),
+		mockAddToast: vi.fn()
+	}));
 
 vi.mock('../generated-sources/openapi', async (importOriginal) => {
 	const original = await importOriginal<typeof import('../generated-sources/openapi')>();
@@ -17,6 +19,7 @@ vi.mock('../generated-sources/openapi', async (importOriginal) => {
 		MembersApi: vi.fn().mockImplementation(function (this: Record<string, unknown>) {
 			this.resolveInvite = mockResolveInvite;
 			this.joinHousehold = mockJoinHousehold;
+			this.checkEmailAvailability = mockCheckEmailAvailability;
 		})
 	};
 });
@@ -39,6 +42,7 @@ const validInviteInfo = {
 describe('JoinWizard', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		mockCheckEmailAvailability.mockResolvedValue({ available: true });
 	});
 
 	it('invalid token — shows an error message', async () => {
@@ -163,5 +167,33 @@ describe('JoinWizard', () => {
 				expect.objectContaining({ message: expect.stringContaining('Fehler beim Beitreten') })
 			)
 		);
+	});
+
+	it('email availability check — calls checkEmailAvailability after the debounce time', async () => {
+		// given
+		mockResolveInvite.mockResolvedValue(validInviteInfo);
+		render(JoinWizard, { token: 'valid-token' });
+
+		// when
+		await page.getByRole('textbox', { name: /Deine E-Mail/i }).fill('max@example.com');
+
+		// then
+		await vi.waitFor(
+			() => expect(mockCheckEmailAvailability).toHaveBeenCalledWith({ email: 'max@example.com' }),
+			{ timeout: 2000 }
+		);
+	});
+
+	it('incomplete email — does not call checkEmailAvailability', async () => {
+		// given
+		mockResolveInvite.mockResolvedValue(validInviteInfo);
+		render(JoinWizard, { token: 'valid-token' });
+
+		// when
+		await page.getByRole('textbox', { name: /Deine E-Mail/i }).fill('max');
+		await new Promise((resolve) => setTimeout(resolve, 600));
+
+		// then
+		expect(mockCheckEmailAvailability).not.toHaveBeenCalled();
 	});
 });
