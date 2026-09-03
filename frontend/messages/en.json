@@ -269,6 +269,18 @@
 		"success_text": "You are now a member of \"{name}\".",
 		"success_button": "Go to Dashboard"
 	},
+	"login": {
+		"title": "Log in",
+		"email_label": "Email",
+		"email_placeholder": "e.g., john.doe@example.org",
+		"password_label": "Password",
+		"password_placeholder": "Your password",
+		"submit_button": "Log in",
+		"error": "Incorrect email or password."
+	},
+	"session": {
+		"bootstrap_error": "Could not load your session. Please log in again."
+	},
 	"settings": {
 		"back": "Back to Settings",
 		"appearance": {
@@ -415,6 +427,10 @@
 				"cancel": "Cancel",
 				"confirm": "Delete"
 			}
+		},
+		"logout": {
+			"title": "Log out",
+			"description": "Sign out of your account."
 		}
 	}
 }
