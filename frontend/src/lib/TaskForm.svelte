@@ -105,8 +105,7 @@
 			<textarea
 				class="textarea h-24 w-full"
 				placeholder={m['tasks.new.description_placeholder']()}
-				bind:value={description}
-			></textarea>
+				bind:value={description}></textarea>
 		</fieldset>
 
 		<fieldset class="fieldset">
