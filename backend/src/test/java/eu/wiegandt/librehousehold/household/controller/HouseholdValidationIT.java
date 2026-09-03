@@ -25,8 +25,10 @@ import tools.jackson.databind.ObjectMapper;
 
 import java.util.UUID;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(controllers = HouseholdApiController.class)
@@ -75,6 +77,26 @@ class HouseholdValidationIT {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(setup)))
                     .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        void emptyBody_returns400() throws Exception {
+            // when / then
+            mockMvc.perform(post("/v1/household/setup")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{}"))
+                    .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        void emptyBody_responseBodyIsProblemDetailWithFieldErrors() throws Exception {
+            // when / then
+            mockMvc.perform(post("/v1/household/setup")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{}"))
+                    .andExpect(jsonPath("$.status").value(400))
+                    .andExpect(jsonPath("$.trace").doesNotExist())
+                    .andExpect(jsonPath("$.detail").value(containsString("household")));
         }
     }
 

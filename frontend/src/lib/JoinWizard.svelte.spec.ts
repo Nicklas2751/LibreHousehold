@@ -3,14 +3,23 @@ import { render } from 'vitest-browser-svelte';
 import { page } from 'vitest/browser';
 import JoinWizard from './JoinWizard.svelte';
 
-const { mockResolveInvite, mockJoinHousehold, mockCheckEmailAvailability, mockGoto, mockAddToast } =
-	vi.hoisted(() => ({
-		mockResolveInvite: vi.fn(),
-		mockJoinHousehold: vi.fn(),
-		mockCheckEmailAvailability: vi.fn(),
-		mockGoto: vi.fn(),
-		mockAddToast: vi.fn()
-	}));
+const {
+	mockResolveInvite,
+	mockJoinHousehold,
+	mockCheckEmailAvailability,
+	mockGoto,
+	mockAddToast,
+	mockCompleteSilentOAuth2Login,
+	mockBootstrapSession
+} = vi.hoisted(() => ({
+	mockResolveInvite: vi.fn(),
+	mockJoinHousehold: vi.fn(),
+	mockCheckEmailAvailability: vi.fn(),
+	mockGoto: vi.fn(),
+	mockAddToast: vi.fn(),
+	mockCompleteSilentOAuth2Login: vi.fn(),
+	mockBootstrapSession: vi.fn()
+}));
 
 vi.mock('../generated-sources/openapi', async (importOriginal) => {
 	const original = await importOriginal<typeof import('../generated-sources/openapi')>();
@@ -28,6 +37,13 @@ vi.mock('$app/navigation', () => ({ goto: mockGoto }));
 
 vi.mock('$lib/stores/toastStore', () => ({ addToast: mockAddToast }));
 
+vi.mock('$lib/oauth2Login', async (importOriginal) => {
+	const original = await importOriginal<typeof import('$lib/oauth2Login')>();
+	return { ...original, completeSilentOAuth2Login: mockCompleteSilentOAuth2Login };
+});
+
+vi.mock('$lib/stores/sessionBootstrap', () => ({ bootstrapSession: mockBootstrapSession }));
+
 vi.mock('./paraglide/runtime.js', async (importOriginal) => {
 	const original = await importOriginal<typeof import('./paraglide/runtime.js')>();
 	return { ...original, getLocale: () => 'de' as const, setLocale: vi.fn() };
@@ -43,6 +59,8 @@ describe('JoinWizard', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		mockCheckEmailAvailability.mockResolvedValue({ available: true });
+		mockCompleteSilentOAuth2Login.mockResolvedValue(undefined);
+		mockBootstrapSession.mockResolvedValue(undefined);
 	});
 
 	it('invalid token — shows an error message', async () => {
@@ -117,7 +135,9 @@ describe('JoinWizard', () => {
 		// then
 		await expect.element(page.getByText('Erfolgreich beigetreten')).toBeVisible();
 		await page.getByRole('button', { name: /Zum Dashboard/i }).click();
-		expect(mockGoto).toHaveBeenCalledWith('/app/dashboard');
+		await vi.waitFor(() => expect(mockGoto).toHaveBeenCalledWith('/app/dashboard'));
+		expect(mockCompleteSilentOAuth2Login).toHaveBeenCalled();
+		expect(mockBootstrapSession).toHaveBeenCalled();
 	});
 
 	it('409 account-already-exists — shows a specific error on the email field', async () => {

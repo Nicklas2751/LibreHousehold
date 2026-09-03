@@ -18,6 +18,8 @@
 	import { goto } from '$app/navigation';
 	import { onDestroy, onMount } from 'svelte';
 	import MemberProfileForm from '$lib/MemberProfileForm.svelte';
+	import { completeSilentOAuth2Login } from '$lib/oauth2Login';
+	import { bootstrapSession } from '$lib/stores/sessionBootstrap';
 
 	const EMAIL_AVAILABILITY_DEBOUNCE_MS = 400;
 
@@ -42,6 +44,7 @@
 	let step = $state(0);
 	let joining = $state(false);
 	let serverEmailError = $state<string | null>(null);
+	let enteringDashboard = $state(false);
 
 	onMount(async () => {
 		try {
@@ -110,6 +113,13 @@
 		}
 	}
 
+	async function enterDashboard() {
+		enteringDashboard = true;
+		await completeSilentOAuth2Login();
+		await bootstrapSession();
+		await goto('/app/dashboard');
+	}
+
 	async function readConflictProblem(err: unknown): Promise<Problem | undefined> {
 		if (!(err instanceof ResponseError)) {
 			return undefined;
@@ -173,7 +183,14 @@
 		{:else if step === 1}
 			<h2 class="text-xl font-bold text-base-content">{m['invite.success_title']()}</h2>
 			<p>{m['invite.success_text']({ name: inviteInfo.householdName })}</p>
-			<button class="btn mt-4 w-full btn-primary" onclick={() => goto('/app/dashboard')}>
+			<button
+				class="btn mt-4 w-full btn-primary"
+				disabled={enteringDashboard}
+				onclick={enterDashboard}
+			>
+				{#if enteringDashboard}
+					<span class="loading loading-xs loading-spinner"></span>
+				{/if}
 				{m['invite.success_button']()}
 			</button>
 		{/if}

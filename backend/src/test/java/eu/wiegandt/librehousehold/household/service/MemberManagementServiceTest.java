@@ -59,6 +59,9 @@ class MemberManagementServiceTest {
     @Mock
     private AccountService accountService;
 
+    @Mock
+    private AccountSessionAuthenticator accountSessionAuthenticator;
+
     @InjectMocks
     private MemberManagementService service;
 
@@ -297,6 +300,26 @@ class MemberManagementServiceTest {
 
             // then
             verify(accountService).createAccount(savedEntity.id(), registration.getLocalRegistration().getPassword());
+        }
+
+        @Test
+        void validToken_authenticatesAndPersistsSessionForCreatedAccount() {
+            // given
+            var token = UUID.randomUUID();
+            var registration = Instancio.create(MemberRegistration.class);
+            var invite = Instancio.of(InviteEntity.class)
+                    .set(field(InviteEntity::validUntil), LocalDate.now().plusDays(3))
+                    .create();
+            var savedEntity = Instancio.of(memberEntityModel).create();
+            doReturn(Optional.of(invite)).when(inviteRepository).findByToken(token);
+            doReturn(savedEntity).when(memberRepository).save(any(MemberEntity.class));
+
+            // when
+            service.joinHousehold(token, registration);
+
+            // then
+            verify(accountSessionAuthenticator).authenticateAndPersistSession(
+                    registration.getEmail(), registration.getLocalRegistration().getPassword());
         }
     }
 

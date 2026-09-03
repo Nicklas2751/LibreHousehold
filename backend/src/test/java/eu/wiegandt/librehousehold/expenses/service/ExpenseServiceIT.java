@@ -77,9 +77,11 @@ class ExpenseServiceIT {
             // when
             expenseService.createExpense(householdId, expense);
 
-            // then
+            // then: BigDecimal scale can differ after the NUMERIC(10,2) DB roundtrip (e.g. 5997.4 vs 5997.40),
+            // so compare amount by numeric value instead of BigDecimal#equals (which treats them as unequal)
             var entity = expenseRepository.findById(expense.getId()).orElseThrow();
             assertThat(entity).usingRecursiveComparison().ignoringFields("isNew")
+                    .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
                     .isEqualTo(expenseMapper.toEntity(expense, householdId));
         }
 
