@@ -1,6 +1,7 @@
 package eu.wiegandt.librehousehold.config;
 
 import eu.wiegandt.librehousehold.TestcontainersConfiguration;
+import eu.wiegandt.librehousehold.household.mapper.HouseholdSetupMapper;
 import eu.wiegandt.librehousehold.household.mapper.MemberMapper;
 import eu.wiegandt.librehousehold.household.model.HouseholdEntity;
 import eu.wiegandt.librehousehold.household.model.MemberEntity;
@@ -20,6 +21,7 @@ import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureRestTe
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.test.web.servlet.client.EntityExchangeResult;
 import org.springframework.test.web.servlet.client.ExchangeResult;
 import org.springframework.test.web.servlet.client.RestTestClient;
@@ -93,13 +95,16 @@ class AuthorizationServerConfigurationIT {
     @Autowired
     private MemberMapper memberMapper;
 
-    private UUID createdHouseholdId;
+    @Autowired
+    private HouseholdSetupMapper householdMapper;
+
+    private HouseholdEntity createdHousehold;
 
     @AfterEach
     void tearDown() {
-        if (createdHouseholdId != null) {
-            memberRepository.deleteByHouseholdId(createdHouseholdId);
-            householdRepository.deleteById(createdHouseholdId);
+        if (createdHousehold != null) {
+            memberRepository.deleteByHouseholdId(createdHousehold.id());
+            householdRepository.deleteById(createdHousehold.id());
         }
     }
 
@@ -135,6 +140,28 @@ class AuthorizationServerConfigurationIT {
         }
     }
 
+    /**
+     * Regression guard for {@link SecurityConfig#clientRegistrationRepository}: without an explicit
+     * override of {@code librehousehold.security.oauth2-client.authorization-uri} (not set among this
+     * class's {@code properties}), {@code authorizationUri} must keep deriving from {@code issuer} as
+     * before — the production default must stay unchanged by the introduction of that new property.
+     */
+    @Nested
+    class clientRegistrationRepository {
+
+        @Autowired
+        private ClientRegistrationRepository clientRegistrationRepository;
+
+        @Test
+        void findByRegistrationId_noAuthorizationUriOverride_authorizationUriDerivedFromIssuer() {
+            // when
+            var providerDetails = clientRegistrationRepository.findByRegistrationId(CLIENT_ID).getProviderDetails();
+
+            // then
+            assertThat(providerDetails.getAuthorizationUri()).isEqualTo("http://localhost:54327/oauth2/authorize");
+        }
+    }
+
     @Nested
     class login {
 
@@ -144,6 +171,30 @@ class AuthorizationServerConfigurationIT {
             var email = "authtest-" + UUID.randomUUID() + "@example.com";
             createMemberWithAccount(email, RAW_PASSWORD);
             var loginPage = requestLoginPageViaAuthorizationCodeFlow();
+
+            // when
+            var result = submitLogin(loginPage.cookies(), loginPage.csrfToken(), email, RAW_PASSWORD);
+
+            // then
+            assertThat(result.getResponseHeaders().getLocation().getPath()).isEqualTo("/oauth2/authorize");
+        }
+
+        /**
+         * Regression guard for the frontend's {@code bootstrapSession()}, which fires on every page
+         * load — including the login page itself, before the form is submitted — as an unauthenticated
+         * {@code GET {basePath}/me}. Without a dedicated, no-op request cache on
+         * {@link SecurityConfig#defaultSecurityFilterChain}, that 401 overwrites the {@code
+         * /oauth2/authorize} continuation already saved by {@link SecurityConfig#authorizationServerSecurityFilterChain}
+         * in the same shared {@code HttpSession}, so login would wrongly redirect back to {@code
+         * {basePath}/me} instead of resuming the original authorization request.
+         */
+        @Test
+        void validAccountCredentialsAfterMeEndpointPolledOnLoginPage_redirectsBackToOriginalAuthorizeRequest() {
+            // given
+            var email = "authtest-" + UUID.randomUUID() + "@example.com";
+            createMemberWithAccount(email, RAW_PASSWORD);
+            var loginPage = requestLoginPageViaAuthorizationCodeFlow();
+            get(loginPage.cookies(), URI.create(BASE_PATH + "/me"));
 
             // when
             var result = submitLogin(loginPage.cookies(), loginPage.csrfToken(), email, RAW_PASSWORD);
@@ -192,7 +243,7 @@ class AuthorizationServerConfigurationIT {
             var email = "authtest-" + UUID.randomUUID() + "@example.com";
             var member = createMemberWithAccount(email, RAW_PASSWORD);
             var authenticatedCookies = performLoginAndFollowToCallback(email, RAW_PASSWORD).cookies();
-            var expected = new CurrentUser(memberMapper.toMember(member), createdHouseholdId, new UserPreferences());
+            var expected = new CurrentUser(memberMapper.toMember(member), householdMapper.toApiModel(createdHousehold), new UserPreferences());
 
             // when
             var result = getWithCookies(authenticatedCookies, URI.create(BASE_PATH + "/me"))
@@ -388,10 +439,9 @@ class AuthorizationServerConfigurationIT {
     }
 
     private MemberEntity createMemberWithAccount(String email, String rawPassword) {
-        var household = householdRepository.save(Instancio.create(HouseholdEntity.class));
-        createdHouseholdId = household.id();
+        createdHousehold = householdRepository.save(Instancio.create(HouseholdEntity.class));
         var member = memberRepository.save(Instancio.of(MemberEntity.class)
-                .set(field(MemberEntity::householdId), household.id())
+                .set(field(MemberEntity::householdId), createdHousehold.id())
                 .set(field(MemberEntity::email), email)
                 .create());
         accountService.createAccount(member.getId(), rawPassword);

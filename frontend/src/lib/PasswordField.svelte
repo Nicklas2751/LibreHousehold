@@ -8,6 +8,7 @@
 		placeholder?: string;
 		value: string;
 		autocomplete?: 'new-password' | 'current-password';
+		name?: string;
 	}
 
 	let {
@@ -15,7 +16,8 @@
 		hint,
 		placeholder,
 		value = $bindable(),
-		autocomplete = 'new-password'
+		autocomplete = 'new-password',
+		name
 	}: Props = $props();
 
 	let revealed = $state(false);
@@ -30,6 +32,7 @@
 			class="grow"
 			{placeholder}
 			{autocomplete}
+			{name}
 			bind:value
 			minlength="8"
 			maxlength="128"

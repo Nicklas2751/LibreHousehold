@@ -6,11 +6,13 @@
 	import { BrightnessIcon } from '@indaco/svelte-iconoir/brightness';
 	import { LanguageIcon } from '@indaco/svelte-iconoir/language';
 	import { NavArrowRightIcon } from '@indaco/svelte-iconoir/nav-arrow-right';
+	import { LogOutIcon } from '@indaco/svelte-iconoir/log-out';
 	import { m } from '$lib/paraglide/messages.js';
 	import { locales } from '$lib/paraglide/runtime.js';
 	import { userState } from '$lib/stores/userState';
 	import { theme, language, setTheme, setLanguage } from '$lib/stores/settingsStore';
 	import type { Language } from '$lib/stores/settingsStore';
+	import { logout } from '$lib/stores/sessionLogout';
 	import PageTitle from '$lib/PageTitle.svelte';
 
 	const isOwner = $derived($userState?.isAdmin === true);
@@ -126,5 +128,21 @@
 				<NavArrowRightIcon class="text-base-content/40" />
 			</div>
 		</a>
+
+		<button
+			type="button"
+			onclick={() => logout()}
+			class="card bg-base-200 text-left shadow-sm transition-colors hover:bg-base-300"
+		>
+			<div class="card-body flex flex-row items-center gap-4 p-4">
+				<div class="flex h-11 w-11 min-w-11 items-center justify-center rounded-full bg-error/15">
+					<LogOutIcon class="text-error" />
+				</div>
+				<div class="flex-1">
+					<h3 class="font-semibold">{m['settings.logout.title']()}</h3>
+					<p class="text-sm text-base-content/60">{m['settings.logout.description']()}</p>
+				</div>
+			</div>
+		</button>
 	</div>
 </div>

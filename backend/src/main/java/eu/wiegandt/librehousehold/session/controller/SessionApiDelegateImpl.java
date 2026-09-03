@@ -2,8 +2,10 @@ package eu.wiegandt.librehousehold.session.controller;
 
 import eu.wiegandt.librehousehold.api.SessionApiDelegate;
 import eu.wiegandt.librehousehold.household.AccountOidcPrincipal;
+import eu.wiegandt.librehousehold.household.HouseholdQuery;
 import eu.wiegandt.librehousehold.household.MemberQuery;
 import eu.wiegandt.librehousehold.model.CurrentUser;
+import eu.wiegandt.librehousehold.session.exception.NoAuthenticatedSessionException;
 import eu.wiegandt.librehousehold.usersettings.PreferencesQuery;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -19,18 +21,24 @@ import org.springframework.stereotype.Component;
 public class SessionApiDelegateImpl implements SessionApiDelegate {
 
     private final MemberQuery memberQuery;
+    private final HouseholdQuery householdQuery;
     private final PreferencesQuery preferencesQuery;
 
-    public SessionApiDelegateImpl(MemberQuery memberQuery, PreferencesQuery preferencesQuery) {
+    public SessionApiDelegateImpl(MemberQuery memberQuery, HouseholdQuery householdQuery, PreferencesQuery preferencesQuery) {
         this.memberQuery = memberQuery;
+        this.householdQuery = householdQuery;
         this.preferencesQuery = preferencesQuery;
     }
 
     @Override
     public ResponseEntity<CurrentUser> getCurrentUser() {
-        var principal = (AccountOidcPrincipal) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !(authentication.getPrincipal() instanceof AccountOidcPrincipal principal)) {
+            throw new NoAuthenticatedSessionException();
+        }
         var member = memberQuery.getMember(principal.memberId());
+        var household = householdQuery.getHousehold(principal.householdId());
         var preferences = preferencesQuery.getPreferencesOrDefault(principal.memberId());
-        return ResponseEntity.ok(new CurrentUser(member, principal.householdId(), preferences));
+        return ResponseEntity.ok(new CurrentUser(member, household, preferences));
     }
 }

@@ -25,7 +25,33 @@ export default defineConfig({
 				target: apiProxyTarget,
 				changeOrigin: true,
 				rewrite: (path) => path.replace(/^\/api/, apiProxyPrefix)
-			}
+			},
+			// Spring Security's own endpoints (form login, logout, OAuth2) never live under the
+			// API base path (/v1) — passed through unprefixed so the local login flow is testable
+			// without a shared reverse proxy in front of frontend and backend.
+			// xfwd sets X-Forwarded-Host/Proto on the proxied request, which server.forward-headers-
+			// strategy=framework (application.yaml) needs to rewrite the backend's self-referential
+			// URLs (OAuth2 authorize/login redirects) to this dev-server origin instead of the
+			// backend's own — see TestLibrehouseholdApplication for the matching authorization-uri/
+			// redirect-uri overrides.
+			// GET /login (exactly that path, no sub-path) is bypassed to SvelteKit because it's also
+			// our own client-side route (src/routes/login/+page.svelte); the form's POST submission
+			// AND the OAuth2 redirect-uri callback (GET /login/oauth2/code/spa-backend-client) must
+			// still reach the backend.
+			'/login': {
+				target: apiProxyTarget,
+				changeOrigin: true,
+				xfwd: true,
+				bypass: (req) => {
+					if (req.method === 'POST') {
+						return undefined;
+					}
+					const path = req.url?.split('?')[0];
+					return path === '/login' ? req.url : undefined;
+				}
+			},
+			'/logout': { target: apiProxyTarget, changeOrigin: true, xfwd: true },
+			'/oauth2': { target: apiProxyTarget, changeOrigin: true, xfwd: true }
 		}
 	},
 	test: {

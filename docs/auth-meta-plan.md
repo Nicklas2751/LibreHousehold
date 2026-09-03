@@ -89,17 +89,20 @@ muss aber sauber neu aus der überarbeiteten OpenAPI-Spec generiert werden.
   Access Control". TDD + IT. Siehe [Detailplan](auth-plan-p1.3-p1.6.md).
 - ✅ **P1.7 — Frontend: SetupWizard um Passwort erweitern.** Inkl. E-Mail-Verfügbarkeits-Check,
   „Account existiert bereits"-Fehlerbild. Siehe [Detailplan](auth-plan-p1.7-p1.10.md).
-- **P1.8 — Frontend: Login, Session-Bootstrap, Route-Guards, Logout.** `/login`-Route real
-  anbinden (aktuell toter Link in `WelcomeScreen`), Current-User-Hydration nach Reload
-  (heute geht der State beim Reload verloren), Guards für `/app/*`. Umfasst auch **P1.10 Teil B**
-  (`sessionExpiredMiddleware`, siehe unten — kann architektonisch erst mit dem hier gebauten
-  Session-State fertig werden). Siehe [Detailplan](auth-plan-p1.7-p1.10.md).
+- ✅ **P1.8 — Frontend: Login, Session-Bootstrap, Route-Guards, Logout.** `/login`-Route real
+  angebunden, Current-User-Hydration nach Reload, Guards für `/app/*`. Umfasst auch **P1.10 Teil B**
+  (`sessionExpiredMiddleware`). Siehe [Detailplan](auth-plan-p1.7-p1.10.md). Dabei mehrere echte,
+  beim Live-Testen gefundene Bugs behoben (siehe Detailplan für Details): fehlender CORS-Origin für
+  lokale Frontend-Dev-Origin, Stacktrace-Leak bei ungültiger E-Mail, `ClassCastException` in
+  `GET /me` bei nicht-OIDC-Principal, hängender OAuth2-Code-Exchange durch Server-zu-Server-Aufruf
+  über den eigenen Dev-Proxy, sowie eine `HttpSessionRequestCache`-Kollision zwischen der
+  Business-API- und der Authorization-Server-Filterkette.
 - ✅ **P1.9 — Frontend: Invite-Join mit Passwortvergabe.** Siehe [Detailplan](auth-plan-p1.7-p1.10.md).
-- 🟡 **P1.10 — Frontend: API-Client & Guards.** Cookie-Requests (`credentials: 'include'`),
+- ✅ **P1.10 — Frontend: API-Client & Guards.** Cookie-Requests (`credentials: 'include'`),
   CSRF-Header, zentrales 401-Handling/Redirect statt der aktuell verstreuten
-  `new Configuration({...})`-Instanzen. **Teil A** (zentrale `apiConfiguration`, CSRF-Middleware,
-  Umstellung aller Fundstellen) ✅ umgesetzt; **Teil B** (`sessionExpiredMiddleware`) folgt mit
-  P1.8. Siehe [Detailplan](auth-plan-p1.7-p1.10.md).
+  `new Configuration({...})`-Instanzen. Teil A (zentrale `apiConfiguration`, CSRF-Middleware,
+  Umstellung aller Fundstellen) und Teil B (`sessionExpiredMiddleware`, mit P1.8) umgesetzt.
+  Siehe [Detailplan](auth-plan-p1.7-p1.10.md).
 
 ## Phase 2 — Lokale Accounts: Lifecycle-Härtung (OWASP ASVS)
 
