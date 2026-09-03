@@ -185,7 +185,7 @@ export const functionName = async (
 
 ## State Management Rules
 
-- **No localStorage/sessionStorage writes in frontend code.** State is intentionally kept in-memory only (Svelte stores/runes). Do not persist state to localStorage or sessionStorage.
+- **During active frontend development, always go through the mock server (`api/mokapi.js`, the `npm run dev` default) or a real local backend (`VITE_API_URL=... npm run dev`) — never fake persistence locally instead.** E.g. don't implement "create a task" by only storing it in an in-memory/localStorage variable without an actual API call; build and test features against the real request/response cycle from the start.
 - **Use Paraglide's `setLocale()`** for language changes — never write the language to localStorage manually.
 - Theme changes are applied via `document.documentElement.setAttribute('data-theme', ...)` only.
 

@@ -4,6 +4,7 @@
 	import { TaskListIcon } from '@indaco/svelte-iconoir/task-list';
 	import { EuroIcon } from '@indaco/svelte-iconoir/euro';
 	import { StatsReportIcon } from '@indaco/svelte-iconoir/stats-report';
+	import { OAUTH2_LOGIN_PATH } from '$lib/oauth2Login';
 </script>
 
 <div class="hero min-h-screen bg-base-200">
@@ -36,8 +37,10 @@
 					<a class="btn w-full rounded-lg p-6 btn-primary" href="/setup"
 						>{m['welcome.setup_button']()}</a
 					>
-					<a class="btn w-full rounded-lg p-6 btn-primary" href="/login"
-						>{m['welcome.login_button']()}</a
+					<a
+						class="btn w-full rounded-lg p-6 btn-primary"
+						href={OAUTH2_LOGIN_PATH}
+						data-sveltekit-reload>{m['welcome.login_button']()}</a
 					>
 				</div>
 			</div>

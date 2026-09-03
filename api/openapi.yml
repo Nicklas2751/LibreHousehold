@@ -2595,17 +2595,14 @@ components:
       type: object
       required:
         - member
-        - householdId
+        - household
         - preferences
       description: Member, household and preferences data for the authenticated session.
       properties:
         member:
           $ref: "#/components/schemas/Member"
-        householdId:
-          type: string
-          format: uuid
-          description: The household the current member belongs to.
-          example: "f3ce1a6b-aba1-478d-9f01-ec484f23ce60"
+        household:
+          $ref: "#/components/schemas/Household"
         preferences:
           $ref: "#/components/schemas/UserPreferences"
 

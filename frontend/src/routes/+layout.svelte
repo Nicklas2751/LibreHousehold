@@ -3,6 +3,10 @@
 	import favicon from '$lib/assets/favicon.svg';
 	import Toasts from '$lib/Toasts.svelte';
 	import { page } from '$app/state';
+	import { browser } from '$app/environment';
+	import { bootstrapSession } from '$lib/stores/sessionBootstrap';
+
+	if (browser) bootstrapSession();
 
 	let { children } = $props();
 </script>

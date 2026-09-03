@@ -271,6 +271,18 @@
 		"success_text": "Du bist jetzt Mitglied von \"{name}\".",
 		"success_button": "Zum Dashboard"
 	},
+	"login": {
+		"title": "Anmelden",
+		"email_label": "E-Mail",
+		"email_placeholder": "z.B., max.mustermann@example.org",
+		"password_label": "Passwort",
+		"password_placeholder": "Dein Passwort",
+		"submit_button": "Anmelden",
+		"error": "E-Mail oder Passwort falsch."
+	},
+	"session": {
+		"bootstrap_error": "Sitzung konnte nicht geladen werden. Bitte melde dich erneut an."
+	},
 	"settings": {
 		"back": "Zurück zu Einstellungen",
 		"appearance": {
@@ -418,6 +430,10 @@
 				"cancel": "Abbrechen",
 				"confirm": "Löschen"
 			}
+		},
+		"logout": {
+			"title": "Abmelden",
+			"description": "Melde dich von deinem Konto ab."
 		}
 	}
 }

@@ -1,5 +1,7 @@
 package eu.wiegandt.librehousehold.household;
 
+import eu.wiegandt.librehousehold.model.Household;
+
 import java.util.UUID;
 
 /**
@@ -16,4 +18,13 @@ public interface HouseholdQuery {
      * @return {@code true} if the household exists, {@code false} otherwise
      */
     boolean householdExists(UUID householdId);
+
+    /**
+     * Returns the household with the given ID.
+     *
+     * @param householdId the ID of the household
+     * @return the household
+     * @throws eu.wiegandt.librehousehold.household.exception.HouseholdNotFoundException if no household with this ID exists
+     */
+    Household getHousehold(UUID householdId);
 }

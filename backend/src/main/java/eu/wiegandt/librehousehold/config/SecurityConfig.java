@@ -76,10 +76,20 @@ public class SecurityConfig {
      * issuer-discovery ({@code ClientRegistrations.fromIssuerLocation}): that call happens eagerly
      * during context refresh, before the embedded servlet container accepts requests, which would
      * make the authorization server unreachable from its own client at startup.
+     *
+     * <p>{@code authorizationUri} is deliberately decoupled from {@code issuer} instead of being
+     * built as {@code issuer + "/oauth2/authorize"} like the other three: it is the only one of the
+     * four URIs a real browser navigates to. In local development the frontend dev server proxies
+     * the browser-facing endpoints to a different origin than the backend's own, so this URI must
+     * reflect that proxy origin, while {@code tokenUri}/{@code jwkSetUri}/{@code userInfoUri} are
+     * called exclusively server-to-server by this backend itself and must keep resolving directly
+     * against {@code issuer} — routing those internal calls through the dev proxy as well-made the
+     * backend proxy a request back to itself, hanging the code-exchange step indefinitely.
      */
     @Bean
     public ClientRegistrationRepository clientRegistrationRepository(
             @Value("${librehousehold.security.oauth2-authorization-server.issuer}") String issuer,
+            @Value("${librehousehold.security.oauth2-client.authorization-uri:${librehousehold.security.oauth2-authorization-server.issuer}/oauth2/authorize}") String authorizationUri,
             @Value("${librehousehold.security.oauth2-client.redirect-uri}") String redirectUri,
             @Value("${librehousehold.security.oauth2-client.client-secret}") String clientSecret) {
         var clientRegistration = ClientRegistration.withRegistrationId(RegisteredClientSeeder.CLIENT_ID)
@@ -89,7 +99,7 @@ public class SecurityConfig {
                 .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
                 .redirectUri(redirectUri)
                 .scope(OidcScopes.OPENID)
-                .authorizationUri(issuer + "/oauth2/authorize")
+                .authorizationUri(authorizationUri)
                 .tokenUri(issuer + "/oauth2/token")
                 .jwkSetUri(issuer + "/oauth2/jwks")
                 .userInfoUri(issuer + "/userinfo")
@@ -161,6 +171,15 @@ public class SecurityConfig {
                         .permitAll()
                         .anyRequest().authenticated())
                 .cors(Customizer.withDefaults())
+                // Both filter chains share the same HttpSession, so without this, an unauthenticated
+                // 401 on a business endpoint (e.g. the frontend's own bootstrapSession() GET /me,
+                // fired on every page load including the login page itself) would overwrite the
+                // /oauth2/authorize continuation already saved by authorizationServerSecurityFilterChain,
+                // causing login to redirect back to /me instead of resuming the original request.
+                // A plain NullRequestCache would also break resuming that continuation: formLogin()'s
+                // SavedRequestAwareAuthenticationSuccessHandler below shares this very RequestCache
+                // instance and needs to still be able to *read* it (see NonSavingRequestCache).
+                .requestCache((cache) -> cache.requestCache(new NonSavingRequestCache()))
                 // ADR-014: XSRF-TOKEN must be JS-readable (spa() wires a cookie-based repository plus
                 // a request handler that resolves the raw, unmasked token value, matching what the SPA
                 // reads straight from the cookie). No permitAll exception from CSRF is added here for
