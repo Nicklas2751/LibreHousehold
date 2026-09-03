@@ -21,7 +21,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -32,7 +36,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.instancio.Select.field;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, properties = {"librehousehold.security.oauth2-client.client-secret=test-client-secret"})
+/**
+ * {@code webEnvironment = MOCK} (not {@code NONE}): {@code joinHousehold}/{@code setupHousehold}
+ * now also establish an authenticated session via {@code AccountSessionAuthenticator}, which needs
+ * a real {@code WebApplicationContext} (for {@code AuthenticationConfiguration} autoconfiguration
+ * and the {@code request}/{@code response} scopes) plus a thread-bound request (set up per test
+ * below).
+ */
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK, properties = {"librehousehold.security.oauth2-client.client-secret=test-client-secret"})
 @Import(TestcontainersConfiguration.class)
 @ExtendWith(InstancioExtension.class)
 class MemberManagementServiceIT {
@@ -64,6 +75,8 @@ class MemberManagementServiceIT {
 
     @BeforeEach
     void setUp() {
+        RequestContextHolder.setRequestAttributes(
+                new ServletRequestAttributes(new MockHttpServletRequest(), new MockHttpServletResponse()));
         var member = Instancio.create(Member.class);
         existingHousehold = Instancio.create(Household.class);
         var localRegistration = Instancio.create(LocalRegistration.class);
@@ -73,6 +86,7 @@ class MemberManagementServiceIT {
 
     @AfterEach
     void tearDown() {
+        RequestContextHolder.resetRequestAttributes();
         for (var householdId : createdHouseholdIds) {
             inviteRepository.deleteByHouseholdId(householdId);
             memberRepository.deleteByHouseholdId(householdId);

@@ -5,11 +5,14 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplicat
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication.Type;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcOperations;
+import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.CsrfConfigurer;
@@ -62,6 +65,26 @@ public class SecurityConfig {
     @Bean
     public RegisteredClientRepository registeredClientRepository(JdbcOperations jdbcOperations) {
         return new JdbcRegisteredClientRepository(jdbcOperations);
+    }
+
+    /**
+     * Not exposed as a bean by Spring Security's autoconfiguration by default. Needed by
+     * {@code AccountSessionAuthenticator} to programmatically authenticate a freshly created
+     * account right after household setup / invite join, without going through the {@code /login}
+     * form (see P1.4-follow-up).
+     *
+     * <p>{@code @Lazy} on the bean definition itself (not just at injection points): plain
+     * {@code @Lazy} constructor injection only defers *wiring*, not Spring's own eager singleton
+     * pre-instantiation of this bean during context refresh. {@link AuthenticationConfiguration} is
+     * only auto-configured for servlet web applications, so eagerly instantiating this bean would
+     * fail to even build the {@code ApplicationContext} for non-web tests
+     * ({@code @SpringBootTest(webEnvironment = WebEnvironment.NONE)}) that never actually trigger
+     * the login flow.
+     */
+    @Bean
+    @Lazy
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) {
+        return configuration.getAuthenticationManager();
     }
 
     @Bean

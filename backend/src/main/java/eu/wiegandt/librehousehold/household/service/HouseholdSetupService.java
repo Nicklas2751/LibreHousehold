@@ -31,16 +31,19 @@ public class HouseholdSetupService {
     private final HouseholdSetupMapper householdSetupMapper;
     private final MemberMapper memberMapper;
     private final AccountService accountService;
+    private final AccountSessionAuthenticator accountSessionAuthenticator;
 
     public HouseholdSetupService(HouseholdRepository householdRepository, MemberRepository memberRepository,
                           InviteRepository inviteRepository, HouseholdSetupMapper householdSetupMapper,
-                          MemberMapper memberMapper, AccountService accountService) {
+                          MemberMapper memberMapper, AccountService accountService,
+                          AccountSessionAuthenticator accountSessionAuthenticator) {
         this.householdRepository = householdRepository;
         this.memberRepository = memberRepository;
         this.inviteRepository = inviteRepository;
         this.householdSetupMapper = householdSetupMapper;
         this.memberMapper = memberMapper;
         this.accountService = accountService;
+        this.accountSessionAuthenticator = accountSessionAuthenticator;
     }
 
     @Transactional
@@ -59,6 +62,8 @@ public class HouseholdSetupService {
             throw new MemberAlreadyExistsException();
         }
         accountService.createAccount(savedMember.getId(), setup.getLocalRegistration().getPassword());
+        accountSessionAuthenticator.authenticateAndPersistSession(
+                setup.getMember().getEmail(), setup.getLocalRegistration().getPassword());
         var invite = inviteRepository.save(new InviteEntity(
                 null,
                 savedHousehold.id(),

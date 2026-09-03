@@ -42,6 +42,9 @@ class HouseholdSetupServiceTest {
     @Mock
     private AccountService accountService;
 
+    @Mock
+    private AccountSessionAuthenticator accountSessionAuthenticator;
+
     @Spy
     private HouseholdSetupMapper householdSetupMapper = Mappers.getMapper(HouseholdSetupMapper.class);
 
@@ -166,6 +169,22 @@ class HouseholdSetupServiceTest {
 
             // then
             verify(accountService).createAccount(savedMember.getId(), setup.getLocalRegistration().getPassword());
+        }
+
+        @Test
+        void validSetup_authenticatesAndPersistsSessionForCreatedAccount() {
+            // given
+            doReturn(Instancio.create(HouseholdEntity.class)).when(householdRepository).save(any(HouseholdEntity.class));
+            doReturn(Instancio.create(MemberEntity.class)).when(memberRepository).save(any(MemberEntity.class));
+            doReturn(Instancio.create(InviteEntity.class)).when(inviteRepository).save(any(InviteEntity.class));
+            var setup = buildSetup();
+
+            // when
+            service.setupHousehold(setup);
+
+            // then
+            verify(accountSessionAuthenticator).authenticateAndPersistSession(
+                    setup.getMember().getEmail(), setup.getLocalRegistration().getPassword());
         }
 
         @Test

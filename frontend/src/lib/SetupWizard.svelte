@@ -34,6 +34,8 @@
 	import { updateUserState } from '$lib/stores/userState';
 	import MemberProfileForm from '$lib/MemberProfileForm.svelte';
 	import { onDestroy } from 'svelte';
+	import { completeSilentOAuth2Login } from '$lib/oauth2Login';
+	import { bootstrapSession } from '$lib/stores/sessionBootstrap';
 
 	const EMAIL_AVAILABILITY_DEBOUNCE_MS = 400;
 
@@ -45,6 +47,7 @@
 	let householdName: string = $state('');
 	let householdImage: string = $state('');
 	let serverEmailError: string | null = $state(null);
+	let closingSetup: boolean = $state(false);
 
 	const membersApi = new MembersApi(apiConfiguration);
 	const checkEmailAvailability = createDebouncedAvailabilityChecker(
@@ -68,6 +71,11 @@
 
 	function nextStep() {
 		step = calculateNextStep(step, maxSteps);
+	}
+
+	function handleCreateStepSubmit(event: SubmitEvent) {
+		event.preventDefault();
+		nextStep();
 	}
 
 	function goBackToStep(targetStep: number) {
@@ -185,6 +193,13 @@
 		}
 	}
 
+	async function closeSetupAndEnterDashboard() {
+		closingSetup = true;
+		await completeSilentOAuth2Login();
+		await bootstrapSession();
+		await goto('/app/dashboard');
+	}
+
 	async function readConflictProblem(err: unknown): Promise<Problem | undefined> {
 		if (!(err instanceof ResponseError)) {
 			return undefined;
@@ -229,7 +244,7 @@
 			{/if}
 			<input type="file" accept="image/*" class="hidden" onchange={handleImageChange} />
 		</label>
-		<form onsubmit={nextStep}>
+		<form onsubmit={handleCreateStepSubmit}>
 			<fieldset class="fieldset">
 				<legend class="fieldset-legend">{m['setup.create_step.household_name_label']()} *</legend>
 				<input
@@ -292,8 +307,15 @@
 				</button>
 			{/if}
 		</div>
-		<button class="btn w-full rounded-lg p-6 btn-primary" onclick={() => goto('/app/dashboard')}
-			>{m['setup.finish_step.close_setup_button']()}</button
+		<button
+			class="btn w-full rounded-lg p-6 btn-primary"
+			disabled={closingSetup}
+			onclick={closeSetupAndEnterDashboard}
 		>
+			{#if closingSetup}
+				<span class="loading loading-xs loading-spinner"></span>
+			{/if}
+			{m['setup.finish_step.close_setup_button']()}
+		</button>
 	{/if}
 </div>

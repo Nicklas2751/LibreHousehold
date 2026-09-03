@@ -15,12 +15,17 @@ import eu.wiegandt.librehousehold.model.Member;
 import org.instancio.Instancio;
 import org.instancio.junit.InstancioExtension;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.time.LocalDate;
 import java.util.UUID;
@@ -29,7 +34,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.instancio.Select.field;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, properties = {"librehousehold.security.oauth2-client.client-secret=test-client-secret"})
+/**
+ * {@code webEnvironment = MOCK} (not {@code NONE}): {@code setupHousehold} now also establishes an
+ * authenticated session via {@code AccountSessionAuthenticator}, which needs a real
+ * {@code WebApplicationContext} (for {@code AuthenticationConfiguration} autoconfiguration and the
+ * {@code request}/{@code response} scopes) plus a thread-bound request (set up per test below).
+ */
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK, properties = {"librehousehold.security.oauth2-client.client-secret=test-client-secret"})
 @Import(TestcontainersConfiguration.class)
 @ExtendWith(InstancioExtension.class)
 class HouseholdSetupServiceIT {
@@ -57,8 +68,15 @@ class HouseholdSetupServiceIT {
 
     private UUID createdHouseholdId;
 
+    @BeforeEach
+    void bindRequestContext() {
+        RequestContextHolder.setRequestAttributes(
+                new ServletRequestAttributes(new MockHttpServletRequest(), new MockHttpServletResponse()));
+    }
+
     @AfterEach
     void tearDown() {
+        RequestContextHolder.resetRequestAttributes();
         if (createdHouseholdId != null) {
             inviteRepository.deleteByHouseholdId(createdHouseholdId);
             memberRepository.deleteByHouseholdId(createdHouseholdId);

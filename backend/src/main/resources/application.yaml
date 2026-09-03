@@ -4,15 +4,23 @@ spring:
   modulith:
     runtime:
       flyway-enabled: true
+  web:
+    error:
+      # Defense-in-depth against leaking stacktraces to clients (OWASP A05): this already matches
+      # Spring Boot's own default, but is set explicitly so it can never regress via an environment-
+      # or tooling-specific default. Note the prefix: in Boot 4 this is bound via WebProperties
+      # ("spring.web.error.*", see ErrorMvcAutoConfiguration), NOT the legacy "server.error.*" this
+      # was previously (incorrectly) set under — that key is silently ignored by Boot 4 and never
+      # bound to anything, which is exactly why this setting failed to prevent a real leak:
+      # spring-boot-devtools ships its own "spring.web.error.include-stacktrace=always" default
+      # (see spring-devtools.properties) as the lowest-priority PropertySource, and with no
+      # higher-priority source ever actually setting the *correct* key, that devtools default won
+      # in local dev (see the ValidationExceptionHandler / ErrorResponseExceptionHandler class
+      # comments for the actual fix: those two custom exception families never even reach this
+      # fallback page anymore).
+      include-stacktrace: never
 
 server:
-  error:
-    # Defense-in-depth against leaking stacktraces to clients (OWASP A05): this already matches
-    # Spring Boot's own default, but is set explicitly so it can never regress via an environment-
-    # or tooling-specific default (e.g. spring-boot-devtools) — see ValidationExceptionHandler for
-    # the actual fix (jakarta.validation.ConstraintViolationException was falling through to this
-    # generic error page with a full stacktrace instead of being translated into a clean 400).
-    include-stacktrace: never
   # Nginx terminates TLS and forwards internally over plain HTTP (see Kapitel 7). Without this,
   # Spring ignores X-Forwarded-Proto and treats every request as insecure, so CookieCsrfTokenRepository
   # would omit the Secure flag on XSRF-TOKEN (the session cookie is unaffected, its Secure flag is set

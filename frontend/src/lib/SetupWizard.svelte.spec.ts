@@ -3,14 +3,21 @@ import { render } from 'vitest-browser-svelte';
 import { page } from 'vitest/browser';
 import SetupWizard from './SetupWizard.svelte';
 
-const { mockSetupHousehold, mockCheckEmailAvailability, mockGoto, mockAddToast } = vi.hoisted(
-	() => ({
-		mockSetupHousehold: vi.fn(),
-		mockCheckEmailAvailability: vi.fn(),
-		mockGoto: vi.fn(),
-		mockAddToast: vi.fn()
-	})
-);
+const {
+	mockSetupHousehold,
+	mockCheckEmailAvailability,
+	mockGoto,
+	mockAddToast,
+	mockCompleteSilentOAuth2Login,
+	mockBootstrapSession
+} = vi.hoisted(() => ({
+	mockSetupHousehold: vi.fn(),
+	mockCheckEmailAvailability: vi.fn(),
+	mockGoto: vi.fn(),
+	mockAddToast: vi.fn(),
+	mockCompleteSilentOAuth2Login: vi.fn(),
+	mockBootstrapSession: vi.fn()
+}));
 
 vi.mock('../generated-sources/openapi', async (importOriginal) => {
 	const original = await importOriginal<typeof import('../generated-sources/openapi')>();
@@ -28,6 +35,13 @@ vi.mock('../generated-sources/openapi', async (importOriginal) => {
 vi.mock('$app/navigation', () => ({ goto: mockGoto }));
 
 vi.mock('$lib/stores/toastStore', () => ({ addToast: mockAddToast }));
+
+vi.mock('$lib/oauth2Login', async (importOriginal) => {
+	const original = await importOriginal<typeof import('$lib/oauth2Login')>();
+	return { ...original, completeSilentOAuth2Login: mockCompleteSilentOAuth2Login };
+});
+
+vi.mock('$lib/stores/sessionBootstrap', () => ({ bootstrapSession: mockBootstrapSession }));
 
 vi.mock('./paraglide/runtime.js', async (importOriginal) => {
 	const original = await importOriginal<typeof import('./paraglide/runtime.js')>();
@@ -47,6 +61,8 @@ describe('SetupWizard', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		mockCheckEmailAvailability.mockResolvedValue({ available: true });
+		mockCompleteSilentOAuth2Login.mockResolvedValue(undefined);
+		mockBootstrapSession.mockResolvedValue(undefined);
 	});
 
 	it('submits the form — calls setupHousehold with localRegistration.password', async () => {
@@ -72,6 +88,28 @@ describe('SetupWizard', () => {
 				})
 			})
 		);
+	});
+
+	it('closing setup after successful setup — completes the OAuth2 login silently and navigates to the dashboard', async () => {
+		// given
+		mockSetupHousehold.mockResolvedValue({
+			household: { id: 'household-id', name: 'Die Testfamilie' },
+			inviteToken: 'invite-token'
+		});
+		await fillAndGoToAccountStep();
+		await page.getByRole('textbox', { name: /Dein Name/i }).fill('Max Mustermann');
+		await page.getByRole('textbox', { name: /Deine E-Mail/i }).fill('max@example.com');
+		await page.getByLabelText(/Passwort/i).fill('supersecret');
+		await page.getByRole('button', { name: /Einrichtung abschließen/i }).click();
+		await expect.element(page.getByRole('button', { name: /Zum Dashboard gehen/i })).toBeVisible();
+
+		// when
+		await page.getByRole('button', { name: /Zum Dashboard gehen/i }).click();
+
+		// then
+		await vi.waitFor(() => expect(mockGoto).toHaveBeenCalledWith('/app/dashboard'));
+		expect(mockCompleteSilentOAuth2Login).toHaveBeenCalled();
+		expect(mockBootstrapSession).toHaveBeenCalled();
 	});
 
 	it('email already taken (account-already-exists) — shows a specific error on the email field', async () => {
