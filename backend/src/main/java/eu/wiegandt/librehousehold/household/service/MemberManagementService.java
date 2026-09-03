@@ -39,6 +39,7 @@ public class MemberManagementService implements MemberQuery {
     private final MemberRegistrationMapper memberRegistrationMapper;
     private final ApplicationEventPublisher eventPublisher;
     private final AccountService accountService;
+    private final AccountSessionAuthenticator accountSessionAuthenticator;
 
     public MemberManagementService(MemberRepository memberRepository,
                                    HouseholdRepository householdRepository,
@@ -46,7 +47,8 @@ public class MemberManagementService implements MemberQuery {
                                    MemberMapper memberMapper,
                                    MemberRegistrationMapper memberRegistrationMapper,
                                    ApplicationEventPublisher eventPublisher,
-                                   AccountService accountService) {
+                                   AccountService accountService,
+                                   AccountSessionAuthenticator accountSessionAuthenticator) {
         this.memberRepository = memberRepository;
         this.householdRepository = householdRepository;
         this.inviteRepository = inviteRepository;
@@ -54,6 +56,7 @@ public class MemberManagementService implements MemberQuery {
         this.memberRegistrationMapper = memberRegistrationMapper;
         this.eventPublisher = eventPublisher;
         this.accountService = accountService;
+        this.accountSessionAuthenticator = accountSessionAuthenticator;
     }
 
     public List<Member> getMembers(UUID householdId) {
@@ -96,6 +99,8 @@ public class MemberManagementService implements MemberQuery {
             throw new MemberAlreadyExistsException();
         }
         accountService.createAccount(saved.getId(), registration.getLocalRegistration().getPassword());
+        accountSessionAuthenticator.authenticateAndPersistSession(
+                registration.getEmail(), registration.getLocalRegistration().getPassword());
         return memberMapper.toMember(saved);
     }
 

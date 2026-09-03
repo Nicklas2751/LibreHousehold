@@ -103,6 +103,35 @@ muss aber sauber neu aus der überarbeiteten OpenAPI-Spec generiert werden.
   `new Configuration({...})`-Instanzen. Teil A (zentrale `apiConfiguration`, CSRF-Middleware,
   Umstellung aller Fundstellen) und Teil B (`sessionExpiredMiddleware`, mit P1.8) umgesetzt.
   Siehe [Detailplan](auth-plan-p1.7-p1.10.md).
+- ✅ **P1.8/P1.10-Nachtrag — Beim manuellen Testen von P1.7–P1.10 gefundene Bugs, sofort behoben:**
+  - `SetupWizard.svelte` Schritt 0: `<form onsubmit={nextStep}>` rief `event.preventDefault()`
+    nirgends auf → nativer GET-Formular-Submit statt SPA-Navigation, kompletter State-Reset,
+    Wizard kam nie über Schritt 0 hinaus. Gefixt (`handleCreateStepSubmit` mit `preventDefault()`).
+  - **Fehlende Session nach Setup/Join:** `setupHousehold`/`joinHousehold` legten nur den Account
+    an, ohne je eine authentifizierte Session zu etablieren — der „Close setup"/„Zum Dashboard"-
+    Button navigierte direkt zu `/app/dashboard`, was mit „Could not load your session" fehlschlug.
+    Behoben per Hybrid-Ansatz: `AccountSessionAuthenticator` (neu, `household/service`)
+    authentifiziert serverseitig die Authorization-Server-Session direkt nach Account-Anlage
+    (`HouseholdSetupService`/`MemberManagementService`); das Frontend schließt danach über
+    `completeSilentOAuth2Login()` (`oauth2Login.ts`) den bestehenden OAuth2-Redirect-Flow still ab
+    (kein erneutes Passwort nötig, da die AS-Session schon authentifiziert ist) und ruft erst dann
+    `bootstrapSession()` + Navigation zum Dashboard auf.
+  - Stacktrace-Leak (OWASP A05) zusätzlich zum bereits bekannten Fall (`ConstraintViolationException`,
+    siehe P1.8-Eintrag oben) auch bei `MethodArgumentNotValidException` (z. B. leerer Body an
+    `POST /household/setup`) und bei der eigenen `NoAuthenticatedSessionException`
+    (`GET /me` ohne `AccountOidcPrincipal`) gefunden und nach demselben Muster
+    (`ValidationExceptionHandler`) behoben.
+  - Vorbestehender flakiger Test `ExpenseServiceIT.validExpense_persistedInDatabase` gefunden
+    (BigDecimal-Skalen-Mismatch nach dem `NUMERIC`-DB-Roundtrip, z. B. `5997.4` vs. `5997.40`) und
+    behoben (`withComparatorForType(BigDecimal::compareTo, ...)` in der Recursive Comparison).
+  - **Cross-User-Session-Verdacht untersucht, nicht reproduzierbar:** Nutzer meldete, nach Login
+    als User B in einem separaten Browser habe ein Reload (F5) im Browser-Tab von User A dessen
+    Session gezeigt. Gezielt getestet mit echt getrennten Cookie-Jars gegen Backend direkt, durch
+    den Vite-Dev-Proxy, über den OAuth2-Redirect-Flow und über den reinen Formular-Login —
+    sequenziell, verschränkt und mit parallelen Requests: in keinem Fall reproduzierbar, jedes
+    Cookie-Jar bekam zuverlässig nur seine eigenen Daten. Nutzer konnte es beim erneuten eigenen
+    Test ebenfalls nicht reproduzieren. Als nicht reproduzierbar geschlossen; bei erneutem
+    Auftreten genaue Repro-Schritte (Browser/Version, Timing, genaue Aktionsreihenfolge) festhalten.
 
 ## Phase 2 — Lokale Accounts: Lifecycle-Härtung (OWASP ASVS)
 
