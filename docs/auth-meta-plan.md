@@ -138,7 +138,15 @@ muss aber sauber neu aus der überarbeiteten OpenAPI-Spec generiert werden.
 - **P2.1 — OpenAPI: E-Mail-Verifikation.** Verifikations-Token, Resend-Endpoint,
   Verifikationsstatus am Member/Account.
 - **P2.2 — Backend: Verifikations-Versand & -Prüfung.** Integration über das
-  Notifications-Modul (Domain Event bei Registrierung), Ablauf-/Resend-Regeln.
+  Notifications-Modul (Domain Event bei Registrierung), Ablauf-/Resend-Regeln. Umfasst auch die
+  Konsequenzen einer dauerhaft unverifizierten E-Mail-Adresse: Login-Blocking (kein erneuter Login
+  nach Logout/Session-Ablauf, bis verifiziert — die erste Session direkt nach Setup/Join bleibt
+  unberührt), Sperre von Passwort-/E-Mail-Änderung bis zur Verifikation, sowie eine konfigurierbare
+  Grace-Period (Standard 7 Tage) nach der ein unverifizierter Account automatisch gelöscht wird
+  (mit konfigurierbarer Warn-Mail, Standard 24h vorher); ist der betroffene Account der
+  Haushalts-Admin, wird der gesamte Haushalt gelöscht. Ausdrücklich **nicht** eingeschränkt:
+  Ausgaben/Aufgaben erstellen, Einladungslink erzeugen/nutzen, Passwort-Reset anfordern/einlösen.
+  Siehe [Detailplan](auth-plan-p2.1-p2.7.md), Abschnitte 2.9/3.7–3.10.
 - **P2.3 — Frontend: Verifikationshinweis & Resend-UI.**
 - **P2.4 — OpenAPI: Passwort-Reset-Flow.** Request- und Confirm-Endpoint mit Einmal-Token.
 - **P2.5 — Backend: Passwort-Reset.** Token-Ausstellung/-Einlösung, Invalidierung bestehender
@@ -146,6 +154,17 @@ muss aber sauber neu aus der überarbeiteten OpenAPI-Spec generiert werden.
 - **P2.6 — Frontend: „Passwort vergessen"-Flow.**
 - **P2.7 — Backend: Rate-Limiting & Lockout.** Brute-Force-Schutz für Login-, Reset- und
   Verifikations-Endpunkte.
+- **P2.8 — Backend: Mitglieder-Benachrichtigung bei Haushalts-Löschung.** *(Noch kein eigener
+  Detailplan.)* Bei jeder Haushalts-Löschung — egal ob durch die bestehende manuelle
+  Admin-Löschung (P1.6) oder durch die neue Auto-Löschung bei abgelaufener Verifikationsfrist
+  (P2.2) — sollen verbleibende Mitglieder per E-Mail informiert werden, dass ihr Haushalt (und
+  damit ihr eigener Account) gelöscht wurde. Erfordert eine Erweiterung des `HouseholdDeleted`-
+  Domain-Events (aktuell nur `householdId`, keine Mitgliederdaten) bzw. einen Datenerfassungsschritt
+  **vor** `HouseholdManagementService.deleteHousehold` löscht die Mitgliederzeilen — die
+  `@ApplicationModuleListener`-Verarbeitung läuft erst nach dem Commit, wenn die Mitgliederdaten
+  bereits weg sind. Nachträglich entdeckte Lücke im bestehenden P1.6-Löschungs-Flow, aufgedeckt bei
+  der P2.2-Erweiterung um die Grace-Period-Löschung; siehe Detailplan
+  [auth-plan-p2.1-p2.7.md](auth-plan-p2.1-p2.7.md), Abschnitt 2.9/3.10.
 
 ## Phase 3 — Social Login (föderiert, konfigurierbar)
 
