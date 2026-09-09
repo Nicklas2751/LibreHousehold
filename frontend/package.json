@@ -27,7 +27,7 @@
 		"@sveltejs/vite-plugin-svelte": "^7.3.0",
 		"@tailwindcss/vite": "^4.3.3",
 		"@types/node": "^26",
-		"@vitest/browser": "^4.1.10",
+		"@vitest/browser": "^5.0.0",
 		"@vitest/browser-playwright": "^4.1.8",
 		"daisyui": "^5.7.28",
 		"eslint": "^10.10.0",
