@@ -177,6 +177,7 @@ public class SecurityConfig {
     @ConditionalOnWebApplication(type = Type.SERVLET)
     public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http, OidcUserService oidcUserService,
                                                           RevokeAuthorizedClientLogoutHandler revokeAuthorizedClientLogoutHandler,
+                                                          UnverifiedAccountLoginFailureHandler unverifiedAccountLoginFailureHandler,
                                                           @Value("${openapi.libreHousehold.base-path:/v1}") String basePath)
             throws Exception {
         http.authorizeHttpRequests((authorize) -> authorize
@@ -190,7 +191,8 @@ public class SecurityConfig {
                         .requestMatchers("/login", "/error",
                                 basePath + "/household/setup",
                                 basePath + "/invite/**",
-                                basePath + "/members/availability")
+                                basePath + "/members/availability",
+                                basePath + "/members/verification/confirm")
                         .permitAll()
                         .anyRequest().authenticated())
                 .cors(Customizer.withDefaults())
@@ -211,7 +213,7 @@ public class SecurityConfig {
                 // that hands it a fresh XSRF-TOKEN cookie before the POST (see P1.5.2).
                 .csrf(CsrfConfigurer::spa)
                 .addFilterAfter(new CsrfCookieFilter(), CsrfFilter.class)
-                .formLogin(Customizer.withDefaults())
+                .formLogin((login) -> login.failureHandler(unverifiedAccountLoginFailureHandler))
                 .oauth2Login((login) -> login.userInfoEndpoint((userInfo) ->
                         userInfo.oidcUserService(oidcUserService)))
                 // ADR-014: logout must actively revoke the backend's cached tokens for this user,

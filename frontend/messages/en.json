@@ -276,7 +276,8 @@
 		"password_label": "Password",
 		"password_placeholder": "Your password",
 		"submit_button": "Log in",
-		"error": "Incorrect email or password."
+		"error": "Incorrect email or password.",
+		"error_unverified": "Please confirm your email address first. We've sent you a link by email."
 	},
 	"session": {
 		"bootstrap_error": "Could not load your session. Please log in again."
@@ -313,12 +314,14 @@
 				"title": "Profile",
 				"name_label": "Display name",
 				"email_label": "Email address",
+				"email_locked_hint": "Please confirm your current email address first to be able to change it.",
 				"save_button": "Save",
 				"save_success": "Profile saved.",
 				"save_error": "Failed to save profile."
 			},
 			"password": {
 				"title": "Change Password",
+				"locked_hint": "Please confirm your email address first to be able to change your password.",
 				"old_label": "Current password",
 				"new_label": "New password",
 				"confirm_label": "Confirm new password",
