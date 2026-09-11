@@ -2,6 +2,7 @@ package eu.wiegandt.librehousehold.household.service;
 import eu.wiegandt.librehousehold.household.AccountRegistered;
 import eu.wiegandt.librehousehold.household.HouseholdDeleted;
 import eu.wiegandt.librehousehold.household.MemberRemoved;
+import eu.wiegandt.librehousehold.household.PasswordResetRequested;
 import eu.wiegandt.librehousehold.household.VerificationEmailRequested;
 import eu.wiegandt.librehousehold.household.exception.EmailNotVerifiedException;
 import eu.wiegandt.librehousehold.household.exception.HouseholdAdminCannotBeRemovedException;
@@ -847,6 +848,39 @@ class MemberManagementServiceTest {
 
             // then
             assertThat(result).isTrue();
+        }
+    }
+
+    @Nested
+    class requestPasswordReset {
+
+        @Test
+        void existingEmail_publishesPasswordResetRequestedEvent() {
+            // given
+            var email = "max@example.com";
+            var entity = Instancio.of(memberEntityModel)
+                    .set(field(MemberEntity::email), email)
+                    .create();
+            doReturn(Optional.of(entity)).when(memberRepository).findByEmail(email);
+
+            // when
+            service.requestPasswordReset(email);
+
+            // then
+            verify(eventPublisher).publishEvent(new PasswordResetRequested(entity.id(), email));
+        }
+
+        @Test
+        void unknownEmail_publishesNothing() {
+            // given
+            var email = "unknown@example.com";
+            doReturn(Optional.empty()).when(memberRepository).findByEmail(email);
+
+            // when
+            service.requestPasswordReset(email);
+
+            // then
+            verifyNoInteractions(eventPublisher);
         }
     }
 }

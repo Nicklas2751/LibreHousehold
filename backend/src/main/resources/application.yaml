@@ -78,6 +78,12 @@ librehousehold:
       # How long before grace-period-days expiry the deletion warning email is sent, so the user has
       # a final chance to verify before the account/household is actually deleted.
       deletion-warning-hours-before: 24
+    password-reset:
+      # How long a freshly issued password reset token stays valid (see RESET1 in Arc42 Chapter 8).
+      # Shorter than email-verification's 24h on purpose: a password reset link is a more sensitive,
+      # higher-privilege credential than an email verification link, so it should not remain usable
+      # for long. Requesting a new one at any time issues a fresh token with a new deadline.
+      token-validity: 1h
 
   frontend:
     # Base URL used to build links that are sent in emails (e.g. the email verification link) and

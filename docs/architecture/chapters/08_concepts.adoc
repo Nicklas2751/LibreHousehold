@@ -97,6 +97,11 @@ Authentication-related security controls are tracked against an https://github.c
 |V6.2.3 (L2), V16.5.1 (L2)
 |Decided, siehe Token-Format-Entscheidung in `docs/auth-plan-p2.1-p2.7.md` Abschnitt 3.2, umgesetzt in `AccountTokenService`
 
+|RESET1
+|Password reset tokens are single-use, short-lived, and a successful reset invalidates all of the account's existing sessions.
+|V6.2.3 (L2), V6.3.2 (L2)
+|Decided, implemented in `PasswordResetService`/`AccountTokenService`
+
 |ERR1
 |Generic error message on unexpected or security-sensitive errors, no stack traces or internal details exposed.
 |V16.5.1 (L2)

@@ -9,6 +9,8 @@ import eu.wiegandt.librehousehold.household.repository.AccountRepository;
 import eu.wiegandt.librehousehold.household.repository.HouseholdRepository;
 import eu.wiegandt.librehousehold.household.repository.MemberRepository;
 import eu.wiegandt.librehousehold.household.service.AccountService;
+import eu.wiegandt.librehousehold.household.service.AccountTokenService;
+import eu.wiegandt.librehousehold.household.service.PasswordResetService;
 import eu.wiegandt.librehousehold.model.CurrentUser;
 import eu.wiegandt.librehousehold.model.UserPreferences;
 import org.instancio.Instancio;
@@ -95,6 +97,12 @@ class AuthorizationServerConfigurationIT {
 
     @Autowired
     private AccountRepository accountRepository;
+
+    @Autowired
+    private PasswordResetService passwordResetService;
+
+    @Autowired
+    private AccountTokenService accountTokenService;
 
     @Autowired
     private MemberMapper memberMapper;
@@ -241,6 +249,37 @@ class AuthorizationServerConfigurationIT {
             // then
             assertThat(result.getResponseHeaders().getLocation()).hasPath("/login").hasQuery("error");
         }
+
+        /**
+         * Bug B: {@code /login} reached by a direct link (e.g. the "back to login" buttons on the
+         * verify-email/reset-password confirmation pages) never goes through
+         * {@code /oauth2/authorization/spa-backend-client} first, so there is no saved request for
+         * {@code formLogin()}'s success handler to resume. Without a dedicated default target URL,
+         * the session stays at the plain {@code AccountPrincipal} from {@code formLogin()} and never
+         * gets upgraded to the full {@code AccountOidcPrincipal} that {@code GET /v1/me} needs.
+         */
+        @Test
+        void reachedDirectlyWithoutSavedRequest_completesOidcHandoffAndAllowsMe() {
+            // given
+            var email = "authtest-" + UUID.randomUUID() + "@example.com";
+            createMemberWithAccount(email, RAW_PASSWORD);
+            var loginPageRequest = get(NO_COOKIES, URI.create("/login"));
+            var csrfToken = extractCsrfToken(loginPageRequest.response().getResponseBody());
+
+            // when — three hops to follow: the default target URL (/oauth2/authorization/spa-backend-client)
+            // itself only redirects to /oauth2/authorize, which (already authenticated) redirects to
+            // the redirect_uri with a code, which finally exchanges it and completes oauth2Login().
+            var loginResult = submitLogin(loginPageRequest.cookies(), csrfToken, email, RAW_PASSWORD);
+            var cookiesAfterLogin = mergeCookies(loginPageRequest.cookies(), loginResult);
+            var authorizationRequest = get(cookiesAfterLogin, loginResult.getResponseHeaders().getLocation());
+            var authorizeRequest = get(authorizationRequest.cookies(), authorizationRequest.response().getResponseHeaders().getLocation());
+            var callback = get(authorizeRequest.cookies(), authorizeRequest.response().getResponseHeaders().getLocation());
+            var meResponse = getWithCookies(callback.cookies(), URI.create(BASE_PATH + "/me"))
+                    .exchange().returnResult(String.class);
+
+            // then
+            assertThat(meResponse.getStatus().value()).isEqualTo(200);
+        }
     }
 
     @Nested
@@ -320,6 +359,36 @@ class AuthorizationServerConfigurationIT {
 
             // then
             assertThat(result.getResponseBody()).usingRecursiveComparison().isEqualTo(expected);
+        }
+    }
+
+    /**
+     * Bug A: {@code PasswordResetService.confirmPasswordReset} only marks the account's
+     * {@code SessionInformation} entries as expired in the {@link SessionRegistry} (see
+     * {@code PasswordResetServiceIT}) — without a filter that enforces that per request, the old
+     * session cookie keeps working. Reproduces the full real login (not a synthetically registered
+     * session) to prove the registered {@code SessionInformation} really matches the session
+     * actually used by {@code GET /v1/me}.
+     */
+    @Nested
+    class passwordResetSessionInvalidation {
+
+        @Test
+        void confirmPasswordReset_oldSessionCookieAfterFullLogin_rejectsSubsequentRequest() {
+            // given
+            var email = "authtest-" + UUID.randomUUID() + "@example.com";
+            var member = createMemberWithAccount(email, RAW_PASSWORD);
+            var authenticatedCookies = performLoginAndFollowToCallback(email, RAW_PASSWORD).cookies();
+            var resetToken = accountTokenService.issuePasswordResetToken(member.getId());
+
+            // when
+            passwordResetService.confirmPasswordReset(resetToken, "new correct horse battery staple");
+            var response = getWithCookies(authenticatedCookies, URI.create(BASE_PATH + "/me"))
+                    .accept(MediaType.APPLICATION_JSON)
+                    .exchange().returnResult(String.class);
+
+            // then
+            assertThat(response.getStatus().value()).isEqualTo(401);
         }
     }
 

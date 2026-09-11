@@ -19,4 +19,13 @@ public interface AccountTokenIssuer {
      * @return the newly issued token
      */
     UUID issueEmailVerificationToken(UUID memberId);
+
+    /**
+     * Issues a new, single-use password reset token for the given member, replacing any
+     * previously issued, still-valid password reset token for that member.
+     *
+     * @param memberId the ID of the member to issue the token for
+     * @return the newly issued token
+     */
+    UUID issuePasswordResetToken(UUID memberId);
 }

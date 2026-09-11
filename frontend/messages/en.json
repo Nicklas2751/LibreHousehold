@@ -277,7 +277,24 @@
 		"password_placeholder": "Your password",
 		"submit_button": "Log in",
 		"error": "Incorrect email or password.",
-		"error_unverified": "Please confirm your email address first. We've sent you a link by email."
+		"error_unverified": "Please confirm your email address first. We've sent you a link by email.",
+		"forgot_password_link": "Forgot your password?"
+	},
+	"forgot_password": {
+		"title": "Forgot password",
+		"email_label": "Email",
+		"submit_button": "Request link",
+		"success_message": "If an account with this email address exists, a password reset email has been sent.",
+		"back_to_login_link": "Back to login"
+	},
+	"reset_password": {
+		"title": "Set a new password",
+		"password_label": "New password",
+		"submit_button": "Reset password",
+		"success_toast": "Password reset successfully. Please log in with your new password.",
+		"error_toast": "Could not reset the password.",
+		"invalid_token_error": "This password reset link is invalid or has expired.",
+		"back_to_forgot_password_link": "Request a new link"
 	},
 	"session": {
 		"bootstrap_error": "Could not load your session. Please log in again."

@@ -15,15 +15,19 @@ import java.util.UUID;
 public class AccountTokenService implements AccountTokenIssuer {
 
     public static final String EMAIL_VERIFICATION_PURPOSE = "EMAIL_VERIFICATION";
+    public static final String PASSWORD_RESET_PURPOSE = "PASSWORD_RESET";
 
     private final AccountTokenRepository accountTokenRepository;
     private final Duration emailVerificationTokenValidity;
+    private final Duration passwordResetTokenValidity;
 
     public AccountTokenService(
             AccountTokenRepository accountTokenRepository,
-            @Value("${librehousehold.security.email-verification.token-validity}") Duration emailVerificationTokenValidity) {
+            @Value("${librehousehold.security.email-verification.token-validity}") Duration emailVerificationTokenValidity,
+            @Value("${librehousehold.security.password-reset.token-validity}") Duration passwordResetTokenValidity) {
         this.accountTokenRepository = accountTokenRepository;
         this.emailVerificationTokenValidity = emailVerificationTokenValidity;
+        this.passwordResetTokenValidity = passwordResetTokenValidity;
     }
 
     public UUID issueToken(UUID memberId, String purpose, Duration validity) {
@@ -44,5 +48,10 @@ public class AccountTokenService implements AccountTokenIssuer {
     @Override
     public UUID issueEmailVerificationToken(UUID memberId) {
         return issueToken(memberId, EMAIL_VERIFICATION_PURPOSE, emailVerificationTokenValidity);
+    }
+
+    @Override
+    public UUID issuePasswordResetToken(UUID memberId) {
+        return issueToken(memberId, PASSWORD_RESET_PURPOSE, passwordResetTokenValidity);
     }
 }
