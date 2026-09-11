@@ -146,6 +146,24 @@ class AccountServiceTest {
     }
 
     @Nested
+    class resetPassword {
+
+        @Test
+        void newPassword_updatesPasswordHashWithoutCheckingOldPassword() {
+            // given
+            var memberId = UUID.randomUUID();
+            var newHashedPassword = "$argon2id$v=19$m=19456,t=2,p=1$newHash";
+            doReturn(newHashedPassword).when(passwordEncoder).encode("newPassword");
+
+            // when
+            accountService.resetPassword(memberId, "newPassword");
+
+            // then
+            verify(accountRepository).updatePasswordHash(memberId, newHashedPassword);
+        }
+    }
+
+    @Nested
     class isEmailVerified {
 
         @Test

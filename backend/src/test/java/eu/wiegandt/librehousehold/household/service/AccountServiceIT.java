@@ -113,6 +113,25 @@ class AccountServiceIT {
     }
 
     @Test
+    void resetPassword_validCall_persistsNewHashedPassword() {
+        // given
+        var household = householdRepository.save(Instancio.create(HouseholdEntity.class));
+        createdHouseholdId = household.id();
+        var member = memberRepository.save(Instancio.of(MemberEntity.class)
+                .set(field(MemberEntity::householdId), household.id())
+                .create());
+        var newPassword = "correct horse battery staple";
+        accountService.createAccount(member.getId(), "old password");
+
+        // when
+        accountService.resetPassword(member.getId(), newPassword);
+
+        // then
+        assertThat(accountRepository.findById(member.getId()))
+                .hasValueSatisfying(account -> assertThat(passwordEncoder.matches(newPassword, account.passwordHash())).isTrue());
+    }
+
+    @Test
     void changePassword_unverifiedAccount_throwsEmailNotVerifiedExceptionWithoutUpdating() {
         // given
         var household = householdRepository.save(Instancio.create(HouseholdEntity.class));

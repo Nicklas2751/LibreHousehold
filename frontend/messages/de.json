@@ -279,7 +279,24 @@
 		"password_placeholder": "Dein Passwort",
 		"submit_button": "Anmelden",
 		"error": "E-Mail oder Passwort falsch.",
-		"error_unverified": "Bitte bestätige zuerst deine E-Mail-Adresse. Wir haben dir dazu einen Link per E-Mail geschickt."
+		"error_unverified": "Bitte bestätige zuerst deine E-Mail-Adresse. Wir haben dir dazu einen Link per E-Mail geschickt.",
+		"forgot_password_link": "Passwort vergessen?"
+	},
+	"forgot_password": {
+		"title": "Passwort vergessen",
+		"email_label": "E-Mail",
+		"submit_button": "Link anfordern",
+		"success_message": "Falls ein Konto mit dieser E-Mail-Adresse existiert, wurde eine E-Mail zum Zurücksetzen des Passworts verschickt.",
+		"back_to_login_link": "Zurück zum Login"
+	},
+	"reset_password": {
+		"title": "Neues Passwort vergeben",
+		"password_label": "Neues Passwort",
+		"submit_button": "Passwort zurücksetzen",
+		"success_toast": "Passwort erfolgreich zurückgesetzt. Bitte melde dich mit deinem neuen Passwort an.",
+		"error_toast": "Passwort konnte nicht zurückgesetzt werden.",
+		"invalid_token_error": "Dieser Link zum Zurücksetzen des Passworts ist ungültig oder abgelaufen.",
+		"back_to_forgot_password_link": "Neuen Link anfordern"
 	},
 	"session": {
 		"bootstrap_error": "Sitzung konnte nicht geladen werden. Bitte melde dich erneut an."

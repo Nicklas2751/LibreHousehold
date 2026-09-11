@@ -27,6 +27,10 @@ public class AccountService {
                 memberId, passwordEncoder.encode(rawPassword), false, Instant.now(), null));
     }
 
+    public void resetPassword(UUID memberId, String newPassword) {
+        accountRepository.updatePasswordHash(memberId, passwordEncoder.encode(newPassword));
+    }
+
     public void changePassword(UUID memberId, String oldPassword, String newPassword) {
         var account = accountRepository.findById(memberId).orElseThrow(MemberNotFoundException::new);
         if (!account.emailVerified()) {

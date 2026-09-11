@@ -33,6 +33,14 @@ public class EmailSenderService {
         mailSender.send(message);
     }
 
+    public void sendPasswordResetEmail(String toEmail, UUID token) {
+        var message = new SimpleMailMessage();
+        message.setTo(toEmail);
+        message.setSubject("Reset your password");
+        message.setText("Please reset your password by opening this link: " + passwordResetLink(token));
+        mailSender.send(message);
+    }
+
     public void sendVerificationDeletionWarningEmail(String toEmail) {
         var message = new SimpleMailMessage();
         message.setTo(toEmail);
@@ -44,5 +52,9 @@ public class EmailSenderService {
 
     private String verificationLink(UUID token) {
         return frontendBaseUrl + "/verify-email/" + token;
+    }
+
+    private String passwordResetLink(UUID token) {
+        return frontendBaseUrl + "/reset-password/" + token;
     }
 }
