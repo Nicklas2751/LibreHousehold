@@ -11,6 +11,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
+import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -58,14 +59,33 @@ class AccountUserDetailsServiceTest {
         }
 
         @Test
-        void memberAndAccountExist_returnsAccountPrincipal() {
+        void unverifiedAccount_returnsPrincipalWithEnabledFalse() {
             // given
             var email = "max@example.com";
             var memberId = UUID.randomUUID();
             var passwordHash = "$argon2id$...";
-            var expectedPrincipal = new AccountPrincipal(email, passwordHash);
+            var expectedPrincipal = new AccountPrincipal(email, passwordHash, false);
             doReturn(Optional.of(memberId)).when(memberManagementService).findMemberIdByEmail(email);
-            doReturn(Optional.of(new AccountEntity(memberId, passwordHash))).when(accountRepository).findById(memberId);
+            doReturn(Optional.of(new AccountEntity(memberId, passwordHash, false, Instant.now(), null)))
+                    .when(accountRepository).findById(memberId);
+
+            // when
+            var result = accountUserDetailsService.loadUserByUsername(email);
+
+            // then
+            assertThat(result).usingRecursiveComparison().isEqualTo(expectedPrincipal);
+        }
+
+        @Test
+        void verifiedAccount_returnsPrincipalWithEnabledTrue() {
+            // given
+            var email = "max@example.com";
+            var memberId = UUID.randomUUID();
+            var passwordHash = "$argon2id$...";
+            var expectedPrincipal = new AccountPrincipal(email, passwordHash, true);
+            doReturn(Optional.of(memberId)).when(memberManagementService).findMemberIdByEmail(email);
+            doReturn(Optional.of(new AccountEntity(memberId, passwordHash, true, Instant.now(), null)))
+                    .when(accountRepository).findById(memberId);
 
             // when
             var result = accountUserDetailsService.loadUserByUsername(email);

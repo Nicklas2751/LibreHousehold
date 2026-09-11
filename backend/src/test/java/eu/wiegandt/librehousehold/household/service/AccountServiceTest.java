@@ -1,5 +1,6 @@
 package eu.wiegandt.librehousehold.household.service;
 
+import eu.wiegandt.librehousehold.household.exception.EmailNotVerifiedException;
 import eu.wiegandt.librehousehold.household.exception.InvalidPasswordException;
 import eu.wiegandt.librehousehold.household.exception.MemberNotFoundException;
 import eu.wiegandt.librehousehold.household.model.AccountEntity;
@@ -13,6 +14,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.time.Instant;
+import java.util.Comparator;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -44,7 +48,6 @@ class AccountServiceTest {
             var memberId = UUID.randomUUID();
             var rawPassword = "correct horse battery staple";
             var hashedPassword = "$argon2id$v=19$m=19456,t=2,p=1$...";
-            var expectedAccount = new AccountEntity(memberId, hashedPassword);
             doReturn(hashedPassword).when(passwordEncoder).encode(rawPassword);
 
             // when
@@ -53,7 +56,33 @@ class AccountServiceTest {
             // then
             var captor = ArgumentCaptor.forClass(AccountEntity.class);
             verify(accountRepository).save(captor.capture());
-            assertThat(captor.getValue()).usingRecursiveComparison().isEqualTo(expectedAccount);
+            assertThat(captor.getValue().passwordHash()).isEqualTo(hashedPassword);
+        }
+
+        @Test
+        void rawPassword_storesAccountAsUnverifiedWithRegisteredAtNow() {
+            // given
+            var memberId = UUID.randomUUID();
+            var rawPassword = "correct horse battery staple";
+            var beforeCreation = Instant.now();
+
+            // when
+            accountService.createAccount(memberId, rawPassword);
+            var afterCreation = Instant.now();
+
+            // then
+            var captor = ArgumentCaptor.forClass(AccountEntity.class);
+            verify(accountRepository).save(captor.capture());
+            var expectedSavedAccount = new AccountEntity(memberId, null, false, beforeCreation, null);
+            Comparator<Instant> registeredAtWithinCreationWindow = (actual, expected) -> {
+                if (actual == null || expected == null) {
+                    return Objects.equals(actual, expected) ? 0 : -1;
+                }
+                return !actual.isBefore(beforeCreation) && !actual.isAfter(afterCreation) ? 0 : -1;
+            };
+            assertThat(captor.getValue()).usingRecursiveComparison()
+                    .withComparatorForType(registeredAtWithinCreationWindow, Instant.class)
+                    .isEqualTo(expectedSavedAccount);
         }
     }
 
@@ -72,10 +101,23 @@ class AccountServiceTest {
         }
 
         @Test
-        void wrongOldPassword_throwsInvalidPasswordExceptionWithoutUpdating() {
+        void unverifiedAccount_throwsEmailNotVerifiedExceptionWithoutUpdating() {
             // given
             var memberId = UUID.randomUUID();
-            var account = new AccountEntity(memberId, "$argon2id$v=19$m=19456,t=2,p=1$...");
+            var account = new AccountEntity(memberId, "$argon2id$v=19$m=19456,t=2,p=1$...", false, Instant.now(), null);
+            doReturn(Optional.of(account)).when(accountRepository).findById(memberId);
+
+            // when / then
+            assertThatThrownBy(() -> accountService.changePassword(memberId, "oldPassword", "newPassword"))
+                    .isInstanceOf(EmailNotVerifiedException.class);
+            verify(accountRepository, never()).updatePasswordHash(any(), any());
+        }
+
+        @Test
+        void verifiedAccountWrongOldPassword_throwsInvalidPasswordExceptionWithoutUpdating() {
+            // given
+            var memberId = UUID.randomUUID();
+            var account = new AccountEntity(memberId, "$argon2id$v=19$m=19456,t=2,p=1$...", true, Instant.now(), null);
             doReturn(Optional.of(account)).when(accountRepository).findById(memberId);
             doReturn(false).when(passwordEncoder).matches("wrongOldPassword", account.passwordHash());
 
@@ -86,10 +128,10 @@ class AccountServiceTest {
         }
 
         @Test
-        void correctOldPassword_updatesPasswordHash() {
+        void verifiedAccountCorrectOldPassword_updatesPasswordHash() {
             // given
             var memberId = UUID.randomUUID();
-            var account = new AccountEntity(memberId, "$argon2id$v=19$m=19456,t=2,p=1$...");
+            var account = new AccountEntity(memberId, "$argon2id$v=19$m=19456,t=2,p=1$...", true, Instant.now(), null);
             var newHashedPassword = "$argon2id$v=19$m=19456,t=2,p=1$newHash";
             doReturn(Optional.of(account)).when(accountRepository).findById(memberId);
             doReturn(true).when(passwordEncoder).matches("correctOldPassword", account.passwordHash());
@@ -100,6 +142,51 @@ class AccountServiceTest {
 
             // then
             verify(accountRepository).updatePasswordHash(memberId, newHashedPassword);
+        }
+    }
+
+    @Nested
+    class isEmailVerified {
+
+        @Test
+        void noAccount_returnsFalse() {
+            // given
+            var memberId = UUID.randomUUID();
+            doReturn(Optional.empty()).when(accountRepository).findById(memberId);
+
+            // when
+            var result = accountService.isEmailVerified(memberId);
+
+            // then
+            assertThat(result).isFalse();
+        }
+
+        @Test
+        void unverifiedAccount_returnsFalse() {
+            // given
+            var memberId = UUID.randomUUID();
+            var account = new AccountEntity(memberId, "$argon2id$...", false, Instant.now(), null);
+            doReturn(Optional.of(account)).when(accountRepository).findById(memberId);
+
+            // when
+            var result = accountService.isEmailVerified(memberId);
+
+            // then
+            assertThat(result).isFalse();
+        }
+
+        @Test
+        void verifiedAccount_returnsTrue() {
+            // given
+            var memberId = UUID.randomUUID();
+            var account = new AccountEntity(memberId, "$argon2id$...", true, Instant.now(), null);
+            doReturn(Optional.of(account)).when(accountRepository).findById(memberId);
+
+            // when
+            var result = accountService.isEmailVerified(memberId);
+
+            // then
+            assertThat(result).isTrue();
         }
     }
 }

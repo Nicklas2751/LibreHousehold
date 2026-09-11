@@ -1,5 +1,6 @@
 package eu.wiegandt.librehousehold.household.service;
 
+import eu.wiegandt.librehousehold.household.AccountRegistered;
 import eu.wiegandt.librehousehold.household.exception.HouseholdAlreadyExistsException;
 import eu.wiegandt.librehousehold.household.exception.MemberAlreadyExistsException;
 import eu.wiegandt.librehousehold.household.mapper.HouseholdSetupMapper;
@@ -12,6 +13,7 @@ import eu.wiegandt.librehousehold.household.repository.InviteRepository;
 import eu.wiegandt.librehousehold.household.repository.MemberRepository;
 import eu.wiegandt.librehousehold.model.HouseholdSetup;
 import eu.wiegandt.librehousehold.model.HouseholdSetupResponse;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,11 +34,13 @@ public class HouseholdSetupService {
     private final MemberMapper memberMapper;
     private final AccountService accountService;
     private final AccountSessionAuthenticator accountSessionAuthenticator;
+    private final ApplicationEventPublisher eventPublisher;
 
     public HouseholdSetupService(HouseholdRepository householdRepository, MemberRepository memberRepository,
                           InviteRepository inviteRepository, HouseholdSetupMapper householdSetupMapper,
                           MemberMapper memberMapper, AccountService accountService,
-                          AccountSessionAuthenticator accountSessionAuthenticator) {
+                          AccountSessionAuthenticator accountSessionAuthenticator,
+                          ApplicationEventPublisher eventPublisher) {
         this.householdRepository = householdRepository;
         this.memberRepository = memberRepository;
         this.inviteRepository = inviteRepository;
@@ -44,6 +48,7 @@ public class HouseholdSetupService {
         this.memberMapper = memberMapper;
         this.accountService = accountService;
         this.accountSessionAuthenticator = accountSessionAuthenticator;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional
@@ -62,6 +67,7 @@ public class HouseholdSetupService {
             throw new MemberAlreadyExistsException();
         }
         accountService.createAccount(savedMember.getId(), setup.getLocalRegistration().getPassword());
+        eventPublisher.publishEvent(new AccountRegistered(savedMember.getId(), setup.getMember().getEmail()));
         accountSessionAuthenticator.authenticateAndPersistSession(
                 setup.getMember().getEmail(), setup.getLocalRegistration().getPassword());
         var invite = inviteRepository.save(new InviteEntity(

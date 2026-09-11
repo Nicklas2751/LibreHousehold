@@ -92,7 +92,7 @@ class AccountUserDetailsServiceIT {
             var rawPassword = "correct horse battery staple";
             accountService.createAccount(member.getId(), rawPassword);
             var passwordHash = accountRepository.findById(member.getId()).orElseThrow().passwordHash();
-            var expectedPrincipal = new AccountPrincipal(member.email(), passwordHash);
+            var expectedPrincipal = new AccountPrincipal(member.email(), passwordHash, false);
 
             // when
             var result = accountUserDetailsService.loadUserByUsername(member.email());

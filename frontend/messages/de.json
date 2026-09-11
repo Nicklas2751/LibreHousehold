@@ -283,6 +283,21 @@
 	"session": {
 		"bootstrap_error": "Sitzung konnte nicht geladen werden. Bitte melde dich erneut an."
 	},
+	"verification": {
+		"banner_text": "Bitte bestätige deine E-Mail-Adresse, um dein Konto vollständig zu nutzen.",
+		"resend_button": "Erneut senden",
+		"close_button": "Schließen",
+		"resend_success_toast": "Verifikations-E-Mail wurde erneut gesendet.",
+		"resend_error_toast": "Verifikations-E-Mail konnte nicht gesendet werden.",
+		"confirm_page": {
+			"loading": "E-Mail-Adresse wird bestätigt...",
+			"success_title": "E-Mail bestätigt!",
+			"success_text": "Deine E-Mail-Adresse wurde erfolgreich bestätigt.",
+			"success_button": "Zum Dashboard",
+			"error_title": "Bestätigung fehlgeschlagen",
+			"error_text": "Dieser Bestätigungslink ist ungültig oder abgelaufen."
+		}
+	},
 	"settings": {
 		"back": "Zurück zu Einstellungen",
 		"appearance": {

@@ -70,7 +70,8 @@ class SessionApiDelegateImplTest {
             doReturn(member).when(memberQuery).getMember(member.getId());
             doReturn(household).when(householdQuery).getHousehold(householdId);
             doReturn(preferences).when(preferencesQuery).getPreferencesOrDefault(member.getId());
-            var expected = new CurrentUser(member, household, preferences);
+            doReturn(true).when(memberQuery).isEmailVerified(member.getId());
+            var expected = new CurrentUser(member, household, preferences, true);
 
             // when
             var result = delegate.getCurrentUser();
@@ -82,7 +83,7 @@ class SessionApiDelegateImplTest {
         @Test
         void nonOidcPrincipal_throwsNoAuthenticatedSessionException() {
             // given
-            var principal = new AccountPrincipal("someone@example.com", "hash");
+            var principal = new AccountPrincipal("someone@example.com", "hash", true);
             SecurityContextHolder.getContext().setAuthentication(
                     new UsernamePasswordAuthenticationToken(principal, null, List.of()));
 

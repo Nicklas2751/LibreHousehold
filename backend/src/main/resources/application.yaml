@@ -4,6 +4,14 @@ spring:
   modulith:
     runtime:
       flyway-enabled: true
+  mail:
+    # Empty by default (same rationale as security.cors.allowed-origins below), not omitted: Spring
+    # Boot's mail autoconfiguration only creates the JavaMailSender bean at all when this property is
+    # present, and EmailSenderService (see the notifications module) depends on that bean unconditionally.
+    # Self-hosters must set this (and port/username/password) explicitly, e.g. via SPRING_MAIL_HOST/
+    # SPRING_MAIL_PORT/SPRING_MAIL_USERNAME/SPRING_MAIL_PASSWORD or an untracked application.yaml —
+    # until then, sending an actual email fails at send time rather than at startup.
+    host: ""
   web:
     error:
       # Defense-in-depth against leaking stacktraces to clients (OWASP A05): this already matches
@@ -56,3 +64,25 @@ librehousehold:
       # them from different origins must set this explicitly, e.g.
       # LIBREHOUSEHOLD_SECURITY_CORS_ALLOWED_ORIGINS=https://household.example.com.
       allowed-origins: ""
+    email-verification:
+      # How long a freshly issued email verification token stays valid (see VERIFY1 in Arc42
+      # Chapter 8, and the account_token migration). 24h balances giving users enough time to check
+      # their inbox against not leaving a long-lived, single-use credential around; a resend
+      # (see /verification/resend) issues a fresh token with a new deadline at any time.
+      token-validity: 24h
+      # Grace period after registration before an account that never verified its email is deleted
+      # (see UnverifiedAccountExpiryJob). A full week gives users generous time to find/confirm the
+      # verification email even across a busy week, while still bounding how long unverified,
+      # unusable accounts accumulate.
+      grace-period-days: 7
+      # How long before grace-period-days expiry the deletion warning email is sent, so the user has
+      # a final chance to verify before the account/household is actually deleted.
+      deletion-warning-hours-before: 24
+
+  frontend:
+    # Base URL used to build links that are sent in emails (e.g. the email verification link) and
+    # therefore must be absolute, since they are followed outside of any authenticated browser
+    # session. Defaults to the same-origin deployment target described in the CORS comment above;
+    # self-hosters serving the frontend from a different origin must override this, e.g.
+    # LIBREHOUSEHOLD_FRONTEND_BASE_URL=https://household.example.com.
+    base-url: "http://localhost:8080"

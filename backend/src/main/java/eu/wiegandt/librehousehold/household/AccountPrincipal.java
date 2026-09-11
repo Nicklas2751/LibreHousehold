@@ -12,7 +12,7 @@ import java.util.List;
  * (see ADR-013/DD-6). Not used for authorizing business API calls — that happens via
  * {@code AccountOidcPrincipal} once the OIDC login has completed (see P1.4).
  */
-public record AccountPrincipal(String email, String passwordHash) implements UserDetails {
+public record AccountPrincipal(String email, String passwordHash, boolean emailVerified) implements UserDetails {
 
     @Override
     public String getUsername() {
@@ -44,9 +44,15 @@ public record AccountPrincipal(String email, String passwordHash) implements Use
         return true;
     }
 
+    /**
+     * An unverified account is treated as disabled, blocking login until the email is confirmed
+     * (see the {@code VERIFY1}/{@code ENUM1} security controls in Arc42 Chapter 8): Spring
+     * Security's {@code DefaultPreAuthenticationChecks} rejects the login with a
+     * {@code DisabledException} before the password is even compared.
+     */
     @Override
     public boolean isEnabled() {
-        return true;
+        return emailVerified;
     }
 
     @Override

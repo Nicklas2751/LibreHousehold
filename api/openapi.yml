@@ -211,6 +211,19 @@ paths:
       responses:
         "204":
           description: Member updated.
+        "403":
+          description: >
+            The email address cannot be changed while the account's own email is still
+            unverified. Does not apply to name/avatar-only updates.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              example:
+                type: "/problems/email-not-verified"
+                title: "Email not verified"
+                status: 403
+                detail: "This action requires a verified email address."
         "404":
           description: Member not found.
           content:
@@ -1496,6 +1509,43 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
 
+  /members/verification/confirm:
+    post:
+      summary: Confirm an email verification token
+      description: >
+        Marks the account's email as verified if the given token is valid and
+        not expired. Reached from the link in the verification email.
+      tags:
+        - members
+      operationId: confirmEmailVerification
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmailVerificationConfirm"
+      responses:
+        "204":
+          description: Email verified.
+        "409":
+          description: The verification token is invalid, unknown or expired.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              example:
+                type: "/problems/verification-token-invalid"
+                title: "Verification token invalid"
+                status: 409
+                detail: "This verification link is invalid or has expired."
+        default:
+          description: An error occurred.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
   /me:
     get:
       summary: Get the current authenticated user
@@ -1613,11 +1663,64 @@ paths:
         "204":
           description: Password changed.
         "403":
-          description: Old password is incorrect.
+          description: >
+            Either the old password is incorrect, or the account's own email is still
+            unverified. The `type` field on the returned problem distinguishes the two cases.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+              examples:
+                oldPasswordIncorrect:
+                  summary: Old password is incorrect
+                  value:
+                    title: "Forbidden"
+                    status: 403
+                emailNotVerified:
+                  summary: Account email is not verified
+                  value:
+                    type: "/problems/email-not-verified"
+                    title: "Email not verified"
+                    status: 403
+                    detail: "This action requires a verified email address."
+        "404":
+          description: Member not found.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        default:
+          description: An error occurred.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
+  /household/{householdId}/members/{memberId}/verification/resend:
+    post:
+      summary: Resend the email verification link
+      description: >
+        Issues a new email verification token and resends the verification email.
+        Self-service only — a member can only resend their own verification email.
+      tags:
+        - members
+      operationId: resendVerificationEmail
+      parameters:
+        - name: householdId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: memberId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Verification email sent.
         "404":
           description: Member not found.
           content:
@@ -2597,6 +2700,7 @@ components:
         - member
         - household
         - preferences
+        - emailVerified
       description: Member, household and preferences data for the authenticated session.
       properties:
         member:
@@ -2605,6 +2709,21 @@ components:
           $ref: "#/components/schemas/Household"
         preferences:
           $ref: "#/components/schemas/UserPreferences"
+        emailVerified:
+          type: boolean
+          description: Whether the account's email address has been verified.
+          example: false
+
+    EmailVerificationConfirm:
+      type: object
+      required:
+        - token
+      properties:
+        token:
+          type: string
+          format: uuid
+          description: The email verification token from the verification link.
+          example: "f3ce1a6b-aba1-478d-9f01-ec484f23ce60"
 
   securitySchemes:
     sessionCookie:

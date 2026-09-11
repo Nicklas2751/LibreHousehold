@@ -366,6 +366,18 @@ Spring Data JDBC automatically derives methods such as `findByHouseholdId`, `del
 
 **Important:** Derived `deleteBy*` methods execute raw SQL and do NOT cascade `@MappedCollection` children. Use `deleteAll(findByX(...))` for cascade-correct bulk deletes (loads entities first, then deletes each with full cascade).
 
+### Email Verification (P2.2): `household` -> `notifications` Module Boundary
+
+`notifications.internal` (e.g. `EmailSenderService`) must never be called directly from `household` — not even from a non-controller context like a `@Scheduled` job. `household` publishes a domain event (`AccountRegistered`, `VerificationEmailRequested`, `VerificationDeletionWarningRequested`, all in the `household` root package) and `notifications.internal.AccountRegistrationListener` reacts via `@ApplicationModuleListener`. A first implementation of `UnverifiedAccountExpiryJob` called `EmailSenderService` directly from `household.service` and was only caught by `ApplicationTests.writeDocumentationSnippets` (`ApplicationModules.verify()`), which fails with a "Cycle detected: Slice household -> Slice notifications -> Slice household" error, since `notifications` already depends on `household`'s public API (`AccountTokenIssuer`) in the other direction. Any new email-triggering behavior in `household` needs its own event, published via the already-injected `ApplicationEventPublisher`, never a direct call into `notifications`.
+
+### Testing `JavaMailSender`: Mock the Concrete `JavaMailSenderImpl`, Not the Interface
+
+`@MockitoBean private JavaMailSender mailSender;` breaks full-context tests (`@SpringBootTest`) with `IllegalArgumentException: 'beans' must not be empty` from `MailHealthContributorAutoConfiguration`: Boot's mail health indicator looks up beans by the concrete `JavaMailSenderImpl` type specifically (`@ConditionalOnBean(JavaMailSenderImpl.class)` / `getBeansOfType(JavaMailSenderImpl.class)`), and a mock declared against the `JavaMailSender` interface doesn't satisfy that lookup. Use `@MockitoBean private JavaMailSenderImpl mailSender;` instead (Mockito's CGLIB proxy for a concrete class still satisfies `instanceof JavaMailSenderImpl`); the `JavaMailSender`-typed constructor parameter elsewhere still resolves to the same mock, since the interface is implemented by that class.
+
+### `AccountSessionAuthenticator` Does Not Go Through `AuthenticationManager`
+
+Since P2.2 (login-blocking for unverified accounts via `AccountPrincipal.isEnabled()`), `AccountSessionAuthenticator` (used right after household setup/invite join to establish the first session) deliberately does **not** authenticate via the shared `AuthenticationManager`/`DaoAuthenticationProvider`: that pipeline's `DefaultPreAuthenticationChecks` enforces `UserDetails.isEnabled()`, which would reject this very first session too, since a freshly created account is always unverified at that point. It instead loads `AccountUserDetailsService` directly (`@Lazy`, to break the constructor-injection cycle back through `MemberManagementService`) and re-verifies the password itself via `PasswordEncoder`, building the authenticated token manually — bypassing the enabled/account-status checks entirely, on purpose, only for this one immediately-post-registration session.
+
 ### Pending Backend Implementations
 
 See [Chapter 11 - Risks and Technical Debts](docs/architecture/chapters/11_technical_risks.adoc) for the full, prioritized list (TD1-TD4). Summary of the two still-open items:
