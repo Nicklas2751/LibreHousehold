@@ -6,6 +6,7 @@ import eu.wiegandt.librehousehold.household.repository.*;
 import eu.wiegandt.librehousehold.household.service.*;
 
 import eu.wiegandt.librehousehold.model.EmailAvailability;
+import eu.wiegandt.librehousehold.model.EmailVerificationConfirm;
 import eu.wiegandt.librehousehold.model.InviteInfo;
 import eu.wiegandt.librehousehold.model.Member;
 import eu.wiegandt.librehousehold.model.MemberRegistration;
@@ -25,7 +26,11 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 @ExtendWith({MockitoExtension.class, InstancioExtension.class})
@@ -36,6 +41,9 @@ class MembersApiDelegateImplTest {
 
     @Mock
     private AccountService accountService;
+
+    @Mock
+    private AccountTokenService accountTokenService;
 
     @InjectMocks
     private MembersApiDelegateImpl delegate;
@@ -225,6 +233,56 @@ class MembersApiDelegateImplTest {
             // then
             verify(accountService).changePassword(memberId, "oldPassword", "newPassword");
             assertThat(result.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        }
+    }
+
+    @Nested
+    class resendVerificationEmail {
+
+        @Test
+        void ownMember_issuesNewTokenAndSendsEmail() {
+            // given
+            var householdId = UUID.randomUUID();
+            var memberId = UUID.randomUUID();
+
+            // when
+            var result = delegate.resendVerificationEmail(householdId, memberId);
+
+            // then
+            verify(memberManagementService).resendVerificationEmail(memberId);
+            assertThat(result.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        }
+    }
+
+    @Nested
+    class confirmEmailVerification {
+
+        @Test
+        void validToken_marksAccountVerified() {
+            // given
+            var token = UUID.randomUUID();
+            var memberId = UUID.randomUUID();
+            doReturn(memberId).when(accountTokenService).consumeToken(token, AccountTokenService.EMAIL_VERIFICATION_PURPOSE);
+
+            // when
+            var result = delegate.confirmEmailVerification(new EmailVerificationConfirm(token));
+
+            // then
+            verify(accountService).markEmailVerified(memberId);
+            assertThat(result.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        }
+
+        @Test
+        void invalidToken_propagatesAccountTokenInvalidException() {
+            // given
+            var token = UUID.randomUUID();
+            doThrow(AccountTokenInvalidException.class)
+                    .when(accountTokenService).consumeToken(token, AccountTokenService.EMAIL_VERIFICATION_PURPOSE);
+
+            // when / then
+            assertThatThrownBy(() -> delegate.confirmEmailVerification(new EmailVerificationConfirm(token)))
+                    .isInstanceOf(AccountTokenInvalidException.class);
+            verify(accountService, never()).markEmailVerified(any());
         }
     }
 }

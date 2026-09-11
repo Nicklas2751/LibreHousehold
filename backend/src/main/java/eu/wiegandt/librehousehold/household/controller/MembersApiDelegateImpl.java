@@ -2,8 +2,10 @@ package eu.wiegandt.librehousehold.household.controller;
 
 import eu.wiegandt.librehousehold.api.MembersApiDelegate;
 import eu.wiegandt.librehousehold.household.service.AccountService;
+import eu.wiegandt.librehousehold.household.service.AccountTokenService;
 import eu.wiegandt.librehousehold.household.service.MemberManagementService;
 import eu.wiegandt.librehousehold.model.EmailAvailability;
+import eu.wiegandt.librehousehold.model.EmailVerificationConfirm;
 import eu.wiegandt.librehousehold.model.InviteInfo;
 import eu.wiegandt.librehousehold.model.Member;
 import eu.wiegandt.librehousehold.model.MemberRegistration;
@@ -22,10 +24,13 @@ public class MembersApiDelegateImpl implements MembersApiDelegate {
 
     private final MemberManagementService memberManagementService;
     private final AccountService accountService;
+    private final AccountTokenService accountTokenService;
 
-    public MembersApiDelegateImpl(MemberManagementService memberManagementService, AccountService accountService) {
+    public MembersApiDelegateImpl(MemberManagementService memberManagementService, AccountService accountService,
+                                   AccountTokenService accountTokenService) {
         this.memberManagementService = memberManagementService;
         this.accountService = accountService;
+        this.accountTokenService = accountTokenService;
     }
 
     @Override
@@ -83,6 +88,21 @@ public class MembersApiDelegateImpl implements MembersApiDelegate {
     @PreAuthorize("@householdAccessGuard.isSelf(#memberId, authentication)")
     public ResponseEntity<Void> changePassword(UUID householdId, UUID memberId, PasswordChangeRequest passwordChangeRequest) {
         accountService.changePassword(memberId, passwordChangeRequest.getOldPassword(), passwordChangeRequest.getNewPassword());
+        return ResponseEntity.noContent().build();
+    }
+
+    @Override
+    @PreAuthorize("@householdAccessGuard.isSelf(#memberId, authentication)")
+    public ResponseEntity<Void> resendVerificationEmail(UUID householdId, UUID memberId) {
+        memberManagementService.resendVerificationEmail(memberId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @Override
+    public ResponseEntity<Void> confirmEmailVerification(EmailVerificationConfirm emailVerificationConfirm) {
+        var memberId = accountTokenService.consumeToken(
+                emailVerificationConfirm.getToken(), AccountTokenService.EMAIL_VERIFICATION_PURPOSE);
+        accountService.markEmailVerified(memberId);
         return ResponseEntity.noContent().build();
     }
 }

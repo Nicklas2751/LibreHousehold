@@ -25,3 +25,14 @@ export const findMember = async (
 		return foundMember;
 	}
 };
+
+export const resendVerificationEmail = async (
+	householdId: string,
+	memberId: string
+): Promise<void> => {
+	await api.resendVerificationEmail({ householdId: householdId, memberId: memberId });
+};
+
+export const confirmEmailVerification = async (token: string): Promise<void> => {
+	await api.confirmEmailVerification({ emailVerificationConfirm: { token } });
+};

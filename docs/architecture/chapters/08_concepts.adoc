@@ -88,9 +88,14 @@ Authentication-related security controls are tracked against an https://github.c
 |Open
 
 |ENUM1
-|No inference of existing accounts from login, registration, or password-reset responses (error messages, status codes, timing).
+|No inference of existing accounts from login, registration, or password-reset responses (error messages, status codes, timing). Deliberate exception: login-blocking of unverified accounts (see VERIFY1) makes the account status distinguishable via a dedicated `DisabledException` — an accepted, documented deviation from the strict interpretation, not a bug.
 |V6.3.8 (**L3**, deliberately raised above the L2 baseline)
 |Decided
+
+|VERIFY1
+|Email verification tokens are single-use, time-limited, and stored only as a random value (UUID), never logged in plain text.
+|V6.2.3 (L2), V16.5.1 (L2)
+|Decided, siehe Token-Format-Entscheidung in `docs/auth-plan-p2.1-p2.7.md` Abschnitt 3.2, umgesetzt in `AccountTokenService`
 
 |ERR1
 |Generic error message on unexpected or security-sensitive errors, no stack traces or internal details exposed.

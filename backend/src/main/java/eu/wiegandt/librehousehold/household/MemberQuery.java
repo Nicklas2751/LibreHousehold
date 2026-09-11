@@ -49,4 +49,12 @@ public interface MemberQuery {
      * @throws eu.wiegandt.librehousehold.household.exception.MemberNotFoundException if no member with this ID exists
      */
     Member getMember(UUID memberId);
+
+    /**
+     * Returns {@code true} if the account belonging to the given member has a verified email address.
+     *
+     * @param memberId the ID of the member
+     * @return {@code true} if the member's account email is verified
+     */
+    boolean isEmailVerified(UUID memberId);
 }

@@ -1,7 +1,10 @@
 package eu.wiegandt.librehousehold.household.service;
 
+import eu.wiegandt.librehousehold.household.AccountRegistered;
 import eu.wiegandt.librehousehold.household.MemberQuery;
 import eu.wiegandt.librehousehold.household.MemberRemoved;
+import eu.wiegandt.librehousehold.household.VerificationEmailRequested;
+import eu.wiegandt.librehousehold.household.exception.EmailNotVerifiedException;
 import eu.wiegandt.librehousehold.household.exception.HouseholdAdminCannotBeRemovedException;
 import eu.wiegandt.librehousehold.household.exception.InvalidInviteException;
 import eu.wiegandt.librehousehold.household.exception.MemberAlreadyExistsException;
@@ -99,6 +102,7 @@ public class MemberManagementService implements MemberQuery {
             throw new MemberAlreadyExistsException();
         }
         accountService.createAccount(saved.getId(), registration.getLocalRegistration().getPassword());
+        eventPublisher.publishEvent(new AccountRegistered(saved.getId(), registration.getEmail()));
         accountSessionAuthenticator.authenticateAndPersistSession(
                 registration.getEmail(), registration.getLocalRegistration().getPassword());
         return memberMapper.toMember(saved);
@@ -108,6 +112,9 @@ public class MemberManagementService implements MemberQuery {
     public void updateMember(UUID householdId, UUID memberId, MemberUpdate update) {
         if (!memberRepository.existsByIdAndHouseholdId(memberId, householdId)) {
             throw new MemberNotFoundException();
+        }
+        if (update.getEmail().isPresent() && !accountService.isEmailVerified(memberId)) {
+            throw new EmailNotVerifiedException();
         }
         try {
             update.getName().ifPresent(name -> memberRepository.updateName(memberId, name));
@@ -185,5 +192,15 @@ public class MemberManagementService implements MemberQuery {
 
     public Optional<UUID> findMemberIdByEmail(String email) {
         return memberRepository.findByEmail(email).map(MemberEntity::getId);
+    }
+
+    @Override
+    public boolean isEmailVerified(UUID memberId) {
+        return accountService.isEmailVerified(memberId);
+    }
+
+    public void resendVerificationEmail(UUID memberId) {
+        var member = memberRepository.findById(memberId).orElseThrow(MemberNotFoundException::new);
+        eventPublisher.publishEvent(new VerificationEmailRequested(member.getId(), member.email()));
     }
 }

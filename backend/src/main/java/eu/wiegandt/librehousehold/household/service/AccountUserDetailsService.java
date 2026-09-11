@@ -25,6 +25,6 @@ public class AccountUserDetailsService implements UserDetailsService {
                 .orElseThrow(() -> new UsernameNotFoundException(email));
         var account = accountRepository.findById(memberId)
                 .orElseThrow(() -> new UsernameNotFoundException(email));
-        return new AccountPrincipal(email, account.passwordHash());
+        return new AccountPrincipal(email, account.passwordHash(), account.emailVerified());
     }
 }

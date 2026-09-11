@@ -165,6 +165,49 @@ muss aber sauber neu aus der überarbeiteten OpenAPI-Spec generiert werden.
   bereits weg sind. Nachträglich entdeckte Lücke im bestehenden P1.6-Löschungs-Flow, aufgedeckt bei
   der P2.2-Erweiterung um die Grace-Period-Löschung; siehe Detailplan
   [auth-plan-p2.1-p2.7.md](auth-plan-p2.1-p2.7.md), Abschnitt 2.9/3.10.
+- **P2.9 — Backend: E-Mail-Inhalte konfigurierbar, mehrsprachig und HTML+Text machen.**
+  *(Noch kein eigener Detailplan — bewusst zurückgestellt, siehe Begründung unten.)* Betrifft
+  `EmailSenderService` (`.../notifications/internal/EmailSenderService.java`), aktuell mit
+  hartkodiertem, rein englischem Betreff/Text direkt im Java-Code (`SimpleMailMessage`, kein
+  Templating, siehe Klassenkommentar „no templating library ... speculative addition for no
+  current benefit" — diese Einschätzung gilt für P2.2 isoliert, nicht mehr sobald die hier
+  beschriebenen Anforderungen dazukommen). Drei zusammenhängende Anforderungen, bei der
+  Erstellung dieses Punkts vom Nutzer vorgegeben:
+  1. **Mehrsprachigkeit:** Die Mail muss in der Sprache verschickt werden, die der Nutzer im
+     Browser zum Zeitpunkt der auslösenden Aktion (Registrierung, Resend, Passwort-Reset-Anfrage)
+     eingestellt hatte — nicht in einer Server-Default-Sprache. Das erfordert, dass die Sprache
+     als Teil der jeweiligen Domain-Events (`AccountRegistered`, `VerificationEmailRequested`,
+     `VerificationDeletionWarningRequested`, künftig auch das Reset-Pendant aus P2.5) mitgegeben
+     wird, da der Event-Listener im `notifications`-Modul zum Verarbeitungszeitpunkt keinen Zugriff
+     mehr auf den ursprünglichen Request/dessen `Accept-Language` o. Ä. hat. Zu klären: woher der
+     Publisher (`household`-Modul) die Sprache nimmt — vermutlich `UserPreferences.language`
+     (siehe `api/openapi.yml`, bereits vorhanden für Theme/Sprache-Einstellungen), nicht der
+     Request-Header, da die Sprachpräferenz im Projekt bereits als persistierte Nutzereinstellung
+     modelliert ist (`Paraglide`, siehe `frontend/messages/{de,en}.json`) — konsistent damit sollte
+     dieselbe Quelle für Mail-Inhalte gelten. Für die Grace-Period-Warn-Mail (kein interaktiver
+     Auslöser, sondern ein Scheduled Job) ist das nicht ohne Weiteres möglich, da es keine
+     „Anfrage" mit Sprachkontext gibt — dort bliebe wohl nur die zuletzt gespeicherte
+     `UserPreferences.language` des betroffenen Mitglieds.
+  2. **Anpassbarkeit durch Selfhoster:** Wer die Software selbst hostet, muss Betreff und Text
+     jeder versendeten Mail anpassen können, ohne den Java-Code zu ändern/neu zu kompilieren —
+     vermutlich externe Template-Dateien (Konfigurationsverzeichnis analog
+     `application.yaml`-Overrides) statt in Java eingebetteter Strings. Offene Frage für den
+     Detailplan: Templating-Mechanismus (z. B. Thymeleaf — aktuell keine Dependency im Projekt,
+     bräuchte Rückfrage laut AGENTS.md „Dependency Management" — vs. eine einfachere
+     Platzhalter-Ersetzung ohne neue Dependency) sowie ob/wie Selfhoster-Overrides mit der
+     Mehrsprachigkeit aus Punkt 1 zusammenspielen (pro Sprache ein eigenes überschreibbares
+     Template-Set).
+  3. **HTML + Text (Multipart):** Aktuell nur Plain-Text (`SimpleMailMessage`). Künftig
+     Multipart-Mails mit einer HTML-Variante, die zum Frontend-Design passt (DaisyUI/Tailwind-
+     Farbschema, Logo etc. — siehe `frontend/src/routes/login/+page.svelte` als visuelles
+     Vorbild), plus einer Text-Variante als Fallback für Clients ohne HTML-Unterstützung
+     (`MimeMessageHelper` statt `SimpleMailMessage`, weiterhin `spring-boot-starter-mail`, keine
+     neue Dependency für den Mailversand selbst nötig).
+
+  **Warum zurückgestellt statt sofort umgesetzt:** Bei der Umsetzung von P2.2 aufgefallen (aktuell
+  rein englische, hartkodierte Mailtexte), aber laut Nutzer bewusst nicht mehr Teil des laufenden
+  P2.1–P2.7-Umfangs — „würde den Rahmen sprengen". Eigener Detailplan folgt, sobald P2.1–P2.7
+  abgeschlossen sind bzw. wenn als nächstes an der Reihe.
 
 ## Phase 3 — Social Login (föderiert, konfigurierbar)
 

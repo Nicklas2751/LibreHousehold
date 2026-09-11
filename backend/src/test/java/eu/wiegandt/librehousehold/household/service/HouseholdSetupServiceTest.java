@@ -1,4 +1,5 @@
 package eu.wiegandt.librehousehold.household.service;
+import eu.wiegandt.librehousehold.household.AccountRegistered;
 import eu.wiegandt.librehousehold.household.exception.*;
 import eu.wiegandt.librehousehold.household.mapper.*;
 import eu.wiegandt.librehousehold.household.model.*;
@@ -17,6 +18,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 
 import java.time.LocalDate;
@@ -44,6 +46,9 @@ class HouseholdSetupServiceTest {
 
     @Mock
     private AccountSessionAuthenticator accountSessionAuthenticator;
+
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
 
     @Spy
     private HouseholdSetupMapper householdSetupMapper = Mappers.getMapper(HouseholdSetupMapper.class);
@@ -185,6 +190,22 @@ class HouseholdSetupServiceTest {
             // then
             verify(accountSessionAuthenticator).authenticateAndPersistSession(
                     setup.getMember().getEmail(), setup.getLocalRegistration().getPassword());
+        }
+
+        @Test
+        void validSetup_publishesAccountRegisteredEvent() {
+            // given
+            var savedMember = Instancio.create(MemberEntity.class);
+            doReturn(Instancio.create(HouseholdEntity.class)).when(householdRepository).save(any(HouseholdEntity.class));
+            doReturn(savedMember).when(memberRepository).save(any(MemberEntity.class));
+            doReturn(Instancio.create(InviteEntity.class)).when(inviteRepository).save(any(InviteEntity.class));
+            var setup = buildSetup();
+
+            // when
+            service.setupHousehold(setup);
+
+            // then
+            verify(eventPublisher).publishEvent(new AccountRegistered(savedMember.getId(), setup.getMember().getEmail()));
         }
 
         @Test
