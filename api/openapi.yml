@@ -1594,6 +1594,70 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
 
+  /password-reset/request:
+    post:
+      summary: Request a password reset
+      description: >
+        Sends a password reset link to the given email address, if an account exists for it.
+        Always responds identically regardless of whether the email is registered, to avoid
+        leaking account existence (see ENUM1 in the security controls).
+      tags:
+        - session
+      operationId: requestPasswordReset
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PasswordResetRequest"
+      responses:
+        "202":
+          description: Accepted. A reset email was sent if the account exists.
+        default:
+          description: An error occurred.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
+  /password-reset/confirm:
+    post:
+      summary: Confirm a password reset
+      description: >
+        Sets a new password for the account identified by the given reset token, and
+        invalidates all of that account's existing sessions.
+      tags:
+        - session
+      operationId: confirmPasswordReset
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PasswordResetConfirm"
+      responses:
+        "204":
+          description: Password reset.
+        "409":
+          description: The reset token is invalid, unknown or expired.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              example:
+                type: "/problems/password-reset-token-invalid"
+                title: "Password reset token invalid"
+                status: 409
+                detail: "This password reset link is invalid or has expired."
+        default:
+          description: An error occurred.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
   /household/{householdId}/admin:
     put:
       summary: Transfer household ownership
@@ -2724,6 +2788,30 @@ components:
           format: uuid
           description: The email verification token from the verification link.
           example: "f3ce1a6b-aba1-478d-9f01-ec484f23ce60"
+
+    PasswordResetRequest:
+      type: object
+      required:
+        - email
+      properties:
+        email:
+          type: string
+          format: email
+          example: "max@example.com"
+
+    PasswordResetConfirm:
+      type: object
+      required:
+        - token
+        - newPassword
+      properties:
+        token:
+          type: string
+          format: uuid
+          description: The password reset token from the reset link.
+          example: "f3ce1a6b-aba1-478d-9f01-ec484f23ce60"
+        newPassword:
+          $ref: "#/components/schemas/Password"
 
   securitySchemes:
     sessionCookie:

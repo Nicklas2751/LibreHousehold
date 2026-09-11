@@ -3,6 +3,7 @@ package eu.wiegandt.librehousehold.household.service;
 import eu.wiegandt.librehousehold.household.AccountRegistered;
 import eu.wiegandt.librehousehold.household.MemberQuery;
 import eu.wiegandt.librehousehold.household.MemberRemoved;
+import eu.wiegandt.librehousehold.household.PasswordResetRequested;
 import eu.wiegandt.librehousehold.household.VerificationEmailRequested;
 import eu.wiegandt.librehousehold.household.exception.EmailNotVerifiedException;
 import eu.wiegandt.librehousehold.household.exception.HouseholdAdminCannotBeRemovedException;
@@ -202,5 +203,15 @@ public class MemberManagementService implements MemberQuery {
     public void resendVerificationEmail(UUID memberId) {
         var member = memberRepository.findById(memberId).orElseThrow(MemberNotFoundException::new);
         eventPublisher.publishEvent(new VerificationEmailRequested(member.getId(), member.email()));
+    }
+
+    // @Transactional is required, not optional: PasswordResetRequestedListener is an
+    // @ApplicationModuleListener (@TransactionalEventListener(phase = AFTER_COMMIT) under the hood),
+    // which Spring silently never invokes if no transaction is active at publish time — confirmed via
+    // a live event_publication row stuck with a null completion_date during manual E2E verification.
+    @Transactional
+    public void requestPasswordReset(String email) {
+        memberRepository.findByEmail(email)
+                .ifPresent(member -> eventPublisher.publishEvent(new PasswordResetRequested(member.getId(), email)));
     }
 }

@@ -28,11 +28,16 @@ import org.springframework.security.oauth2.core.oidc.OidcScopes;
 import org.springframework.security.oauth2.server.authorization.client.JdbcRegisteredClientRepository;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository;
 import org.springframework.security.oauth2.server.authorization.settings.AuthorizationServerSettings;
+import org.springframework.security.core.session.SessionRegistry;
+import org.springframework.security.core.session.SessionRegistryImpl;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
+import org.springframework.security.web.authentication.SavedRequestAwareAuthenticationSuccessHandler;
 import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
+import org.springframework.security.web.session.ConcurrentSessionFilter;
+import org.springframework.security.web.session.HttpSessionEventPublisher;
 import org.springframework.security.web.util.matcher.AnyRequestMatcher;
 import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
 import org.springframework.web.cors.CorsConfiguration;
@@ -85,6 +90,27 @@ public class SecurityConfig {
     @Lazy
     public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) {
         return configuration.getAuthenticationManager();
+    }
+
+    /**
+     * Since OIDC is enabled on the authorization server (see {@code authorizationServerSecurityFilterChain}),
+     * Spring Authorization Server's authorization endpoint automatically uses this {@link SessionRegistry}
+     * bean to register every newly authenticated session (see RESET1 in Arc42 Chapter 8) — no
+     * additional {@code sessionManagement()} wiring is needed on {@code defaultSecurityFilterChain}.
+     * {@code PasswordResetService} uses it to expire all of an account's sessions on password reset.
+     */
+    @Bean
+    public SessionRegistry sessionRegistry() {
+        return new SessionRegistryImpl();
+    }
+
+    /**
+     * Notifies {@link SessionRegistryImpl} of session lifecycle events (e.g. destruction), so it can
+     * remove the corresponding {@code SessionInformation} entries.
+     */
+    @Bean
+    public HttpSessionEventPublisher httpSessionEventPublisher() {
+        return new HttpSessionEventPublisher();
     }
 
     @Bean
@@ -178,8 +204,18 @@ public class SecurityConfig {
     public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http, OidcUserService oidcUserService,
                                                           RevokeAuthorizedClientLogoutHandler revokeAuthorizedClientLogoutHandler,
                                                           UnverifiedAccountLoginFailureHandler unverifiedAccountLoginFailureHandler,
+                                                          SessionRegistry sessionRegistry,
                                                           @Value("${openapi.libreHousehold.base-path:/v1}") String basePath)
             throws Exception {
+        // Same continuation the frontend's own redirectToOAuth2Login() (frontend/src/lib/oauth2Login.ts)
+        // navigates to. Used as formLogin()'s default success target below (Bug B): without it, /login
+        // reached directly (e.g. the "back to login" link on the verify-email/reset-password
+        // confirmation pages) has no saved /oauth2/authorize request to resume, so the session would
+        // stay at the plain AccountPrincipal from formLogin() and never get upgraded to the full
+        // AccountOidcPrincipal that business endpoints need.
+        var oauth2LoginPath = "/oauth2/authorization/" + RegisteredClientSeeder.CLIENT_ID;
+        var loginSuccessHandler = new SavedRequestAwareAuthenticationSuccessHandler();
+        loginSuccessHandler.setDefaultTargetUrl(oauth2LoginPath);
         http.authorizeHttpRequests((authorize) -> authorize
                         // All generated API controllers are mounted under this base path (see the
                         // @RequestMapping on the generated *ApiController classes) — read from the
@@ -192,7 +228,9 @@ public class SecurityConfig {
                                 basePath + "/household/setup",
                                 basePath + "/invite/**",
                                 basePath + "/members/availability",
-                                basePath + "/members/verification/confirm")
+                                basePath + "/members/verification/confirm",
+                                basePath + "/password-reset/request",
+                                basePath + "/password-reset/confirm")
                         .permitAll()
                         .anyRequest().authenticated())
                 .cors(Customizer.withDefaults())
@@ -213,7 +251,16 @@ public class SecurityConfig {
                 // that hands it a fresh XSRF-TOKEN cookie before the POST (see P1.5.2).
                 .csrf(CsrfConfigurer::spa)
                 .addFilterAfter(new CsrfCookieFilter(), CsrfFilter.class)
-                .formLogin((login) -> login.failureHandler(unverifiedAccountLoginFailureHandler))
+                // Bug A: PasswordResetService marks an account's SessionInformation entries as
+                // expired on the shared SessionRegistry bean (see its Javadoc), but nothing enforced
+                // that per request without this filter — the old session cookie kept working.
+                // ConcurrentSessionFilter is a framework-known filter type (see HttpSecurityBuilder#addFilter),
+                // so Spring Security places it at its own standard position automatically, the same
+                // position sessionManagement().maximumSessions() would use internally.
+                .addFilter(new ConcurrentSessionFilter(sessionRegistry, new ConcurrentSessionExpiredStrategy()))
+                .formLogin((login) -> login
+                        .failureHandler(unverifiedAccountLoginFailureHandler)
+                        .successHandler(loginSuccessHandler))
                 .oauth2Login((login) -> login.userInfoEndpoint((userInfo) ->
                         userInfo.oidcUserService(oidcUserService)))
                 // ADR-014: logout must actively revoke the backend's cached tokens for this user,

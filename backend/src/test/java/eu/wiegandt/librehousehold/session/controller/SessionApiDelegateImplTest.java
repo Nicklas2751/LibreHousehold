@@ -4,9 +4,12 @@ import eu.wiegandt.librehousehold.household.AccountOidcPrincipal;
 import eu.wiegandt.librehousehold.household.AccountPrincipal;
 import eu.wiegandt.librehousehold.household.HouseholdQuery;
 import eu.wiegandt.librehousehold.household.MemberQuery;
+import eu.wiegandt.librehousehold.household.PasswordReset;
 import eu.wiegandt.librehousehold.model.CurrentUser;
 import eu.wiegandt.librehousehold.model.Household;
 import eu.wiegandt.librehousehold.model.Member;
+import eu.wiegandt.librehousehold.model.PasswordResetConfirm;
+import eu.wiegandt.librehousehold.model.PasswordResetRequest;
 import eu.wiegandt.librehousehold.model.UserPreferences;
 import eu.wiegandt.librehousehold.session.exception.NoAuthenticatedSessionException;
 import eu.wiegandt.librehousehold.usersettings.PreferencesQuery;
@@ -18,6 +21,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
@@ -33,6 +37,8 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
 class SessionApiDelegateImplTest {
@@ -45,6 +51,9 @@ class SessionApiDelegateImplTest {
 
     @Mock
     private PreferencesQuery preferencesQuery;
+
+    @Mock
+    private PasswordReset passwordReset;
 
     @InjectMocks
     private SessionApiDelegateImpl delegate;
@@ -90,6 +99,53 @@ class SessionApiDelegateImplTest {
             // when
             // then
             assertThatThrownBy(delegate::getCurrentUser).isInstanceOf(NoAuthenticatedSessionException.class);
+        }
+    }
+
+    @Nested
+    class requestPasswordReset {
+
+        @Test
+        void anyEmail_delegatesAndAlwaysReturns202() {
+            // given
+            var email = "max@example.com";
+
+            // when
+            var result = delegate.requestPasswordReset(new PasswordResetRequest(email));
+
+            // then
+            verify(passwordReset).requestPasswordReset(email);
+            assertThat(result.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
+        }
+    }
+
+    @Nested
+    class confirmPasswordReset {
+
+        @Test
+        void validToken_resetsPasswordAndReturns204() {
+            // given
+            var token = UUID.randomUUID();
+            var newPassword = "new correct horse battery staple";
+
+            // when
+            var result = delegate.confirmPasswordReset(new PasswordResetConfirm(token, newPassword));
+
+            // then
+            verify(passwordReset).confirmPasswordReset(token, newPassword);
+            assertThat(result.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        }
+
+        @Test
+        void invalidToken_propagatesException() {
+            // given
+            var token = UUID.randomUUID();
+            var newPassword = "new correct horse battery staple";
+            doThrow(new IllegalStateException("token invalid")).when(passwordReset).confirmPasswordReset(token, newPassword);
+
+            // when / then
+            assertThatThrownBy(() -> delegate.confirmPasswordReset(new PasswordResetConfirm(token, newPassword)))
+                    .isInstanceOf(IllegalStateException.class);
         }
     }
 
