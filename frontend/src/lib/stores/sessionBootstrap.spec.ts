@@ -70,4 +70,16 @@ describe('bootstrapSession', () => {
 		expect(session.status).toBe('guest');
 		expect(mockAddToast).toHaveBeenCalled();
 	});
+
+	it('on an unexpected error with silent option — sets session to guest without showing a toast', async () => {
+		// given
+		mockGetCurrentUser.mockRejectedValue(new Error('network error'));
+
+		// when
+		await bootstrapSession({ silent: true });
+
+		// then
+		expect(session.status).toBe('guest');
+		expect(mockAddToast).not.toHaveBeenCalled();
+	});
 });
