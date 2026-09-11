@@ -5,6 +5,7 @@ import eu.wiegandt.librehousehold.household.mapper.HouseholdSetupMapper;
 import eu.wiegandt.librehousehold.household.mapper.MemberMapper;
 import eu.wiegandt.librehousehold.household.model.HouseholdEntity;
 import eu.wiegandt.librehousehold.household.model.MemberEntity;
+import eu.wiegandt.librehousehold.household.repository.AccountRepository;
 import eu.wiegandt.librehousehold.household.repository.HouseholdRepository;
 import eu.wiegandt.librehousehold.household.repository.MemberRepository;
 import eu.wiegandt.librehousehold.household.service.AccountService;
@@ -91,6 +92,9 @@ class AuthorizationServerConfigurationIT {
 
     @Autowired
     private AccountService accountService;
+
+    @Autowired
+    private AccountRepository accountRepository;
 
     @Autowired
     private MemberMapper memberMapper;
@@ -202,6 +206,20 @@ class AuthorizationServerConfigurationIT {
             // then
             assertThat(result.getResponseHeaders().getLocation().getPath()).isEqualTo("/oauth2/authorize");
         }
+
+        @Test
+        void unverifiedAccountCredentials_rejectedWithDisabledAccount() {
+            // given
+            var email = "authtest-" + UUID.randomUUID() + "@example.com";
+            createMemberWithUnverifiedAccount(email, RAW_PASSWORD);
+            var loginPage = requestLoginPageViaAuthorizationCodeFlow();
+
+            // when
+            var result = submitLogin(loginPage.cookies(), loginPage.csrfToken(), email, RAW_PASSWORD);
+
+            // then
+            assertThat(result.getResponseHeaders().getLocation()).hasPath("/login").hasQuery("error");
+        }
     }
 
     @Nested
@@ -243,7 +261,7 @@ class AuthorizationServerConfigurationIT {
             var email = "authtest-" + UUID.randomUUID() + "@example.com";
             var member = createMemberWithAccount(email, RAW_PASSWORD);
             var authenticatedCookies = performLoginAndFollowToCallback(email, RAW_PASSWORD).cookies();
-            var expected = new CurrentUser(memberMapper.toMember(member), householdMapper.toApiModel(createdHousehold), new UserPreferences());
+            var expected = new CurrentUser(memberMapper.toMember(member), householdMapper.toApiModel(createdHousehold), new UserPreferences(), true);
 
             // when
             var result = getWithCookies(authenticatedCookies, URI.create(BASE_PATH + "/me"))
@@ -438,7 +456,18 @@ class AuthorizationServerConfigurationIT {
         return spec;
     }
 
+    /**
+     * Creates a member with a <em>verified</em> account — the right fixture for every test in this
+     * class except the {@code login.unverifiedAccountCredentials_*} regression guard below, since
+     * login itself is blocked for unverified accounts (see {@code AccountPrincipal#isEnabled()}).
+     */
     private MemberEntity createMemberWithAccount(String email, String rawPassword) {
+        var member = createMemberWithUnverifiedAccount(email, rawPassword);
+        accountRepository.markEmailVerified(member.getId());
+        return member;
+    }
+
+    private MemberEntity createMemberWithUnverifiedAccount(String email, String rawPassword) {
         createdHousehold = householdRepository.save(Instancio.create(HouseholdEntity.class));
         var member = memberRepository.save(Instancio.of(MemberEntity.class)
                 .set(field(MemberEntity::householdId), createdHousehold.id())

@@ -1,6 +1,7 @@
 package eu.wiegandt.librehousehold.household.service;
 
 import eu.wiegandt.librehousehold.TestcontainersConfiguration;
+import eu.wiegandt.librehousehold.household.exception.EmailNotVerifiedException;
 import eu.wiegandt.librehousehold.household.model.HouseholdEntity;
 import eu.wiegandt.librehousehold.household.model.MemberEntity;
 import eu.wiegandt.librehousehold.household.repository.AccountRepository;
@@ -19,6 +20,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.instancio.Select.field;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, properties = {"librehousehold.security.oauth2-client.client-secret=test-client-secret"})
@@ -73,7 +75,24 @@ class AccountServiceIT {
     }
 
     @Test
-    void changePassword_correctOldPassword_persistsNewHashedPassword() {
+    void createAccount_validPassword_persistsAccountAsUnverified() {
+        // given
+        var household = householdRepository.save(Instancio.create(HouseholdEntity.class));
+        createdHouseholdId = household.id();
+        var member = memberRepository.save(Instancio.of(MemberEntity.class)
+                .set(field(MemberEntity::householdId), household.id())
+                .create());
+
+        // when
+        accountService.createAccount(member.getId(), "correct horse battery staple");
+
+        // then
+        assertThat(accountRepository.findById(member.getId()))
+                .hasValueSatisfying(account -> assertThat(account.emailVerified()).isFalse());
+    }
+
+    @Test
+    void changePassword_verifiedAccountCorrectOldPassword_persistsNewHashedPassword() {
         // given
         var household = householdRepository.save(Instancio.create(HouseholdEntity.class));
         createdHouseholdId = household.id();
@@ -83,6 +102,7 @@ class AccountServiceIT {
         var oldPassword = "correct horse battery staple";
         var newPassword = "new correct horse battery staple";
         accountService.createAccount(member.getId(), oldPassword);
+        accountRepository.markEmailVerified(member.getId());
 
         // when
         accountService.changePassword(member.getId(), oldPassword, newPassword);
@@ -90,5 +110,21 @@ class AccountServiceIT {
         // then
         assertThat(accountRepository.findById(member.getId()))
                 .hasValueSatisfying(account -> assertThat(passwordEncoder.matches(newPassword, account.passwordHash())).isTrue());
+    }
+
+    @Test
+    void changePassword_unverifiedAccount_throwsEmailNotVerifiedExceptionWithoutUpdating() {
+        // given
+        var household = householdRepository.save(Instancio.create(HouseholdEntity.class));
+        createdHouseholdId = household.id();
+        var member = memberRepository.save(Instancio.of(MemberEntity.class)
+                .set(field(MemberEntity::householdId), household.id())
+                .create());
+        var oldPassword = "correct horse battery staple";
+        accountService.createAccount(member.getId(), oldPassword);
+
+        // when / then
+        assertThatThrownBy(() -> accountService.changePassword(member.getId(), oldPassword, "new correct horse battery staple"))
+                .isInstanceOf(EmailNotVerifiedException.class);
     }
 }
