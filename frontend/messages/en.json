@@ -293,6 +293,7 @@
 			"success_title": "Email confirmed!",
 			"success_text": "Your email address has been confirmed successfully.",
 			"success_button": "Go to dashboard",
+			"login_button": "Go to login",
 			"error_title": "Confirmation failed",
 			"error_text": "This confirmation link is invalid or has expired."
 		}
