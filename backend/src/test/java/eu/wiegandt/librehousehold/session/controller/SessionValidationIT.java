@@ -3,6 +3,7 @@ package eu.wiegandt.librehousehold.session.controller;
 import eu.wiegandt.librehousehold.api.SessionApiController;
 import eu.wiegandt.librehousehold.household.HouseholdQuery;
 import eu.wiegandt.librehousehold.household.MemberQuery;
+import eu.wiegandt.librehousehold.household.PasswordReset;
 import eu.wiegandt.librehousehold.usersettings.PreferencesQuery;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,6 +34,9 @@ class SessionValidationIT {
 
     @MockitoBean
     private PreferencesQuery preferencesQuery;
+
+    @MockitoBean
+    private PasswordReset passwordReset;
 
     @Test
     void getCurrentUser_noAuthenticatedSession_returns401() throws Exception {
