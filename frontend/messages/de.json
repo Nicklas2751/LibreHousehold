@@ -295,6 +295,7 @@
 			"success_title": "E-Mail bestätigt!",
 			"success_text": "Deine E-Mail-Adresse wurde erfolgreich bestätigt.",
 			"success_button": "Zum Dashboard",
+			"login_button": "Zum Login",
 			"error_title": "Bestätigung fehlgeschlagen",
 			"error_text": "Dieser Bestätigungslink ist ungültig oder abgelaufen."
 		}
