@@ -278,7 +278,8 @@
 		"password_label": "Passwort",
 		"password_placeholder": "Dein Passwort",
 		"submit_button": "Anmelden",
-		"error": "E-Mail oder Passwort falsch."
+		"error": "E-Mail oder Passwort falsch.",
+		"error_unverified": "Bitte bestätige zuerst deine E-Mail-Adresse. Wir haben dir dazu einen Link per E-Mail geschickt."
 	},
 	"session": {
 		"bootstrap_error": "Sitzung konnte nicht geladen werden. Bitte melde dich erneut an."
@@ -315,12 +316,14 @@
 				"title": "Profil",
 				"name_label": "Anzeigename",
 				"email_label": "E-Mail-Adresse",
+				"email_locked_hint": "Bitte bestätige zuerst deine aktuelle E-Mail-Adresse, um sie ändern zu können.",
 				"save_button": "Speichern",
 				"save_success": "Profil gespeichert.",
 				"save_error": "Fehler beim Speichern des Profils."
 			},
 			"password": {
 				"title": "Passwort ändern",
+				"locked_hint": "Bitte bestätige zuerst deine E-Mail-Adresse, um dein Passwort ändern zu können.",
 				"old_label": "Aktuelles Passwort",
 				"new_label": "Neues Passwort",
 				"confirm_label": "Neues Passwort bestätigen",

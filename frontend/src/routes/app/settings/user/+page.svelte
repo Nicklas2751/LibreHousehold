@@ -4,6 +4,7 @@
 	import { m } from '$lib/paraglide/messages.js';
 	import { userState } from '$lib/stores/userState';
 	import { householdState } from '$lib/stores/householdState.svelte';
+	import { session } from '$lib/stores/sessionState.svelte';
 	import { loadMembers, members } from '$lib/stores/memberStore';
 	import { addToast } from '$lib/stores/toastStore';
 	import { Toast } from '$lib/toast';
@@ -17,6 +18,7 @@
 	const householdId = $derived($householdState?.id ?? '');
 	const memberId = $derived($userState?.id ?? '');
 	const isOwner = $derived($userState?.isAdmin === true);
+	const emailVerified = $derived(session.currentUser?.emailVerified !== false);
 	const otherMembers = $derived($members.filter((mb) => mb.id !== memberId));
 
 	// Load members if not yet loaded
@@ -41,7 +43,10 @@
 			await membersApi.updateMember({
 				householdId,
 				memberId,
-				memberUpdate: { name: displayName, email }
+				// The backend rejects any request that includes the email field while the account is
+				// unverified (P2.2), even if the value is unchanged — omit it entirely in that case so
+				// a name-only edit still succeeds (see the disabled email input below).
+				memberUpdate: emailVerified ? { name: displayName, email } : { name: displayName }
 			});
 			userState.update((s) => (s ? { ...s, name: displayName, email } : s));
 			members.update((all) =>
@@ -146,6 +151,7 @@
 				<legend class="fieldset-legend">{m['settings.user.profile.name_label']()}</legend>
 				<input
 					type="text"
+					aria-label={m['settings.user.profile.name_label']()}
 					class="validator input w-full"
 					autocomplete="name"
 					bind:value={displayName}
@@ -157,11 +163,18 @@
 				<legend class="fieldset-legend">{m['settings.user.profile.email_label']()}</legend>
 				<input
 					type="email"
+					aria-label={m['settings.user.profile.email_label']()}
 					class="validator input w-full"
 					autocomplete="email"
 					bind:value={email}
+					disabled={!emailVerified}
 					required
 				/>
+				{#if !emailVerified}
+					<p class="label mt-1 text-xs text-warning">
+						{m['settings.user.profile.email_locked_hint']()}
+					</p>
+				{/if}
 			</fieldset>
 			<div class="mt-3 card-actions justify-end">
 				<button
@@ -182,13 +195,18 @@
 	<div class="card mb-4 bg-base-200 shadow-sm">
 		<div class="card-body p-4">
 			<h3 class="mb-3 text-base font-semibold">{m['settings.user.password.title']()}</h3>
+			{#if !emailVerified}
+				<p class="mb-3 text-xs text-warning">{m['settings.user.password.locked_hint']()}</p>
+			{/if}
 			<fieldset class="fieldset">
 				<legend class="fieldset-legend">{m['settings.user.password.old_label']()}</legend>
 				<input
 					type="password"
+					aria-label={m['settings.user.password.old_label']()}
 					class="validator input w-full"
 					autocomplete="current-password"
 					bind:value={oldPassword}
+					disabled={!emailVerified}
 					required
 				/>
 			</fieldset>
@@ -196,11 +214,13 @@
 				<legend class="fieldset-legend">{m['settings.user.password.new_label']()}</legend>
 				<input
 					type="password"
+					aria-label={m['settings.user.password.new_label']()}
 					class="input w-full"
 					autocomplete="new-password"
 					class:input-error={passwordMismatch}
 					bind:value={newPassword}
 					minlength="8"
+					disabled={!emailVerified}
 					required
 				/>
 			</fieldset>
@@ -208,10 +228,12 @@
 				<legend class="fieldset-legend">{m['settings.user.password.confirm_label']()}</legend>
 				<input
 					type="password"
+					aria-label={m['settings.user.password.confirm_label']()}
 					class="input w-full"
 					autocomplete="new-password"
 					class:input-error={passwordMismatch}
 					bind:value={confirmPassword}
+					disabled={!emailVerified}
 					required
 				/>
 				{#if passwordMismatch}
@@ -222,7 +244,8 @@
 				<button
 					class="btn btn-sm btn-primary"
 					onclick={savePassword}
-					disabled={passwordSaving ||
+					disabled={!emailVerified ||
+						passwordSaving ||
 						passwordMismatch ||
 						!oldPassword ||
 						!newPassword ||
