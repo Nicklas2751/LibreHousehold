@@ -4,8 +4,10 @@
 	import { m } from '$lib/paraglide/messages.js';
 	import { confirmEmailVerification } from '$lib/stores/memberStore';
 	import { bootstrapSession } from '$lib/stores/sessionBootstrap';
+	import { session } from '$lib/stores/sessionState.svelte';
 
 	let status: 'loading' | 'success' | 'error' = $state('loading');
+	const isAuthenticated = $derived(session.status === 'authenticated');
 
 	onMount(async () => {
 		try {
@@ -33,9 +35,15 @@
 						{m['verification.confirm_page.success_title']()}
 					</h1>
 					<p class="mt-2 text-base-content/70">{m['verification.confirm_page.success_text']()}</p>
-					<a href="/app/dashboard" class="btn mt-4 btn-primary">
-						{m['verification.confirm_page.success_button']()}
-					</a>
+					{#if isAuthenticated}
+						<a href="/app/dashboard" class="btn mt-4 btn-primary">
+							{m['verification.confirm_page.success_button']()}
+						</a>
+					{:else}
+						<a href="/login" class="btn mt-4 btn-primary">
+							{m['verification.confirm_page.login_button']()}
+						</a>
+					{/if}
 				{:else}
 					<h1 class="text-xl font-bold text-error">
 						{m['verification.confirm_page.error_title']()}
