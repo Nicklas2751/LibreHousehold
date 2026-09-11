@@ -1,6 +1,9 @@
 package eu.wiegandt.librehousehold.household.service;
+import eu.wiegandt.librehousehold.household.AccountRegistered;
 import eu.wiegandt.librehousehold.household.HouseholdDeleted;
 import eu.wiegandt.librehousehold.household.MemberRemoved;
+import eu.wiegandt.librehousehold.household.VerificationEmailRequested;
+import eu.wiegandt.librehousehold.household.exception.EmailNotVerifiedException;
 import eu.wiegandt.librehousehold.household.exception.HouseholdAdminCannotBeRemovedException;
 import eu.wiegandt.librehousehold.household.exception.InvalidInviteException;
 import eu.wiegandt.librehousehold.household.exception.MemberAlreadyExistsException;
@@ -303,6 +306,25 @@ class MemberManagementServiceTest {
         }
 
         @Test
+        void validToken_publishesAccountRegisteredEvent() {
+            // given
+            var token = UUID.randomUUID();
+            var registration = Instancio.create(MemberRegistration.class);
+            var invite = Instancio.of(InviteEntity.class)
+                    .set(field(InviteEntity::validUntil), LocalDate.now().plusDays(3))
+                    .create();
+            var savedEntity = Instancio.of(memberEntityModel).create();
+            doReturn(Optional.of(invite)).when(inviteRepository).findByToken(token);
+            doReturn(savedEntity).when(memberRepository).save(any(MemberEntity.class));
+
+            // when
+            service.joinHousehold(token, registration);
+
+            // then
+            verify(eventPublisher).publishEvent(new AccountRegistered(savedEntity.id(), registration.getEmail()));
+        }
+
+        @Test
         void validToken_authenticatesAndPersistsSessionForCreatedAccount() {
             // given
             var token = UUID.randomUUID();
@@ -347,6 +369,7 @@ class MemberManagementServiceTest {
             var memberId = UUID.randomUUID();
             var update = new MemberUpdate().email("taken@example.com");
             doReturn(true).when(memberRepository).existsByIdAndHouseholdId(memberId, householdId);
+            doReturn(true).when(accountService).isEmailVerified(memberId);
             doThrow(DataIntegrityViolationException.class).when(memberRepository).updateEmail(memberId, "taken@example.com");
 
             // when / then
@@ -370,12 +393,43 @@ class MemberManagementServiceTest {
         }
 
         @Test
+        void unverifiedAccountWithOnlyNameChange_succeedsWithoutCheckingVerification() {
+            // given — name/avatar remain changeable regardless of verification status
+            var householdId = UUID.randomUUID();
+            var memberId = UUID.randomUUID();
+            var update = new MemberUpdate().name("Updated Name");
+            doReturn(true).when(memberRepository).existsByIdAndHouseholdId(memberId, householdId);
+
+            // when
+            service.updateMember(householdId, memberId, update);
+
+            // then
+            verify(accountService, never()).isEmailVerified(any());
+        }
+
+        @Test
+        void unverifiedAccountWithEmailChange_throwsEmailNotVerifiedExceptionWithoutUpdating() {
+            // given
+            var householdId = UUID.randomUUID();
+            var memberId = UUID.randomUUID();
+            var update = new MemberUpdate().email("updated@example.com");
+            doReturn(true).when(memberRepository).existsByIdAndHouseholdId(memberId, householdId);
+            doReturn(false).when(accountService).isEmailVerified(memberId);
+
+            // when / then
+            assertThatThrownBy(() -> service.updateMember(householdId, memberId, update))
+                    .isInstanceOf(EmailNotVerifiedException.class);
+            verify(memberRepository, never()).updateEmail(any(), any());
+        }
+
+        @Test
         void validEmailUpdate_updatesEmailInRepository() {
             // given
             var householdId = UUID.randomUUID();
             var memberId = UUID.randomUUID();
             var update = new MemberUpdate().email("updated@example.com");
             doReturn(true).when(memberRepository).existsByIdAndHouseholdId(memberId, householdId);
+            doReturn(true).when(accountService).isEmailVerified(memberId);
 
             // when
             service.updateMember(householdId, memberId, update);
@@ -735,6 +789,64 @@ class MemberManagementServiceTest {
             // then
             verify(memberRepository).deleteById(memberId);
             verify(eventPublisher).publishEvent(new MemberRemoved(memberId));
+        }
+    }
+
+    @Nested
+    class resendVerificationEmail {
+
+        @Test
+        void memberNotFound_throwsMemberNotFoundException() {
+            // given
+            var memberId = UUID.randomUUID();
+            doReturn(Optional.empty()).when(memberRepository).findById(memberId);
+
+            // when / then
+            assertThatThrownBy(() -> service.resendVerificationEmail(memberId))
+                    .isInstanceOf(MemberNotFoundException.class);
+        }
+
+        @Test
+        void memberFound_publishesVerificationEmailRequestedEvent() {
+            // given
+            var entity = Instancio.of(memberEntityModel).create();
+            doReturn(Optional.of(entity)).when(memberRepository).findById(entity.id());
+
+            // when
+            service.resendVerificationEmail(entity.id());
+
+            // then
+            verify(eventPublisher).publishEvent(new VerificationEmailRequested(entity.id(), entity.email()));
+        }
+    }
+
+    @Nested
+    class isEmailVerified {
+
+        @Test
+        void unverifiedAccount_returnsFalse() {
+            // given
+            var memberId = UUID.randomUUID();
+            doReturn(false).when(accountService).isEmailVerified(memberId);
+
+            // when
+            var result = service.isEmailVerified(memberId);
+
+            // then
+            assertThat(result).isFalse();
+        }
+
+        @Test
+        void verifiedAccount_returnsTrue() {
+            // given
+            var memberId = UUID.randomUUID();
+            doReturn(true).when(accountService).isEmailVerified(memberId);
+
+            // when
+            var result = service.isEmailVerified(memberId);
+
+            // then
+            assertThat(result).isTrue();
         }
     }
 }

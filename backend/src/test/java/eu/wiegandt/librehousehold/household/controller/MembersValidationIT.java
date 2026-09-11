@@ -1,6 +1,7 @@
 package eu.wiegandt.librehousehold.household.controller;
 
 import eu.wiegandt.librehousehold.household.service.AccountService;
+import eu.wiegandt.librehousehold.household.service.AccountTokenService;
 import eu.wiegandt.librehousehold.household.service.MemberManagementService;
 
 import eu.wiegandt.librehousehold.api.MembersApiController;
@@ -33,6 +34,9 @@ class MembersValidationIT {
 
     @MockitoBean
     private AccountService accountService;
+
+    @MockitoBean
+    private AccountTokenService accountTokenService;
 
     @Test
     void checkEmailAvailability_malformedEmail_returns400() throws Exception {

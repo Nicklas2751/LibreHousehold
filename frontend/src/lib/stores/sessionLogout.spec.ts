@@ -25,7 +25,8 @@ vi.mock('$app/navigation', () => ({ goto: mockGoto }));
 const currentUser = {
 	member: { id: 'member-id', name: 'Max Mustermann', email: 'max@example.com', isAdmin: true },
 	household: { id: 'household-id', name: 'Die Testfamilie' },
-	preferences: {}
+	preferences: {},
+	emailVerified: true
 };
 
 describe('logout', () => {

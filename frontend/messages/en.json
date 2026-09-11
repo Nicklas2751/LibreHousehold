@@ -281,6 +281,21 @@
 	"session": {
 		"bootstrap_error": "Could not load your session. Please log in again."
 	},
+	"verification": {
+		"banner_text": "Please confirm your email address to use your account fully.",
+		"resend_button": "Resend",
+		"close_button": "Close",
+		"resend_success_toast": "Verification email has been resent.",
+		"resend_error_toast": "Could not resend the verification email.",
+		"confirm_page": {
+			"loading": "Confirming your email address...",
+			"success_title": "Email confirmed!",
+			"success_text": "Your email address has been confirmed successfully.",
+			"success_button": "Go to dashboard",
+			"error_title": "Confirmation failed",
+			"error_text": "This confirmation link is invalid or has expired."
+		}
+	},
 	"settings": {
 		"back": "Back to Settings",
 		"appearance": {

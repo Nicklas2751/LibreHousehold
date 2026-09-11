@@ -3,6 +3,7 @@ package eu.wiegandt.librehousehold.config;
 import eu.wiegandt.librehousehold.TestcontainersConfiguration;
 import eu.wiegandt.librehousehold.household.model.HouseholdEntity;
 import eu.wiegandt.librehousehold.household.model.MemberEntity;
+import eu.wiegandt.librehousehold.household.repository.AccountRepository;
 import eu.wiegandt.librehousehold.household.repository.HouseholdRepository;
 import eu.wiegandt.librehousehold.household.repository.MemberRepository;
 import eu.wiegandt.librehousehold.household.service.AccountService;
@@ -94,6 +95,9 @@ class HouseholdAccessControlIT {
 
     @Autowired
     private AccountService accountService;
+
+    @Autowired
+    private AccountRepository accountRepository;
 
     @Autowired
     private TaskRepository taskRepository;
@@ -319,6 +323,10 @@ class HouseholdAccessControlIT {
                 .set(field(MemberEntity::isAdmin), isAdmin)
                 .create());
         accountService.createAccount(member.getId(), RAW_PASSWORD);
+        // Verified immediately: this class drives real logins for every actor, and login is
+        // blocked for unverified accounts (see AccountPrincipal#isEnabled()) — the login-blocking
+        // behavior itself is covered separately in AuthorizationServerConfigurationIT.
+        accountRepository.markEmailVerified(member.getId());
         return member;
     }
 
