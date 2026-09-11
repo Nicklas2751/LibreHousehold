@@ -207,8 +207,15 @@ class AuthorizationServerConfigurationIT {
             assertThat(result.getResponseHeaders().getLocation().getPath()).isEqualTo("/oauth2/authorize");
         }
 
+        /**
+         * Aufgabe A: the frontend must be able to distinguish an unverified account from wrong
+         * credentials, so it can show a "please verify your email" hint instead of the generic
+         * "incorrect email or password" message. This is a deliberate, already-documented ENUM1
+         * trade-off (see the {@code DisabledException} footnote in Arc42 Chapter 8), not a new
+         * design decision.
+         */
         @Test
-        void unverifiedAccountCredentials_rejectedWithDisabledAccount() {
+        void unverifiedAccountCredentials_rejectedWithUnverifiedReason() {
             // given
             var email = "authtest-" + UUID.randomUUID() + "@example.com";
             createMemberWithUnverifiedAccount(email, RAW_PASSWORD);
@@ -216,6 +223,20 @@ class AuthorizationServerConfigurationIT {
 
             // when
             var result = submitLogin(loginPage.cookies(), loginPage.csrfToken(), email, RAW_PASSWORD);
+
+            // then
+            assertThat(result.getResponseHeaders().getLocation()).hasPath("/login").hasQuery("error&reason=unverified");
+        }
+
+        @Test
+        void invalidPassword_rejectedWithoutUnverifiedReason() {
+            // given
+            var email = "authtest-" + UUID.randomUUID() + "@example.com";
+            createMemberWithAccount(email, RAW_PASSWORD);
+            var loginPage = requestLoginPageViaAuthorizationCodeFlow();
+
+            // when
+            var result = submitLogin(loginPage.cookies(), loginPage.csrfToken(), email, "wrong-password");
 
             // then
             assertThat(result.getResponseHeaders().getLocation()).hasPath("/login").hasQuery("error");
@@ -237,6 +258,36 @@ class AuthorizationServerConfigurationIT {
             // then
             assertThat(Objects.requireNonNullElse(callbackResponse.getResponseBody(), ""))
                     .doesNotContain("access_token", "refresh_token");
+        }
+    }
+
+    /**
+     * Regression guard for the {@code authenticationTime cannot be null} crash previously fixed for
+     * {@code AccountSessionAuthenticator} (see git history), reproduced here through a different
+     * code path: re-triggering the SPA's own {@code /oauth2/authorization/spa-backend-client}
+     * continuation on a session that already completed {@code oauth2Login()} once reuses the
+     * resulting {@code OAuth2AuthenticationToken} (whose {@code AccountOidcPrincipal} carried no
+     * {@code FactorGrantedAuthority}) as the new authorization's resource-owner authentication,
+     * failing at token exchange the exact same way — and clearing the previously valid session in
+     * the process (see {@code AbstractAuthenticationProcessingFilter#unsuccessfulAuthentication}).
+     */
+    @Nested
+    class reauthorizeAlreadyOidcAuthenticatedSession {
+
+        @Test
+        void reauthorize_doesNotFailWithLoginError() {
+            // given
+            var email = "authtest-" + UUID.randomUUID() + "@example.com";
+            createMemberWithAccount(email, RAW_PASSWORD);
+            var authenticatedSession = performLoginAndFollowToCallback(email, RAW_PASSWORD);
+
+            // when
+            var authorizationRequest = get(authenticatedSession.cookies(), URI.create("/oauth2/authorization/" + CLIENT_ID));
+            var authorizeRequest = get(authorizationRequest.cookies(), authorizationRequest.response().getResponseHeaders().getLocation());
+            var callback = get(authorizeRequest.cookies(), authorizeRequest.response().getResponseHeaders().getLocation());
+
+            // then
+            assertThat(callback.response().getResponseHeaders().getLocation()).hasPath("/");
         }
     }
 
@@ -370,6 +421,25 @@ class AuthorizationServerConfigurationIT {
 
             // then
             assertThat(response.getStatus().value()).isEqualTo(404);
+        }
+
+        /**
+         * Regression guard: the OpenAPI spec declares {@code security: []} for this endpoint (it is
+         * reached from the verification link in an email, i.e. by a logged-out user), but it was
+         * missing from this {@code permitAll()} list — an anonymous request was silently redirected
+         * to {@code /login} instead of reaching the controller, so a logged-out user could never
+         * actually confirm their email.
+         */
+        @Test
+        void confirmEmailVerification_noSession_isReachable() {
+            // given — GET instead of the real POST sidesteps CSRF, same rationale as householdSetup above
+            var uri = URI.create(BASE_PATH + "/members/verification/confirm");
+
+            // when
+            var response = get(NO_COOKIES, uri).response();
+
+            // then
+            assertThat(response.getStatus().value()).isEqualTo(405);
         }
     }
 

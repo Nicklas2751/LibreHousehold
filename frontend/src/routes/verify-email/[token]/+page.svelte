@@ -3,6 +3,7 @@
 	import { page } from '$app/stores';
 	import { m } from '$lib/paraglide/messages.js';
 	import { confirmEmailVerification } from '$lib/stores/memberStore';
+	import { bootstrapSession } from '$lib/stores/sessionBootstrap';
 
 	let status: 'loading' | 'success' | 'error' = $state('loading');
 
@@ -10,6 +11,10 @@
 		try {
 			await confirmEmailVerification($page.params.token ?? '');
 			status = 'success';
+			// Refreshes session.currentUser.emailVerified in place so the verification banner
+			// disappears immediately if this browser tab still holds an authenticated session
+			// (e.g. the initial post-setup session) — a no-op guest probe otherwise.
+			await bootstrapSession({ silent: true });
 		} catch {
 			status = 'error';
 		}

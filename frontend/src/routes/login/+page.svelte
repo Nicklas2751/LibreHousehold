@@ -5,18 +5,22 @@
 	import { getCsrfTokenFromCookieHeader } from '$lib/api/csrf';
 	import { bootstrapSession } from '$lib/stores/sessionBootstrap';
 
+	type LoginErrorType = 'none' | 'unverified' | 'generic';
+
 	let email = $state('');
 	let password = $state('');
 	let submitting = $state(false);
-	let loginError = $state(false);
+	let loginErrorType = $state<LoginErrorType>('none');
 
-	function hasErrorQueryParam(url: string): boolean {
-		return new URL(url).searchParams.has('error');
+	function classifyErrorQueryParam(url: string): LoginErrorType {
+		const params = new URL(url).searchParams;
+		if (!params.has('error')) return 'none';
+		return params.get('reason') === 'unverified' ? 'unverified' : 'generic';
 	}
 
 	async function handleSubmit(event: SubmitEvent) {
 		event.preventDefault();
-		loginError = false;
+		loginErrorType = 'none';
 		submitting = true;
 		try {
 			const csrfToken = getCsrfTokenFromCookieHeader(document.cookie);
@@ -29,14 +33,15 @@
 				},
 				body: new URLSearchParams({ username: email, password })
 			});
-			if (hasErrorQueryParam(response.url)) {
-				loginError = true;
+			const errorType = classifyErrorQueryParam(response.url);
+			if (errorType !== 'none') {
+				loginErrorType = errorType;
 				return;
 			}
 			await bootstrapSession();
 			await goto('/app/dashboard');
 		} catch {
-			loginError = true;
+			loginErrorType = 'generic';
 		} finally {
 			submitting = false;
 		}
@@ -53,7 +58,11 @@
 				<h1 class="text-center text-2xl font-bold text-base-content">LibreHousehold</h1>
 				<p class="mt-2 text-center text-base-content/70">{m['subtitle']()}</p>
 				<h2 class="mt-4 text-xl font-bold text-base-content">{m['login.title']()}</h2>
-				{#if loginError}
+				{#if loginErrorType === 'unverified'}
+					<div class="mt-4 alert alert-warning">
+						<span>{m['login.error_unverified']()}</span>
+					</div>
+				{:else if loginErrorType === 'generic'}
 					<div class="mt-4 alert alert-error">
 						<span>{m['login.error']()}</span>
 					</div>
