@@ -1,24 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { get } from 'svelte/store';
 import { logout } from './sessionLogout';
 import { session, setAuthenticated } from './sessionState.svelte';
 import { householdState } from './householdState.svelte';
 import { userState } from './userState';
 
-const { mockLogout, mockGoto } = vi.hoisted(() => ({
-	mockLogout: vi.fn(),
-	mockGoto: vi.fn()
-}));
-
-vi.mock('../../generated-sources/openapi', async (importOriginal) => {
-	const original = await importOriginal<typeof import('../../generated-sources/openapi')>();
-	return {
-		...original,
-		SessionApi: vi.fn().mockImplementation(function (this: Record<string, unknown>) {
-			this.logout = mockLogout;
-		})
-	};
-});
+const { mockGoto } = vi.hoisted(() => ({ mockGoto: vi.fn() }));
 
 vi.mock('$app/navigation', () => ({ goto: mockGoto }));
 
@@ -29,23 +16,46 @@ const currentUser = {
 	emailVerified: true
 };
 
+function clearCookies() {
+	document.cookie.split(';').forEach((cookie) => {
+		const name = cookie.split('=')[0].trim();
+		if (name) {
+			document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
+		}
+	});
+}
+
 describe('logout', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		clearCookies();
+		document.cookie = 'XSRF-TOKEN=test-csrf-token';
 		setAuthenticated(currentUser);
 		householdState.set(currentUser.household);
 		userState.set(currentUser.member);
 	});
 
-	it('calls SessionApi.logout, sets the session to guest and navigates to /', async () => {
+	afterEach(() => {
+		vi.unstubAllGlobals();
+	});
+
+	it('posts to the unprefixed /logout endpoint with the CSRF header, sets the session to guest and navigates to /', async () => {
 		// given
-		mockLogout.mockResolvedValue(undefined);
+		const mockFetch = vi.fn().mockResolvedValue({ ok: true } as Response);
+		vi.stubGlobal('fetch', mockFetch);
 
 		// when
 		await logout();
 
 		// then
-		expect(mockLogout).toHaveBeenCalled();
+		expect(mockFetch).toHaveBeenCalledWith(
+			'/logout',
+			expect.objectContaining({
+				method: 'POST',
+				credentials: 'include',
+				headers: { 'X-XSRF-TOKEN': 'test-csrf-token' }
+			})
+		);
 		expect(session.status).toBe('guest');
 		expect(get(householdState)).toBeUndefined();
 		expect(get(userState)).toBeUndefined();
@@ -54,7 +64,8 @@ describe('logout', () => {
 
 	it('still sets the session to guest and navigates to / when the logout request fails', async () => {
 		// given
-		mockLogout.mockRejectedValue(new Error('network error'));
+		const mockFetch = vi.fn().mockRejectedValue(new Error('network error'));
+		vi.stubGlobal('fetch', mockFetch);
 
 		// when
 		await logout();
