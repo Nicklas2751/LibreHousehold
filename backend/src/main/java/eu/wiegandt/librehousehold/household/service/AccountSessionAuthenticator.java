@@ -3,6 +3,8 @@ package eu.wiegandt.librehousehold.household.service;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.FactorGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
@@ -11,11 +13,20 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
+import java.util.LinkedHashSet;
+
 /**
  * Programmatically establishes an authenticated Authorization Server session right after a new
  * account is created (household setup / invite join, see P1.4-follow-up). This lets the SPA
  * immediately continue with the existing {@code /oauth2/authorization/spa-backend-client} redirect
  * instead of hitting the login form.
+ *
+ * <p>The resulting {@code Authentication} is granted a
+ * {@link FactorGrantedAuthority#PASSWORD_AUTHORITY} authority, mirroring what
+ * {@code AbstractUserDetailsAuthenticationProvider.createSuccessAuthentication} does for a regular
+ * {@code formLogin()}: {@code JwtGenerator.getAuthenticationTime} requires at least one
+ * {@link FactorGrantedAuthority} to compute the OIDC {@code auth_time} claim during the subsequent
+ * authorization code exchange, and throws {@code IllegalArgumentException} otherwise.
  *
  * <p>Deliberately does <strong>not</strong> authenticate via the shared {@code AuthenticationManager}
  * (unlike a real {@code formLogin()}): that manager's {@code DaoAuthenticationProvider} runs
@@ -67,8 +78,9 @@ public class AccountSessionAuthenticator {
         if (!passwordEncoder.matches(rawPassword, userDetails.getPassword())) {
             throw new BadCredentialsException("Invalid credentials");
         }
-        var authenticationResult = UsernamePasswordAuthenticationToken.authenticated(
-                userDetails, null, userDetails.getAuthorities());
+        var authorities = new LinkedHashSet<GrantedAuthority>(userDetails.getAuthorities());
+        authorities.add(FactorGrantedAuthority.fromAuthority(FactorGrantedAuthority.PASSWORD_AUTHORITY));
+        var authenticationResult = UsernamePasswordAuthenticationToken.authenticated(userDetails, null, authorities);
         var context = SecurityContextHolder.createEmptyContext();
         context.setAuthentication(authenticationResult);
         SecurityContextHolder.setContext(context);

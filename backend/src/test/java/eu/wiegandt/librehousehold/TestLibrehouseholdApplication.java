@@ -24,7 +24,8 @@ public class TestLibrehouseholdApplication {
                 "--librehousehold.security.oauth2-client.authorization-uri=" + FRONTEND_DEV_ORIGIN
                         + "/oauth2/authorize",
                 "--librehousehold.security.oauth2-client.redirect-uri=" + FRONTEND_DEV_ORIGIN
-                        + "/login/oauth2/code/spa-backend-client")
+                        + "/login/oauth2/code/spa-backend-client",
+                "--librehousehold.frontend.base-url=" + FRONTEND_DEV_ORIGIN)
                 // Spring Boot Devtools restarts re-invoke main() with the previous call's (already
                 // defaulted) args, so appending unconditionally would duplicate each --key=value on
                 // every restart; SimpleCommandLinePropertySource then joins duplicates with a comma,

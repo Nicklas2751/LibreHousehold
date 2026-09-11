@@ -12,7 +12,7 @@ const HTTP_STATUS_UNAUTHORIZED = 401;
 
 const sessionApi = new SessionApi(apiConfiguration);
 
-export async function bootstrapSession(): Promise<void> {
+export async function bootstrapSession(options: { silent?: boolean } = {}): Promise<void> {
 	try {
 		const currentUser = await sessionApi.getCurrentUser();
 		setAuthenticated(currentUser);
@@ -20,7 +20,7 @@ export async function bootstrapSession(): Promise<void> {
 		updateUserState(currentUser.member);
 	} catch (err: unknown) {
 		setGuest();
-		if (extractErrorStatus(err) !== HTTP_STATUS_UNAUTHORIZED) {
+		if (!options.silent && extractErrorStatus(err) !== HTTP_STATUS_UNAUTHORIZED) {
 			addToast(new Toast(m['session.bootstrap_error'](), 'error'));
 		}
 	}

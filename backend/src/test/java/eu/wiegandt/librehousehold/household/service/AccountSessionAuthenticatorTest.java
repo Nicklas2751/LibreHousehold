@@ -10,6 +10,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.FactorGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
@@ -57,6 +59,30 @@ class AccountSessionAuthenticatorTest {
 
             // then
             assertThat(SecurityContextHolder.getContext().getAuthentication().getPrincipal()).isEqualTo(principal);
+        }
+
+        @Test
+        void validCredentials_grantsPasswordFactorAuthority() {
+            // given — the OIDC token generator (JwtGenerator#getAuthenticationTime) requires at
+            // least one FactorGrantedAuthority to compute the auth_time claim, otherwise it throws
+            // "authenticationTime cannot be null" during the subsequent authorization code exchange
+            var email = "member@example.com";
+            var rawPassword = "s3cret!";
+            var principal = new AccountPrincipal(email, "$argon2id$...", true);
+            doReturn(principal).when(accountUserDetailsService).loadUserByUsername(email);
+            doReturn(true).when(passwordEncoder).matches(rawPassword, principal.passwordHash());
+            RequestContextHolder.setRequestAttributes(
+                    new ServletRequestAttributes(new MockHttpServletRequest(), new MockHttpServletResponse()));
+            var authenticator = new AccountSessionAuthenticator(accountUserDetailsService, passwordEncoder);
+
+            // when
+            authenticator.authenticateAndPersistSession(email, rawPassword);
+
+            // then
+            assertThat(SecurityContextHolder.getContext().getAuthentication().getAuthorities())
+                    .filteredOn(FactorGrantedAuthority.class::isInstance)
+                    .extracting(GrantedAuthority::getAuthority)
+                    .containsExactly(FactorGrantedAuthority.PASSWORD_AUTHORITY);
         }
 
         @Test
