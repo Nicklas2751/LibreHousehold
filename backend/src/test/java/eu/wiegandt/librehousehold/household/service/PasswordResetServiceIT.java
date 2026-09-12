@@ -74,7 +74,7 @@ class PasswordResetServiceIT {
                 .set(field(MemberEntity::householdId), household.id())
                 .create());
         var oldPasswordHash = "$argon2id$v=19$m=19456,t=2,p=1$oldHash";
-        accountRepository.save(new AccountEntity(member.getId(), oldPasswordHash, true, Instant.now(), null));
+        accountRepository.save(new AccountEntity(member.getId(), oldPasswordHash, true, Instant.now(), null, 0, null));
         var principal = new AccountPrincipal(member.email(), oldPasswordHash, true);
         var sessionId = "session-" + UUID.randomUUID();
         sessionRegistry.registerNewSession(sessionId, principal);

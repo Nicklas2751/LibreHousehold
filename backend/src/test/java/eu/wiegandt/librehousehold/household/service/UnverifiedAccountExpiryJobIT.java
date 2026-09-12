@@ -81,7 +81,7 @@ class UnverifiedAccountExpiryJobIT {
         // registered 6 days and 1 hour ago is past the warning threshold but not the grace period.
         var member = createMember(false);
         var registeredAt = Instant.now().minus(Duration.ofDays(6)).minus(Duration.ofHours(1));
-        accountRepository.save(new AccountEntity(member.getId(), "hash", false, registeredAt, null));
+        accountRepository.save(new AccountEntity(member.getId(), "hash", false, registeredAt, null, 0, null));
 
         // when
         job.run();
@@ -96,7 +96,7 @@ class UnverifiedAccountExpiryJobIT {
         // given
         var member = createMember(true);
         var registeredAt = Instant.now().minus(Duration.ofDays(8));
-        accountRepository.save(new AccountEntity(member.getId(), "hash", false, registeredAt, Instant.now()));
+        accountRepository.save(new AccountEntity(member.getId(), "hash", false, registeredAt, Instant.now(), 0, null));
         var householdId = createdHouseholdId;
 
         // when
@@ -112,7 +112,7 @@ class UnverifiedAccountExpiryJobIT {
         // given
         var member = createMember(false);
         var registeredAt = Instant.now().minus(Duration.ofDays(8));
-        accountRepository.save(new AccountEntity(member.getId(), "hash", false, registeredAt, Instant.now()));
+        accountRepository.save(new AccountEntity(member.getId(), "hash", false, registeredAt, Instant.now(), 0, null));
 
         // when
         job.run();

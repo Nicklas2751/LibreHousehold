@@ -5,22 +5,27 @@
 	import { getCsrfTokenFromCookieHeader } from '$lib/api/csrf';
 	import { bootstrapSession } from '$lib/stores/sessionBootstrap';
 
-	type LoginErrorType = 'none' | 'unverified' | 'generic';
+	type LoginErrorType = 'none' | 'unverified' | 'locked' | 'generic';
 
 	let email = $state('');
 	let password = $state('');
 	let submitting = $state(false);
 	let loginErrorType = $state<LoginErrorType>('none');
+	let lockedUntil = $state<Date | null>(null);
 
 	function classifyErrorQueryParam(url: string): LoginErrorType {
 		const params = new URL(url).searchParams;
 		if (!params.has('error')) return 'none';
-		return params.get('reason') === 'unverified' ? 'unverified' : 'generic';
+		const reason = params.get('reason');
+		if (reason === 'unverified') return 'unverified';
+		if (reason === 'locked') return 'locked';
+		return 'generic';
 	}
 
 	async function handleSubmit(event: SubmitEvent) {
 		event.preventDefault();
 		loginErrorType = 'none';
+		lockedUntil = null;
 		submitting = true;
 		try {
 			const csrfToken = getCsrfTokenFromCookieHeader(document.cookie);
@@ -36,6 +41,10 @@
 			const errorType = classifyErrorQueryParam(response.url);
 			if (errorType !== 'none') {
 				loginErrorType = errorType;
+				if (errorType === 'locked') {
+					const rawLockedUntil = new URL(response.url).searchParams.get('lockedUntil');
+					lockedUntil = rawLockedUntil ? new Date(rawLockedUntil) : null;
+				}
 				return;
 			}
 			await bootstrapSession();
@@ -61,6 +70,14 @@
 				{#if loginErrorType === 'unverified'}
 					<div class="mt-4 alert alert-warning">
 						<span>{m['login.error_unverified']()}</span>
+					</div>
+				{:else if loginErrorType === 'locked'}
+					<div class="mt-4 alert alert-warning">
+						<span>
+							{lockedUntil
+								? m['login.error_locked']({ time: lockedUntil.toLocaleTimeString() })
+								: m['login.error_locked_unknown_time']()}
+						</span>
 					</div>
 				{:else if loginErrorType === 'generic'}
 					<div class="mt-4 alert alert-error">

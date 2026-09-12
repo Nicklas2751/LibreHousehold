@@ -24,7 +24,7 @@ public class AccountService {
 
     public void createAccount(UUID memberId, String rawPassword) {
         accountRepository.save(new AccountEntity(
-                memberId, passwordEncoder.encode(rawPassword), false, Instant.now(), null));
+                memberId, passwordEncoder.encode(rawPassword), false, Instant.now(), null, 0, null));
     }
 
     public void resetPassword(UUID memberId, String newPassword) {
