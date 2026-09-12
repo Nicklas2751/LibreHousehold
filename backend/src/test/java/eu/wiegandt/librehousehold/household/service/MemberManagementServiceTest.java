@@ -23,6 +23,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mapstruct.factory.Mappers;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
@@ -682,7 +683,7 @@ class MemberManagementServiceTest {
         void memberNotFound_throwsMemberNotFoundException() {
             // given
             var memberId = UUID.randomUUID();
-            doReturn(false).when(memberRepository).existsById(memberId);
+            doReturn(Optional.empty()).when(memberRepository).findById(memberId);
 
             // when / then
             assertThatThrownBy(() -> service.leaveHousehold(memberId))
@@ -692,51 +693,50 @@ class MemberManagementServiceTest {
         @Test
         void memberIsAdmin_throwsHouseholdAdminCannotBeRemovedExceptionWithoutDeleting() {
             // given
-            var memberId = UUID.randomUUID();
             var entity = Instancio.of(memberEntityModel)
                     .set(field(MemberEntity::isAdmin), true)
                     .create();
-            doReturn(true).when(memberRepository).existsById(memberId);
-            doReturn(Optional.of(entity)).when(memberRepository).findById(memberId);
+            doReturn(Optional.of(entity)).when(memberRepository).findById(entity.id());
 
             // when / then
-            assertThatThrownBy(() -> service.leaveHousehold(memberId))
+            assertThatThrownBy(() -> service.leaveHousehold(entity.id()))
                     .isInstanceOf(HouseholdAdminCannotBeRemovedException.class);
             verify(memberRepository, never()).deleteById(any());
         }
 
         @Test
-        void memberFound_publishesMemberRemovedEvent() {
+        void memberFound_deletesMemberById() {
             // given
-            var memberId = UUID.randomUUID();
             var entity = Instancio.of(memberEntityModel)
                     .set(field(MemberEntity::isAdmin), false)
                     .create();
-            doReturn(true).when(memberRepository).existsById(memberId);
-            doReturn(Optional.of(entity)).when(memberRepository).findById(memberId);
+            doReturn(Optional.of(entity)).when(memberRepository).findById(entity.id());
 
             // when
-            service.leaveHousehold(memberId);
+            service.leaveHousehold(entity.id());
 
             // then
-            verify(eventPublisher).publishEvent(new MemberRemoved(memberId));
+            verify(memberRepository).deleteById(entity.id());
         }
 
         @Test
-        void memberFound_deletesMemberById() {
+        void validCall_publishesMemberRemovedWithMemberAndHouseholdData() {
             // given
-            var memberId = UUID.randomUUID();
+            var householdName = "Musterfamilie";
             var entity = Instancio.of(memberEntityModel)
                     .set(field(MemberEntity::isAdmin), false)
                     .create();
-            doReturn(true).when(memberRepository).existsById(memberId);
-            doReturn(Optional.of(entity)).when(memberRepository).findById(memberId);
+            doReturn(Optional.of(entity)).when(memberRepository).findById(entity.id());
+            doReturn(Optional.of(householdName)).when(householdRepository).findNameById(entity.householdId());
+            var expectedEvent = new MemberRemoved(entity.id(), entity.name(), entity.email(), householdName);
+            var eventCaptor = ArgumentCaptor.forClass(MemberRemoved.class);
 
             // when
-            service.leaveHousehold(memberId);
+            service.leaveHousehold(entity.id());
 
             // then
-            verify(memberRepository).deleteById(memberId);
+            verify(eventPublisher).publishEvent(eventCaptor.capture());
+            assertThat(eventCaptor.getValue()).usingRecursiveComparison().isEqualTo(expectedEvent);
         }
     }
 
@@ -748,7 +748,7 @@ class MemberManagementServiceTest {
             // given — the member exists (deletion would succeed), but not in this household
             var householdId = UUID.randomUUID();
             var memberId = UUID.randomUUID();
-            doReturn(false).when(memberRepository).existsByIdAndHouseholdId(memberId, householdId);
+            doReturn(Optional.empty()).when(memberRepository).findByIdAndHouseholdId(memberId, householdId);
 
             // when / then
             assertThatThrownBy(() -> service.removeMember(householdId, memberId))
@@ -760,36 +760,55 @@ class MemberManagementServiceTest {
         void memberIsAdmin_throwsHouseholdAdminCannotBeRemovedExceptionWithoutDeleting() {
             // given
             var householdId = UUID.randomUUID();
-            var memberId = UUID.randomUUID();
             var entity = Instancio.of(memberEntityModel)
+                    .set(field(MemberEntity::householdId), householdId)
                     .set(field(MemberEntity::isAdmin), true)
                     .create();
-            doReturn(true).when(memberRepository).existsByIdAndHouseholdId(memberId, householdId);
-            doReturn(Optional.of(entity)).when(memberRepository).findById(memberId);
+            doReturn(Optional.of(entity)).when(memberRepository).findByIdAndHouseholdId(entity.id(), householdId);
 
             // when / then
-            assertThatThrownBy(() -> service.removeMember(householdId, memberId))
+            assertThatThrownBy(() -> service.removeMember(householdId, entity.id()))
                     .isInstanceOf(HouseholdAdminCannotBeRemovedException.class);
             verify(memberRepository, never()).deleteById(any());
         }
 
         @Test
-        void memberBelongsToHousehold_deletesMemberAndPublishesEvent() {
+        void memberBelongsToHousehold_deletesMemberById() {
             // given
             var householdId = UUID.randomUUID();
-            var memberId = UUID.randomUUID();
             var entity = Instancio.of(memberEntityModel)
+                    .set(field(MemberEntity::householdId), householdId)
                     .set(field(MemberEntity::isAdmin), false)
                     .create();
-            doReturn(true).when(memberRepository).existsByIdAndHouseholdId(memberId, householdId);
-            doReturn(Optional.of(entity)).when(memberRepository).findById(memberId);
+            doReturn(Optional.of(entity)).when(memberRepository).findByIdAndHouseholdId(entity.id(), householdId);
 
             // when
-            service.removeMember(householdId, memberId);
+            service.removeMember(householdId, entity.id());
 
             // then
-            verify(memberRepository).deleteById(memberId);
-            verify(eventPublisher).publishEvent(new MemberRemoved(memberId));
+            verify(memberRepository).deleteById(entity.id());
+        }
+
+        @Test
+        void validCall_publishesMemberRemovedWithMemberAndHouseholdData() {
+            // given
+            var householdId = UUID.randomUUID();
+            var householdName = "Musterfamilie";
+            var entity = Instancio.of(memberEntityModel)
+                    .set(field(MemberEntity::householdId), householdId)
+                    .set(field(MemberEntity::isAdmin), false)
+                    .create();
+            doReturn(Optional.of(entity)).when(memberRepository).findByIdAndHouseholdId(entity.id(), householdId);
+            doReturn(Optional.of(householdName)).when(householdRepository).findNameById(householdId);
+            var expectedEvent = new MemberRemoved(entity.id(), entity.name(), entity.email(), householdName);
+            var eventCaptor = ArgumentCaptor.forClass(MemberRemoved.class);
+
+            // when
+            service.removeMember(householdId, entity.id());
+
+            // then
+            verify(eventPublisher).publishEvent(eventCaptor.capture());
+            assertThat(eventCaptor.getValue()).usingRecursiveComparison().isEqualTo(expectedEvent);
         }
     }
 

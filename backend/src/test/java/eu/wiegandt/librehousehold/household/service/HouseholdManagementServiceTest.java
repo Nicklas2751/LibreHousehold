@@ -8,10 +8,12 @@ import eu.wiegandt.librehousehold.household.repository.*;
 
 import eu.wiegandt.librehousehold.model.HouseholdUpdate;
 import org.instancio.Instancio;
+import org.instancio.Model;
 import org.instancio.junit.InstancioExtension;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -19,6 +21,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -46,6 +49,8 @@ class HouseholdManagementServiceTest {
 
     @InjectMocks
     private HouseholdManagementService service;
+
+    private final Model<MemberEntity> memberEntityModel = Instancio.of(MemberEntity.class).toModel();
 
     @Nested
     class updateName {
@@ -115,7 +120,32 @@ class HouseholdManagementServiceTest {
             service.deleteHousehold(householdId);
 
             // then
-            verify(eventPublisher).publishEvent(new HouseholdDeleted(householdId));
+            verify(eventPublisher).publishEvent(new HouseholdDeleted(householdId, "", List.of()));
+        }
+
+        @Test
+        void multipleMembers_publishesHouseholdDeletedWithAllMemberData() {
+            // given
+            var householdId = UUID.randomUUID();
+            var householdName = "Musterfamilie";
+            var members = Instancio.ofList(memberEntityModel)
+                    .set(field(MemberEntity::householdId), householdId)
+                    .create();
+            doReturn(1).when(householdRepository).deleteHouseholdById(householdId);
+            doReturn(Optional.of(householdName)).when(householdRepository).findNameById(householdId);
+            doReturn(members).when(memberRepository).findByHouseholdId(householdId);
+            var expectedMembers = members.stream()
+                    .map(member -> new HouseholdDeleted.DeletedMember(member.id(), member.name(), member.email()))
+                    .toList();
+            var expectedEvent = new HouseholdDeleted(householdId, householdName, expectedMembers);
+            var eventCaptor = ArgumentCaptor.forClass(HouseholdDeleted.class);
+
+            // when
+            service.deleteHousehold(householdId);
+
+            // then
+            verify(eventPublisher).publishEvent(eventCaptor.capture());
+            assertThat(eventCaptor.getValue()).usingRecursiveComparison().isEqualTo(expectedEvent);
         }
     }
 

@@ -128,31 +128,29 @@ public class MemberManagementService implements MemberQuery {
 
     @Transactional
     public void leaveHousehold(UUID memberId) {
-        if (!memberRepository.existsById(memberId)) {
-            throw new MemberNotFoundException();
-        }
-        assertMemberIsNotHouseholdAdmin(memberId);
-        deleteMemberAndPublishEvent(memberId);
+        var member = memberRepository.findById(memberId).orElseThrow(MemberNotFoundException::new);
+        assertMemberIsNotHouseholdAdmin(member);
+        deleteMemberAndPublishEvent(member);
     }
 
     @Transactional
     public void removeMember(UUID householdId, UUID memberId) {
-        if (!memberRepository.existsByIdAndHouseholdId(memberId, householdId)) {
-            throw new MemberNotFoundException();
-        }
-        assertMemberIsNotHouseholdAdmin(memberId);
-        deleteMemberAndPublishEvent(memberId);
+        var member = memberRepository.findByIdAndHouseholdId(memberId, householdId)
+                .orElseThrow(MemberNotFoundException::new);
+        assertMemberIsNotHouseholdAdmin(member);
+        deleteMemberAndPublishEvent(member);
     }
 
-    private void assertMemberIsNotHouseholdAdmin(UUID memberId) {
-        if (isAdmin(memberId)) {
+    private void assertMemberIsNotHouseholdAdmin(MemberEntity member) {
+        if (member.isAdmin()) {
             throw new HouseholdAdminCannotBeRemovedException();
         }
     }
 
-    private void deleteMemberAndPublishEvent(UUID memberId) {
-        memberRepository.deleteById(memberId);
-        eventPublisher.publishEvent(new MemberRemoved(memberId));
+    private void deleteMemberAndPublishEvent(MemberEntity member) {
+        memberRepository.deleteById(member.id());
+        var householdName = householdRepository.findNameById(member.householdId()).orElse("");
+        eventPublisher.publishEvent(new MemberRemoved(member.id(), member.name(), member.email(), householdName));
     }
 
     @Override

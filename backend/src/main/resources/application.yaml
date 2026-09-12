@@ -116,3 +116,13 @@ librehousehold:
     # self-hosters serving the frontend from a different origin must override this, e.g.
     # LIBREHOUSEHOLD_FRONTEND_BASE_URL=https://household.example.com.
     base-url: "http://localhost:8080"
+
+  notifications:
+    templates:
+      # Empty by default: no override directory active, only the bundled email templates/messages
+      # (see EmailTemplatingConfig) are used. Self-hosters can point this at a directory containing
+      # their own "messages/email_<locale>.properties" and/or "templates/email/*.html" files to
+      # override individual translations or the whole HTML layout without rebuilding the image, e.g.
+      # LIBREHOUSEHOLD_NOTIFICATIONS_TEMPLATES_OVERRIDE_DIR=/config/templates. Overridden keys/files
+      # take precedence; anything not overridden falls back to the bundled default.
+      override-dir: ""

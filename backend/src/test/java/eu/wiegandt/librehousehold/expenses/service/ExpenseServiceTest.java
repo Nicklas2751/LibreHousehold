@@ -302,7 +302,7 @@ class ExpenseServiceTest {
         void deletesAllExpenseData() {
             // given
             var householdId = UUID.randomUUID();
-            var event = new HouseholdDeleted(householdId);
+            var event = new HouseholdDeleted(householdId, "", List.of());
             var entities = Instancio.ofList(ExpenseEntity.class).create();
             doReturn(entities).when(expenseRepository).findByHouseholdId(householdId);
 

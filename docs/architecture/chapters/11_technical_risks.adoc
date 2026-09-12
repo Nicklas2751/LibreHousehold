@@ -25,10 +25,10 @@ This chapter collects the technical risks and technical debts that have already 
 |ID |Description |Affects |Priority |Mitigation / Next Step
 
 |TD1
-|Module boundaries are not yet technically enforced: no `package-info.java` with `@ApplicationModule(allowedDependencies = ...)` exists in the backend yet, even though xref:../adrs/adr-011.adoc[ADR 011] mandates explicit, declared dependencies between modules. Right now, nothing but code review discipline stops a module from importing another module's internals.
+|Module boundaries are only partially technically enforced: `ApplicationTests.writeDocumentationSnippets` already calls `ApplicationModules.verify()` on every build, which catches structural cycles between modules (it has already caught a real cycle during the P2.2 implementation). However, no `package-info.java` with `@ApplicationModule(allowedDependencies = ...)` exists in the backend yet, even though xref:../adrs/adr-011.adoc[ADR 011] mandates explicit, declared dependencies between modules. Without that declaration, `verify()` has no explicit allow-list to check a module's dependencies against beyond cycle detection, so nothing but code review discipline stops a module from importing another module's internals as long as no cycle results.
 |xref:01_introduction_and_goals.adoc#QG4[QG4 - Maintainable]
 |High
-|Add `package-info.java` per module declaring `allowedDependencies`, and add a `ApplicationModules.verify()` test so violations fail the build, as already specified in ADR 011.
+|Add `package-info.java` per module declaring `allowedDependencies`, as already specified in ADR 011 — the existing `ApplicationModules.verify()` test will then also enforce it.
 
 |TD2
 |No server-side limit on uploaded image size: `server.tomcat.max-http-post-size` is set to unbounded (`-1`) and the OpenAPI `image`/`avatar` fields have no `maxLength` constraint, so a client can currently upload an arbitrarily large base64-encoded image.
