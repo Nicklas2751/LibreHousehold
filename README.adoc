@@ -35,6 +35,61 @@ The OpenAPI specification can be validated with https://stoplight.io/open-source
 docker run --rm -v ./api:/tmp:ro stoplight/spectral lint -v /tmp/openapi.yml --ruleset /tmp/.spectral.yaml
 ----
 
+== How to Customize Email Templates
+
+LibreHousehold sends emails (email verification, password reset, household/member removal notices, etc.) using a bundled set of Thymeleaf HTML templates and translated (English/German) texts. Self-hosters can override any of them without rebuilding the application and without losing future updates to the ones they don't touch.
+
+An override directory mirrors the bundled layout under `backend/src/main/resources/`:
+
+[source]
+----
+<override-dir>/
+├── messages/
+│   ├── email_en.properties
+│   └── email_de.properties
+└── templates/
+    └── email/
+        ├── verification.html
+        ├── password-reset.html
+        ├── verification-deletion-warning.html
+        ├── household-deleted.html
+        ├── member-removed.html
+        └── layout/
+            └── email-frame.html   # shared header/footer fragment used by all templates
+----
+
+Only add the file(s) you actually want to change — anything missing falls back to the bundled default (translations fall back per key, templates fall back per file). See `backend/src/main/resources/messages/email_en.properties`/`email_de.properties` for the current translation keys and `backend/src/main/resources/templates/email/` for the current templates.
+
+=== During Development
+
+. Copy the file(s) you want to customize from `backend/src/main/resources/messages/` and/or `backend/src/main/resources/templates/email/` into a local directory (e.g. `./local-email-overrides/`), keeping the same relative paths.
+. Point the backend at that directory via the `librehousehold.notifications.templates.override-dir` property, e.g.:
++
+[source,bash]
+----
+LIBREHOUSEHOLD_NOTIFICATIONS_TEMPLATES_OVERRIDE_DIR=$(pwd)/local-email-overrides \
+  ./mvnw spring-boot:test-run -Dspring-boot.run.main-class=eu.wiegandt.librehousehold.TestLibrehouseholdApplication
+----
+. Edit the files in your override directory and restart the backend to see your changes — they are not hot-reloaded.
+
+=== In Production (Docker Compose)
+
+Mount your override directory into the backend container as a read-only volume and set the same property as an environment variable:
+
+[source,yaml]
+----
+services:
+  backend:
+    image: <your librehousehold-backend image>
+    volumes:
+      - ./email-overrides:/config/email-templates:ro
+    environment:
+      LIBREHOUSEHOLD_NOTIFICATIONS_TEMPLATES_OVERRIDE_DIR: /config/email-templates
+      # ... other required settings, see backend/src/main/resources/application.yaml
+----
+
+Place your customized files on the host under `./email-overrides`, mirroring the layout described above.
+
 == Software Architecture Overview
 
 An overview of the software architecture can be found in the https://librehousehold.wiegandt.eu[Architecture Overview].

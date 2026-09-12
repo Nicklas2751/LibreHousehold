@@ -43,7 +43,7 @@ class AccountRegistrationListenerTest {
             listener.on(new AccountRegistered(memberId, email));
 
             // then
-            verify(emailSenderService).sendVerificationEmail(email, token);
+            verify(emailSenderService).sendVerificationEmail(email, memberId, token);
         }
 
         @Test
@@ -58,7 +58,7 @@ class AccountRegistrationListenerTest {
             listener.on(new VerificationEmailRequested(memberId, email));
 
             // then
-            verify(emailSenderService).sendVerificationEmail(email, token);
+            verify(emailSenderService).sendVerificationEmail(email, memberId, token);
         }
 
         @Test
@@ -71,7 +71,7 @@ class AccountRegistrationListenerTest {
             listener.on(new VerificationDeletionWarningRequested(memberId, email));
 
             // then
-            verify(emailSenderService).sendVerificationDeletionWarningEmail(email);
+            verify(emailSenderService).sendVerificationDeletionWarningEmail(email, memberId);
         }
     }
 }

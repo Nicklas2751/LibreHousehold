@@ -37,11 +37,11 @@ public class AccountRegistrationListener {
 
     @ApplicationModuleListener
     public void on(VerificationDeletionWarningRequested event) {
-        emailSenderService.sendVerificationDeletionWarningEmail(event.email());
+        emailSenderService.sendVerificationDeletionWarningEmail(event.email(), event.memberId());
     }
 
     private void issueTokenAndSendVerificationEmail(UUID memberId, String email) {
         var token = accountTokenIssuer.issueEmailVerificationToken(memberId);
-        emailSenderService.sendVerificationEmail(email, token);
+        emailSenderService.sendVerificationEmail(email, memberId, token);
     }
 }

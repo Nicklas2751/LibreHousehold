@@ -24,6 +24,6 @@ public class PasswordResetRequestedListener {
     @ApplicationModuleListener
     public void on(PasswordResetRequested event) {
         var token = accountTokenIssuer.issuePasswordResetToken(event.memberId());
-        emailSenderService.sendPasswordResetEmail(event.email(), token);
+        emailSenderService.sendPasswordResetEmail(event.email(), event.memberId(), token);
     }
 }
