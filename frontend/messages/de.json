@@ -280,6 +280,8 @@
 		"submit_button": "Anmelden",
 		"error": "E-Mail oder Passwort falsch.",
 		"error_unverified": "Bitte bestätige zuerst deine E-Mail-Adresse. Wir haben dir dazu einen Link per E-Mail geschickt.",
+		"error_locked": "Dieses Konto ist wegen zu vieler fehlgeschlagener Anmeldeversuche vorübergehend gesperrt. Bitte versuche es nach {time} erneut.",
+		"error_locked_unknown_time": "Dieses Konto ist wegen zu vieler fehlgeschlagener Anmeldeversuche vorübergehend gesperrt. Bitte versuche es später erneut.",
 		"forgot_password_link": "Passwort vergessen?"
 	},
 	"forgot_password": {

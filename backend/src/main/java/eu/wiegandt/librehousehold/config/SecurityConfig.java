@@ -34,6 +34,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 import org.springframework.security.web.authentication.SavedRequestAwareAuthenticationSuccessHandler;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
 import org.springframework.security.web.session.ConcurrentSessionFilter;
@@ -42,6 +43,7 @@ import org.springframework.security.web.util.matcher.AnyRequestMatcher;
 import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
@@ -205,6 +207,7 @@ public class SecurityConfig {
                                                           RevokeAuthorizedClientLogoutHandler revokeAuthorizedClientLogoutHandler,
                                                           UnverifiedAccountLoginFailureHandler unverifiedAccountLoginFailureHandler,
                                                           SessionRegistry sessionRegistry,
+                                                          OncePerRequestFilter rateLimitingFilter,
                                                           @Value("${openapi.libreHousehold.base-path:/v1}") String basePath)
             throws Exception {
         // Same continuation the frontend's own redirectToOAuth2Login() (frontend/src/lib/oauth2Login.ts)
@@ -251,6 +254,11 @@ public class SecurityConfig {
                 // that hands it a fresh XSRF-TOKEN cookie before the POST (see P1.5.2).
                 .csrf(CsrfConfigurer::spa)
                 .addFilterAfter(new CsrfCookieFilter(), CsrfFilter.class)
+                // RATE1: covers both POST /login (username+IP-keyed) and the password-reset/
+                // verification endpoints (IP-keyed), see RateLimitingConfig. Must run before the
+                // request reaches formLogin()'s own authentication filter, and does not depend on
+                // authentication having happened yet, so it also protects the permitAll() endpoints.
+                .addFilterBefore(rateLimitingFilter, UsernamePasswordAuthenticationFilter.class)
                 // Bug A: PasswordResetService marks an account's SessionInformation entries as
                 // expired on the shared SessionRegistry bean (see its Javadoc), but nothing enforced
                 // that per request without this filter — the old session cookie kept working.

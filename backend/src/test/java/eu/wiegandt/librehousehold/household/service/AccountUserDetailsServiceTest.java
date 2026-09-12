@@ -1,5 +1,6 @@
 package eu.wiegandt.librehousehold.household.service;
 
+import eu.wiegandt.librehousehold.household.AccountLockedException;
 import eu.wiegandt.librehousehold.household.AccountPrincipal;
 import eu.wiegandt.librehousehold.household.model.AccountEntity;
 import eu.wiegandt.librehousehold.household.repository.AccountRepository;
@@ -66,7 +67,7 @@ class AccountUserDetailsServiceTest {
             var passwordHash = "$argon2id$...";
             var expectedPrincipal = new AccountPrincipal(email, passwordHash, false);
             doReturn(Optional.of(memberId)).when(memberManagementService).findMemberIdByEmail(email);
-            doReturn(Optional.of(new AccountEntity(memberId, passwordHash, false, Instant.now(), null)))
+            doReturn(Optional.of(new AccountEntity(memberId, passwordHash, false, Instant.now(), null, 0, null)))
                     .when(accountRepository).findById(memberId);
 
             // when
@@ -84,7 +85,42 @@ class AccountUserDetailsServiceTest {
             var passwordHash = "$argon2id$...";
             var expectedPrincipal = new AccountPrincipal(email, passwordHash, true);
             doReturn(Optional.of(memberId)).when(memberManagementService).findMemberIdByEmail(email);
-            doReturn(Optional.of(new AccountEntity(memberId, passwordHash, true, Instant.now(), null)))
+            doReturn(Optional.of(new AccountEntity(memberId, passwordHash, true, Instant.now(), null, 0, null)))
+                    .when(accountRepository).findById(memberId);
+
+            // when
+            var result = accountUserDetailsService.loadUserByUsername(email);
+
+            // then
+            assertThat(result).usingRecursiveComparison().isEqualTo(expectedPrincipal);
+        }
+
+        @Test
+        void lockedUntilInFuture_throwsAccountLockedExceptionCarryingLockedUntil() {
+            // given
+            var email = "max@example.com";
+            var memberId = UUID.randomUUID();
+            var lockedUntil = Instant.now().plusSeconds(600);
+            doReturn(Optional.of(memberId)).when(memberManagementService).findMemberIdByEmail(email);
+            doReturn(Optional.of(new AccountEntity(memberId, "$argon2id$...", true, Instant.now(), null, 10, lockedUntil)))
+                    .when(accountRepository).findById(memberId);
+
+            // when / then
+            assertThatThrownBy(() -> accountUserDetailsService.loadUserByUsername(email))
+                    .isInstanceOfSatisfying(AccountLockedException.class,
+                            ex -> assertThat(ex.getLockedUntil()).isEqualTo(lockedUntil));
+        }
+
+        @Test
+        void lockedUntilInPast_returnsPrincipal() {
+            // given
+            var email = "max@example.com";
+            var memberId = UUID.randomUUID();
+            var passwordHash = "$argon2id$...";
+            var lockedUntil = Instant.now().minusSeconds(600);
+            var expectedPrincipal = new AccountPrincipal(email, passwordHash, true);
+            doReturn(Optional.of(memberId)).when(memberManagementService).findMemberIdByEmail(email);
+            doReturn(Optional.of(new AccountEntity(memberId, passwordHash, true, Instant.now(), null, 10, lockedUntil)))
                     .when(accountRepository).findById(memberId);
 
             // when
