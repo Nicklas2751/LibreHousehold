@@ -88,7 +88,7 @@ Authentication-related security controls are tracked against an https://github.c
 |Open
 
 |ENUM1
-|No inference of existing accounts from login, registration, or password-reset responses (error messages, status codes, timing). Deliberate exception: login-blocking of unverified accounts (see VERIFY1) makes the account status distinguishable via a dedicated `DisabledException` — an accepted, documented deviation from the strict interpretation, not a bug.
+|No inference of existing accounts from login, registration, or password-reset responses (error messages, status codes, timing). Deliberate exceptions: login-blocking of unverified accounts (see VERIFY1) makes the account status distinguishable via a dedicated `DisabledException`, and account lockout (see RATE1) makes a locked account distinguishable via a dedicated `AccountLockedException` (the login page shows the exact unlock time) — both are accepted, documented deviations from the strict interpretation, not bugs. Chosen deliberately for both cases: the usability benefit of telling a genuine user what is happening with their own account outweighs the minor account-enumeration signal.
 |V6.3.8 (**L3**, deliberately raised above the L2 baseline)
 |Decided
 
@@ -110,7 +110,13 @@ Authentication-related security controls are tracked against an https://github.c
 |RATE1
 |Rate limiting / anti-automation against credential stuffing and brute force.
 |V6.1.1 (L1), V6.3.1 (L1)
-|Deliberately deferred to a dedicated future hardening effort
+|Decided, implemented via two complementary mechanisms: a local, in-memory Bucket4j token bucket (`RateLimitingFilter`/`RateLimitingConfig`)
+throttles the *rate* of requests to `POST /login` (keyed by username+IP) and to the
+password-reset/email-verification endpoints (keyed by IP, since several of them are
+unauthenticated), returning `429 Too Many Requests` once exceeded; independently, a DB-backed
+account lockout (`AccountLockoutListener`, `AccountUserDetailsService`, `account.locked_until`/
+`account.failed_login_attempts`) locks an account for a configurable duration after a higher
+threshold of failed attempts is reached, regardless of how slowly they were made.
 
 |HASH1
 |Password hashing with a computationally intensive key derivation function.

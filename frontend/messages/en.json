@@ -278,6 +278,8 @@
 		"submit_button": "Log in",
 		"error": "Incorrect email or password.",
 		"error_unverified": "Please confirm your email address first. We've sent you a link by email.",
+		"error_locked": "This account is temporarily locked due to too many failed login attempts. Please try again after {time}.",
+		"error_locked_unknown_time": "This account is temporarily locked due to too many failed login attempts. Please try again later.",
 		"forgot_password_link": "Forgot your password?"
 	},
 	"forgot_password": {

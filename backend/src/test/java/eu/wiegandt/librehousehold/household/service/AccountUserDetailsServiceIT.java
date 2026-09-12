@@ -1,6 +1,7 @@
 package eu.wiegandt.librehousehold.household.service;
 
 import eu.wiegandt.librehousehold.TestcontainersConfiguration;
+import eu.wiegandt.librehousehold.household.AccountLockedException;
 import eu.wiegandt.librehousehold.household.AccountPrincipal;
 import eu.wiegandt.librehousehold.household.model.HouseholdEntity;
 import eu.wiegandt.librehousehold.household.model.MemberEntity;
@@ -18,10 +19,13 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.within;
 import static org.instancio.Select.field;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, properties = {"librehousehold.security.oauth2-client.client-secret=test-client-secret"})
@@ -99,6 +103,24 @@ class AccountUserDetailsServiceIT {
 
             // then
             assertThat(result).usingRecursiveComparison().isEqualTo(expectedPrincipal);
+        }
+
+        @Test
+        void lockedAccount_throwsAccountLockedExceptionCarryingLockedUntil() {
+            // given
+            var household = householdRepository.save(Instancio.create(HouseholdEntity.class));
+            createdHouseholdId = household.id();
+            var member = memberRepository.save(Instancio.of(MemberEntity.class)
+                    .set(field(MemberEntity::householdId), household.id())
+                    .create());
+            accountService.createAccount(member.getId(), "correct horse battery staple");
+            var lockedUntil = Instant.now().plusSeconds(600);
+            accountRepository.lockUntil(member.getId(), lockedUntil);
+
+            // when / then
+            assertThatThrownBy(() -> accountUserDetailsService.loadUserByUsername(member.email()))
+                    .isInstanceOfSatisfying(AccountLockedException.class,
+                            ex -> assertThat(ex.getLockedUntil()).isCloseTo(lockedUntil, within(2, ChronoUnit.SECONDS)));
         }
     }
 }

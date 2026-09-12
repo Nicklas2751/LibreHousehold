@@ -135,9 +135,9 @@ muss aber sauber neu aus der überarbeiteten OpenAPI-Spec generiert werden.
 
 ## Phase 2 — Lokale Accounts: Lifecycle-Härtung (OWASP ASVS)
 
-- **P2.1 — OpenAPI: E-Mail-Verifikation.** Verifikations-Token, Resend-Endpoint,
+- ✅ **P2.1 — OpenAPI: E-Mail-Verifikation.** Verifikations-Token, Resend-Endpoint,
   Verifikationsstatus am Member/Account.
-- **P2.2 — Backend: Verifikations-Versand & -Prüfung.** Integration über das
+- ✅ **P2.2 — Backend: Verifikations-Versand & -Prüfung.** Integration über das
   Notifications-Modul (Domain Event bei Registrierung), Ablauf-/Resend-Regeln. Umfasst auch die
   Konsequenzen einer dauerhaft unverifizierten E-Mail-Adresse: Login-Blocking (kein erneuter Login
   nach Logout/Session-Ablauf, bis verifiziert — die erste Session direkt nach Setup/Join bleibt
@@ -147,67 +147,30 @@ muss aber sauber neu aus der überarbeiteten OpenAPI-Spec generiert werden.
   Haushalts-Admin, wird der gesamte Haushalt gelöscht. Ausdrücklich **nicht** eingeschränkt:
   Ausgaben/Aufgaben erstellen, Einladungslink erzeugen/nutzen, Passwort-Reset anfordern/einlösen.
   Siehe [Detailplan](auth-plan-p2.1-p2.7.md), Abschnitte 2.9/3.7–3.10.
-- **P2.3 — Frontend: Verifikationshinweis & Resend-UI.**
-- **P2.4 — OpenAPI: Passwort-Reset-Flow.** Request- und Confirm-Endpoint mit Einmal-Token.
-- **P2.5 — Backend: Passwort-Reset.** Token-Ausstellung/-Einlösung, Invalidierung bestehender
-  Sessions nach Reset.
-- **P2.6 — Frontend: „Passwort vergessen"-Flow.**
-- **P2.7 — Backend: Rate-Limiting & Lockout.** Brute-Force-Schutz für Login-, Reset- und
-  Verifikations-Endpunkte.
-- **P2.8 — Backend: Mitglieder-Benachrichtigung bei Haushalts-Löschung.** *(Noch kein eigener
-  Detailplan.)* Bei jeder Haushalts-Löschung — egal ob durch die bestehende manuelle
-  Admin-Löschung (P1.6) oder durch die neue Auto-Löschung bei abgelaufener Verifikationsfrist
-  (P2.2) — sollen verbleibende Mitglieder per E-Mail informiert werden, dass ihr Haushalt (und
-  damit ihr eigener Account) gelöscht wurde. Erfordert eine Erweiterung des `HouseholdDeleted`-
-  Domain-Events (aktuell nur `householdId`, keine Mitgliederdaten) bzw. einen Datenerfassungsschritt
-  **vor** `HouseholdManagementService.deleteHousehold` löscht die Mitgliederzeilen — die
-  `@ApplicationModuleListener`-Verarbeitung läuft erst nach dem Commit, wenn die Mitgliederdaten
-  bereits weg sind. Nachträglich entdeckte Lücke im bestehenden P1.6-Löschungs-Flow, aufgedeckt bei
-  der P2.2-Erweiterung um die Grace-Period-Löschung; siehe Detailplan
-  [auth-plan-p2.1-p2.7.md](auth-plan-p2.1-p2.7.md), Abschnitt 2.9/3.10.
+- ✅ **P2.3 — Frontend: Verifikationshinweis & Resend-UI.**
+- ✅ **P2.4 — OpenAPI: Passwort-Reset-Flow.** Request- und Confirm-Endpoint mit Einmal-Token.
+- ✅ **P2.5 — Backend: Passwort-Reset.** Token-Ausstellung/-Einlösung, Invalidierung bestehender
+  Sessions nach Reset. Beim Umsetzen zwei zusätzliche, vorbestehende Bugs gefunden und behoben:
+  fehlendes `@Transactional` bei `MemberManagementService.requestPasswordReset` (Domain-Event wurde
+  nie zugestellt) sowie ein nicht durchgesetzter Session-Invalidierungs-Mechanismus (`SessionRegistry.
+  expireNow()` ohne `ConcurrentSessionFilter`-Enforcement — jetzt per gezielt verdrahtetem
+  `ConcurrentSessionFilter` behoben) und ein vorbestehender Login-Hand-off-Bug (direkter `/login`-
+  Aufruf ohne vorherigen OAuth2-Redirect schloss den OIDC-Hand-off nicht ab).
+- ✅ **P2.6 — Frontend: „Passwort vergessen"-Flow.**
+- ✅ **P2.7 — Backend: Rate-Limiting & Lockout.** Brute-Force-Schutz für Login-, Reset- und
+  Verifikations-Endpunkte (Bucket4j) sowie DB-gestützter Account-Lockout nach wiederholten
+  Fehlversuchen.
+- **P2.8 — Backend: Mitglieder-Benachrichtigung bei Haushalts-Löschung/Mitglieds-Entfernung.**
+  Erweitert `HouseholdDeleted`/`MemberRemoved` um die vor der Löschung eingesammelten
+  Mitglieder-/Haushaltsdaten (Timing-Lücke: `@ApplicationModuleListener` läuft erst nach dem
+  Commit, wenn die Zeilen bereits weg sind); benachrichtigt alle betroffenen Mitglieder inkl.
+  des auslösenden Admins/Selbst-Austretenden per E-Mail. Siehe
+  [Detailplan](auth-plan-p2.8-p2.9.md).
 - **P2.9 — Backend: E-Mail-Inhalte konfigurierbar, mehrsprachig und HTML+Text machen.**
-  *(Noch kein eigener Detailplan — bewusst zurückgestellt, siehe Begründung unten.)* Betrifft
-  `EmailSenderService` (`.../notifications/internal/EmailSenderService.java`), aktuell mit
-  hartkodiertem, rein englischem Betreff/Text direkt im Java-Code (`SimpleMailMessage`, kein
-  Templating, siehe Klassenkommentar „no templating library ... speculative addition for no
-  current benefit" — diese Einschätzung gilt für P2.2 isoliert, nicht mehr sobald die hier
-  beschriebenen Anforderungen dazukommen). Drei zusammenhängende Anforderungen, bei der
-  Erstellung dieses Punkts vom Nutzer vorgegeben:
-  1. **Mehrsprachigkeit:** Die Mail muss in der Sprache verschickt werden, die der Nutzer im
-     Browser zum Zeitpunkt der auslösenden Aktion (Registrierung, Resend, Passwort-Reset-Anfrage)
-     eingestellt hatte — nicht in einer Server-Default-Sprache. Das erfordert, dass die Sprache
-     als Teil der jeweiligen Domain-Events (`AccountRegistered`, `VerificationEmailRequested`,
-     `VerificationDeletionWarningRequested`, künftig auch das Reset-Pendant aus P2.5) mitgegeben
-     wird, da der Event-Listener im `notifications`-Modul zum Verarbeitungszeitpunkt keinen Zugriff
-     mehr auf den ursprünglichen Request/dessen `Accept-Language` o. Ä. hat. Zu klären: woher der
-     Publisher (`household`-Modul) die Sprache nimmt — vermutlich `UserPreferences.language`
-     (siehe `api/openapi.yml`, bereits vorhanden für Theme/Sprache-Einstellungen), nicht der
-     Request-Header, da die Sprachpräferenz im Projekt bereits als persistierte Nutzereinstellung
-     modelliert ist (`Paraglide`, siehe `frontend/messages/{de,en}.json`) — konsistent damit sollte
-     dieselbe Quelle für Mail-Inhalte gelten. Für die Grace-Period-Warn-Mail (kein interaktiver
-     Auslöser, sondern ein Scheduled Job) ist das nicht ohne Weiteres möglich, da es keine
-     „Anfrage" mit Sprachkontext gibt — dort bliebe wohl nur die zuletzt gespeicherte
-     `UserPreferences.language` des betroffenen Mitglieds.
-  2. **Anpassbarkeit durch Selfhoster:** Wer die Software selbst hostet, muss Betreff und Text
-     jeder versendeten Mail anpassen können, ohne den Java-Code zu ändern/neu zu kompilieren —
-     vermutlich externe Template-Dateien (Konfigurationsverzeichnis analog
-     `application.yaml`-Overrides) statt in Java eingebetteter Strings. Offene Frage für den
-     Detailplan: Templating-Mechanismus (z. B. Thymeleaf — aktuell keine Dependency im Projekt,
-     bräuchte Rückfrage laut AGENTS.md „Dependency Management" — vs. eine einfachere
-     Platzhalter-Ersetzung ohne neue Dependency) sowie ob/wie Selfhoster-Overrides mit der
-     Mehrsprachigkeit aus Punkt 1 zusammenspielen (pro Sprache ein eigenes überschreibbares
-     Template-Set).
-  3. **HTML + Text (Multipart):** Aktuell nur Plain-Text (`SimpleMailMessage`). Künftig
-     Multipart-Mails mit einer HTML-Variante, die zum Frontend-Design passt (DaisyUI/Tailwind-
-     Farbschema, Logo etc. — siehe `frontend/src/routes/login/+page.svelte` als visuelles
-     Vorbild), plus einer Text-Variante als Fallback für Clients ohne HTML-Unterstützung
-     (`MimeMessageHelper` statt `SimpleMailMessage`, weiterhin `spring-boot-starter-mail`, keine
-     neue Dependency für den Mailversand selbst nötig).
-
-  **Warum zurückgestellt statt sofort umgesetzt:** Bei der Umsetzung von P2.2 aufgefallen (aktuell
-  rein englische, hartkodierte Mailtexte), aber laut Nutzer bewusst nicht mehr Teil des laufenden
-  P2.1–P2.7-Umfangs — „würde den Rahmen sprengen". Eigener Detailplan folgt, sobald P2.1–P2.7
-  abgeschlossen sind bzw. wenn als nächstes an der Reihe.
+  Thymeleaf + Spring `MessageSource` für selfhoster-überschreibbare, mehrsprachige HTML+Text-Mails;
+  Sprachauflösung über `notifications` → `usersettings.PreferencesQuery` (nicht über
+  `household`-Events, siehe ADR-011/Modul-Grenzen). Migriert auch die drei bestehenden E-Mails aus
+  P2.2/P2.5 auf die neue Infrastruktur. Siehe [Detailplan](auth-plan-p2.8-p2.9.md).
 
 ## Phase 3 — Social Login (föderiert, konfigurierbar)
 

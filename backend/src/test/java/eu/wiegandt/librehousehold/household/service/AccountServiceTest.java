@@ -73,7 +73,7 @@ class AccountServiceTest {
             // then
             var captor = ArgumentCaptor.forClass(AccountEntity.class);
             verify(accountRepository).save(captor.capture());
-            var expectedSavedAccount = new AccountEntity(memberId, null, false, beforeCreation, null);
+            var expectedSavedAccount = new AccountEntity(memberId, null, false, beforeCreation, null, 0, null);
             Comparator<Instant> registeredAtWithinCreationWindow = (actual, expected) -> {
                 if (actual == null || expected == null) {
                     return Objects.equals(actual, expected) ? 0 : -1;
@@ -104,7 +104,7 @@ class AccountServiceTest {
         void unverifiedAccount_throwsEmailNotVerifiedExceptionWithoutUpdating() {
             // given
             var memberId = UUID.randomUUID();
-            var account = new AccountEntity(memberId, "$argon2id$v=19$m=19456,t=2,p=1$...", false, Instant.now(), null);
+            var account = new AccountEntity(memberId, "$argon2id$v=19$m=19456,t=2,p=1$...", false, Instant.now(), null, 0, null);
             doReturn(Optional.of(account)).when(accountRepository).findById(memberId);
 
             // when / then
@@ -117,7 +117,7 @@ class AccountServiceTest {
         void verifiedAccountWrongOldPassword_throwsInvalidPasswordExceptionWithoutUpdating() {
             // given
             var memberId = UUID.randomUUID();
-            var account = new AccountEntity(memberId, "$argon2id$v=19$m=19456,t=2,p=1$...", true, Instant.now(), null);
+            var account = new AccountEntity(memberId, "$argon2id$v=19$m=19456,t=2,p=1$...", true, Instant.now(), null, 0, null);
             doReturn(Optional.of(account)).when(accountRepository).findById(memberId);
             doReturn(false).when(passwordEncoder).matches("wrongOldPassword", account.passwordHash());
 
@@ -131,7 +131,7 @@ class AccountServiceTest {
         void verifiedAccountCorrectOldPassword_updatesPasswordHash() {
             // given
             var memberId = UUID.randomUUID();
-            var account = new AccountEntity(memberId, "$argon2id$v=19$m=19456,t=2,p=1$...", true, Instant.now(), null);
+            var account = new AccountEntity(memberId, "$argon2id$v=19$m=19456,t=2,p=1$...", true, Instant.now(), null, 0, null);
             var newHashedPassword = "$argon2id$v=19$m=19456,t=2,p=1$newHash";
             doReturn(Optional.of(account)).when(accountRepository).findById(memberId);
             doReturn(true).when(passwordEncoder).matches("correctOldPassword", account.passwordHash());
@@ -183,7 +183,7 @@ class AccountServiceTest {
         void unverifiedAccount_returnsFalse() {
             // given
             var memberId = UUID.randomUUID();
-            var account = new AccountEntity(memberId, "$argon2id$...", false, Instant.now(), null);
+            var account = new AccountEntity(memberId, "$argon2id$...", false, Instant.now(), null, 0, null);
             doReturn(Optional.of(account)).when(accountRepository).findById(memberId);
 
             // when
@@ -197,7 +197,7 @@ class AccountServiceTest {
         void verifiedAccount_returnsTrue() {
             // given
             var memberId = UUID.randomUUID();
-            var account = new AccountEntity(memberId, "$argon2id$...", true, Instant.now(), null);
+            var account = new AccountEntity(memberId, "$argon2id$...", true, Instant.now(), null, 0, null);
             doReturn(Optional.of(account)).when(accountRepository).findById(memberId);
 
             // when

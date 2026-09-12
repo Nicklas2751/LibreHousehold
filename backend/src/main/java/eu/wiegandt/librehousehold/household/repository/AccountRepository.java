@@ -27,4 +27,16 @@ public interface AccountRepository extends CrudRepository<AccountEntity, UUID> {
     @Modifying
     @Query("UPDATE account SET verification_deletion_warning_sent_at = :sentAt WHERE member_id = :memberId")
     void updateVerificationDeletionWarningSentAt(@Param("memberId") UUID memberId, @Param("sentAt") Instant sentAt);
+
+    @Modifying
+    @Query("UPDATE account SET failed_login_attempts = failed_login_attempts + 1 WHERE member_id = :memberId")
+    void incrementFailedLoginAttempts(@Param("memberId") UUID memberId);
+
+    @Modifying
+    @Query("UPDATE account SET locked_until = :lockedUntil WHERE member_id = :memberId")
+    void lockUntil(@Param("memberId") UUID memberId, @Param("lockedUntil") Instant lockedUntil);
+
+    @Modifying
+    @Query("UPDATE account SET failed_login_attempts = 0, locked_until = NULL WHERE member_id = :memberId")
+    void resetFailedLoginAttempts(@Param("memberId") UUID memberId);
 }

@@ -55,7 +55,7 @@ class UnverifiedAccountExpiryJobTest {
         void accountPastWarningThresholdNotYetWarned_sendsWarningEmailAndSetsTimestamp() {
             // given
             var job = buildJob();
-            var account = new AccountEntity(UUID.randomUUID(), "hash", false, Instant.now(), null);
+            var account = new AccountEntity(UUID.randomUUID(), "hash", false, Instant.now(), null, 0, null);
             var member = Instancio.of(MemberEntity.class).set(field(MemberEntity::id), account.memberId()).create();
             doReturn(List.of(account)).when(accountRepository)
                     .findByEmailVerifiedFalseAndVerificationDeletionWarningSentAtIsNullAndRegisteredAtBefore(any());
@@ -73,7 +73,7 @@ class UnverifiedAccountExpiryJobTest {
         void accountPastWarningThreshold_setsWarningTimestampOnAccount() {
             // given
             var job = buildJob();
-            var account = new AccountEntity(UUID.randomUUID(), "hash", false, Instant.now(), null);
+            var account = new AccountEntity(UUID.randomUUID(), "hash", false, Instant.now(), null, 0, null);
             var member = Instancio.of(MemberEntity.class).set(field(MemberEntity::id), account.memberId()).create();
             var beforeRun = Instant.now();
             doReturn(List.of(account)).when(accountRepository)
@@ -109,7 +109,7 @@ class UnverifiedAccountExpiryJobTest {
             // given
             var job = buildJob();
             var householdId = UUID.randomUUID();
-            var account = new AccountEntity(UUID.randomUUID(), "hash", false, Instant.now(), null);
+            var account = new AccountEntity(UUID.randomUUID(), "hash", false, Instant.now(), null, 0, null);
             var member = Instancio.of(MemberEntity.class)
                     .set(field(MemberEntity::id), account.memberId())
                     .set(field(MemberEntity::householdId), householdId)
@@ -132,7 +132,7 @@ class UnverifiedAccountExpiryJobTest {
             // given
             var job = buildJob();
             var householdId = UUID.randomUUID();
-            var account = new AccountEntity(UUID.randomUUID(), "hash", false, Instant.now(), null);
+            var account = new AccountEntity(UUID.randomUUID(), "hash", false, Instant.now(), null, 0, null);
             var member = Instancio.of(MemberEntity.class)
                     .set(field(MemberEntity::id), account.memberId())
                     .set(field(MemberEntity::householdId), householdId)

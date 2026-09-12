@@ -32,8 +32,8 @@ import java.util.LinkedHashSet;
  * (unlike a real {@code formLogin()}): that manager's {@code DaoAuthenticationProvider} runs
  * {@code UserDetails.isEnabled()} pre-authentication checks (see {@code AccountPrincipal#isEnabled()},
  * P2.2), which would reject this very first session too, since a freshly created account is always
- * unverified at this point — the login-blocking gate is meant for <em>subsequent</em> logins only
- * (see {@code docs/auth-plan-p2.1-p2.7.md}, Abschnitt 2.9). This class re-verifies the password
+ * unverified at this point — the login-blocking gate is meant for <em>subsequent</em> logins only.
+ * This class re-verifies the password
  * directly instead (redundant given the caller just used the same raw password to create the
  * account, but kept as a defense-in-depth safety net) and builds the authenticated token itself,
  * bypassing those pre-authentication checks entirely.

@@ -33,6 +33,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
@@ -234,6 +235,28 @@ class AuthorizationServerConfigurationIT {
 
             // then
             assertThat(result.getResponseHeaders().getLocation()).hasPath("/login").hasQuery("error&reason=unverified");
+        }
+
+        /**
+         * Same trade-off as {@link #unverifiedAccountCredentials_rejectedWithUnverifiedReason()},
+         * extended to the account-lockout case (RATE1, see {@code AccountLockoutListener}): the
+         * frontend needs {@code lockedUntil} to tell the user when they can try again.
+         */
+        @Test
+        void lockedAccountCredentials_rejectedWithLockedReasonAndLockedUntil() {
+            // given
+            var email = "authtest-" + UUID.randomUUID() + "@example.com";
+            var member = createMemberWithAccount(email, RAW_PASSWORD);
+            accountRepository.lockUntil(member.getId(), Instant.now().plusSeconds(600));
+            var loginPage = requestLoginPageViaAuthorizationCodeFlow();
+
+            // when
+            var result = submitLogin(loginPage.cookies(), loginPage.csrfToken(), email, RAW_PASSWORD);
+
+            // then
+            assertThat(result.getResponseHeaders().getLocation())
+                    .hasPath("/login")
+                    .satisfies(uri -> assertThat(uri.getQuery()).startsWith("error&reason=locked&lockedUntil="));
         }
 
         @Test
