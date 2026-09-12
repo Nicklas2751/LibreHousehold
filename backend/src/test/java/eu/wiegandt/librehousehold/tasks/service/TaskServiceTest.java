@@ -408,7 +408,7 @@ class TaskServiceTest {
             var householdId = UUID.randomUUID();
 
             // when
-            taskService.onHouseholdDeleted(new HouseholdDeleted(householdId));
+            taskService.onHouseholdDeleted(new HouseholdDeleted(householdId, "", List.of()));
 
             // then
             verify(taskRepository).deleteByHouseholdId(householdId);

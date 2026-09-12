@@ -47,13 +47,17 @@ public class HouseholdManagementService {
 
     @Transactional
     public void deleteHousehold(UUID householdId) {
+        var householdName = householdRepository.findNameById(householdId).orElse("");
+        var deletedMembers = memberRepository.findByHouseholdId(householdId).stream()
+                .map(member -> new HouseholdDeleted.DeletedMember(member.id(), member.name(), member.email()))
+                .toList();
         inviteRepository.deleteByHouseholdId(householdId);
         memberRepository.deleteByHouseholdId(householdId);
         var deletedRows = householdRepository.deleteHouseholdById(householdId);
         if (deletedRows == 0) {
             throw new HouseholdNotFoundException();
         }
-        eventPublisher.publishEvent(new HouseholdDeleted(householdId));
+        eventPublisher.publishEvent(new HouseholdDeleted(householdId, householdName, deletedMembers));
     }
 
     public InviteResponse getInvite(UUID householdId) {

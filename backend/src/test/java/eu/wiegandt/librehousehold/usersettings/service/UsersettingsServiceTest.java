@@ -138,7 +138,7 @@ class UsersettingsServiceTest {
         void publishedEvent_deletesPreferences() {
             // given
             var memberId = UUID.randomUUID();
-            var event = new MemberRemoved(memberId);
+            var event = new MemberRemoved(memberId, "", "", "");
 
             // when
             service.onMemberRemoved(event);
