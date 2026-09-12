@@ -1,0 +1,11 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:replace="~{layout/email-frame :: frame(~{::.email-body})}">
+    <div class="email-body">
+        <h2 style="margin:0 0 12px;font-size:16px;" th:text="#{member-removed.subject}">You have been removed from a household</h2>
+        <p style="margin:0;" th:text="#{member-removed.body(${memberName}, ${householdName})}">Body text placeholder</p>
+    </div>
+</div>
+</body>
+</html>

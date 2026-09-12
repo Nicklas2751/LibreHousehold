@@ -15,10 +15,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
-import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
+import jakarta.mail.Session;
+import jakarta.mail.internet.MimeMessage;
 import java.time.Duration;
 import java.util.UUID;
 
@@ -26,6 +27,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static org.instancio.Select.field;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.verify;
 
 /**
@@ -83,6 +85,7 @@ class AccountRegistrationListenerIT {
         var member = memberRepository.save(Instancio.of(MemberEntity.class)
                 .set(field(MemberEntity::householdId), household.id())
                 .create());
+        doReturn(new MimeMessage((Session) null)).when(mailSender).createMimeMessage();
 
         // when
         listener.on(new AccountRegistered(member.getId(), member.email()));
@@ -91,7 +94,7 @@ class AccountRegistrationListenerIT {
         await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
             assertThat(accountTokenRepository.findAll())
                     .anyMatch(token -> token.memberId().equals(member.getId()) && token.purpose().equals("EMAIL_VERIFICATION"));
-            verify(mailSender).send(any(SimpleMailMessage.class));
+            verify(mailSender).send(any(MimeMessage.class));
         });
     }
 }

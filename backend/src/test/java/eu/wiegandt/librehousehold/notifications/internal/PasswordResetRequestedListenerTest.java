@@ -37,6 +37,6 @@ class PasswordResetRequestedListenerTest {
         listener.on(new PasswordResetRequested(memberId, email));
 
         // then
-        verify(emailSenderService).sendPasswordResetEmail(email, token);
+        verify(emailSenderService).sendPasswordResetEmail(email, memberId, token);
     }
 }
