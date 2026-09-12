@@ -15,7 +15,9 @@ public record AccountEntity(
         @Column("password_hash") String passwordHash,
         @Column("email_verified") boolean emailVerified,
         @Column("registered_at") Instant registeredAt,
-        @Column("verification_deletion_warning_sent_at") Instant verificationDeletionWarningSentAt
+        @Column("verification_deletion_warning_sent_at") Instant verificationDeletionWarningSentAt,
+        @Column("failed_login_attempts") int failedLoginAttempts,
+        @Column("locked_until") Instant lockedUntil
 ) implements Persistable<UUID> {
 
     @Override

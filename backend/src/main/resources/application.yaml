@@ -84,6 +84,30 @@ librehousehold:
       # higher-privilege credential than an email verification link, so it should not remain usable
       # for long. Requesting a new one at any time issues a fresh token with a new deadline.
       token-validity: 1h
+    rate-limit:
+      # RATE1 (see Arc42 Chapter 8): throttles POST /login per username+IP combination, on top of
+      # the account-wide lockout below. 5 attempts per minute is generous enough for a genuine user
+      # who mistypes their password a couple of times, while still meaningfully slowing down
+      # credential-stuffing/brute-force attempts against a single account.
+      login:
+        max-attempts: 5
+        window-duration: 1m
+      # Shared by the password-reset and email-verification endpoints (POST /password-reset/request,
+      # /password-reset/confirm, /members/verification/confirm, and the per-member
+      # /verification/resend), keyed by IP only: several of these endpoints are unauthenticated and
+      # have no meaningful "username" to key on, and an attacker trying many different email
+      # addresses must still be throttled.
+      sensitive-endpoints:
+        max-attempts: 5
+        window-duration: 1m
+    lockout:
+      # Account-wide lockout after repeated failed login attempts (AuthenticationFailureBadCredentialsEvent,
+      # see AccountLockoutListener), independent of how slowly the attempts were made - complements
+      # the rate-limit above, which only throttles the *rate*. Higher than rate-limit.login.max-attempts
+      # on purpose: a legitimate user who is simply slow (e.g. across several rate-limit windows)
+      # should not get their account locked as easily as they get rate-limited.
+      max-attempts: 10
+      lockout-duration: 15m
 
   frontend:
     # Base URL used to build links that are sent in emails (e.g. the email verification link) and

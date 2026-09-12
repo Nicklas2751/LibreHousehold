@@ -86,6 +86,38 @@ describe('login page', () => {
 		expect(mockBootstrapSession).not.toHaveBeenCalled();
 	});
 
+	it('locked account — shows the lockout message with the formatted unlock time', async () => {
+		// given
+		const lockedUntil = new Date(Date.now() + 15 * 60 * 1000);
+		const mockFetch = vi.fn().mockResolvedValue({
+			url: `http://localhost:5173/login?error&reason=locked&lockedUntil=${encodeURIComponent(lockedUntil.toISOString())}`
+		} as Response);
+		vi.stubGlobal('fetch', mockFetch);
+
+		// when
+		await fillAndSubmit();
+
+		// then
+		await expect.element(page.getByText(lockedUntil.toLocaleTimeString())).toBeVisible();
+		expect(mockGoto).not.toHaveBeenCalled();
+		expect(mockBootstrapSession).not.toHaveBeenCalled();
+	});
+
+	it('locked account without a lockedUntil value — shows the generic lockout message', async () => {
+		// given
+		const mockFetch = vi
+			.fn()
+			.mockResolvedValue({ url: 'http://localhost:5173/login?error&reason=locked' } as Response);
+		vi.stubGlobal('fetch', mockFetch);
+
+		// when
+		await fillAndSubmit();
+
+		// then
+		await expect.element(page.getByText('später erneut')).toBeVisible();
+		expect(mockGoto).not.toHaveBeenCalled();
+	});
+
 	it('network error — shows an error message', async () => {
 		// given
 		const mockFetch = vi.fn().mockRejectedValue(new Error('network error'));
