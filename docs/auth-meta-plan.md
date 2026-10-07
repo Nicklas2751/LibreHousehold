@@ -174,21 +174,39 @@ muss aber sauber neu aus der überarbeiteten OpenAPI-Spec generiert werden.
 
 ## Phase 3 — Social Login (föderiert, konfigurierbar)
 
+- 🟡 **P3.0 — Lokale Dev-Umgebung: Dex als Test-OIDC-Provider (Testcontainers).** Beim lokalen
+  Start von `TestLibrehouseholdApplication` (die bereits Postgres + Grafana LGTM per
+  Testcontainers hochfährt) soll zusätzlich automatisch ein Dex-Container (`dexidp/dex`, Apache
+  2.0, YAML-Konfiguration mit statischen Test-Usern/-Clients) als lokaler Stand-in für einen
+  generischen Social-/OIDC-Provider gestartet werden, damit Entwickler den kompletten
+  Social-Login-Flow lokal testen können, ohne echte OAuth-App-Credentials bei Google/GitHub/
+  Microsoft/Apple zu benötigen. Nutzerentscheidung nach Vorstellung von 14 recherchierten
+  Alternativen (u. a. Keycloak/Authentik als Dogfooding-Option, navikt/mock-oauth2-server als
+  reines Test-Double) — Dex bevorzugt als leichtgewichtiger, aber „echter" OIDC-Server ohne
+  Lizenz-Fallstricke. Siehe [Detailplan](auth-plan-p3.0-p3.7.md).
 - **P3.1 — ADR: Social-Integration.** Spring-Authorization-Server-Federation
   (Provider auf der Login-Seite des Auth-Servers) vs. Multi-Client-Registrierung;
   Account-Linking über verifizierte E-Mail; Konsequenzen aus dem 1:1-Modell (ADR-012).
+  Siehe [Detailplan](auth-plan-p3.0-p3.7.md).
 - **P3.2 — Konfigurationsmodell.** `application.yml`-Schalter (`local`/`social`/`both`),
   Provider-Registrierungen (z. B. Google, GitHub, generisches OIDC), Startvalidierung.
+  Siehe [Detailplan](auth-plan-p3.0-p3.7.md).
 - **P3.3 — Backend: Provider-Federation & Account-Mapping.** Externe Identität → lokaler
   Member/Account, Anlage bei Erst-Login im Setup-/Invite-Kontext, Linking per verifizierter
-  E-Mail, 1:1-Regel bleibt erzwungen.
+  E-Mail, 1:1-Regel bleibt erzwungen. Siehe [Detailplan](auth-plan-p3.0-p3.7.md).
 - **P3.4 — OpenAPI: Discover-Endpoint.** Liefert konfigurierte Methoden/Provider
-  (`{ localEnabled, socialProviders: [...] }`).
+  (`{ localEnabled, socialProviders: [...] }`). Siehe [Detailplan](auth-plan-p3.0-p3.7.md).
 - **P3.5 — Frontend: dynamische Auth-UI.** Login/Setup/Invite rendern abhängig vom
   Discover-Ergebnis (lokales Formular und/oder Provider-Buttons); lokale Registrierung
-  ausblenden, wenn deaktiviert.
+  ausblenden, wenn deaktiviert. Siehe [Detailplan](auth-plan-p3.0-p3.7.md).
 - **P3.6 — Setup/Invite ausschließlich via Social.** Erster Admin bzw. Invitee kann sich
   rein über Social registrieren, korrekte Haushalts-Bindung bleibt gewahrt.
+  Siehe [Detailplan](auth-plan-p3.0-p3.7.md).
+- 🟡 **P3.7 — README: Diátaxis-How-To-Guides für Social-Login-Konfiguration (Englisch).**
+  Ergänzt `README.adoc` um zielgerichtete How-to-Guides (kein Tutorial/Reference/Explanation) zur
+  Einrichtung von Social Login je Provider, mit konkreten Beispielen für Google, Microsoft,
+  Keycloak, GitHub und Authentik. Apple bewusst nicht Teil dieser Phase (Nutzerentscheidung, siehe
+  Detailplan). Siehe [Detailplan](auth-plan-p3.0-p3.7.md).
 
 ## Querschnittlich (laufend, kein eigener Implementierungsplan)
 
