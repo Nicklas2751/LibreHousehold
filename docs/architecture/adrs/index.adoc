@@ -18,3 +18,6 @@
 === xref:adr-013.adoc[ADR 013: Spring Authorization Server for Authentication]
 === xref:adr-014.adoc[ADR 014: Session Strategy - Backend for Frontend (BFF) with httpOnly Cookies]
 === xref:adr-015.adoc[ADR 015: Credential Storage in a dedicated `account` table]
+=== xref:adr-016.adoc[ADR 016: Authorization-Server-Side Social Login Federation]
+=== xref:adr-017.adoc[ADR 017: Pre-Redirect Session Endpoint for Social Login Context]
+=== xref:adr-018.adoc[ADR 018: Automatic Verified-Email Account Linking for Social Login]
