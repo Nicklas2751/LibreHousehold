@@ -1,0 +1,47 @@
+:jbake-title: ADR 018: No Linking Between Social Login and Password-Protected Accounts
+:jbake-type: page_toc
+:jbake-status: published
+:jbake-menu: adrs
+:jbake-order: 18
+
+[[adr-018]]
+= ADR 018: No Linking Between Social Login and Password-Protected Accounts
+
+== Context
+
+A social login (xref:adr-016.adoc[ADR 016]) that matches no existing account creates a new, purely federated account automatically - no local password is ever set for it. The open question is what happens when the externally authenticated e-mail matches an e-mail that already has an account, in particular one that already has a local password (xref:adr-015.adoc[ADR 015]'s nullable `password_hash`). Letting a social identity attach to a password-protected account would blur which login method governs account-security operations such as changing the password: should a session established purely through an external provider be allowed to change a password that provider never verified?
+
+== Considered Options
+
+Automatically link a social login to an existing account by provider-verified e-mail, regardless of whether that account already has a local password; vs. never link a social identity to an account that already has a local password - registering via social login fails if the e-mail already belongs to any account, and logging in via social login fails if the matched account has a local password.
+
+== Decision Outcome
+
+A social login never attaches itself to an account that already has a local password. Registering via social login with an e-mail that already belongs to an existing account fails with an error instead of creating or linking anything. Logging in via social login where the matched account already has a local password also fails; only an account that itself has no local password - one created purely via social login in the first place - is recognized across repeated social logins.
+
+Automatic linking was rejected because attaching a social identity to a password-protected account conflates two independent credentials behind one account: every password-related operation (change password, password reset) would then need an extra check for whether the active session is federated or local, instead of password operations simply only ever existing for local accounts.
+
+== Pros and Cons of the Options
+
+.Overview of the pros and cons of the considered options
+[cols="2a,2a"]
+|===
+|Pros |Cons
+
+2+^s|No linking to password-protected accounts (chosen)
+|
+- Password-related operations are unambiguous - they only ever exist for local accounts
+- No session can act on an account whose password it cannot prove knowledge of
+|
+- A user can never consolidate a local password account and a social identity into one account, not even deliberately
+- Registering via social login with an e-mail that already has an account must surface a clear, actionable error instead of "just working"
+
+2+^s|Automatic linking
+|
+- One account regardless of which login method was used
+- No extra rejection/error path needed on e-mail collision
+|
+- Blurs which login method may change account security settings for a given session
+- Every password-related operation needs to check whether the active session is federated or local
+
+|===
