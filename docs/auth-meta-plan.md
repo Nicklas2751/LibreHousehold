@@ -184,10 +184,11 @@ muss aber sauber neu aus der überarbeiteten OpenAPI-Spec generiert werden.
   Alternativen (u. a. Keycloak/Authentik als Dogfooding-Option, navikt/mock-oauth2-server als
   reines Test-Double) — Dex bevorzugt als leichtgewichtiger, aber „echter" OIDC-Server ohne
   Lizenz-Fallstricke. Siehe [Detailplan](auth-plan-p3.0-p3.7.md).
-- **P3.1 — ADR: Social-Integration.** Spring-Authorization-Server-Federation
+- ✅ **P3.1 — ADR: Social-Integration.** Spring-Authorization-Server-Federation
   (Provider auf der Login-Seite des Auth-Servers) vs. Multi-Client-Registrierung;
   Account-Linking über verifizierte E-Mail; Konsequenzen aus dem 1:1-Modell (ADR-012).
-  Siehe [Detailplan](auth-plan-p3.0-p3.7.md).
+  Siehe [ADR 016](architecture/adrs/adr-016.adoc), [ADR 017](architecture/adrs/adr-017.adoc),
+  [ADR 018](architecture/adrs/adr-018.adoc) und [Detailplan](auth-plan-p3.0-p3.7.md).
 - **P3.2 — Konfigurationsmodell.** `application.yml`-Schalter (`local`/`social`/`both`),
   Provider-Registrierungen (z. B. Google, GitHub, generisches OIDC), Startvalidierung.
   Siehe [Detailplan](auth-plan-p3.0-p3.7.md).
