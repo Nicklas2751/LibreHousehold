@@ -1,0 +1,51 @@
+:jbake-title: ADR 017: Pre-Redirect Session Endpoint for Social Login Context
+:jbake-type: page_toc
+:jbake-status: published
+:jbake-menu: adrs
+:jbake-order: 17
+
+[[adr-017]]
+= ADR 017: Pre-Redirect Session Endpoint for Social Login Context
+
+== Context
+
+Within the federation approach decided in xref:adr-016.adoc[ADR 016], a social login redirect can be started for three different reasons - an existing member logging back in, a brand-new household setup, or joining via an invite link - which all share the same OAuth2/OIDC redirect flow but need different outcomes afterwards. This context has to be carried through that flow somehow.
+
+== Considered Options
+
+A dedicated endpoint that stores why the redirect was started (login/setup/invite) in the session before it begins; vs. a separate `ClientRegistration` per context per provider; vs. a query parameter on the authorization request.
+
+== Decision Outcome
+
+Context is transported via a dedicated pre-redirect endpoint that stores it in the session.
+
+A separate `ClientRegistration` per context was rejected because it would triple the registrations - and the redirect URIs to configure at each provider - per provider, for no real benefit over a session flag. A query parameter was rejected because providers do not reliably reflect arbitrary query parameters back to the callback, and the one parameter that does round-trip (`state`) is already used internally for CSRF protection.
+
+== Pros and Cons of the Options
+
+.Overview of the pros and cons of the considered options
+[cols="2a,2a"]
+|===
+|Pros |Cons
+
+2+^s|Pre-redirect session endpoint (chosen)
+|
+- Server-controlled, no client-controlled redirect/state field involved
+- One `ClientRegistration` per provider regardless of context
+|
+- One additional round-trip before the redirect starts
+
+2+^s|Per-context client registration
+|
+- Context is implicit in which registration was used
+|
+- Triples registrations and redirect URIs per provider
+
+2+^s|Query parameter on the authorization request
+|
+- Simplest to express, no extra request needed
+|
+- Providers don't reliably reflect query parameters back to the callback
+- Only `state` round-trips reliably, and it is already used for CSRF protection
+
+|===

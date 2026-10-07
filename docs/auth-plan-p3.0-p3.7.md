@@ -1098,21 +1098,28 @@ aufzuführen.
 
 ## 4. Empfohlene Umsetzungsreihenfolge
 
-Die Meta-Plan-Reihenfolge P3.1 → P3.6 wird **nicht** unverändert übernommen: P3.0 (Dev-Umgebung)
-sollte so früh wie möglich stehen, da **jeder** andere Punkt ab P3.1 gegen einen echten,
-lokal erreichbaren OIDC-Provider getestet werden muss (kein Punkt danach ist ohne P3.0 sinnvoll
-mit IT-Tests abzusichern, siehe AGENTS.md TDD-Pflicht). Empfohlene Reihenfolge:
+**Korrektur nach Umsetzungsbeginn (siehe unten):** Die ursprüngliche Fassung dieses Abschnitts
+sah P3.0 (Dex-Dev-Umgebung) als allerersten Schritt vor, mit der Begründung „reine Infrastruktur,
+keine Abhängigkeit zu den übrigen Punkten". Beim Start der Umsetzung stellte sich heraus, dass
+P3.0 Aufgabe 2 (Abschnitt 5) tatsächlich auf das `librehousehold.security.social-login.*`-Schema
+verweist, das erst in P3.2 entsteht — also doch eine Abhängigkeit, die hier ursprünglich übersehen
+wurde. Auf Rückfrage hat der Nutzer entschieden, die Reihenfolge anzupassen: **P3.1 → P3.2 → P3.0
+→ P3.3 → ...** (statt P3.0 zuerst). P3.0 Aufgabe 2 kann dadurch wie ursprünglich in Abschnitt 5
+beschrieben umgesetzt werden, ohne Abstriche oder eine vorgezogene Sonderlösung.
 
-1. **P3.0 (Lokale Dev-Umgebung: Dex)** zuerst — reine Infrastruktur, keine Abhängigkeit zu den
-   übrigen Punkten, aber Voraussetzung für jeden folgenden IT-Test. Voraussetzung: Rückfrage aus
-   Abschnitt 3.12 (neue Test-Dependency) muss beantwortet sein, bevor Aufgabe 1 beginnt.
-2. **P3.1 (ADR: Social-Integration)** direkt danach — dokumentiert die in Abschnitt 3.1/3.3
-   getroffenen (bzw. hier vorgelegten) Architekturentscheidungen als neues `docs/architecture/
-   adrs/adr-016.adoc`, bevor Code geschrieben wird (konsistent mit dem Muster ADR-013/014/015 vor
-   P1/P2-Umsetzung).
-3. **P3.2 (Konfigurationsmodell)**, da P3.3 die `SocialLoginProperties`-Bean und die daraus
-   gebauten `ClientRegistration`s braucht, um überhaupt etwas zu implementieren — gleiches
-   Verhältnis wie P2.1 → P2.2 im Vorgänger-Plan.
+1. **P3.1 (ADR: Social-Integration)** zuerst — dokumentiert die in Abschnitt 3.1/3.3 getroffenen
+   (bzw. hier vorgelegten) Architekturentscheidungen als drei separate ADRs (ein ADR = eine
+   Architekturentscheidung, nicht gebündelt): `docs/architecture/adrs/adr-016.adoc`
+   (Federation-Architektur), `adr-017.adoc` (Kontext-Transport) und `adr-018.adoc`
+   (Account-Linking-Regel), bevor Code geschrieben wird (konsistent mit dem Muster
+   ADR-013/014/015 vor P1/P2-Umsetzung).
+2. **P3.2 (Konfigurationsmodell)** direkt danach — legt `SocialLoginProperties` und das
+   `librehousehold.security.social-login.*`-Schema an, das sowohl P3.0 Aufgabe 2 als auch P3.3 für
+   die daraus gebauten `ClientRegistration`s braucht.
+3. **P3.0 (Lokale Dev-Umgebung: Dex)** jetzt erst — Aufgabe 2 registriert Dex reibungsfrei als
+   `dev-provider` im in Schritt 2 angelegten Schema, Voraussetzung für jeden folgenden IT-Test ab
+   P3.3. Voraussetzung: Rückfrage aus Abschnitt 3.12 (neue Test-Dependency) muss beantwortet sein,
+   bevor Aufgabe 1 beginnt (bereits erledigt, siehe dort).
 4. **P3.3 (Backend: Provider-Federation & Account-Mapping)** — der mit Abstand größte Block dieser
    Phase (Filter-Chain-Erweiterung aus 3.1, Kontext-Mechanismus aus 3.3, `account_identity` aus
    3.4, `password_hash` nullable aus 3.5, GitHub-Nicht-OIDC-Pfad aus 3.6 — kein Apple-Client-Secret
@@ -1179,17 +1186,32 @@ vom Nutzer bestätigt ist (siehe Prioritätenliste in der Abschlussantwort).
 
 ### P3.1 — ADR: Social-Integration
 
-**Aufgabe 1: Neues `docs/architecture/adrs/adr-016.adoc`**
+**Umgesetzt als drei separate ADRs statt eines gebündelten Dokuments** (Nutzer-Feedback bei
+Review: „ein ADR beschreibt immer genau eine Architekturentscheidung" — die ursprünglich hier
+geplante Fassung bündelte drei; Stil/Länge zusätzlich an ADR-006/ADR-012 angeglichen, kein
+Verweis auf dieses Planungsdokument in den ADRs selbst, da Detailpläne nicht dauerhaft erhalten
+bleiben):
 
-- Analog bestehendem `template.adoc` (`docs/architecture/adrs/template.adoc`), Titel „Social
-  Login Federation Architecture". Kontext: ADR-013 antizipiert Phase 3 bereits (Zitat aus
-  Abschnitt 2.4 übernehmen). Entscheidung: Spring-Authorization-Server-Federation (Entscheidung
-  3.1), mit Verweis auf den offiziellen Spring-Guide. Konsequenzen: dritter Login-Weg auf Chain 1
-  (Abschnitt 2.1), Account-Linking über verifizierte E-Mail (Entscheidung 3.4), 1:1-Modell
-  (ADR-012) bleibt unverändert erzwungen (kein Multi-Household-Choice-Screen).
-  Alternativen-Abschnitt: Multi-Client-Registrierung (verworfen, siehe Entscheidung 3.1-Tabelle).
-- `docs/architecture/adrs/index.adoc` um `=== xref:adr-016.adoc[ADR 016: ...]` ergänzen (Zeile
-  nach dem bestehenden letzten Eintrag, Zeile 20).
+**Aufgabe 1: `docs/architecture/adrs/adr-016.adoc` — Federation-Architektur**
+
+- Titel „Authorization-Server-Side Social Login Federation". Kontext: ADR-013-Zitat. Entscheidung:
+  Spring-Authorization-Server-Federation (Entscheidung 3.1) statt Multi-Client-Registrierung, mit
+  Verweis auf den offiziellen Spring-Guide und Begründung über ADR-014 (BFF).
+
+**Aufgabe 2: `docs/architecture/adrs/adr-017.adoc` — Kontext-Transport**
+
+- Titel „Pre-Redirect Session Endpoint for Social Login Context". Entscheidung: Session-Endpoint
+  vor dem Redirect (Entscheidung 3.3) statt Per-Kontext-Registrierung oder Query-Parameter, xref
+  auf ADR-016.
+
+**Aufgabe 3: `docs/architecture/adrs/adr-018.adoc` — Account-Linking-Regel**
+
+- Titel „Automatic Verified-Email Account Linking for Social Login". Entscheidung: automatisches
+  Linking per providerseitig verifizierter E-Mail (Entscheidung 3.4) statt explizitem
+  Verknüpfen-Schritt, xref auf ADR-012/ADR-016.
+
+- `docs/architecture/adrs/index.adoc` um alle drei neuen Einträge ergänzen (Zeile nach dem
+  bestehenden letzten Eintrag, Zeile 20).
 - Kein Code, keine Tests — reine ADR-Erstellung, wie bei ADR-013/014/015 vor der jeweiligen
   Umsetzung.
 

@@ -1,0 +1,46 @@
+:jbake-title: ADR 016: Authorization-Server-Side Social Login Federation
+:jbake-type: page_toc
+:jbake-status: published
+:jbake-menu: adrs
+:jbake-order: 16
+
+[[adr-016]]
+= ADR 016: Authorization-Server-Side Social Login Federation
+
+== Context
+
+xref:adr-013.adoc[ADR 013] already anticipates this decision: "Spring Authorization Server supports both cases - local password accounts today and federated social login in the future - through the same standardized Authorization Code + PKCE flow, without operating an additional service." Adding social login (Google, GitHub, Microsoft, self-hosted generic OIDC) requires deciding how the SPA, the backend's own embedded Authorization Server, and the external providers fit together.
+
+== Considered Options
+
+The backend's own Authorization Server becomes an OAuth2/OIDC client of the external providers on its own login page (per Spring Authorization Server's "How-to: Authenticate using Social Login" guide); vs. multi-client registration, where the SPA authenticates directly against external providers and the backend only validates externally issued tokens as a resource server.
+
+== Decision Outcome
+
+The backend's own Authorization Server federates to external providers itself, on its own login page, rather than having the SPA authenticate against them directly.
+
+Multi-client registration was rejected because it would let external provider tokens reach the browser - exactly the exposure xref:adr-014.adoc[ADR 014]'s BFF/cookie model was adopted to avoid - and would scatter trust across multiple issuers and sessions instead of the one the BFF model relies on. Authorization-Server-side federation keeps the SPA talking to exactly one issuer, as it already does for local password accounts, and lets account-status enforcement (lockout, e-mail verification) apply uniformly to every login path.
+
+== Pros and Cons of the Options
+
+.Overview of the pros and cons of the considered options
+[cols="2a,2a"]
+|===
+|Pros |Cons
+
+2+^s|Authorization-Server-side federation (chosen)
+|
+- Tokens never reach the browser, consistent with ADR-014
+- One issuer/trust boundary for all resource servers
+- Lockout/verification enforcement applies to every login path uniformly
+|
+- The Authorization Server now also acts as a confidential OAuth2 client of each external provider, adding a third login path to its filter chain
+
+2+^s|Multi-client registration
+|
+- No federation logic needed inside the Authorization Server
+|
+- External provider tokens would reach the browser, breaking ADR-014
+- Multiple issuers/JWKS to trust, multiple parallel sessions, no single logout
+
+|===
