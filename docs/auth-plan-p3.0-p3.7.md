@@ -1217,6 +1217,27 @@ bleiben):
 
 ### P3.2 — Konfigurationsmodell
 
+**Korrekturen aus dem Nutzer-Review (gelten vorrangig vor den Aufgaben unten):**
+
+- Kein `SocialLoginPropertiesTest`: Der Record hat keine eigene Logik (`@DefaultValue` statt
+  null-Default im Compact-Constructor); ein Binding-Test würde nur Spring Boots Binder testen.
+- Neue kohäsive Klasse `CommonProvider` (`isCommonProvider(...)`) statt `isKnownProvider` in der
+  Factory; der Validator hängt **nicht** mehr an der Factory (keine DRY-Kopplung).
+- Neue Adapter-Klasse `OidcIssuerDiscovery` kapselt `ClientRegistrations.fromIssuerLocation`
+  (echtes HTTP). Im Factory-Unit-Test wird sie gemockt, die echte Discovery testet ein eigenes
+  `OidcIssuerDiscoveryIT`. Unit-Tests starten keine Server.
+- Validator ist kein `ApplicationRunner` mehr. `SecurityConfig.clientRegistrationRepository()` ruft
+  `validate(...)` vor dem Bauen der Registrierungen auf, damit eine kaputte Konfiguration mit einer
+  Meldung scheitert, die den Provider beim Namen nennt. Neu: Unbekannte `oauth2`-Provider müssen
+  `authorization-uri`, `token-uri`, `user-info-uri` und `user-name-attribute` setzen.
+- Weitere Validierungsregeln (Nutzerentscheidung, zweite Review-Runde): `client-id` und
+  `client-secret` sind für **jeden** Provider Pflicht (der eigene AS ist immer Confidential
+  Client). Leere Werte (z. B. aus `${GOOGLE_CLIENT_ID:}`) gelten wie fehlende. Ein fehlender `type`
+  scheitert nur bei unbekannten Provider-Namen; bei `google`/`github` usw. darf er fehlen. Die
+  Factory behandelt eine leere `issuer-uri` wie eine fehlende.
+- Vollständige Zweigabdeckung statt nur der unten gelisteten Mindest-Testnamen; keine Verweise auf
+  dieses Planungsdokument im Code.
+
 **Aufgabe 1: `SocialLoginProperties`**
 
 - Neue Datei `.../config/SocialLoginProperties.java`, `@ConfigurationProperties(prefix =
