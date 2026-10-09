@@ -64,6 +64,19 @@ librehousehold:
       # them from different origins must set this explicitly, e.g.
       # LIBREHOUSEHOLD_SECURITY_CORS_ALLOWED_ORIGINS=https://household.example.com.
       allowed-origins: ""
+    social-login:
+      # Off by default: external OIDC/OAuth2 login providers (see ADR-016) are an
+      # opt-in self-hoster feature on top of local password login. Self-hosters configure one entry
+      # per provider under `providers`, e.g.:
+      # social-login:
+      #   enabled: true
+      #   providers:
+      #     google:
+      #       type: oidc
+      #       client-id: ${GOOGLE_CLIENT_ID:}
+      #       client-secret: ${GOOGLE_CLIENT_SECRET:}
+      #       display-name: "Google"
+      enabled: false
     email-verification:
       # How long a freshly issued email verification token stays valid (see VERIFY1 in Arc42
       # Chapter 8, and the account_token migration). 24h balances giving users enough time to check
