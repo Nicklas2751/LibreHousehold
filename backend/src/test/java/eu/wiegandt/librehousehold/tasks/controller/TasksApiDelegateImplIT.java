@@ -25,6 +25,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
+import static org.hamcrest.Matchers.hasEntry;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
@@ -61,6 +62,18 @@ class TasksApiDelegateImplIT {
             mockMvc.perform(get("/v1/household/{householdId}/tasks", householdId))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$[0].title").value("Clean kitchen"));
+        }
+
+        @Test
+        void taskWithoutDoneDate_returnsDoneAsExplicitNull() throws Exception {
+            // given
+            var householdId = UUID.randomUUID();
+            var task = new Task(UUID.randomUUID(), "Clean kitchen", LocalDate.of(2024, 7, 1)).done(null);
+            doReturn(List.of(task)).when(taskService).getTasks(householdId);
+
+            // when / then
+            mockMvc.perform(get("/v1/household/{householdId}/tasks", householdId))
+                    .andExpect(jsonPath("$[0]", hasEntry("done", null)));
         }
     }
 

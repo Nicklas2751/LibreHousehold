@@ -1,11 +1,16 @@
 package eu.wiegandt.librehousehold.session.controller;
 
+import eu.wiegandt.librehousehold.config.LocalLoginProperties;
 import eu.wiegandt.librehousehold.config.SocialLoginContextStore;
+import eu.wiegandt.librehousehold.config.SocialLoginProperties;
+import eu.wiegandt.librehousehold.config.SocialLoginProperties.ProviderConfig;
+import eu.wiegandt.librehousehold.config.SocialLoginProperties.ProviderType;
 import eu.wiegandt.librehousehold.household.AccountOidcPrincipal;
 import eu.wiegandt.librehousehold.household.AccountPrincipal;
 import eu.wiegandt.librehousehold.household.HouseholdQuery;
 import eu.wiegandt.librehousehold.household.MemberQuery;
 import eu.wiegandt.librehousehold.household.PasswordReset;
+import eu.wiegandt.librehousehold.model.AuthDiscovery;
 import eu.wiegandt.librehousehold.model.CurrentUser;
 import eu.wiegandt.librehousehold.model.Household;
 import eu.wiegandt.librehousehold.model.Member;
@@ -13,6 +18,7 @@ import eu.wiegandt.librehousehold.model.PasswordResetConfirm;
 import eu.wiegandt.librehousehold.model.PasswordResetRequest;
 import eu.wiegandt.librehousehold.model.SocialLoginContext;
 import eu.wiegandt.librehousehold.model.SocialLoginContext.ContextEnum;
+import eu.wiegandt.librehousehold.model.SocialLoginProvider;
 import eu.wiegandt.librehousehold.model.UserPreferences;
 import eu.wiegandt.librehousehold.session.exception.InviteTokenIsRequiredException;
 import eu.wiegandt.librehousehold.session.exception.NoAuthenticatedSessionException;
@@ -23,6 +29,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -36,12 +43,14 @@ import org.springframework.security.oauth2.core.oidc.OidcIdToken;
 import org.springframework.security.oauth2.core.oidc.user.DefaultOidcUser;
 
 import java.time.Instant;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.params.provider.Arguments.argumentSet;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
@@ -189,6 +198,56 @@ class SessionApiDelegateImplTest {
             assertThatThrownBy(() -> delegate.storeSocialLoginContext(context))
                     .isInstanceOf(InviteTokenIsRequiredException.class);
             verifyNoInteractions(socialLoginContextStore);
+        }
+    }
+
+    @Nested
+    class getAuthDiscovery {
+
+        static List<Arguments> configuredLoginMethods() {
+            var googleAndDex = new LinkedHashMap<String, ProviderConfig>();
+            googleAndDex.put("google", providerWithDisplayName("Google"));
+            googleAndDex.put("dex", providerWithDisplayName(null));
+            return List.of(
+                    argumentSet("social login enabled with two providers, one without display name",
+                            new SocialLoginProperties(true, googleAndDex),
+                            new LocalLoginProperties(true),
+                            new AuthDiscovery(true, List.of(
+                                    new SocialLoginProvider("google", "Google"),
+                                    new SocialLoginProvider("dex", "dex")))),
+                    argumentSet("social login disabled although a provider is configured",
+                            new SocialLoginProperties(false, Map.of("google", providerWithDisplayName("Google"))),
+                            new LocalLoginProperties(true),
+                            new AuthDiscovery(true, List.of())),
+                    argumentSet("local login disabled",
+                            new SocialLoginProperties(false, Map.of()),
+                            new LocalLoginProperties(false),
+                            new AuthDiscovery(false, List.of())),
+                    argumentSet("social login enabled with a blank display name",
+                            new SocialLoginProperties(true, Map.of("dex", providerWithDisplayName("   "))),
+                            new LocalLoginProperties(true),
+                            new AuthDiscovery(true, List.of(new SocialLoginProvider("dex", "dex")))));
+        }
+
+        @ParameterizedTest
+        @MethodSource("configuredLoginMethods")
+        void configuredLoginMethods_returnsMatchingAuthDiscovery(SocialLoginProperties socialLoginProperties,
+                                                                LocalLoginProperties localLoginProperties,
+                                                                AuthDiscovery expected) {
+            // given
+            var discoveryDelegate = new SessionApiDelegateImpl(memberQuery, householdQuery, preferencesQuery,
+                    passwordReset, socialLoginContextStore, socialLoginProperties, localLoginProperties);
+
+            // when
+            var result = discoveryDelegate.getAuthDiscovery();
+
+            // then
+            assertThat(result.getBody()).usingRecursiveComparison().isEqualTo(expected);
+        }
+
+        private static ProviderConfig providerWithDisplayName(String displayName) {
+            return new ProviderConfig(ProviderType.OIDC, null, "client-id", "client-secret", displayName,
+                    null, null, null, null, List.of());
         }
     }
 

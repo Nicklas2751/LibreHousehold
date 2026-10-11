@@ -581,6 +581,18 @@ class AuthorizationServerConfigurationIT {
             // then
             assertThat(response.getStatus().value()).isEqualTo(405);
         }
+
+        @Test
+        void getAuthDiscovery_noSession_isReachable() {
+            // given
+            var uri = URI.create(BASE_PATH + "/auth/discover");
+
+            // when
+            var response = get(NO_COOKIES, uri).response();
+
+            // then
+            assertThat(response.getStatus().value()).isEqualTo(200);
+        }
     }
 
     /**
