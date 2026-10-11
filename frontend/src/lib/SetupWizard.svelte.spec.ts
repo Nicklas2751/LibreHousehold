@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import { page } from 'vitest/browser';
 import SetupWizard from './SetupWizard.svelte';
+import { authDiscovery } from '$lib/stores/authDiscoveryState.svelte';
 
 const {
 	mockSetupHousehold,
@@ -9,14 +10,18 @@ const {
 	mockGoto,
 	mockAddToast,
 	mockCompleteSilentOAuth2Login,
-	mockBootstrapSession
+	mockBootstrapSession,
+	mockLoadAuthDiscovery,
+	mockStartSocialLogin
 } = vi.hoisted(() => ({
 	mockSetupHousehold: vi.fn(),
 	mockCheckEmailAvailability: vi.fn(),
 	mockGoto: vi.fn(),
 	mockAddToast: vi.fn(),
 	mockCompleteSilentOAuth2Login: vi.fn(),
-	mockBootstrapSession: vi.fn()
+	mockBootstrapSession: vi.fn(),
+	mockLoadAuthDiscovery: vi.fn(),
+	mockStartSocialLogin: vi.fn()
 }));
 
 vi.mock('../generated-sources/openapi', async (importOriginal) => {
@@ -43,6 +48,13 @@ vi.mock('$lib/oauth2Login', async (importOriginal) => {
 
 vi.mock('$lib/stores/sessionBootstrap', () => ({ bootstrapSession: mockBootstrapSession }));
 
+vi.mock('$lib/stores/authDiscoveryState.svelte', async (importOriginal) => {
+	const original = await importOriginal<typeof import('$lib/stores/authDiscoveryState.svelte')>();
+	return { ...original, loadAuthDiscovery: mockLoadAuthDiscovery };
+});
+
+vi.mock('$lib/socialLogin', () => ({ startSocialLogin: mockStartSocialLogin }));
+
 vi.mock('./paraglide/runtime.js', async (importOriginal) => {
 	const original = await importOriginal<typeof import('./paraglide/runtime.js')>();
 	return { ...original, getLocale: () => 'de' as const, setLocale: vi.fn() };
@@ -63,6 +75,9 @@ describe('SetupWizard', () => {
 		mockCheckEmailAvailability.mockResolvedValue({ available: true });
 		mockCompleteSilentOAuth2Login.mockResolvedValue(undefined);
 		mockBootstrapSession.mockResolvedValue(undefined);
+		mockLoadAuthDiscovery.mockResolvedValue(undefined);
+		authDiscovery.localEnabled = true;
+		authDiscovery.socialProviders = [];
 	});
 
 	it('submits the form — calls setupHousehold with localRegistration.password', async () => {
@@ -229,5 +244,37 @@ describe('SetupWizard', () => {
 
 		// then
 		expect(mockCheckEmailAvailability).not.toHaveBeenCalled();
+	});
+
+	it('on mount — loads the available login methods', async () => {
+		// when
+		render(SetupWizard);
+
+		// then
+		await vi.waitFor(() => expect(mockLoadAuthDiscovery).toHaveBeenCalled());
+	});
+
+	it('account step with a social provider — starts the social login with the SETUP context', async () => {
+		// given
+		authDiscovery.socialProviders = [{ id: 'google', displayName: 'Google' }];
+		await fillAndGoToAccountStep();
+
+		// when
+		await page.getByRole('button', { name: 'Weiter mit Google' }).click();
+
+		// then
+		expect(mockStartSocialLogin).toHaveBeenCalledWith('google', { context: 'SETUP' });
+	});
+
+	it('account step with local login disabled — hides the account form', async () => {
+		// given
+		authDiscovery.localEnabled = false;
+		authDiscovery.socialProviders = [{ id: 'google', displayName: 'Google' }];
+
+		// when
+		await fillAndGoToAccountStep();
+
+		// then
+		await expect.element(page.getByRole('textbox', { name: /Dein Name/i })).not.toBeInTheDocument();
 	});
 });

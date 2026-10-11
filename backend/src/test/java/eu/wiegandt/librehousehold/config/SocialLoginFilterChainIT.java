@@ -202,6 +202,26 @@ class SocialLoginFilterChainIT {
             assertThat(callback.response().getResponseHeaders().getLocation())
                     .hasPath("/login").hasQuery("error&reason=social-login-no-account");
         }
+
+        /**
+         * The user cancelled at the provider or the provider refused: Dex is not involved, since the
+         * provider's error redirect is simulated directly against the backend's callback.
+         */
+        @Test
+        void providerDeniedAccess_rejectsWithSocialLoginFailedReason() {
+            // given
+            var authorizationRequest = get(NO_COOKIES, URI.create("/oauth2/authorization/" + PROVIDER_ID));
+            var state = UriComponentsBuilder.fromUri(authorizationRequest.response().getResponseHeaders().getLocation())
+                    .build().getQueryParams().getFirst("state");
+
+            // when
+            var callback = get(authorizationRequest.cookies(),
+                    URI.create("/login/oauth2/code/" + PROVIDER_ID + "?error=access_denied&state=" + state));
+
+            // then
+            assertThat(callback.response().getResponseHeaders().getLocation())
+                    .hasPath("/login").hasQuery("error&reason=social-login-failed");
+        }
     }
 
     /**
