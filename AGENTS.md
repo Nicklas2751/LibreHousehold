@@ -52,7 +52,16 @@ For local development with PostgreSQL and Grafana LGTM (observability) in contai
 cd backend
 ./mvnw spring-boot:test-run -Dspring-boot.run.main-class=eu.wiegandt.librehousehold.TestLibrehouseholdApplication
 ```
-This starts `TestLibrehouseholdApplication`, which uses Testcontainers to automatically spin up PostgreSQL and Grafana LGTM. No manual DB setup required.
+This starts `TestLibrehouseholdApplication`, which uses Testcontainers to automatically spin up PostgreSQL, Grafana LGTM, Mailpit and Dex. No manual DB setup required.
+
+Dex is a local OIDC provider (`DexTestcontainersConfiguration`), registered as the social-login provider `dev-provider`, so social login can be exercised without real Google/GitHub credentials:
+
+- Test user: `dev@example.com` / `password`
+- Client: `librehousehold-dev` / `librehousehold-dev-secret`
+- Dex runs on a random port; its issuer is `http://localhost:<port>/dex`.
+- The Testcontainers Dex module accepts only one redirect URI per client. The Dex client allows `http://localhost:5173/login/oauth2/code/dev-provider`, the Vite dev-proxy origin: the proxy forwards `/oauth2` with `X-Forwarded-Host`, so the backend builds its redirect URI from that origin. Log in through the frontend (`npm run dev` with `VITE_API_URL=http://localhost:8080/v1`). Calling the backend directly on port 8080 produces a redirect URI that Dex rejects.
+
+`DexTestcontainersConfiguration` is deliberately separate from `TestcontainersConfiguration`: importing it enables social login for the whole application context, so only tests that need Dex import it.
 
 For a plain start without containers (requires an external DB):
 ```bash

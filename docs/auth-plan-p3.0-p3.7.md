@@ -1152,6 +1152,20 @@ vom Nutzer bestätigt ist (siehe Prioritätenliste in der Abschlussantwort).
 
 ### P3.0 — Lokale Dev-Umgebung: Dex als Test-OIDC-Provider
 
+**Korrekturen bei Umsetzungsbeginn (gelten vorrangig vor den Aufgaben unten):**
+
+- Dex kommt **nicht** in `TestcontainersConfiguration`. Die wird von 28 Testklassen importiert,
+  die sonst alle Dex starten und mit aktiviertem Social Login laufen würden. Stattdessen gibt es
+  eine eigene `DexTestcontainersConfiguration` (Nutzerentscheidung). Sie wird nur von
+  `TestLibrehouseholdApplication` und den Tests geladen, die Dex brauchen.
+- Die `dev-provider`-Properties registriert diese Konfiguration selbst über den idiomatischen
+  Spring-Boot-Mechanismus für container-abhängige Properties, nicht über Default-Argumente in
+  `TestLibrehouseholdApplication`. Der Issuer-Port steht erst nach dem Containerstart fest.
+- Der Test prüft **nicht** Dex' Discovery-Dokument, denn das wäre ein Test der Fremdkomponente.
+  Er prüft unsere Verdrahtung: Mit geladener Dex-Konfiguration enthält die
+  `ClientRegistrationRepository` einen `dev-provider` mit Dex' Issuer und der konfigurierten
+  client-id.
+
 **Voraussetzung:** Rückfrage aus Entscheidung 3.12 (neue Test-Dependencies
 `wf.garnier:testcontainers-dex`/`spring-boot-testcontainers-dex`) muss beantwortet sein.
 
@@ -1294,6 +1308,25 @@ bleiben):
   - Refactor: keiner nötig.
 
 ### P3.3 — Backend: Provider-Federation & Account-Mapping
+
+**Aus P3.0 übernommen, hier zu lösen:** Der Dex-Client in `DexTestcontainersConfiguration`
+akzeptiert nur **eine** Redirect-URI (`DexContainer.Client` erlaubt nicht mehr). Registriert ist
+die Vite-Proxy-Origin `http://localhost:5173/login/oauth2/code/dev-provider`, denn das lokale
+manuelle Testen über das Frontend ist ihr einziger echter Nutzer (Nutzerentscheidung). Die
+Federation-ITs in P3.3 laufen mit einem per `TestSocketUtils` gewählten Port, ihre Redirect-URI
+passt also zu keinem festen Wert. Sie brauchen eine eigene Lösung. Optionen: eigener Dex-Client,
+der nach dem Serverstart mit dem echten Port registriert wird (siehe unten), `DexContainer`
+ableiten und die vorgesehene `protected configuration()` überschreiben (kollidiert mit
+„Komposition vor Vererbung"), oder mehrere Redirect-URIs upstream im Modul ergänzen.
+
+Geprüft und vom Nutzer **abgelehnt**: Umstellung auf das Begleitmodul
+`spring-boot-testcontainers-dex` (`@ServiceConnection`). Es registriert den Dex-Client erst per
+`WebServerInitializedEvent`-Listener mit dem tatsächlichen Server-Port. Das würde das
+Random-Port-Problem lösen, erzwingt aber den Registrierungsnamen `dex` und die Client-Daten
+`spring-client`/`spring-secret`. Seine eigene `ClientRegistrationRepository` greift wegen unserer
+Bean ohnehin nicht. Als weitere Option bleibt, dasselbe Muster selbst umzusetzen: den Dex-Client
+erst nach dem Serverstart mit dem echten Port registrieren, z. B. per `DexContainer.withClient(...)`
+auf dem laufenden Container.
 
 **Aufgabe 1: Migration `password_hash` nullable + `account_identity`-Tabelle**
 
