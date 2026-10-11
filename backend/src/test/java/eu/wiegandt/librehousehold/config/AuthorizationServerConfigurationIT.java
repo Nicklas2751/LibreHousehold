@@ -25,6 +25,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.util.TestSocketUtils;
 import org.springframework.test.web.servlet.client.EntityExchangeResult;
 import org.springframework.test.web.servlet.client.ExchangeResult;
 import org.springframework.test.web.servlet.client.RestTestClient;
@@ -65,9 +68,6 @@ import static org.instancio.Select.field;
  * request itself, which is exactly the manual, step-by-step control this test needs.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT, properties = {
-        "server.port=54327",
-        "librehousehold.security.oauth2-authorization-server.issuer=http://localhost:54327",
-        "librehousehold.security.oauth2-client.redirect-uri=http://localhost:54327/login/oauth2/code/spa-backend-client",
         "librehousehold.security.oauth2-client.client-secret=test-client-secret"
 })
 @Import(TestcontainersConfiguration.class)
@@ -75,14 +75,27 @@ import static org.instancio.Select.field;
 @ExtendWith(InstancioExtension.class)
 class AuthorizationServerConfigurationIT {
 
+    private static final int SERVER_PORT = TestSocketUtils.findAvailableTcpPort();
+    private static final String SERVER_BASE_URL = "http://localhost:" + SERVER_PORT;
+
     private static final String CLIENT_ID = "spa-backend-client";
-    private static final String REDIRECT_URI = "http://localhost:54327/login/oauth2/code/spa-backend-client";
+    private static final String REDIRECT_URI = SERVER_BASE_URL + "/login/oauth2/code/spa-backend-client";
     private static final String RAW_PASSWORD = "correct horse battery staple";
     private static final Map<String, String> NO_COOKIES = Map.of();
     // Default of openapi.libreHousehold.base-path (see the generated *ApiController classes and
     // SecurityConfig#defaultSecurityFilterChain, which reads the same property) — not overridden
     // anywhere in application.yaml, so this is the actual path prefix in the running application.
     private static final String BASE_PATH = "/v1";
+
+    // SecurityConfig builds the internal client's endpoints from the issuer at bean creation, so the
+    // issuer must already contain the actual port before the context starts
+    @DynamicPropertySource
+    static void serverPortProperties(DynamicPropertyRegistry registry) {
+        registry.add("server.port", () -> SERVER_PORT);
+        registry.add("librehousehold.security.oauth2-authorization-server.issuer", () -> SERVER_BASE_URL);
+        registry.add("librehousehold.security.oauth2-client.redirect-uri",
+                () -> SERVER_BASE_URL + "/login/oauth2/code/spa-backend-client");
+    }
 
     @Autowired
     private RestTestClient restTestClient;
@@ -171,7 +184,7 @@ class AuthorizationServerConfigurationIT {
             var providerDetails = clientRegistrationRepository.findByRegistrationId(CLIENT_ID).getProviderDetails();
 
             // then
-            assertThat(providerDetails.getAuthorizationUri()).isEqualTo("http://localhost:54327/oauth2/authorize");
+            assertThat(providerDetails.getAuthorizationUri()).isEqualTo(SERVER_BASE_URL + "/oauth2/authorize");
         }
     }
 

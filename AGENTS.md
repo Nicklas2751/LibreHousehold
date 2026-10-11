@@ -290,6 +290,12 @@ modal?.close();
 
 ## Findings & Notes
 
+### Integration tests that need the server port: pick a free port before startup, never hardcode one
+
+ITs that run the real OAuth2 flow against the running server (e.g. `AuthorizationServerConfigurationIT`, `OidcIssuerDiscoveryIT`) can't use `RANDOM_PORT`. The port has to be in `librehousehold.security.oauth2-authorization-server.issuer` and `...oauth2-client.redirect-uri` **before** the context starts: `SecurityConfig.clientRegistrationRepository()` builds the internal client's token/jwks/userinfo URIs from the issuer at bean creation, the backend calls that URL on itself during the code exchange, and OIDC discovery requires an exact issuer match. A random port only exists after Tomcat has started, which is too late.
+
+These tests therefore use `DEFINED_PORT` with a port picked via `TestSocketUtils.findAvailableTcpPort()` in a static constant. A `@DynamicPropertySource` registers it as `server.port`, issuer and redirect-uri together. Each test class does this itself, with no shared helper (see the DRY note under TDD). Don't hardcode port numbers: the former fixed 543xx ports collided intermittently with Testcontainers' port mappings ("address already in use"). Tests that don't need the port in their configuration should simply use `RANDOM_PORT`.
+
 ### `./mvnw test` runs without integration tests — use `./mvnw verify`
 
 `backend/pom.xml` binds `maven-failsafe-plugin` with the `integration-test`+`verify` goals without

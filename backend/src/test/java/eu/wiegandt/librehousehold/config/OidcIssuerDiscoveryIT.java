@@ -6,6 +6,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.security.oauth2.client.registration.ClientRegistration.ProviderDetails;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.util.TestSocketUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -17,15 +20,23 @@ import static org.assertj.core.api.Assertions.assertThat;
  * must already match the server port at bean-creation time.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT, properties = {
-        "server.port=54332",
-        "librehousehold.security.oauth2-authorization-server.issuer=http://localhost:54332",
-        "librehousehold.security.oauth2-client.redirect-uri=http://localhost:54332/login/oauth2/code/spa-backend-client",
         "librehousehold.security.oauth2-client.client-secret=test-client-secret"
 })
 @Import(TestcontainersConfiguration.class)
 class OidcIssuerDiscoveryIT {
 
-    private static final String ISSUER = "http://localhost:54332";
+    private static final int SERVER_PORT = TestSocketUtils.findAvailableTcpPort();
+    private static final String ISSUER = "http://localhost:" + SERVER_PORT;
+
+    // SecurityConfig builds the internal client's endpoints from the issuer at bean creation, so the
+    // issuer must already contain the actual port before the context starts
+    @DynamicPropertySource
+    static void serverPortProperties(DynamicPropertyRegistry registry) {
+        registry.add("server.port", () -> SERVER_PORT);
+        registry.add("librehousehold.security.oauth2-authorization-server.issuer", () -> ISSUER);
+        registry.add("librehousehold.security.oauth2-client.redirect-uri",
+                () -> ISSUER + "/login/oauth2/code/spa-backend-client");
+    }
 
     @Autowired
     private OidcIssuerDiscovery oidcIssuerDiscovery;
