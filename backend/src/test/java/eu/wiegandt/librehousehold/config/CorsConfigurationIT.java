@@ -7,6 +7,9 @@ import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureRestTe
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.util.TestSocketUtils;
 import org.springframework.test.web.servlet.client.EntityExchangeResult;
 import org.springframework.test.web.servlet.client.RestTestClient;
 
@@ -18,9 +21,6 @@ import static org.assertj.core.api.Assertions.assertThat;
  * {@link AuthorizationServerConfigurationIT}.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT, properties = {
-        "server.port=54329",
-        "librehousehold.security.oauth2-authorization-server.issuer=http://localhost:54329",
-        "librehousehold.security.oauth2-client.redirect-uri=http://localhost:54329/login/oauth2/code/spa-backend-client",
         "librehousehold.security.oauth2-client.client-secret=test-client-secret",
         "librehousehold.security.cors.allowed-origins=http://allowed.example.com"
 })
@@ -28,9 +28,22 @@ import static org.assertj.core.api.Assertions.assertThat;
 @AutoConfigureRestTestClient
 class CorsConfigurationIT {
 
+    private static final int SERVER_PORT = TestSocketUtils.findAvailableTcpPort();
+    private static final String SERVER_BASE_URL = "http://localhost:" + SERVER_PORT;
+
     private static final String BASE_PATH = "/v1";
     private static final String ALLOWED_ORIGIN = "http://allowed.example.com";
     private static final String UNKNOWN_ORIGIN = "http://unknown.example.com";
+
+    // SecurityConfig builds the internal client's endpoints from the issuer at bean creation, so the
+    // issuer must already contain the actual port before the context starts
+    @DynamicPropertySource
+    static void serverPortProperties(DynamicPropertyRegistry registry) {
+        registry.add("server.port", () -> SERVER_PORT);
+        registry.add("librehousehold.security.oauth2-authorization-server.issuer", () -> SERVER_BASE_URL);
+        registry.add("librehousehold.security.oauth2-client.redirect-uri",
+                () -> SERVER_BASE_URL + "/login/oauth2/code/spa-backend-client");
+    }
 
     @Autowired
     private RestTestClient restTestClient;
