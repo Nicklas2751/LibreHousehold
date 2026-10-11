@@ -5,6 +5,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import java.util.List;
+import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 /**
@@ -20,6 +21,8 @@ import java.util.stream.Stream;
  *     <li>An unknown provider name needs a {@code type}. A {@code type: oidc} provider then needs
  *     an {@code issuer-uri}; a {@code type: oauth2} provider needs {@code authorization-uri},
  *     {@code token-uri}, {@code user-info-uri} and {@code user-name-attribute}.</li>
+ *     <li>{@code scopes} is optional for every provider, well-known names included, but must not
+ *     contain a blank entry.</li>
  * </ul>
  * A blank value counts as missing, since an unset environment variable behind a placeholder such
  * as {@code ${GOOGLE_CLIENT_ID:}} binds to an empty string rather than {@code null}. Consistent with
@@ -43,6 +46,7 @@ public class SocialLoginConfigurationValidator {
 
     private void validateProvider(String registrationId, ProviderConfig config) {
         validateClientCredentials(registrationId, config);
+        validateScopes(registrationId, config);
         if (commonProvider.isCommonProvider(registrationId)) {
             return;
         }
@@ -61,6 +65,13 @@ public class SocialLoginConfigurationValidator {
         if (!missingFields.isEmpty()) {
             throw new IllegalStateException("Social login provider '" + registrationId + "' is missing: "
                     + String.join(", ", missingFields) + ".");
+        }
+    }
+
+    private void validateScopes(String registrationId, ProviderConfig config) {
+        if (config.scopes().stream().anyMatch(Predicate.not(StringUtils::hasText))) {
+            throw new IllegalStateException("Social login provider '" + registrationId
+                    + "' has a blank entry in: scopes.");
         }
     }
 

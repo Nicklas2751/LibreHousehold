@@ -76,6 +76,10 @@ librehousehold:
       #       client-id: ${GOOGLE_CLIENT_ID:}
       #       client-secret: ${GOOGLE_CLIENT_SECRET:}
       #       display-name: "Google"
+      #       # Optional. Replaces the default scopes when set: openid, profile, email for
+      #       # issuer-uri (discovery) providers, the provider's own defaults for well-known names
+      #       # like google/github, none for explicit oauth2 providers.
+      #       scopes: [openid, profile, email]
       enabled: false
     email-verification:
       # How long a freshly issued email verification token stays valid (see VERIFY1 in Arc42

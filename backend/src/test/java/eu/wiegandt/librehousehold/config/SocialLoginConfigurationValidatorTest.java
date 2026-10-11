@@ -8,6 +8,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
@@ -31,7 +32,7 @@ class SocialLoginConfigurationValidatorTest {
             // given
             var properties = new SocialLoginProperties(false, Map.of("keycloak-self-hosted",
                     new ProviderConfig(ProviderType.OIDC, null, "client-id", "client-secret", "Keycloak",
-                            null, null, null, null)));
+                            null, null, null, null, List.of())));
 
             // when / then
             assertThatCode(() -> validator.validate(properties)).doesNotThrowAnyException();
@@ -42,7 +43,7 @@ class SocialLoginConfigurationValidatorTest {
             // given
             var properties = new SocialLoginProperties(true, Map.of("keycloak-self-hosted",
                     new ProviderConfig(ProviderType.OIDC, null, "client-id", "client-secret", "Keycloak",
-                            null, null, null, null)));
+                            null, null, null, null, List.of())));
 
             // when / then
             assertThatThrownBy(() -> validator.validate(properties))
@@ -55,7 +56,7 @@ class SocialLoginConfigurationValidatorTest {
             // given
             var properties = new SocialLoginProperties(true, Map.of("keycloak-self-hosted",
                     new ProviderConfig(ProviderType.OIDC, " ", "client-id", "client-secret", "Keycloak",
-                            null, null, null, null)));
+                            null, null, null, null, List.of())));
 
             // when / then
             assertThatThrownBy(() -> validator.validate(properties))
@@ -68,7 +69,7 @@ class SocialLoginConfigurationValidatorTest {
             // given
             var properties = new SocialLoginProperties(true, Map.of("google",
                     new ProviderConfig(ProviderType.OIDC, null, "client-id", "client-secret", "Google",
-                            null, null, null, null)));
+                            null, null, null, null, List.of())));
 
             // when / then
             assertThatCode(() -> validator.validate(properties)).doesNotThrowAnyException();
@@ -79,7 +80,7 @@ class SocialLoginConfigurationValidatorTest {
             // given
             var properties = new SocialLoginProperties(true, Map.of("keycloak-self-hosted",
                     new ProviderConfig(ProviderType.OIDC, "https://keycloak.example.com/realms/household",
-                            "client-id", "client-secret", "Keycloak", null, null, null, null)));
+                            "client-id", "client-secret", "Keycloak", null, null, null, null, List.of())));
 
             // when / then
             assertThatCode(() -> validator.validate(properties)).doesNotThrowAnyException();
@@ -90,7 +91,7 @@ class SocialLoginConfigurationValidatorTest {
             // given
             var properties = new SocialLoginProperties(true, Map.of("github",
                     new ProviderConfig(ProviderType.OAUTH2, null, "client-id", "client-secret", "GitHub",
-                            null, null, null, null)));
+                            null, null, null, null, List.of())));
 
             // when / then
             assertThatCode(() -> validator.validate(properties)).doesNotThrowAnyException();
@@ -101,7 +102,7 @@ class SocialLoginConfigurationValidatorTest {
             // given
             var properties = new SocialLoginProperties(true, Map.of("forgejo",
                     new ProviderConfig(ProviderType.OAUTH2, null, "client-id", "client-secret", "Forgejo",
-                            AUTHORIZATION_URI, TOKEN_URI, USER_INFO_URI, USER_NAME_ATTRIBUTE)));
+                            AUTHORIZATION_URI, TOKEN_URI, USER_INFO_URI, USER_NAME_ATTRIBUTE, List.of())));
 
             // when / then
             assertThatCode(() -> validator.validate(properties)).doesNotThrowAnyException();
@@ -125,7 +126,7 @@ class SocialLoginConfigurationValidatorTest {
             // given
             var properties = new SocialLoginProperties(true, Map.of("forgejo",
                     new ProviderConfig(ProviderType.OAUTH2, null, "client-id", "client-secret", "Forgejo",
-                            null, null, null, null)));
+                            null, null, null, null, List.of())));
 
             // when / then
             assertThatThrownBy(() -> validator.validate(properties))
@@ -139,7 +140,7 @@ class SocialLoginConfigurationValidatorTest {
             // given
             var properties = new SocialLoginProperties(true, Map.of("forgejo",
                     new ProviderConfig(null, null, "client-id", "client-secret", "Forgejo",
-                            AUTHORIZATION_URI, TOKEN_URI, USER_INFO_URI, USER_NAME_ATTRIBUTE)));
+                            AUTHORIZATION_URI, TOKEN_URI, USER_INFO_URI, USER_NAME_ATTRIBUTE, List.of())));
 
             // when / then
             assertThatThrownBy(() -> validator.validate(properties))
@@ -152,7 +153,7 @@ class SocialLoginConfigurationValidatorTest {
             // given
             var properties = new SocialLoginProperties(true, Map.of("google",
                     new ProviderConfig(null, null, "client-id", "client-secret", "Google",
-                            null, null, null, null)));
+                            null, null, null, null, List.of())));
 
             // when / then
             assertThatCode(() -> validator.validate(properties)).doesNotThrowAnyException();
@@ -170,45 +171,87 @@ class SocialLoginConfigurationValidatorTest {
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContainingAll(registrationId, missingField);
         }
+        @ParameterizedTest
+        @MethodSource("eu.wiegandt.librehousehold.config.SocialLoginConfigurationValidatorTest#providersWithValidScopes")
+        void providerWithValidScopes_doesNotThrow(String registrationId, ProviderConfig config) {
+            // given
+            var properties = new SocialLoginProperties(true, Map.of(registrationId, config));
+
+            // when / then
+            assertThatCode(() -> validator.validate(properties)).doesNotThrowAnyException();
+        }
+
+        @ParameterizedTest
+        @MethodSource("eu.wiegandt.librehousehold.config.SocialLoginConfigurationValidatorTest#providersWithBlankScope")
+        void providerWithBlankScope_throwsIllegalStateExceptionNamingProviderAndScopes(
+                String registrationId, ProviderConfig config) {
+            // given
+            var properties = new SocialLoginProperties(true, Map.of(registrationId, config));
+
+            // when / then
+            assertThatThrownBy(() -> validator.validate(properties))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContainingAll(registrationId, "scopes");
+        }
+    }
+
+    static Stream<Arguments> providersWithValidScopes() {
+        return Stream.of(
+                Arguments.of("keycloak-self-hosted", new ProviderConfig(ProviderType.OIDC,
+                        "https://keycloak.example.com/realms/household", "client-id", "client-secret", "Keycloak",
+                        null, null, null, null, List.of("openid", "email", "groups"))),
+                Arguments.of("google", new ProviderConfig(ProviderType.OIDC, null, "client-id", "client-secret",
+                        "Google", null, null, null, null, List.of("openid", "email"))));
+    }
+
+    static Stream<Arguments> providersWithBlankScope() {
+        return Stream.of(
+                Arguments.of("keycloak-self-hosted", new ProviderConfig(ProviderType.OIDC,
+                        "https://keycloak.example.com/realms/household", "client-id", "client-secret", "Keycloak",
+                        null, null, null, null, List.of("openid", " "))),
+                Arguments.of("forgejo", new ProviderConfig(ProviderType.OAUTH2, null, "client-id", "client-secret",
+                        "Forgejo", AUTHORIZATION_URI, TOKEN_URI, USER_INFO_URI, USER_NAME_ATTRIBUTE, List.of(""))),
+                Arguments.of("google", new ProviderConfig(ProviderType.OIDC, null, "client-id", "client-secret",
+                        "Google", null, null, null, null, List.of("openid", ""))));
     }
 
     static Stream<Arguments> providersMissingOneClientCredential() {
         return Stream.of(
                 Arguments.of("forgejo", new ProviderConfig(ProviderType.OAUTH2, null, null, "client-secret", "Forgejo",
-                        AUTHORIZATION_URI, TOKEN_URI, USER_INFO_URI, USER_NAME_ATTRIBUTE), "client-id"),
+                        AUTHORIZATION_URI, TOKEN_URI, USER_INFO_URI, USER_NAME_ATTRIBUTE, List.of()), "client-id"),
                 Arguments.of("forgejo", new ProviderConfig(ProviderType.OAUTH2, null, " ", "client-secret", "Forgejo",
-                        AUTHORIZATION_URI, TOKEN_URI, USER_INFO_URI, USER_NAME_ATTRIBUTE), "client-id"),
+                        AUTHORIZATION_URI, TOKEN_URI, USER_INFO_URI, USER_NAME_ATTRIBUTE, List.of()), "client-id"),
                 Arguments.of("forgejo", new ProviderConfig(ProviderType.OAUTH2, null, "client-id", null, "Forgejo",
-                        AUTHORIZATION_URI, TOKEN_URI, USER_INFO_URI, USER_NAME_ATTRIBUTE), "client-secret"),
+                        AUTHORIZATION_URI, TOKEN_URI, USER_INFO_URI, USER_NAME_ATTRIBUTE, List.of()), "client-secret"),
                 Arguments.of("forgejo", new ProviderConfig(ProviderType.OAUTH2, null, "client-id", "", "Forgejo",
-                        AUTHORIZATION_URI, TOKEN_URI, USER_INFO_URI, USER_NAME_ATTRIBUTE), "client-secret"),
+                        AUTHORIZATION_URI, TOKEN_URI, USER_INFO_URI, USER_NAME_ATTRIBUTE, List.of()), "client-secret"),
                 Arguments.of("google", new ProviderConfig(ProviderType.OIDC, null, null, "client-secret", "Google",
-                        null, null, null, null), "client-id"),
+                        null, null, null, null, List.of()), "client-id"),
                 Arguments.of("google", new ProviderConfig(ProviderType.OIDC, null, "", "client-secret", "Google",
-                        null, null, null, null), "client-id"),
+                        null, null, null, null, List.of()), "client-id"),
                 Arguments.of("google", new ProviderConfig(ProviderType.OIDC, null, "client-id", null, "Google",
-                        null, null, null, null), "client-secret"),
+                        null, null, null, null, List.of()), "client-secret"),
                 Arguments.of("google", new ProviderConfig(ProviderType.OIDC, null, "client-id", " ", "Google",
-                        null, null, null, null), "client-secret"));
+                        null, null, null, null, List.of()), "client-secret"));
     }
 
     static Stream<Arguments> oauth2ProvidersMissingOrBlankOneField() {
         return Stream.of(
                 Arguments.of(new ProviderConfig(ProviderType.OAUTH2, null, "client-id", "client-secret", "Forgejo",
-                        null, TOKEN_URI, USER_INFO_URI, USER_NAME_ATTRIBUTE), "authorization-uri"),
+                        null, TOKEN_URI, USER_INFO_URI, USER_NAME_ATTRIBUTE, List.of()), "authorization-uri"),
                 Arguments.of(new ProviderConfig(ProviderType.OAUTH2, null, "client-id", "client-secret", "Forgejo",
-                        AUTHORIZATION_URI, null, USER_INFO_URI, USER_NAME_ATTRIBUTE), "token-uri"),
+                        AUTHORIZATION_URI, null, USER_INFO_URI, USER_NAME_ATTRIBUTE, List.of()), "token-uri"),
                 Arguments.of(new ProviderConfig(ProviderType.OAUTH2, null, "client-id", "client-secret", "Forgejo",
-                        AUTHORIZATION_URI, TOKEN_URI, null, USER_NAME_ATTRIBUTE), "user-info-uri"),
+                        AUTHORIZATION_URI, TOKEN_URI, null, USER_NAME_ATTRIBUTE, List.of()), "user-info-uri"),
                 Arguments.of(new ProviderConfig(ProviderType.OAUTH2, null, "client-id", "client-secret", "Forgejo",
-                        AUTHORIZATION_URI, TOKEN_URI, USER_INFO_URI, null), "user-name-attribute"),
+                        AUTHORIZATION_URI, TOKEN_URI, USER_INFO_URI, null, List.of()), "user-name-attribute"),
                 Arguments.of(new ProviderConfig(ProviderType.OAUTH2, null, "client-id", "client-secret", "Forgejo",
-                        " ", TOKEN_URI, USER_INFO_URI, USER_NAME_ATTRIBUTE), "authorization-uri"),
+                        " ", TOKEN_URI, USER_INFO_URI, USER_NAME_ATTRIBUTE, List.of()), "authorization-uri"),
                 Arguments.of(new ProviderConfig(ProviderType.OAUTH2, null, "client-id", "client-secret", "Forgejo",
-                        AUTHORIZATION_URI, "", USER_INFO_URI, USER_NAME_ATTRIBUTE), "token-uri"),
+                        AUTHORIZATION_URI, "", USER_INFO_URI, USER_NAME_ATTRIBUTE, List.of()), "token-uri"),
                 Arguments.of(new ProviderConfig(ProviderType.OAUTH2, null, "client-id", "client-secret", "Forgejo",
-                        AUTHORIZATION_URI, TOKEN_URI, " ", USER_NAME_ATTRIBUTE), "user-info-uri"),
+                        AUTHORIZATION_URI, TOKEN_URI, " ", USER_NAME_ATTRIBUTE, List.of()), "user-info-uri"),
                 Arguments.of(new ProviderConfig(ProviderType.OAUTH2, null, "client-id", "client-secret", "Forgejo",
-                        AUTHORIZATION_URI, TOKEN_URI, USER_INFO_URI, ""), "user-name-attribute"));
+                        AUTHORIZATION_URI, TOKEN_URI, USER_INFO_URI, "", List.of()), "user-name-attribute"));
     }
 }
