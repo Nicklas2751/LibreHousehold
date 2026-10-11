@@ -4,6 +4,8 @@ import eu.wiegandt.librehousehold.household.exception.EmailNotVerifiedException;
 import eu.wiegandt.librehousehold.household.exception.InvalidPasswordException;
 import eu.wiegandt.librehousehold.household.exception.MemberNotFoundException;
 import eu.wiegandt.librehousehold.household.model.AccountEntity;
+import eu.wiegandt.librehousehold.household.model.AccountIdentityEntity;
+import eu.wiegandt.librehousehold.household.repository.AccountIdentityRepository;
 import eu.wiegandt.librehousehold.household.repository.AccountRepository;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -32,6 +34,9 @@ class AccountServiceTest {
 
     @Mock
     private AccountRepository accountRepository;
+
+    @Mock
+    private AccountIdentityRepository accountIdentityRepository;
 
     @Mock
     private PasswordEncoder passwordEncoder;
@@ -206,5 +211,87 @@ class AccountServiceTest {
             // then
             assertThat(result).isTrue();
         }
+    }
+
+    @Nested
+    class createFederatedAccount {
+
+        @Test
+        void memberId_storesVerifiedAccountWithoutPasswordHashRegisteredNow() {
+            // given
+            var memberId = UUID.randomUUID();
+            var beforeCreation = Instant.now();
+            var expectedSavedAccount = new AccountEntity(memberId, null, true, beforeCreation, null, 0, null);
+
+            // when
+            accountService.createFederatedAccount(memberId);
+            var afterCreation = Instant.now();
+
+            // then
+            var captor = ArgumentCaptor.forClass(AccountEntity.class);
+            verify(accountRepository).save(captor.capture());
+            assertThat(captor.getValue()).usingRecursiveComparison()
+                    .withComparatorForFields(withinWindow(beforeCreation, afterCreation), "registeredAt")
+                    .isEqualTo(expectedSavedAccount);
+        }
+    }
+
+    @Nested
+    class linkExternalIdentity {
+
+        @Test
+        void validCall_storesIdentityLinkedNow() {
+            // given
+            var memberId = UUID.randomUUID();
+            var beforeLinking = Instant.now();
+            var expectedSavedIdentity = new AccountIdentityEntity(null, memberId, "dev-provider", "external-subject", beforeLinking);
+
+            // when
+            accountService.linkExternalIdentity(memberId, "dev-provider", "external-subject");
+            var afterLinking = Instant.now();
+
+            // then
+            var captor = ArgumentCaptor.forClass(AccountIdentityEntity.class);
+            verify(accountIdentityRepository).save(captor.capture());
+            assertThat(captor.getValue()).usingRecursiveComparison()
+                    .withComparatorForFields(withinWindow(beforeLinking, afterLinking), "linkedAt")
+                    .isEqualTo(expectedSavedIdentity);
+        }
+    }
+
+    @Nested
+    class findMemberIdByExternalIdentity {
+
+        @Test
+        void linkedIdentity_returnsMemberId() {
+            // given
+            var memberId = UUID.randomUUID();
+            var identity = new AccountIdentityEntity(1L, memberId, "dev-provider", "external-subject", Instant.now());
+            doReturn(Optional.of(identity)).when(accountIdentityRepository)
+                    .findByProviderIdAndExternalSubject("dev-provider", "external-subject");
+
+            // when
+            var result = accountService.findMemberIdByExternalIdentity("dev-provider", "external-subject");
+
+            // then
+            assertThat(result).contains(memberId);
+        }
+
+        @Test
+        void unlinkedIdentity_returnsEmpty() {
+            // given
+            doReturn(Optional.empty()).when(accountIdentityRepository)
+                    .findByProviderIdAndExternalSubject("dev-provider", "external-subject");
+
+            // when
+            var result = accountService.findMemberIdByExternalIdentity("dev-provider", "external-subject");
+
+            // then
+            assertThat(result).isEmpty();
+        }
+    }
+
+    private Comparator<Instant> withinWindow(Instant windowStart, Instant windowEnd) {
+        return (actual, _) -> actual.isBefore(windowStart) || actual.isAfter(windowEnd) ? -1 : 0;
     }
 }

@@ -1309,6 +1309,42 @@ bleiben):
 
 ### P3.3 — Backend: Provider-Federation & Account-Mapping
 
+**Korrekturen bei Umsetzungsbeginn (Nutzerentscheidungen, gelten vorrangig vor den Aufgaben unten):**
+
+- **Login-Regel nach ADR-018, nicht nach Abschnitt 3.4:** Ein Social-Login findet das Mitglied
+  ausschließlich über `account_identity` (Provider + Subject). Es gibt keinen Abgleich über die
+  E-Mail und kein automatisches Linking. Ohne Verknüpfung wird der Login abgelehnt, auch wenn die
+  E-Mail zu einem Passwort-Account passt. Damit entfallen die Tests
+  `login_verifiedEmailMatchesExistingMember_autoLinks…` und `login_unverifiedEmailFromProvider_…`.
+  Neu ist `login_emailMatchesPasswordAccount_rejects…`.
+- **Nur Login-Pfad:** P3.3 baut Kontext-Store, Endpoint und den Login. Liegt ein SETUP- oder
+  INVITE-Kontext vor, wird vorerst wie bei „kein Account“ abgelehnt. Die Account-Anlage folgt in
+  P3.6 (Ablauf wie Abschnitt 3.10).
+- **Aufgabe 6 (GitHub-E-Mail-Nachladen) wandert nach P3.6:** Die verifizierte E-Mail zählt nur noch
+  bei der Registrierung. Der GitHub-Login selbst läuft über Springs `DefaultOAuth2UserService`
+  (Subject = GitHub-`id`).
+- **Dex in den ITs:** Das IT wählt den Port per `TestSocketUtils` und registriert den Dex-Client im
+  given-Block per `dexContainer.withClient(...)` mit der Test-Redirect-URI neu (gRPC-API des
+  laufenden Containers).
+- **Ort der Klassen:** Das Mapping ist Security-Verdrahtung und liegt deshalb in `config`
+  (`FederatedIdentityAuthenticationSuccessHandler`, `SocialLoginContextStore`). `household` liefert
+  nur die Abfrage `MemberQuery.findEmailByExternalIdentity`, denn `household` darf nicht von
+  `config` abhängen (Zyklus). Der Endpoint `POST /auth/social-context` hängt am `session`-Tag
+  (`SessionApiDelegateImpl`). Das Kontext-Enum enthält zusätzlich `LOGIN`. So kann die Login-Seite
+  einen liegengebliebenen SETUP/INVITE-Kontext aus einem abgebrochenen Flow verwerfen.
+- **Technische Befunde:** Der OIDC-Login-Provider von Spring Security 7.1.0 setzt keine
+  `FactorGrantedAuthority`, die der eingebettete AS für `auth_time` braucht. Außerdem hält die Session
+  nur einen offenen Authorization-Request. Der Handler ersetzt die Authentifizierung deshalb durch
+  eine mit der Mitglieds-E-Mail als Name und `AUTHORIZATION_CODE`-Faktor. Danach startet er die
+  SPA-Continuation neu, statt den gespeicherten `/oauth2/authorize`-Request fortzusetzen. Die
+  OIDC-User-Service- und Success-Handler-Verdrahtung unterscheidet zwischen `spa-backend-client`
+  (unverändert) und externen Providern.
+- **Keine neue Migration:** Es gibt noch kein Release. `password_hash` nullable und die Tabelle
+  `account_identity` kommen deshalb direkt in `V1__create_household_and_member.sql`, nicht in eine
+  `V2`-Datei (Aufgabe 1).
+- **Kein Lockout beim föderierten Login:** Der Lockout schützt vor Passwort-Raten. Würde er auch hier
+  greifen, könnte ein Angreifer einen föderierten Account per Falschpasswort-Versuchen sperren.
+
 **Aus P3.0 übernommen, hier zu lösen:** Der Dex-Client in `DexTestcontainersConfiguration`
 akzeptiert nur **eine** Redirect-URI (`DexContainer.Client` erlaubt nicht mehr). Registriert ist
 die Vite-Proxy-Origin `http://localhost:5173/login/oauth2/code/dev-provider`, denn das lokale
