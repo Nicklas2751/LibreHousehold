@@ -1235,6 +1235,11 @@ bleiben):
   Client). Leere Werte (z. B. aus `${GOOGLE_CLIENT_ID:}`) gelten wie fehlende. Ein fehlender `type`
   scheitert nur bei unbekannten Provider-Namen; bei `google`/`github` usw. darf er fehlen. Die
   Factory behandelt eine leere `issuer-uri` wie eine fehlende.
+- Scopes (bei P3.0 gefunden, Nutzerentscheidung): `ClientRegistrations.fromIssuerLocation` setzt
+  in Spring Security 7.1.0 keine Scopes. Per Discovery gebaute OIDC-Registrierungen bekommen daher
+  fest `openid, profile, email`. Ein optionales `scopes`-Property pro Provider ersetzt die Defaults
+  auf jedem Pfad (bei explizitem `oauth2` gibt es keine Defaults). Leere Einträge scheitern im
+  Validator.
 - Vollständige Zweigabdeckung statt nur der unten gelisteten Mindest-Testnamen; keine Verweise auf
   dieses Planungsdokument im Code.
 

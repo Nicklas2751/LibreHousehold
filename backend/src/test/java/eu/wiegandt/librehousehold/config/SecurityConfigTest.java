@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.oauth2.client.registration.ClientRegistration;
 
+import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -43,7 +44,7 @@ class SecurityConfigTest {
             // given
             var socialLoginProperties = new SocialLoginProperties(true, Map.of("github",
                     new ProviderConfig(ProviderType.OAUTH2, null, "client-id", "client-secret", "GitHub",
-                            null, null, null, null)));
+                            null, null, null, null, List.of())));
 
             // when
             var repository = securityConfig.clientRegistrationRepository(
@@ -64,7 +65,7 @@ class SecurityConfigTest {
             // given
             var socialLoginProperties = new SocialLoginProperties(true, Map.of("keycloak-self-hosted",
                     new ProviderConfig(ProviderType.OIDC, null, "client-id", "client-secret", "Keycloak",
-                            null, null, null, null)));
+                            null, null, null, null, List.of())));
             var clientRegistrationFactory =
                     new SocialLoginClientRegistrationFactory(new CommonProvider(), new OidcIssuerDiscovery());
             var validator = new SocialLoginConfigurationValidator(new CommonProvider());

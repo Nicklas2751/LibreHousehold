@@ -3,6 +3,7 @@ package eu.wiegandt.librehousehold.config;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -27,6 +28,10 @@ public record SocialLoginProperties(boolean enabled, @DefaultValue Map<String, P
      * {@code OAUTH2} providers that are not well-known instead set the explicit endpoint fields.
      * A future provider type can be added as a new {@link ProviderType} constant plus additional
      * optional fields here without breaking existing bindings.
+     * <p>
+     * {@code scopes} is optional and binds to an empty list via {@link DefaultValue} when absent.
+     * A non-empty list replaces the default scopes of every provider type; see
+     * {@link SocialLoginClientRegistrationFactory} for the defaults applied otherwise.
      */
     public record ProviderConfig(
             ProviderType type,
@@ -37,6 +42,7 @@ public record SocialLoginProperties(boolean enabled, @DefaultValue Map<String, P
             String authorizationUri,
             String tokenUri,
             String userInfoUri,
-            String userNameAttribute) {
+            String userNameAttribute,
+            @DefaultValue List<String> scopes) {
     }
 }
