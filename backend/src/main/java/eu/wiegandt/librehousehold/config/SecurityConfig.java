@@ -69,7 +69,7 @@ import java.util.stream.Stream;
  */
 @Configuration
 @EnableMethodSecurity
-@EnableConfigurationProperties(SocialLoginProperties.class)
+@EnableConfigurationProperties({SocialLoginProperties.class, LocalLoginProperties.class})
 public class SecurityConfig {
 
     @Bean
@@ -262,7 +262,8 @@ public class SecurityConfig {
                                 basePath + "/members/verification/confirm",
                                 basePath + "/password-reset/request",
                                 basePath + "/password-reset/confirm",
-                                basePath + "/auth/social-context")
+                                basePath + "/auth/social-context",
+                                basePath + "/auth/discover")
                         .permitAll()
                         .anyRequest().authenticated())
                 .cors(Customizer.withDefaults())
