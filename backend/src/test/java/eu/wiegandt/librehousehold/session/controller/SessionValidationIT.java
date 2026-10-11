@@ -1,6 +1,7 @@
 package eu.wiegandt.librehousehold.session.controller;
 
 import eu.wiegandt.librehousehold.api.SessionApiController;
+import eu.wiegandt.librehousehold.config.SocialLoginContextStore;
 import eu.wiegandt.librehousehold.household.HouseholdQuery;
 import eu.wiegandt.librehousehold.household.MemberQuery;
 import eu.wiegandt.librehousehold.household.PasswordReset;
@@ -37,6 +38,9 @@ class SessionValidationIT {
 
     @MockitoBean
     private PasswordReset passwordReset;
+
+    @MockitoBean
+    private SocialLoginContextStore socialLoginContextStore;
 
     @Test
     void getCurrentUser_noAuthenticatedSession_returns401() throws Exception {

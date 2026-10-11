@@ -287,6 +287,29 @@ class AuthorizationServerConfigurationIT {
         }
 
         /**
+         * An account created via social login has no password hash: a password login attempt for it
+         * must fail like any wrong password instead of crashing on the missing hash.
+         */
+        @Test
+        void federatedAccountWithoutPassword_rejectedWithoutReason() {
+            // given
+            var email = "authtest-" + UUID.randomUUID() + "@example.com";
+            createdHousehold = householdRepository.save(Instancio.create(HouseholdEntity.class));
+            var member = memberRepository.save(Instancio.of(MemberEntity.class)
+                    .set(field(MemberEntity::householdId), createdHousehold.id())
+                    .set(field(MemberEntity::email), email)
+                    .create());
+            accountService.createFederatedAccount(member.getId());
+            var loginPage = requestLoginPageViaAuthorizationCodeFlow();
+
+            // when
+            var result = submitLogin(loginPage.cookies(), loginPage.csrfToken(), email, RAW_PASSWORD);
+
+            // then
+            assertThat(result.getResponseHeaders().getLocation()).hasPath("/login").hasQuery("error");
+        }
+
+        /**
          * Bug B: {@code /login} reached by a direct link (e.g. the "back to login" buttons on the
          * verify-email/reset-password confirmation pages) never goes through
          * {@code /oauth2/authorization/spa-backend-client} first, so there is no saved request for
@@ -539,6 +562,18 @@ class AuthorizationServerConfigurationIT {
         void confirmEmailVerification_noSession_isReachable() {
             // given — GET instead of the real POST sidesteps CSRF, same rationale as householdSetup above
             var uri = URI.create(BASE_PATH + "/members/verification/confirm");
+
+            // when
+            var response = get(NO_COOKIES, uri).response();
+
+            // then
+            assertThat(response.getStatus().value()).isEqualTo(405);
+        }
+
+        @Test
+        void storeSocialLoginContext_noSession_isReachable() {
+            // given — GET instead of the real POST sidesteps CSRF, same rationale as householdSetup above
+            var uri = URI.create(BASE_PATH + "/auth/social-context");
 
             // when
             var response = get(NO_COOKIES, uri).response();

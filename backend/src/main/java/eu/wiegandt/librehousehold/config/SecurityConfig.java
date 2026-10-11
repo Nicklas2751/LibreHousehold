@@ -225,6 +225,7 @@ public class SecurityConfig {
     public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http, OidcUserService oidcUserService,
                                                           RevokeAuthorizedClientLogoutHandler revokeAuthorizedClientLogoutHandler,
                                                           UnverifiedAccountLoginFailureHandler unverifiedAccountLoginFailureHandler,
+                                                          FederatedIdentityAuthenticationSuccessHandler federatedIdentityAuthenticationSuccessHandler,
                                                           SessionRegistry sessionRegistry,
                                                           OncePerRequestFilter rateLimitingFilter,
                                                           @Value("${openapi.libreHousehold.base-path:/v1}") String basePath)
@@ -238,6 +239,14 @@ public class SecurityConfig {
         var oauth2LoginPath = "/oauth2/authorization/" + RegisteredClientSeeder.CLIENT_ID;
         var loginSuccessHandler = new SavedRequestAwareAuthenticationSuccessHandler();
         loginSuccessHandler.setDefaultTargetUrl(oauth2LoginPath);
+        var requestCache = new NonSavingRequestCache();
+        // Same handler oauth2Login() would use by default for the SPA's own loop-back registration;
+        // external social-login registrations still need to be mapped to a member account first.
+        var spaClientLoginSuccessHandler = new SavedRequestAwareAuthenticationSuccessHandler();
+        spaClientLoginSuccessHandler.setRequestCache(requestCache);
+        var oauth2LoginSuccessHandler = new SpaClientAwareAuthenticationSuccessHandler(
+                spaClientLoginSuccessHandler, federatedIdentityAuthenticationSuccessHandler);
+        var oauth2LoginUserService = new SpaClientAwareOidcUserService(oidcUserService, new OidcUserService());
         http.authorizeHttpRequests(authorize -> authorize
                         // All generated API controllers are mounted under this base path (see the
                         // @RequestMapping on the generated *ApiController classes) — read from the
@@ -252,7 +261,8 @@ public class SecurityConfig {
                                 basePath + "/members/availability",
                                 basePath + "/members/verification/confirm",
                                 basePath + "/password-reset/request",
-                                basePath + "/password-reset/confirm")
+                                basePath + "/password-reset/confirm",
+                                basePath + "/auth/social-context")
                         .permitAll()
                         .anyRequest().authenticated())
                 .cors(Customizer.withDefaults())
@@ -264,7 +274,7 @@ public class SecurityConfig {
                 // A plain NullRequestCache would also break resuming that continuation: formLogin()'s
                 // SavedRequestAwareAuthenticationSuccessHandler below shares this very RequestCache
                 // instance and needs to still be able to *read* it (see NonSavingRequestCache).
-                .requestCache(cache -> cache.requestCache(new NonSavingRequestCache()))
+                .requestCache(cache -> cache.requestCache(requestCache))
                 // ADR-014: XSRF-TOKEN must be JS-readable (spa() wires a cookie-based repository plus
                 // a request handler that resolves the raw, unmasked token value, matching what the SPA
                 // reads straight from the cookie). No permitAll exception from CSRF is added here for
@@ -288,8 +298,9 @@ public class SecurityConfig {
                 .formLogin(login -> login
                         .failureHandler(unverifiedAccountLoginFailureHandler)
                         .successHandler(loginSuccessHandler))
-                .oauth2Login(login -> login.userInfoEndpoint(userInfo ->
-                        userInfo.oidcUserService(oidcUserService)))
+                .oauth2Login(login -> login
+                        .userInfoEndpoint(userInfo -> userInfo.oidcUserService(oauth2LoginUserService))
+                        .successHandler(oauth2LoginSuccessHandler))
                 // ADR-014: logout must actively revoke the backend's cached tokens for this user,
                 // not just invalidate the session (see RevokeAuthorizedClientLogoutHandler).
                 // POST /logout is therefore fully handled here, not by SessionApiDelegateImpl.

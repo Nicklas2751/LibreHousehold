@@ -628,6 +628,38 @@ class MemberManagementServiceTest {
     }
 
     @Nested
+    class findEmailByExternalIdentity {
+
+        @Test
+        void linkedIdentity_returnsEmailOfLinkedMember() {
+            // given
+            var entity = Instancio.create(memberEntityModel);
+            doReturn(Optional.of(entity.id())).when(accountService)
+                    .findMemberIdByExternalIdentity("dev-provider", "external-subject");
+            doReturn(Optional.of(entity)).when(memberRepository).findById(entity.id());
+
+            // when
+            var result = service.findEmailByExternalIdentity("dev-provider", "external-subject");
+
+            // then
+            assertThat(result).contains(entity.email());
+        }
+
+        @Test
+        void unlinkedIdentity_returnsEmpty() {
+            // given
+            doReturn(Optional.empty()).when(accountService)
+                    .findMemberIdByExternalIdentity("dev-provider", "external-subject");
+
+            // when
+            var result = service.findEmailByExternalIdentity("dev-provider", "external-subject");
+
+            // then
+            assertThat(result).isEmpty();
+        }
+    }
+
+    @Nested
     class isAdmin {
 
         @Test
