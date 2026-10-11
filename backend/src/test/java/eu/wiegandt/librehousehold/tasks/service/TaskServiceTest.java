@@ -61,7 +61,7 @@ class TaskServiceTest {
             var entity = taskEntity(householdId);
             doReturn(List.of(entity)).when(taskRepository).findByHouseholdId(householdId);
             doReturn(List.of()).when(taskCompletionRepository).findLatestByTaskIdIn(any());
-            var expected = new Task(entity.getId(), "Task", LocalDate.of(2024, 7, 1)).recurring(false);
+            var expected = new Task(entity.getId(), "Task", LocalDate.of(2024, 7, 1)).recurring(false).done(null);
 
             // when
             var result = taskService.getTasks(householdId);
@@ -172,7 +172,7 @@ class TaskServiceTest {
             doReturn(Optional.of(entity)).when(taskRepository).findByIdAndHouseholdId(taskId, householdId);
             doReturn(Optional.of(completion)).doReturn(Optional.empty())
                     .when(taskCompletionRepository).findFirstByTaskIdOrderByDoneDateDesc(taskId);
-            var expected = new Task(taskId, "T", LocalDate.of(2024, 7, 1)).assignedTo(memberId).recurring(false);
+            var expected = new Task(taskId, "T", LocalDate.of(2024, 7, 1)).assignedTo(memberId).recurring(false).done(null);
 
             // when
             var result = taskService.updateTask(householdId, taskId, new TaskUpdate());
@@ -225,7 +225,8 @@ class TaskServiceTest {
                     .assignedTo(memberId)
                     .recurring(true)
                     .recurrenceUnit(Task.RecurrenceUnitEnum.WEEKS)
-                    .recurrenceInterval(2);
+                    .recurrenceInterval(2)
+                    .done(null);
 
             // when
             var result = taskService.updateTask(householdId, taskId, new TaskUpdate());

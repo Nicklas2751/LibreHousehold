@@ -1,7 +1,9 @@
 package eu.wiegandt.librehousehold.session.controller;
 
 import eu.wiegandt.librehousehold.api.SessionApiController;
+import eu.wiegandt.librehousehold.config.LocalLoginProperties;
 import eu.wiegandt.librehousehold.config.SocialLoginContextStore;
+import eu.wiegandt.librehousehold.config.SocialLoginProperties;
 import eu.wiegandt.librehousehold.household.HouseholdQuery;
 import eu.wiegandt.librehousehold.household.MemberQuery;
 import eu.wiegandt.librehousehold.household.PasswordReset;
@@ -9,6 +11,7 @@ import eu.wiegandt.librehousehold.usersettings.PreferencesQuery;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.jackson.autoconfigure.JacksonAutoConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
@@ -22,6 +25,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(controllers = SessionApiController.class)
 @Import(SessionApiDelegateImpl.class)
 @ImportAutoConfiguration(JacksonAutoConfiguration.class)
+@EnableConfigurationProperties({SocialLoginProperties.class, LocalLoginProperties.class})
 class SessionValidationIT {
 
     @Autowired

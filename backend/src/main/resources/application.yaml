@@ -64,6 +64,11 @@ librehousehold:
       # them from different origins must set this explicitly, e.g.
       # LIBREHOUSEHOLD_SECURITY_CORS_ALLOWED_ORIGINS=https://household.example.com.
       allowed-origins: ""
+    local-login:
+      # On by default: login, setup and invite join with e-mail and password. Self-hosters offering
+      # only social login can set this to false. Currently only evaluated by GET /auth/discover to
+      # hide the local forms in the client; it does not disable the form login server-side.
+      enabled: true
     social-login:
       # Off by default: external OIDC/OAuth2 login providers (see ADR-016) are an
       # opt-in self-hoster feature on top of local password login. Self-hosters configure one entry

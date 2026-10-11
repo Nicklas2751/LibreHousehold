@@ -334,7 +334,7 @@ For class-based entities the recommended update pattern is via MapStruct `@Mappi
 
 ### Task Schema
 
-The `Task` schema has a `done` field (date format) that either contains a date or is `null`.
+The `Task` schema has a `done` field (date format) that either contains a date or is `null`. Clients must treat a missing `done` the same as `null`: the backend generates it as `JsonNullable` with `NON_ABSENT`, so responses that never set it (e.g. `createTask`) omit the field entirely.
 
 ### Recurring Tasks
 

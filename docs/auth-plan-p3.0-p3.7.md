@@ -1307,7 +1307,7 @@ bleiben):
   - Grün: wie oben.
   - Refactor: keiner nötig.
 
-### P3.3 — Backend: Provider-Federation & Account-Mapping
+### P3.3 — Backend: Provider-Federation & Account-Mapping — ✅ umgesetzt (Login-Pfad; Setup/Invite-Anlage siehe P3.6)
 
 **Korrekturen bei Umsetzungsbeginn (Nutzerentscheidungen, gelten vorrangig vor den Aufgaben unten):**
 
@@ -1467,7 +1467,19 @@ außerhalb dieses Plans" am Dokumentende.
   Federation-Logik ergänzen (Abschnitt 2.6).
 - Kein Code, keine Tests — reine Doku-Änderung.
 
-### P3.4 — OpenAPI: Discover-Endpoint
+### P3.4 — OpenAPI: Discover-Endpoint — ✅ umgesetzt
+
+**Korrekturen bei Umsetzungsbeginn (Nutzerentscheidungen, gelten vorrangig vor den Aufgaben unten):**
+
+- **Kein `auth`-Package, kein `auth`-Tag:** Ein Root-Package `auth` wäre ein neues
+  Spring-Modulith-Modul, Kapitel 5/8 schließen ein Auth-Modul aber ausdrücklich aus. Außerdem hängt
+  `POST /auth/social-context` seit P3.3 am Tag `session`. `GET /auth/discover` bekommt deshalb
+  ebenfalls den Tag `session` und wird im bestehenden `SessionApiDelegateImpl` umgesetzt.
+- **`displayName`-Fallback:** `display-name` bleibt optional. Fehlt der Wert, liefert der Endpoint
+  die `registrationId` (z. B. `google`). Das entspricht dem, was Spring bei `clientName(null)` in der
+  `ClientRegistration` ebenfalls tut.
+- **`LocalLoginProperties` statt `@Value`:** Der Schalter `librehousehold.security.local-login.enabled`
+  (Default `true`) wird wie `SocialLoginProperties` als `@ConfigurationProperties`-Record gebunden.
 
 **Aufgabe 1: Schema + Pfad in `api/openapi.yml`**
 
@@ -1537,6 +1549,15 @@ außerhalb dieses Plans" am Dokumentende.
   `auth.social_login_error_toast`. `npm run paraglide` danach.
 
 ### P3.6 — Setup/Invite ausschließlich via Social
+
+**Ergänzung aus P3.4 (Nutzerentscheidung):** Seit P3.4 wertet nur der Discover-Endpoint
+`librehousehold.security.local-login.enabled` aus. Bei `false` blendet der Client die Formulare aus,
+das Backend akzeptiert aber weiter Formular-Login (`POST /login`), Setup mit Passwort und Invite-Join
+mit Passwort. Ein Self-Hoster, der den lokalen Login abschaltet, erwartet, dass er serverseitig aus
+ist. P3.6 sperrt diese drei Wege deshalb serverseitig, wenn der Schalter `false` ist (Tests zuerst:
+je Weg abgelehnt bei `false` und unverändert bei `true`). Das passt hierher, weil P3.6 Setup und
+Invite-Join ohnehin um den Social-Pfad erweitert. Offen bis zur Umsetzung: das genaue Fehlerbild,
+z. B. 403 mit eigenem Problem-Typ oder 404.
 
 **Aufgabe 1: OpenAPI — `localRegistration` optional**
 
