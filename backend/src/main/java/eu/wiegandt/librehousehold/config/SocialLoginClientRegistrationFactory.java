@@ -19,11 +19,18 @@ import java.util.List;
  * well-known {@link CommonOAuth2Provider} name match (e.g. {@code google}, {@code github}),
  * finally a fully explicit, manually built registration for self-hosted OAuth2 providers Spring
  * Security does not know out of the box.
+ * <p>
+ * Requested scopes: a non-empty {@code scopes} list configured for a provider always replaces the
+ * defaults, on every path. Without it, OIDC discovery requests {@code openid}, {@code profile} and
+ * {@code email}, because {@code ClientRegistrations.fromIssuerLocation} sets no scopes at all and
+ * the e-mail rule of ADR-018 needs an ID token with an e-mail claim; a {@link CommonOAuth2Provider}
+ * keeps its own default scopes; an explicitly built registration requests no scopes.
  */
 @Component
 public class SocialLoginClientRegistrationFactory {
 
     private static final String DEFAULT_REDIRECT_URI = "{baseUrl}/{action}/oauth2/code/{registrationId}";
+    private static final List<String> DEFAULT_OIDC_SCOPES = List.of("openid", "profile", "email");
 
     private final CommonProvider commonProvider;
     private final OidcIssuerDiscovery oidcIssuerDiscovery;
@@ -57,16 +64,20 @@ public class SocialLoginClientRegistrationFactory {
                 .clientId(config.clientId())
                 .clientSecret(config.clientSecret())
                 .clientName(config.displayName())
+                .scope(config.scopes().isEmpty() ? DEFAULT_OIDC_SCOPES : config.scopes())
                 .build();
     }
 
     private ClientRegistration buildFromCommonProvider(CommonOAuth2Provider provider, String registrationId,
                                                        ProviderConfig config) {
-        return provider.getBuilder(registrationId)
+        var builder = provider.getBuilder(registrationId)
                 .clientId(config.clientId())
                 .clientSecret(config.clientSecret())
-                .clientName(config.displayName())
-                .build();
+                .clientName(config.displayName());
+        if (!config.scopes().isEmpty()) {
+            builder.scope(config.scopes());
+        }
+        return builder.build();
     }
 
     private ClientRegistration buildExplicit(String registrationId, ProviderConfig config) {
@@ -81,6 +92,7 @@ public class SocialLoginClientRegistrationFactory {
                 .tokenUri(config.tokenUri())
                 .userInfoUri(config.userInfoUri())
                 .userNameAttributeName(config.userNameAttribute())
+                .scope(config.scopes())
                 .build();
     }
 }

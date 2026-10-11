@@ -43,13 +43,58 @@ class SocialLoginClientRegistrationFactoryTest {
             // given
             var properties = new SocialLoginProperties(true, Map.of("keycloak-self-hosted",
                     new ProviderConfig(ProviderType.OIDC, ISSUER_URI, "client-id", "client-secret", "Keycloak",
-                            null, null, null, null)));
+                            null, null, null, null, List.of())));
             doReturn(discoveredRegistration()).when(oidcIssuerDiscovery).discover(ISSUER_URI);
             var expected = discoveredRegistration()
                     .registrationId("keycloak-self-hosted")
                     .clientId("client-id")
                     .clientSecret("client-secret")
                     .clientName("Keycloak")
+                    .scope("openid", "profile", "email")
+                    .build();
+
+            // when
+            var result = factory.buildClientRegistrations(properties);
+
+            // then
+            assertThat(result).usingRecursiveComparison().isEqualTo(List.of(expected));
+        }
+
+        @Test
+        void oidcProviderWithIssuerUriWithoutScopes_registrationWithDefaultOidcScopes() {
+            // given
+            var properties = new SocialLoginProperties(true, Map.of("dex",
+                    new ProviderConfig(ProviderType.OIDC, ISSUER_URI, "client-id", "client-secret", "Dex",
+                            null, null, null, null, List.of())));
+            doReturn(discoveredRegistration()).when(oidcIssuerDiscovery).discover(ISSUER_URI);
+            var expected = discoveredRegistration()
+                    .registrationId("dex")
+                    .clientId("client-id")
+                    .clientSecret("client-secret")
+                    .clientName("Dex")
+                    .scope("openid", "profile", "email")
+                    .build();
+
+            // when
+            var result = factory.buildClientRegistrations(properties);
+
+            // then
+            assertThat(result).usingRecursiveComparison().isEqualTo(List.of(expected));
+        }
+
+        @Test
+        void oidcProviderWithIssuerUriAndScopes_registrationWithConfiguredScopesOnly() {
+            // given
+            var properties = new SocialLoginProperties(true, Map.of("dex",
+                    new ProviderConfig(ProviderType.OIDC, ISSUER_URI, "client-id", "client-secret", "Dex",
+                            null, null, null, null, List.of("openid", "groups"))));
+            doReturn(discoveredRegistration()).when(oidcIssuerDiscovery).discover(ISSUER_URI);
+            var expected = discoveredRegistration()
+                    .registrationId("dex")
+                    .clientId("client-id")
+                    .clientSecret("client-secret")
+                    .clientName("Dex")
+                    .scope("openid", "groups")
                     .build();
 
             // when
@@ -64,13 +109,14 @@ class SocialLoginClientRegistrationFactoryTest {
             // given
             var properties = new SocialLoginProperties(true, Map.of("google",
                     new ProviderConfig(ProviderType.OIDC, ISSUER_URI, "client-id", "client-secret", "Google",
-                            null, null, null, null)));
+                            null, null, null, null, List.of())));
             doReturn(discoveredRegistration()).when(oidcIssuerDiscovery).discover(ISSUER_URI);
             var expected = discoveredRegistration()
                     .registrationId("google")
                     .clientId("client-id")
                     .clientSecret("client-secret")
                     .clientName("Google")
+                    .scope("openid", "profile", "email")
                     .build();
 
             // when
@@ -85,7 +131,7 @@ class SocialLoginClientRegistrationFactoryTest {
             // given
             var properties = new SocialLoginProperties(true, Map.of("google",
                     new ProviderConfig(ProviderType.OIDC, null, "client-id", "client-secret", "Google",
-                            null, null, null, null)));
+                            null, null, null, null, List.of())));
             var expected = CommonOAuth2Provider.GOOGLE.getBuilder("google")
                     .clientId("client-id")
                     .clientSecret("client-secret")
@@ -100,11 +146,31 @@ class SocialLoginClientRegistrationFactoryTest {
         }
 
         @Test
+        void commonProviderNameWithScopes_registrationWithConfiguredScopesInsteadOfProviderDefaults() {
+            // given
+            var properties = new SocialLoginProperties(true, Map.of("google",
+                    new ProviderConfig(ProviderType.OIDC, null, "client-id", "client-secret", "Google",
+                            null, null, null, null, List.of("openid", "email"))));
+            var expected = CommonOAuth2Provider.GOOGLE.getBuilder("google")
+                    .clientId("client-id")
+                    .clientSecret("client-secret")
+                    .clientName("Google")
+                    .scope("openid", "email")
+                    .build();
+
+            // when
+            var result = factory.buildClientRegistrations(properties);
+
+            // then
+            assertThat(result).usingRecursiveComparison().isEqualTo(List.of(expected));
+        }
+
+        @Test
         void oidcProviderWithBlankIssuerUriAndCommonProviderName_registrationFromCommonOAuth2Provider() {
             // given
             var properties = new SocialLoginProperties(true, Map.of("google",
                     new ProviderConfig(ProviderType.OIDC, "", "client-id", "client-secret", "Google",
-                            null, null, null, null)));
+                            null, null, null, null, List.of())));
             var expected = CommonOAuth2Provider.GOOGLE.getBuilder("google")
                     .clientId("client-id")
                     .clientSecret("client-secret")
@@ -123,7 +189,7 @@ class SocialLoginClientRegistrationFactoryTest {
             // given
             var properties = new SocialLoginProperties(true, Map.of("google",
                     new ProviderConfig(ProviderType.OIDC, " ", "client-id", "client-secret", "Google",
-                            null, null, null, null)));
+                            null, null, null, null, List.of())));
 
             // when
             factory.buildClientRegistrations(properties);
@@ -137,7 +203,7 @@ class SocialLoginClientRegistrationFactoryTest {
             // given
             var properties = new SocialLoginProperties(true, Map.of("google",
                     new ProviderConfig(null, null, "client-id", "client-secret", "Google",
-                            null, null, null, null)));
+                            null, null, null, null, List.of())));
             var expected = CommonOAuth2Provider.GOOGLE.getBuilder("google")
                     .clientId("client-id")
                     .clientSecret("client-secret")
@@ -156,7 +222,7 @@ class SocialLoginClientRegistrationFactoryTest {
             // given
             var properties = new SocialLoginProperties(true, Map.of("github",
                     new ProviderConfig(ProviderType.OAUTH2, null, "client-id", "client-secret", "GitHub",
-                            null, null, null, null)));
+                            null, null, null, null, List.of())));
             var expected = CommonOAuth2Provider.GITHUB.getBuilder("github")
                     .clientId("client-id")
                     .clientSecret("client-secret")
@@ -175,7 +241,7 @@ class SocialLoginClientRegistrationFactoryTest {
             // given
             var properties = new SocialLoginProperties(true, Map.of("github",
                     new ProviderConfig(ProviderType.OAUTH2, ISSUER_URI, "client-id", "client-secret", "GitHub",
-                            null, null, null, null)));
+                            null, null, null, null, List.of())));
             var expected = CommonOAuth2Provider.GITHUB.getBuilder("github")
                     .clientId("client-id")
                     .clientSecret("client-secret")
@@ -197,7 +263,7 @@ class SocialLoginClientRegistrationFactoryTest {
                             "https://git.example.com/login/oauth/authorize",
                             "https://git.example.com/login/oauth/access_token",
                             "https://git.example.com/api/v1/user",
-                            "login")));
+                            "login", List.of())));
             var expected = ClientRegistration.withRegistrationId("forgejo")
                     .clientId("client-id")
                     .clientSecret("client-secret")
@@ -219,11 +285,42 @@ class SocialLoginClientRegistrationFactoryTest {
         }
 
         @Test
+        void oauth2ProviderWithUnknownNameAndScopes_explicitlyBuiltRegistrationWithConfiguredScopes() {
+            // given
+            var properties = new SocialLoginProperties(true, Map.of("forgejo",
+                    new ProviderConfig(ProviderType.OAUTH2, null, "client-id", "client-secret", "Forgejo",
+                            "https://git.example.com/login/oauth/authorize",
+                            "https://git.example.com/login/oauth/access_token",
+                            "https://git.example.com/api/v1/user",
+                            "login",
+                            List.of("read:user"))));
+            var expected = ClientRegistration.withRegistrationId("forgejo")
+                    .clientId("client-id")
+                    .clientSecret("client-secret")
+                    .clientName("Forgejo")
+                    .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
+                    .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+                    .redirectUri("{baseUrl}/{action}/oauth2/code/{registrationId}")
+                    .authorizationUri("https://git.example.com/login/oauth/authorize")
+                    .tokenUri("https://git.example.com/login/oauth/access_token")
+                    .userInfoUri("https://git.example.com/api/v1/user")
+                    .userNameAttributeName("login")
+                    .scope("read:user")
+                    .build();
+
+            // when
+            var result = factory.buildClientRegistrations(properties);
+
+            // then
+            assertThat(result).usingRecursiveComparison().isEqualTo(List.of(expected));
+        }
+
+        @Test
         void socialLoginDisabled_emptyList() {
             // given
             var properties = new SocialLoginProperties(false, Map.of("google",
                     new ProviderConfig(ProviderType.OIDC, null, "client-id", "client-secret", "Google",
-                            null, null, null, null)));
+                            null, null, null, null, List.of())));
 
             // when
             var result = factory.buildClientRegistrations(properties);
@@ -238,7 +335,6 @@ class SocialLoginClientRegistrationFactoryTest {
                     .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
                     .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
                     .redirectUri("{baseUrl}/{action}/oauth2/code/{registrationId}")
-                    .scope("openid")
                     .issuerUri(ISSUER_URI)
                     .authorizationUri(ISSUER_URI + "/protocol/openid-connect/auth")
                     .tokenUri(ISSUER_URI + "/protocol/openid-connect/token")
