@@ -35,6 +35,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.util.TestSocketUtils;
 import org.springframework.test.web.servlet.client.EntityExchangeResult;
 import org.springframework.test.web.servlet.client.ExchangeResult;
 import org.springframework.test.web.servlet.client.RestTestClient;
@@ -67,9 +70,6 @@ import static org.instancio.Select.field;
  * coverage — the three sessions themselves are never mutated by any test.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT, properties = {
-        "server.port=54330",
-        "librehousehold.security.oauth2-authorization-server.issuer=http://localhost:54330",
-        "librehousehold.security.oauth2-client.redirect-uri=http://localhost:54330/login/oauth2/code/spa-backend-client",
         "librehousehold.security.oauth2-client.client-secret=test-client-secret"
 })
 @Import(TestcontainersConfiguration.class)
@@ -77,12 +77,25 @@ import static org.instancio.Select.field;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class HouseholdAccessControlIT {
 
+    private static final int SERVER_PORT = TestSocketUtils.findAvailableTcpPort();
+    private static final String SERVER_BASE_URL = "http://localhost:" + SERVER_PORT;
+
     private static final String BASE_PATH = "/v1";
     private static final String CLIENT_ID = "spa-backend-client";
     private static final String RAW_PASSWORD = "correct horse battery staple";
     private static final String XSRF_TOKEN_COOKIE = "XSRF-TOKEN";
     private static final String XSRF_TOKEN_HEADER = "X-XSRF-TOKEN";
     private static final Pattern REMAINING_PATH_PLACEHOLDER = Pattern.compile("\\{[a-zA-Z]+}");
+
+    // SecurityConfig builds the internal client's endpoints from the issuer at bean creation, so the
+    // issuer must already contain the actual port before the context starts
+    @DynamicPropertySource
+    static void serverPortProperties(DynamicPropertyRegistry registry) {
+        registry.add("server.port", () -> SERVER_PORT);
+        registry.add("librehousehold.security.oauth2-authorization-server.issuer", () -> SERVER_BASE_URL);
+        registry.add("librehousehold.security.oauth2-client.redirect-uri",
+                () -> SERVER_BASE_URL + "/login/oauth2/code/spa-backend-client");
+    }
 
     @Autowired
     private RestTestClient restTestClient;
