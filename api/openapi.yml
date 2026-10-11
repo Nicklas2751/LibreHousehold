@@ -1658,6 +1658,39 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
 
+  /auth/social-context:
+    post:
+      summary: Store the social login context
+      description: >
+        Stores in the session why the following social login redirect
+        (/oauth2/authorization/{registrationId}) is started: login, household setup or invite
+        join. The server evaluates it when the provider redirects back.
+      tags:
+        - session
+      operationId: storeSocialLoginContext
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SocialLoginContext"
+      responses:
+        "204":
+          description: Context stored.
+        "400":
+          description: The context is INVITE, but no invite token was given.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        default:
+          description: An error occurred.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
   /household/{householdId}/admin:
     put:
       summary: Transfer household ownership
@@ -2812,6 +2845,28 @@ components:
           example: "f3ce1a6b-aba1-478d-9f01-ec484f23ce60"
         newPassword:
           $ref: "#/components/schemas/Password"
+
+    SocialLoginContext:
+      type: object
+      description: >
+        Why the following social login redirect is started. The server keeps it in the session
+        and evaluates it when the provider redirects back.
+      required:
+        - context
+      properties:
+        context:
+          type: string
+          enum: [LOGIN, SETUP, INVITE]
+          description: >
+            LOGIN signs in an existing member. It is also the default when no context was stored,
+            and storing it explicitly discards a context left over from an abandoned setup or
+            invite flow in the same session. SETUP and INVITE register a new member.
+          example: "INVITE"
+        inviteToken:
+          type: string
+          format: uuid
+          description: The invite token to join with. Required if context is INVITE.
+          example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
 
   securitySchemes:
     sessionCookie:

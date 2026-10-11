@@ -194,6 +194,13 @@ public class MemberManagementService implements MemberQuery {
     }
 
     @Override
+    public Optional<String> findEmailByExternalIdentity(String providerId, String externalSubject) {
+        return accountService.findMemberIdByExternalIdentity(providerId, externalSubject)
+                .flatMap(memberRepository::findById)
+                .map(MemberEntity::email);
+    }
+
+    @Override
     public boolean isEmailVerified(UUID memberId) {
         return accountService.isEmailVerified(memberId);
     }

@@ -80,12 +80,12 @@ Authentication-related security controls are tracked against an https://github.c
 |RED1
 |OAuth `redirect_uri` exact allow-list matching.
 |V10.4.1 (L1)
-|Enforced natively by Spring Authorization Server's registered-client configuration
+|Enforced natively by Spring Authorization Server's registered-client configuration. Also covers the external social-login providers (see FED1): their redirect URI is fixed server-side per `ClientRegistration` and registered at the provider, never influenced by the client.
 
 |RED2
 |No automatic redirect to untrusted hosts (invite links).
 |V3.7.2 (L2)
-|Open
+|Open. The social-login context (`POST /auth/social-context`, xref:../adrs/adr-017.adoc[ADR 017]) adds a further input that carries an invite token through the provider redirect; it is stored server-side only and must be validated like any other invite token when it is evaluated.
 
 |ENUM1
 |No inference of existing accounts from login, registration, or password-reset responses (error messages, status codes, timing). Deliberate exceptions: login-blocking of unverified accounts (see VERIFY1) makes the account status distinguishable via a dedicated `DisabledException`, and account lockout (see RATE1) makes a locked account distinguishable via a dedicated `AccountLockedException` (the login page shows the exact unlock time) — both are accepted, documented deviations from the strict interpretation, not bugs. Chosen deliberately for both cases: the usability benefit of telling a genuine user what is happening with their own account outweighs the minor account-enumeration signal.
@@ -127,6 +127,11 @@ threshold of failed attempts is reached, regardless of how slowly they were made
 |Authorization Code Flow with PKCE against code interception.
 |V10.4.6 (L2)
 |Decided, see xref:../adrs/adr-013.adoc[ADR 013]
+
+|FED1
+|Social login against external OIDC/OAuth2 providers: the backend's Authorization Server is the only client of the provider, so provider tokens never reach the browser. `state` and OIDC `nonce` bind the callback to the session that started the flow, and the ID Token's issuer and audience are validated. A login resolves the local account only via the stored provider + subject pair (`account_identity`), never via the e-mail claim, and never attaches to an account that has a local password.
+|V10.1.1 (L2), V10.1.2 (L2), V10.2.1 (L2), V10.5.1 (L2), V10.5.2 (L2), V10.5.3 (L2), V10.5.4 (L2)
+|Decided, see xref:../adrs/adr-016.adoc[ADR 016] and xref:../adrs/adr-018.adoc[ADR 018]. `state`/`nonce`/ID-Token validation is done by Spring Security's `oauth2Login()`; the account resolution is implemented in `FederatedIdentityAuthenticationSuccessHandler`.
 
 |AC1
 |Object-/field-level access control per household (IDOR protection).

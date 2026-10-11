@@ -69,6 +69,9 @@ class MemberManagementServiceIT {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private AccountService accountService;
+
     private HouseholdSetupResponse setupResponse;
     private Household existingHousehold;
     private final List<UUID> createdHouseholdIds = new ArrayList<>();
@@ -251,6 +254,25 @@ class MemberManagementServiceIT {
 
             // then
             assertThat(result).contains(registration.getId());
+        }
+    }
+
+    @Nested
+    class findEmailByExternalIdentity {
+
+        @Test
+        void linkedIdentity_returnsEmailOfLinkedMember() {
+            // given
+            var registration = Instancio.create(MemberRegistration.class);
+            var member = memberManagementService.joinHousehold(setupResponse.getInviteToken(), registration);
+            var externalSubject = UUID.randomUUID().toString();
+            accountService.linkExternalIdentity(member.getId(), "dev-provider", externalSubject);
+
+            // when
+            var result = memberManagementService.findEmailByExternalIdentity("dev-provider", externalSubject);
+
+            // then
+            assertThat(result).contains(registration.getEmail());
         }
     }
 

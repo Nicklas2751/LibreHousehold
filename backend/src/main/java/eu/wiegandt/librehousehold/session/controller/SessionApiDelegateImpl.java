@@ -1,6 +1,7 @@
 package eu.wiegandt.librehousehold.session.controller;
 
 import eu.wiegandt.librehousehold.api.SessionApiDelegate;
+import eu.wiegandt.librehousehold.config.SocialLoginContextStore;
 import eu.wiegandt.librehousehold.household.AccountOidcPrincipal;
 import eu.wiegandt.librehousehold.household.HouseholdQuery;
 import eu.wiegandt.librehousehold.household.MemberQuery;
@@ -8,6 +9,9 @@ import eu.wiegandt.librehousehold.household.PasswordReset;
 import eu.wiegandt.librehousehold.model.CurrentUser;
 import eu.wiegandt.librehousehold.model.PasswordResetConfirm;
 import eu.wiegandt.librehousehold.model.PasswordResetRequest;
+import eu.wiegandt.librehousehold.model.SocialLoginContext;
+import eu.wiegandt.librehousehold.model.SocialLoginContext.ContextEnum;
+import eu.wiegandt.librehousehold.session.exception.InviteTokenIsRequiredException;
 import eu.wiegandt.librehousehold.session.exception.NoAuthenticatedSessionException;
 import eu.wiegandt.librehousehold.usersettings.PreferencesQuery;
 import org.springframework.http.HttpStatus;
@@ -16,7 +20,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
 /**
- * Handles {@code GET /me} (see P1.4.7) and the password-reset endpoints. {@code POST /logout} is
+ * Handles {@code GET /me} (see P1.4.7), the password-reset endpoints and storing the social-login
+ * context. {@code POST /logout} is
  * deliberately not implemented here: it is fully handled by Spring Security's own {@code logout()}
  * filter (see {@code SecurityConfig}/{@code RevokeAuthorizedClientLogoutHandler}), which intercepts
  * the request before it would ever reach this controller.
@@ -33,13 +38,16 @@ public class SessionApiDelegateImpl implements SessionApiDelegate {
     private final HouseholdQuery householdQuery;
     private final PreferencesQuery preferencesQuery;
     private final PasswordReset passwordReset;
+    private final SocialLoginContextStore socialLoginContextStore;
 
     public SessionApiDelegateImpl(MemberQuery memberQuery, HouseholdQuery householdQuery,
-                                   PreferencesQuery preferencesQuery, PasswordReset passwordReset) {
+                                   PreferencesQuery preferencesQuery, PasswordReset passwordReset,
+                                   SocialLoginContextStore socialLoginContextStore) {
         this.memberQuery = memberQuery;
         this.householdQuery = householdQuery;
         this.preferencesQuery = preferencesQuery;
         this.passwordReset = passwordReset;
+        this.socialLoginContextStore = socialLoginContextStore;
     }
 
     @Override
@@ -64,6 +72,15 @@ public class SessionApiDelegateImpl implements SessionApiDelegate {
     @Override
     public ResponseEntity<Void> confirmPasswordReset(PasswordResetConfirm passwordResetConfirm) {
         passwordReset.confirmPasswordReset(passwordResetConfirm.getToken(), passwordResetConfirm.getNewPassword());
+        return ResponseEntity.noContent().build();
+    }
+
+    @Override
+    public ResponseEntity<Void> storeSocialLoginContext(SocialLoginContext socialLoginContext) {
+        if (socialLoginContext.getContext() == ContextEnum.INVITE && socialLoginContext.getInviteToken().isEmpty()) {
+            throw new InviteTokenIsRequiredException();
+        }
+        socialLoginContextStore.store(socialLoginContext);
         return ResponseEntity.noContent().build();
     }
 }

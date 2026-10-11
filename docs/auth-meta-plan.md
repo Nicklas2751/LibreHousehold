@@ -174,7 +174,7 @@ muss aber sauber neu aus der überarbeiteten OpenAPI-Spec generiert werden.
 
 ## Phase 3 — Social Login (föderiert, konfigurierbar)
 
-- 🟡 **P3.0 — Lokale Dev-Umgebung: Dex als Test-OIDC-Provider (Testcontainers).** Beim lokalen
+- ✅ **P3.0 — Lokale Dev-Umgebung: Dex als Test-OIDC-Provider (Testcontainers).** Beim lokalen
   Start von `TestLibrehouseholdApplication` (die bereits Postgres + Grafana LGTM per
   Testcontainers hochfährt) soll zusätzlich automatisch ein Dex-Container (`dexidp/dex`, Apache
   2.0, YAML-Konfiguration mit statischen Test-Usern/-Clients) als lokaler Stand-in für einen
@@ -189,9 +189,11 @@ muss aber sauber neu aus der überarbeiteten OpenAPI-Spec generiert werden.
   Account-Linking über verifizierte E-Mail; Konsequenzen aus dem 1:1-Modell (ADR-012).
   Siehe [ADR 016](architecture/adrs/adr-016.adoc), [ADR 017](architecture/adrs/adr-017.adoc),
   [ADR 018](architecture/adrs/adr-018.adoc) und [Detailplan](auth-plan-p3.0-p3.7.md).
-- **P3.2 — Konfigurationsmodell.** `application.yml`-Schalter (`local`/`social`/`both`),
+- ✅ **P3.2 — Konfigurationsmodell.** `application.yml`-Schalter (`local`/`social`/`both`),
   Provider-Registrierungen (z. B. Google, GitHub, generisches OIDC), Startvalidierung.
-  Siehe [Detailplan](auth-plan-p3.0-p3.7.md).
+  Umgesetzt ist der Social-Schalter `librehousehold.security.social-login.enabled`. Der Schalter für
+  den lokalen Login (`librehousehold.security.local-login.enabled`) kommt erst mit P3.4, weil ihn
+  erst der Discover-Endpoint auswertet. Siehe [Detailplan](auth-plan-p3.0-p3.7.md).
 - **P3.3 — Backend: Provider-Federation & Account-Mapping.** Externe Identität → lokaler
   Member/Account, Anlage bei Erst-Login im Setup-/Invite-Kontext, Linking per verifizierter
   E-Mail, 1:1-Regel bleibt erzwungen. Siehe [Detailplan](auth-plan-p3.0-p3.7.md).

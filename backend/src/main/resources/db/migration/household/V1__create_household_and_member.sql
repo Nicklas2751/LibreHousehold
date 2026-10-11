@@ -26,7 +26,7 @@ CREATE TABLE invite
 CREATE TABLE account
 (
     member_id                            UUID PRIMARY KEY REFERENCES member (id) ON DELETE CASCADE,
-    password_hash                        TEXT NOT NULL,
+    password_hash                        TEXT NULL, -- NULL for accounts that sign in via social login only
     email_verified                       BOOLEAN NOT NULL DEFAULT FALSE,
     registered_at                        TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
     verification_deletion_warning_sent_at TIMESTAMP WITH TIME ZONE NULL,
@@ -41,6 +41,16 @@ CREATE TABLE account_token
     token       UUID NOT NULL UNIQUE,
     purpose     TEXT NOT NULL, -- 'EMAIL_VERIFICATION' | 'PASSWORD_RESET'
     valid_until TIMESTAMP WITH TIME ZONE NOT NULL
+);
+
+CREATE TABLE account_identity
+(
+    id               BIGSERIAL PRIMARY KEY,
+    member_id        UUID NOT NULL REFERENCES member (id) ON DELETE CASCADE,
+    provider_id      TEXT NOT NULL,
+    external_subject TEXT NOT NULL,
+    linked_at        TIMESTAMP WITH TIME ZONE NOT NULL,
+    UNIQUE (provider_id, external_subject)
 );
 
 -- Spring Authorization Server schema (see JdbcRegisteredClientRepository /

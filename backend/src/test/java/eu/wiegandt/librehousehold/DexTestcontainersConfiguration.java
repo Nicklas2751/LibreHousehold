@@ -18,7 +18,7 @@ public class DexTestcontainersConfiguration {
 
     private static final String REGISTRATION_ID = "dev-provider";
     public static final String CLIENT_ID = "librehousehold-dev";
-    private static final String CLIENT_SECRET = "librehousehold-dev-secret";
+    public static final String CLIENT_SECRET = "librehousehold-dev-secret";
     private static final String USER_NAME = "dev";
     private static final String USER_EMAIL = "dev@example.com";
     private static final String USER_PASSWORD = "password";

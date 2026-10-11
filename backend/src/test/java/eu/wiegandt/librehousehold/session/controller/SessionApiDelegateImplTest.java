@@ -1,5 +1,6 @@
 package eu.wiegandt.librehousehold.session.controller;
 
+import eu.wiegandt.librehousehold.config.SocialLoginContextStore;
 import eu.wiegandt.librehousehold.household.AccountOidcPrincipal;
 import eu.wiegandt.librehousehold.household.AccountPrincipal;
 import eu.wiegandt.librehousehold.household.HouseholdQuery;
@@ -10,7 +11,10 @@ import eu.wiegandt.librehousehold.model.Household;
 import eu.wiegandt.librehousehold.model.Member;
 import eu.wiegandt.librehousehold.model.PasswordResetConfirm;
 import eu.wiegandt.librehousehold.model.PasswordResetRequest;
+import eu.wiegandt.librehousehold.model.SocialLoginContext;
+import eu.wiegandt.librehousehold.model.SocialLoginContext.ContextEnum;
 import eu.wiegandt.librehousehold.model.UserPreferences;
+import eu.wiegandt.librehousehold.session.exception.InviteTokenIsRequiredException;
 import eu.wiegandt.librehousehold.session.exception.NoAuthenticatedSessionException;
 import eu.wiegandt.librehousehold.usersettings.PreferencesQuery;
 import org.instancio.Instancio;
@@ -18,6 +22,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -39,6 +45,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 @ExtendWith(MockitoExtension.class)
 class SessionApiDelegateImplTest {
@@ -54,6 +61,9 @@ class SessionApiDelegateImplTest {
 
     @Mock
     private PasswordReset passwordReset;
+
+    @Mock
+    private SocialLoginContextStore socialLoginContextStore;
 
     @InjectMocks
     private SessionApiDelegateImpl delegate;
@@ -146,6 +156,39 @@ class SessionApiDelegateImplTest {
             // when / then
             assertThatThrownBy(() -> delegate.confirmPasswordReset(new PasswordResetConfirm(token, newPassword)))
                     .isInstanceOf(IllegalStateException.class);
+        }
+    }
+
+    @Nested
+    class storeSocialLoginContext {
+
+        static List<SocialLoginContext> validContexts() {
+            return List.of(
+                    new SocialLoginContext(ContextEnum.LOGIN),
+                    new SocialLoginContext(ContextEnum.SETUP),
+                    new SocialLoginContext(ContextEnum.INVITE).inviteToken(UUID.randomUUID()));
+        }
+
+        @ParameterizedTest
+        @MethodSource("validContexts")
+        void validContext_storesContextAndReturns204(SocialLoginContext context) {
+            // when
+            var result = delegate.storeSocialLoginContext(context);
+
+            // then
+            verify(socialLoginContextStore).store(context);
+            assertThat(result.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        }
+
+        @Test
+        void inviteContextWithoutToken_throwsInviteTokenIsRequiredExceptionWithoutStoring() {
+            // given
+            var context = new SocialLoginContext(ContextEnum.INVITE);
+
+            // when / then
+            assertThatThrownBy(() -> delegate.storeSocialLoginContext(context))
+                    .isInstanceOf(InviteTokenIsRequiredException.class);
+            verifyNoInteractions(socialLoginContextStore);
         }
     }
 
