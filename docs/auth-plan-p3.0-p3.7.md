@@ -1503,7 +1503,30 @@ außerhalb dieses Plans" am Dokumentende.
   - Grün: minimale Verdrahtung.
   - Refactor: keiner nötig bei dieser Größe.
 
-### P3.5 — Frontend: dynamische Auth-UI
+### P3.5 — Frontend: dynamische Auth-UI — ✅ umgesetzt
+
+**Korrekturen bei Umsetzungsbeginn (Nutzerentscheidungen, gelten vorrangig vor den Aufgaben unten):**
+
+- **Alle drei Seiten wie geplant:** Setup und Invite bekommen die Provider-Buttons schon jetzt, obwohl
+  das Backend die Kontexte SETUP/INVITE erst mit P3.6 annimmt. Bis dahin landen sie auf
+  `/login?error&reason=social-login-no-account`.
+- **Inline-Alert statt Toast:** Die Login-Seite wertet beim Laden die eigene URL aus
+  (`?error&reason=...`, Vollseiten-Redirect des Backends) und zeigt den Fehler als Alert über dem
+  Formular, wie bei `unverified`/`locked`.
+- **Eigener Grund bei Provider-Abbruch:** `.oauth2Login()` bekommt
+  `failureUrl("/login?error&reason=social-login-failed")`, sonst zeigt die Seite bei einem Abbruch beim
+  Provider „E-Mail oder Passwort falsch“. Das Frontend zeigt dafür eine eigene Meldung.
+- **Kein `AuthApi`:** Der Endpoint hängt am Tag `session` (siehe P3.4), der Client heißt deshalb
+  `SessionApi.getAuthDiscovery()`.
+- **Test des Discover-States in Node:** `authDiscoveryState.spec.ts` statt `.svelte.spec.ts`. Der State
+  cacht modulweit; jeder Test lädt ihn per `vi.resetModules()` neu, was im Browser-Projekt mit
+  Factory-Mocks nicht funktioniert.
+- **Setup-Buttons in Schritt 1, P3.6 folgt Abschnitt 3.10:** Die Abschnitte 3.3 (Success-Handler
+  legt Haushalt und Mitglied selbst an) und 3.10 (SPA ruft nach dem Federation-Login
+  `POST /household/setup` ohne `localRegistration` auf) widersprechen sich. Entschieden: 3.10. Die
+  Social-Buttons sitzen im Setup-Wizard in Schritt 1, neben bzw. statt des Kontoformulars. P3.5 setzt
+  dort nur den Kontext SETUP und leitet weiter. Wie der Haushaltsname (Schritt 0, nur im Speicher)
+  den Vollseiten-Redirect übersteht, klärt P3.6.
 
 **Aufgabe 1: `authDiscoveryState.svelte.ts`**
 

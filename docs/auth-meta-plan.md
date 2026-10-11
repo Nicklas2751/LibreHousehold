@@ -204,9 +204,11 @@ muss aber sauber neu aus der überarbeiteten OpenAPI-Spec generiert werden.
 - ✅ **P3.4 — OpenAPI: Discover-Endpoint.** Liefert konfigurierte Methoden/Provider
   (`{ localEnabled, socialProviders: [...] }`). `GET /auth/discover` liegt am Tag `session`, kein
   eigenes `auth`-Modul (Kap. 5/8). Siehe [Detailplan](auth-plan-p3.0-p3.7.md).
-- **P3.5 — Frontend: dynamische Auth-UI.** Login/Setup/Invite rendern abhängig vom
+- ✅ **P3.5 — Frontend: dynamische Auth-UI.** Login/Setup/Invite rendern abhängig vom
   Discover-Ergebnis (lokales Formular und/oder Provider-Buttons); lokale Registrierung
-  ausblenden, wenn deaktiviert. Siehe [Detailplan](auth-plan-p3.0-p3.7.md).
+  ausblenden, wenn deaktiviert. Setup und Invite zeigen die Buttons schon, scheitern bis P3.6 aber
+  mit „kein Konto“. Abbrüche beim Provider melden sich mit eigenem Grund
+  (`reason=social-login-failed`). Siehe [Detailplan](auth-plan-p3.0-p3.7.md).
 - **P3.6 — Setup/Invite ausschließlich via Social.** Erster Admin bzw. Invitee kann sich
   rein über Social registrieren, korrekte Haushalts-Bindung bleibt gewahrt. Umfasst auch die
   serverseitige Sperre von Formular-Login, Passwort-Setup und Passwort-Join bei
