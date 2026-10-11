@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import { page } from 'vitest/browser';
 import JoinWizard from './JoinWizard.svelte';
+import { authDiscovery } from '$lib/stores/authDiscoveryState.svelte';
 
 const {
 	mockResolveInvite,
@@ -10,7 +11,9 @@ const {
 	mockGoto,
 	mockAddToast,
 	mockCompleteSilentOAuth2Login,
-	mockBootstrapSession
+	mockBootstrapSession,
+	mockLoadAuthDiscovery,
+	mockStartSocialLogin
 } = vi.hoisted(() => ({
 	mockResolveInvite: vi.fn(),
 	mockJoinHousehold: vi.fn(),
@@ -18,7 +21,9 @@ const {
 	mockGoto: vi.fn(),
 	mockAddToast: vi.fn(),
 	mockCompleteSilentOAuth2Login: vi.fn(),
-	mockBootstrapSession: vi.fn()
+	mockBootstrapSession: vi.fn(),
+	mockLoadAuthDiscovery: vi.fn(),
+	mockStartSocialLogin: vi.fn()
 }));
 
 vi.mock('../generated-sources/openapi', async (importOriginal) => {
@@ -44,6 +49,13 @@ vi.mock('$lib/oauth2Login', async (importOriginal) => {
 
 vi.mock('$lib/stores/sessionBootstrap', () => ({ bootstrapSession: mockBootstrapSession }));
 
+vi.mock('$lib/stores/authDiscoveryState.svelte', async (importOriginal) => {
+	const original = await importOriginal<typeof import('$lib/stores/authDiscoveryState.svelte')>();
+	return { ...original, loadAuthDiscovery: mockLoadAuthDiscovery };
+});
+
+vi.mock('$lib/socialLogin', () => ({ startSocialLogin: mockStartSocialLogin }));
+
 vi.mock('./paraglide/runtime.js', async (importOriginal) => {
 	const original = await importOriginal<typeof import('./paraglide/runtime.js')>();
 	return { ...original, getLocale: () => 'de' as const, setLocale: vi.fn() };
@@ -61,6 +73,9 @@ describe('JoinWizard', () => {
 		mockCheckEmailAvailability.mockResolvedValue({ available: true });
 		mockCompleteSilentOAuth2Login.mockResolvedValue(undefined);
 		mockBootstrapSession.mockResolvedValue(undefined);
+		mockLoadAuthDiscovery.mockResolvedValue(undefined);
+		authDiscovery.localEnabled = true;
+		authDiscovery.socialProviders = [];
 	});
 
 	it('invalid token — shows an error message', async () => {
@@ -215,5 +230,46 @@ describe('JoinWizard', () => {
 
 		// then
 		expect(mockCheckEmailAvailability).not.toHaveBeenCalled();
+	});
+
+	it('on mount — loads the available login methods', async () => {
+		// given
+		mockResolveInvite.mockResolvedValue(validInviteInfo);
+
+		// when
+		render(JoinWizard, { token: 'invite-token' });
+
+		// then
+		await vi.waitFor(() => expect(mockLoadAuthDiscovery).toHaveBeenCalled());
+	});
+
+	it('valid invite with a social provider — starts the social login with the INVITE context and token', async () => {
+		// given
+		mockResolveInvite.mockResolvedValue(validInviteInfo);
+		authDiscovery.socialProviders = [{ id: 'google', displayName: 'Google' }];
+		render(JoinWizard, { token: 'invite-token' });
+
+		// when
+		await page.getByRole('button', { name: 'Weiter mit Google' }).click();
+
+		// then
+		expect(mockStartSocialLogin).toHaveBeenCalledWith('google', {
+			context: 'INVITE',
+			inviteToken: 'invite-token'
+		});
+	});
+
+	it('valid invite with local login disabled — hides the join form', async () => {
+		// given
+		mockResolveInvite.mockResolvedValue(validInviteInfo);
+		authDiscovery.localEnabled = false;
+		authDiscovery.socialProviders = [{ id: 'google', displayName: 'Google' }];
+
+		// when
+		render(JoinWizard, { token: 'invite-token' });
+
+		// then
+		await expect.element(page.getByRole('button', { name: 'Weiter mit Google' })).toBeVisible();
+		await expect.element(page.getByRole('textbox', { name: /Name/i })).not.toBeInTheDocument();
 	});
 });

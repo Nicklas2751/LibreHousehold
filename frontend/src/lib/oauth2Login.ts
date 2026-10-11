@@ -4,10 +4,14 @@
 // entering through this endpoint lets the server save the request, redirect to /login for the
 // missing session, and then automatically resume the full Authorization Code + PKCE roundtrip
 // after a successful login.
-export const OAUTH2_LOGIN_PATH = '/oauth2/authorization/spa-backend-client';
+const OAUTH2_AUTHORIZATION_PATH = '/oauth2/authorization/';
+const SPA_CLIENT_REGISTRATION_ID = 'spa-backend-client';
+export const OAUTH2_LOGIN_PATH = OAUTH2_AUTHORIZATION_PATH + SPA_CLIENT_REGISTRATION_ID;
 
-export function redirectToOAuth2Login(): void {
-	window.location.href = OAUTH2_LOGIN_PATH;
+// Without a registration ID this is the SPA's own loop-back login described above. With the ID of a
+// social login provider (see GET /auth/discover), it redirects to that external provider instead.
+export function redirectToOAuth2Login(registrationId: string = SPA_CLIENT_REGISTRATION_ID): void {
+	window.location.href = OAUTH2_AUTHORIZATION_PATH + registrationId;
 }
 
 // Used right after household setup / invite join: the backend has already authenticated the

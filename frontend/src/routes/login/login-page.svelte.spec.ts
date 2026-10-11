@@ -2,13 +2,27 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import { page } from 'vitest/browser';
 import LoginPage from './+page.svelte';
+import { authDiscovery } from '$lib/stores/authDiscoveryState.svelte';
 
-const { mockGoto, mockBootstrapSession } = vi.hoisted(() => ({
-	mockGoto: vi.fn(),
-	mockBootstrapSession: vi.fn()
-}));
+const { mockGoto, mockBootstrapSession, mockLoadAuthDiscovery, mockStartSocialLogin, mockPage } =
+	vi.hoisted(() => ({
+		mockGoto: vi.fn(),
+		mockBootstrapSession: vi.fn(),
+		mockLoadAuthDiscovery: vi.fn(),
+		mockStartSocialLogin: vi.fn(),
+		mockPage: { url: new URL('http://localhost:5173/login') }
+	}));
 
 vi.mock('$app/navigation', () => ({ goto: mockGoto }));
+
+vi.mock('$app/state', () => ({ page: mockPage }));
+
+vi.mock('$lib/stores/authDiscoveryState.svelte', async (importOriginal) => {
+	const original = await importOriginal<typeof import('$lib/stores/authDiscoveryState.svelte')>();
+	return { ...original, loadAuthDiscovery: mockLoadAuthDiscovery };
+});
+
+vi.mock('$lib/socialLogin', () => ({ startSocialLogin: mockStartSocialLogin }));
 
 vi.mock('$lib/stores/sessionBootstrap', () => ({ bootstrapSession: mockBootstrapSession }));
 
@@ -39,6 +53,10 @@ describe('login page', () => {
 		vi.clearAllMocks();
 		clearCookies();
 		document.cookie = 'XSRF-TOKEN=test-csrf-token';
+		mockPage.url = new URL('http://localhost:5173/login');
+		mockLoadAuthDiscovery.mockResolvedValue(undefined);
+		authDiscovery.localEnabled = true;
+		authDiscovery.socialProviders = [];
 	});
 
 	afterEach(() => {
@@ -130,4 +148,53 @@ describe('login page', () => {
 		await expect.element(page.getByText('falsch')).toBeVisible();
 		expect(mockGoto).not.toHaveBeenCalled();
 	});
+
+	it('on mount — loads the available login methods', async () => {
+		// when
+		render(LoginPage);
+
+		// then
+		await vi.waitFor(() => expect(mockLoadAuthDiscovery).toHaveBeenCalled());
+	});
+
+	it('local login disabled — hides the e-mail and password form', async () => {
+		// given
+		authDiscovery.localEnabled = false;
+		authDiscovery.socialProviders = [{ id: 'google', displayName: 'Google' }];
+
+		// when
+		render(LoginPage);
+
+		// then
+		await expect.element(page.getByRole('textbox', { name: /E-Mail/i })).not.toBeInTheDocument();
+	});
+
+	it('social provider button — starts the social login with the LOGIN context', async () => {
+		// given
+		authDiscovery.socialProviders = [{ id: 'google', displayName: 'Google' }];
+		render(LoginPage);
+
+		// when
+		await page.getByRole('button', { name: 'Weiter mit Google' }).click();
+
+		// then
+		expect(mockStartSocialLogin).toHaveBeenCalledWith('google', { context: 'LOGIN' });
+	});
+
+	it.each([
+		{ reason: 'social-login-no-account', expectedText: 'kein Konto in LibreHousehold' },
+		{ reason: 'social-login-failed', expectedText: 'über den Anbieter ist fehlgeschlagen' }
+	])(
+		'redirected back with reason $reason — shows the matching error message',
+		async ({ reason, expectedText }) => {
+			// given
+			mockPage.url = new URL(`http://localhost:5173/login?error&reason=${reason}`);
+
+			// when
+			render(LoginPage);
+
+			// then
+			await expect.element(page.getByText(expectedText)).toBeVisible();
+		}
+	);
 });

@@ -280,7 +280,9 @@
 		"error_unverified": "Please confirm your email address first. We've sent you a link by email.",
 		"error_locked": "This account is temporarily locked due to too many failed login attempts. Please try again after {time}.",
 		"error_locked_unknown_time": "This account is temporarily locked due to too many failed login attempts. Please try again later.",
-		"forgot_password_link": "Forgot your password?"
+		"forgot_password_link": "Forgot your password?",
+		"error_social_login_no_account": "There is no LibreHousehold account for this provider account. Sign in with e-mail and password or ask to be invited to a household.",
+		"error_social_login_failed": "Signing in with the provider failed. Please try again."
 	},
 	"forgot_password": {
 		"title": "Forgot password",
@@ -470,5 +472,10 @@
 			"title": "Log out",
 			"description": "Sign out of your account."
 		}
+	},
+	"auth": {
+		"social_login_button": "Continue with {provider}",
+		"social_login_divider": "or",
+		"social_login_start_error": "Could not start signing in with the provider. Please try again."
 	}
 }

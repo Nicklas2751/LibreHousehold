@@ -1,17 +1,34 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
+	import { onMount } from 'svelte';
+	import SocialLoginButtons from '$lib/SocialLoginButtons.svelte';
+	import { authDiscovery, loadAuthDiscovery } from '$lib/stores/authDiscoveryState.svelte';
+	import { SocialLoginContextContextEnum } from '../../generated-sources/openapi';
 	import PasswordField from '$lib/PasswordField.svelte';
 	import { getCsrfTokenFromCookieHeader } from '$lib/api/csrf';
 	import { bootstrapSession } from '$lib/stores/sessionBootstrap';
 
-	type LoginErrorType = 'none' | 'unverified' | 'locked' | 'generic';
+	type LoginErrorType =
+		| 'none'
+		| 'unverified'
+		| 'locked'
+		| 'social-login-no-account'
+		| 'social-login-failed'
+		| 'generic';
 
 	let email = $state('');
 	let password = $state('');
 	let submitting = $state(false);
-	let loginErrorType = $state<LoginErrorType>('none');
+	// A failed social login comes back as a full page redirect to this page, so its reason is in
+	// the page URL rather than in a fetch response.
+	let loginErrorType = $state<LoginErrorType>(classifyErrorQueryParam(page.url.href));
 	let lockedUntil = $state<Date | null>(null);
+
+	onMount(() => {
+		loadAuthDiscovery();
+	});
 
 	function classifyErrorQueryParam(url: string): LoginErrorType {
 		const params = new URL(url).searchParams;
@@ -19,6 +36,8 @@
 		const reason = params.get('reason');
 		if (reason === 'unverified') return 'unverified';
 		if (reason === 'locked') return 'locked';
+		if (reason === 'social-login-no-account') return 'social-login-no-account';
+		if (reason === 'social-login-failed') return 'social-login-failed';
 		return 'generic';
 	}
 
@@ -79,40 +98,51 @@
 								: m['login.error_locked_unknown_time']()}
 						</span>
 					</div>
+				{:else if loginErrorType === 'social-login-no-account'}
+					<div class="mt-4 alert alert-warning">
+						<span>{m['login.error_social_login_no_account']()}</span>
+					</div>
+				{:else if loginErrorType === 'social-login-failed'}
+					<div class="mt-4 alert alert-error">
+						<span>{m['login.error_social_login_failed']()}</span>
+					</div>
 				{:else if loginErrorType === 'generic'}
 					<div class="mt-4 alert alert-error">
 						<span>{m['login.error']()}</span>
 					</div>
 				{/if}
-				<form onsubmit={handleSubmit} class="mt-4 flex flex-col gap-3">
-					<fieldset class="fieldset">
-						<legend class="fieldset-legend">{m['login.email_label']()} *</legend>
-						<input
-							type="email"
-							aria-label={m['login.email_label']()}
-							class="input-bordered validator input w-full"
-							placeholder={m['login.email_placeholder']()}
-							bind:value={email}
-							required
+				{#if authDiscovery.localEnabled}
+					<form onsubmit={handleSubmit} class="mt-4 flex flex-col gap-3">
+						<fieldset class="fieldset">
+							<legend class="fieldset-legend">{m['login.email_label']()} *</legend>
+							<input
+								type="email"
+								aria-label={m['login.email_label']()}
+								class="input-bordered validator input w-full"
+								placeholder={m['login.email_placeholder']()}
+								bind:value={email}
+								required
+							/>
+						</fieldset>
+						<PasswordField
+							label={m['login.password_label']()}
+							hint=""
+							placeholder={m['login.password_placeholder']()}
+							autocomplete="current-password"
+							bind:value={password}
 						/>
-					</fieldset>
-					<PasswordField
-						label={m['login.password_label']()}
-						hint=""
-						placeholder={m['login.password_placeholder']()}
-						autocomplete="current-password"
-						bind:value={password}
-					/>
-					<button type="submit" class="btn mt-2 w-full btn-primary" disabled={submitting}>
-						{#if submitting}
-							<span class="loading loading-xs loading-spinner"></span>
-						{/if}
-						{m['login.submit_button']()}
-					</button>
-				</form>
-				<a href="/forgot-password" class="mt-3 text-center text-sm link link-hover">
-					{m['login.forgot_password_link']()}
-				</a>
+						<button type="submit" class="btn mt-2 w-full btn-primary" disabled={submitting}>
+							{#if submitting}
+								<span class="loading loading-xs loading-spinner"></span>
+							{/if}
+							{m['login.submit_button']()}
+						</button>
+					</form>
+					<a href="/forgot-password" class="mt-3 text-center text-sm link link-hover">
+						{m['login.forgot_password_link']()}
+					</a>
+				{/if}
+				<SocialLoginButtons socialLoginContext={{ context: SocialLoginContextContextEnum.Login }} />
 			</div>
 		</div>
 	</div>

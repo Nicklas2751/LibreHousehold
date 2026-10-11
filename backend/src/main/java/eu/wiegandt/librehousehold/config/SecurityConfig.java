@@ -72,6 +72,11 @@ import java.util.stream.Stream;
 @EnableConfigurationProperties({SocialLoginProperties.class, LocalLoginProperties.class})
 public class SecurityConfig {
 
+    // Without its own target, a failed oauth2Login() (e.g. the user cancels at the provider, which
+    // calls back with error=access_denied) lands on formLogin()'s default /login?error, which the
+    // login page can only present as wrong credentials.
+    private static final String SOCIAL_LOGIN_FAILURE_URL = "/login?error&reason=social-login-failed";
+
     @Bean
     public RegisteredClientRepository registeredClientRepository(JdbcOperations jdbcOperations) {
         return new JdbcRegisteredClientRepository(jdbcOperations);
@@ -301,7 +306,8 @@ public class SecurityConfig {
                         .successHandler(loginSuccessHandler))
                 .oauth2Login(login -> login
                         .userInfoEndpoint(userInfo -> userInfo.oidcUserService(oauth2LoginUserService))
-                        .successHandler(oauth2LoginSuccessHandler))
+                        .successHandler(oauth2LoginSuccessHandler)
+                        .failureUrl(SOCIAL_LOGIN_FAILURE_URL))
                 // ADR-014: logout must actively revoke the backend's cached tokens for this user,
                 // not just invalidate the session (see RevokeAuthorizedClientLogoutHandler).
                 // POST /logout is therefore fully handled here, not by SessionApiDelegateImpl.

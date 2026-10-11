@@ -33,9 +33,12 @@
 	import { goto } from '$app/navigation';
 	import { updateUserState } from '$lib/stores/userState';
 	import MemberProfileForm from '$lib/MemberProfileForm.svelte';
-	import { onDestroy } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
 	import { completeSilentOAuth2Login } from '$lib/oauth2Login';
 	import { bootstrapSession } from '$lib/stores/sessionBootstrap';
+	import SocialLoginButtons from '$lib/SocialLoginButtons.svelte';
+	import { authDiscovery, loadAuthDiscovery } from '$lib/stores/authDiscoveryState.svelte';
+	import { SocialLoginContextContextEnum } from '../generated-sources/openapi';
 
 	const EMAIL_AVAILABILITY_DEBOUNCE_MS = 400;
 
@@ -54,6 +57,10 @@
 		(email: string) => membersApi.checkEmailAvailability({ email }),
 		EMAIL_AVAILABILITY_DEBOUNCE_MS
 	);
+
+	onMount(() => {
+		loadAuthDiscovery();
+	});
 
 	onDestroy(() => {
 		checkEmailAvailability.cancel();
@@ -268,27 +275,37 @@
 		</form>
 	{:else if step === 1}
 		<h2 class="text-xl font-bold text-base-content">{m['setup.create_account_step.title']()}</h2>
-		<MemberProfileForm
-			contextHint={m['setup.create_account_step.text']()}
-			nameLabel={m['setup.create_account_step.admin_name_label']()}
-			nameHint={m['setup.create_account_step.admin_name_error']()}
-			namePlaceholder={m['setup.create_account_step.admin_name_placeholder']()}
-			emailLabel={m['setup.create_account_step.admin_email_label']()}
-			emailHint={m['setup.create_account_step.admin_email_error']()}
-			emailPlaceholder={m['setup.create_account_step.admin_email_placeholder']()}
-			backLabel={m['setup.create_account_step.back_button']()}
-			submitLabel={m['setup.finish_step.finish_button']()}
-			passwordLabel={m['setup.create_account_step.password_label']()}
-			passwordHint={m['setup.create_account_step.password_hint']()}
-			passwordPlaceholder={m['setup.create_account_step.password_placeholder']()}
-			{serverEmailError}
-			onClearEmailError={() => {
-				serverEmailError = null;
-			}}
-			onEmailInput={handleEmailInput}
-			onformsubmit={finish}
-			onback={() => goBackToStep(step - 1)}
-		/>
+		{#if authDiscovery.localEnabled}
+			<MemberProfileForm
+				contextHint={m['setup.create_account_step.text']()}
+				nameLabel={m['setup.create_account_step.admin_name_label']()}
+				nameHint={m['setup.create_account_step.admin_name_error']()}
+				namePlaceholder={m['setup.create_account_step.admin_name_placeholder']()}
+				emailLabel={m['setup.create_account_step.admin_email_label']()}
+				emailHint={m['setup.create_account_step.admin_email_error']()}
+				emailPlaceholder={m['setup.create_account_step.admin_email_placeholder']()}
+				backLabel={m['setup.create_account_step.back_button']()}
+				submitLabel={m['setup.finish_step.finish_button']()}
+				passwordLabel={m['setup.create_account_step.password_label']()}
+				passwordHint={m['setup.create_account_step.password_hint']()}
+				passwordPlaceholder={m['setup.create_account_step.password_placeholder']()}
+				{serverEmailError}
+				onClearEmailError={() => {
+					serverEmailError = null;
+				}}
+				onEmailInput={handleEmailInput}
+				onformsubmit={finish}
+				onback={() => goBackToStep(step - 1)}
+			/>
+		{:else}
+			<p>{m['setup.create_account_step.text']()}</p>
+		{/if}
+		<SocialLoginButtons socialLoginContext={{ context: SocialLoginContextContextEnum.Setup }} />
+		{#if !authDiscovery.localEnabled}
+			<button type="button" class="btn w-full btn-outline" onclick={() => goBackToStep(step - 1)}>
+				{m['setup.create_account_step.back_button']()}
+			</button>
+		{/if}
 	{:else if step === 2}
 		<h2 class="text-xl font-bold text-base-content">{m['setup.finish_step.title']()}</h2>
 		<p>{m['setup.finish_step.invite_text']()}</p>

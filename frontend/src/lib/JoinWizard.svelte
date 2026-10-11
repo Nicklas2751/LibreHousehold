@@ -20,6 +20,9 @@
 	import MemberProfileForm from '$lib/MemberProfileForm.svelte';
 	import { completeSilentOAuth2Login } from '$lib/oauth2Login';
 	import { bootstrapSession } from '$lib/stores/sessionBootstrap';
+	import SocialLoginButtons from '$lib/SocialLoginButtons.svelte';
+	import { authDiscovery, loadAuthDiscovery } from '$lib/stores/authDiscoveryState.svelte';
+	import { SocialLoginContextContextEnum } from '../generated-sources/openapi';
 
 	const EMAIL_AVAILABILITY_DEBOUNCE_MS = 400;
 
@@ -47,6 +50,7 @@
 	let enteringDashboard = $state(false);
 
 	onMount(async () => {
+		loadAuthDiscovery();
 		try {
 			inviteInfo = await membersApi.resolveInvite({ token });
 		} catch {
@@ -158,28 +162,40 @@
 
 		{#if step === 0}
 			<h2 class="text-xl font-bold text-base-content">{m['invite.title']()}</h2>
-			<MemberProfileForm
-				contextHint={m['invite.household_hint']({ name: inviteInfo.householdName })}
-				nameLabel={m['invite.name_label']()}
-				nameHint={m['invite.name_error']()}
-				namePlaceholder={m['invite.name_placeholder']()}
-				emailLabel={m['invite.email_label']()}
-				emailHint={m['setup.create_account_step.admin_email_error']()}
-				emailPlaceholder={m['invite.email_placeholder']()}
-				backLabel={m['setup.create_step.back_button']()}
-				submitLabel={m['invite.join_button']()}
-				passwordLabel={m['invite.password_label']()}
-				passwordHint={m['invite.password_hint']()}
-				passwordPlaceholder={m['invite.password_placeholder']()}
-				{serverEmailError}
-				onClearEmailError={() => {
-					serverEmailError = null;
-				}}
-				onEmailInput={handleEmailInput}
-				submitting={joining}
-				onformsubmit={join}
-				onback={() => goto('/')}
+			{#if authDiscovery.localEnabled}
+				<MemberProfileForm
+					contextHint={m['invite.household_hint']({ name: inviteInfo.householdName })}
+					nameLabel={m['invite.name_label']()}
+					nameHint={m['invite.name_error']()}
+					namePlaceholder={m['invite.name_placeholder']()}
+					emailLabel={m['invite.email_label']()}
+					emailHint={m['setup.create_account_step.admin_email_error']()}
+					emailPlaceholder={m['invite.email_placeholder']()}
+					backLabel={m['setup.create_step.back_button']()}
+					submitLabel={m['invite.join_button']()}
+					passwordLabel={m['invite.password_label']()}
+					passwordHint={m['invite.password_hint']()}
+					passwordPlaceholder={m['invite.password_placeholder']()}
+					{serverEmailError}
+					onClearEmailError={() => {
+						serverEmailError = null;
+					}}
+					onEmailInput={handleEmailInput}
+					submitting={joining}
+					onformsubmit={join}
+					onback={() => goto('/')}
+				/>
+			{:else}
+				<p>{m['invite.household_hint']({ name: inviteInfo.householdName })}</p>
+			{/if}
+			<SocialLoginButtons
+				socialLoginContext={{ context: SocialLoginContextContextEnum.Invite, inviteToken: token }}
 			/>
+			{#if !authDiscovery.localEnabled}
+				<button type="button" class="btn w-full btn-outline" onclick={() => goto('/')}>
+					{m['setup.create_step.back_button']()}
+				</button>
+			{/if}
 		{:else if step === 1}
 			<h2 class="text-xl font-bold text-base-content">{m['invite.success_title']()}</h2>
 			<p>{m['invite.success_text']({ name: inviteInfo.householdName })}</p>
