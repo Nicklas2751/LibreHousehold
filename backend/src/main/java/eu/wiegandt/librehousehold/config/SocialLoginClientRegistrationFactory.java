@@ -9,7 +9,9 @@ import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Builds one {@link ClientRegistration} per enabled external social-login provider configured
@@ -24,13 +26,16 @@ import java.util.List;
  * defaults, on every path. Without it, OIDC discovery requests {@code openid}, {@code profile} and
  * {@code email}, because {@code ClientRegistrations.fromIssuerLocation} sets no scopes at all and
  * the e-mail rule of ADR-018 needs an ID token with an e-mail claim; a {@link CommonOAuth2Provider}
- * keeps its own default scopes; an explicitly built registration requests no scopes.
+ * keeps its own default scopes, GitHub additionally {@code user:email}, because registering via
+ * social login needs a verified e-mail address, which GitHub only reveals at {@code /user/emails};
+ * an explicitly built registration requests no scopes.
  */
 @Component
 public class SocialLoginClientRegistrationFactory {
 
     private static final String DEFAULT_REDIRECT_URI = "{baseUrl}/{action}/oauth2/code/{registrationId}";
     private static final List<String> DEFAULT_OIDC_SCOPES = List.of("openid", "profile", "email");
+    private static final String GITHUB_EMAIL_SCOPE = "user:email";
 
     private final CommonProvider commonProvider;
     private final OidcIssuerDiscovery oidcIssuerDiscovery;
@@ -75,9 +80,21 @@ public class SocialLoginClientRegistrationFactory {
                 .clientSecret(config.clientSecret())
                 .clientName(config.displayName());
         if (!config.scopes().isEmpty()) {
-            builder.scope(config.scopes());
+            return builder.scope(config.scopes()).build();
         }
-        return builder.build();
+        var registration = builder.build();
+        if (provider != CommonOAuth2Provider.GITHUB) {
+            return registration;
+        }
+        return ClientRegistration.withClientRegistration(registration)
+                .scope(withGitHubEmailScope(registration.getScopes()))
+                .build();
+    }
+
+    private Set<String> withGitHubEmailScope(Set<String> defaultScopes) {
+        var scopes = new LinkedHashSet<>(defaultScopes);
+        scopes.add(GITHUB_EMAIL_SCOPE);
+        return scopes;
     }
 
     private ClientRegistration buildExplicit(String registrationId, ProviderConfig config) {

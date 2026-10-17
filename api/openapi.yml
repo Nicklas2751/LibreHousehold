@@ -66,11 +66,25 @@ paths:
               schema:
                 $ref: "#/components/schemas/HouseholdSetupResponse"
         "400":
-          description: The data for the new household or member is invalid.
+          description: >
+            The data for the new household or member is invalid, or neither localRegistration
+            nor a pending social login registration is present.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+        "403":
+          description: >
+            Registration with a password was requested, but this instance has local login disabled.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              example:
+                type: "/problems/local-login-disabled"
+                title: "Local login disabled"
+                status: 403
+                detail: "This instance only allows registering via a social login provider."
         "409":
           description: >
             Either the household already exists, or an account already exists for
@@ -230,6 +244,17 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+        "409":
+          description: Another account already uses the given e-mail address.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              example:
+                type: "/problems/account-already-exists"
+                title: "Account already exists"
+                status: 409
+                detail: "An account for this email address already exists."
         default:
           description: An error occurred.
           content:
@@ -1443,6 +1468,26 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Member'
+        "400":
+          description: >
+            The member data is invalid, or neither localRegistration nor a pending social login
+            registration is present.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        "403":
+          description: >
+            Registration with a password was requested, but this instance has local login disabled.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              example:
+                type: "/problems/local-login-disabled"
+                title: "Local login disabled"
+                status: 403
+                detail: "This instance only allows registering via a social login provider."
         "404":
           description: Token not found or expired.
           content:
@@ -1676,6 +1721,48 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AuthDiscovery"
+        default:
+          description: An error occurred.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
+  /auth/social-registration:
+    get:
+      summary: Get the pending social login registration
+      description: >
+        Returns the external identity that a social login with the SETUP or INVITE context left
+        in the caller's own session. The client shows it for confirmation, then completes the
+        registration with POST /household/setup or POST /invite/{token}/join without
+        localRegistration.
+
+
+        The data is read only from the HttpSession identified by the session cookie of this
+        request; the endpoint takes no parameters and cannot look up any other registration.
+        It therefore only answers the browser that went through the provider login itself. A
+        request without a session cookie, or with a session that has no pending registration,
+        always receives 404. The pending registration is removed once setup or join succeeds
+        and expires with the session.
+      tags:
+        - session
+      operationId: getPendingSocialRegistration
+      security: []
+      responses:
+        "200":
+          description: The pending registration.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PendingSocialRegistration"
+        "404":
+          description: >
+            No social login registration is pending in the caller's session, including the case
+            that the request carries no session cookie at all.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
         default:
           description: An error occurred.
           content:
@@ -2665,7 +2752,6 @@ components:
       required:
         - household
         - member
-        - localRegistration
       properties:
         household:
           $ref: "#/components/schemas/Household"
@@ -2673,6 +2759,12 @@ components:
           $ref: "#/components/schemas/Member"
         localRegistration:
           $ref: "#/components/schemas/LocalRegistration"
+          description: >
+            Present for a registration with e-mail and password. Absent for a registration via
+            social login: the request must then come from a session that just returned from the
+            provider with the SETUP or INVITE context (see /auth/social-context and
+            /auth/social-registration). The member's e-mail is then taken from the external
+            identity, and the e-mail in this request is ignored.
 
     HouseholdSetupResponse:
       type: object
@@ -2758,7 +2850,6 @@ components:
         - id
         - name
         - email
-        - localRegistration
       properties:
         id:
           type: string
@@ -2776,6 +2867,12 @@ components:
           example: "data:image/jpeg;base64,/9j/4AAQ..."
         localRegistration:
           $ref: "#/components/schemas/LocalRegistration"
+          description: >
+            Present for a registration with e-mail and password. Absent for a registration via
+            social login: the request must then come from a session that just returned from the
+            provider with the SETUP or INVITE context (see /auth/social-context and
+            /auth/social-registration). The member's e-mail is then taken from the external
+            identity, and the e-mail in this request is ignored.
 
     MemberUpdate:
       type: object
@@ -2909,6 +3006,22 @@ components:
           type: string
           description: The name to show on the login button. Falls back to the id if none is configured.
           example: "Google"
+
+    PendingSocialRegistration:
+      type: object
+      description: The external identity a social login registration will use.
+      required:
+        - email
+      properties:
+        name:
+          type: string
+          description: The name the provider reported, if any. The client may let the user change it.
+          example: "Max Mustermann"
+        email:
+          type: string
+          format: email
+          description: The verified e-mail the provider reported. It becomes the member's e-mail.
+          example: "max@example.com"
 
     SocialLoginContext:
       type: object

@@ -282,7 +282,8 @@
 		"error_locked_unknown_time": "This account is temporarily locked due to too many failed login attempts. Please try again later.",
 		"forgot_password_link": "Forgot your password?",
 		"error_social_login_no_account": "There is no LibreHousehold account for this provider account. Sign in with e-mail and password or ask to be invited to a household.",
-		"error_social_login_failed": "Signing in with the provider failed. Please try again."
+		"error_social_login_failed": "Signing in with the provider failed. Please try again.",
+		"error_local_login_disabled": "This instance only allows signing in with a provider."
 	},
 	"forgot_password": {
 		"title": "Forgot password",
@@ -476,6 +477,11 @@
 	"auth": {
 		"social_login_button": "Continue with {provider}",
 		"social_login_divider": "or",
-		"social_login_start_error": "Could not start signing in with the provider. Please try again."
+		"social_login_start_error": "Could not start signing in with the provider. Please try again.",
+		"social_registration_email_label": "E-mail address",
+		"social_registration_email_hint": "Comes from your provider and cannot be changed here.",
+		"social_registration_hint": "Almost done. Check your name, we take the e-mail address from your provider.",
+		"social_registration_missing": "Signing in with the provider has expired. Please start it again.",
+		"error_social_email_unverified": "Your provider did not share a verified e-mail address. Verify your e-mail address there or choose another way."
 	}
 }

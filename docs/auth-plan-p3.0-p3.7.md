@@ -1571,7 +1571,66 @@ außerhalb dieses Plans" am Dokumentende.
 - Neue i18n-Keys `auth.social_login_button` (mit Platzhalter für Providernamen),
   `auth.social_login_error_toast`. `npm run paraglide` danach.
 
-### P3.6 — Setup/Invite ausschließlich via Social
+### P3.6 — Setup/Invite ausschließlich via Social — ✅ umgesetzt
+
+**Korrekturen bei Umsetzungsbeginn (Nutzerentscheidungen, gelten vorrangig vor den Aufgaben unten):**
+
+- **Ablauf (Abschnitt 3.10, konkretisiert):**
+  1. Der Wizard speichert den Kontext (SETUP bzw. INVITE mit Token) und leitet zum Anbieter weiter.
+  2. Beim Callback mit SETUP/INVITE legt der Handler noch keinen Account an. Er legt die externe
+     Identität (Registration-ID, Subject, verifizierte E-Mail, Name) als ausstehende Registrierung in
+     der Session ab und verwirft die externe Authentifizierung. Sonst würde der eingebettete
+     Authorization Server Tokens für ein Subject ausstellen, das kein Mitglied ist. Danach leitet er
+     auf `/setup?social` bzw. `/invite/{token}?social` zurück.
+  3. Das SPA holt die Identität über den neuen Endpoint `GET /auth/social-registration` (Tag
+     `session`, 404 ohne ausstehende Registrierung), zeigt einen Bestätigungsschritt und ruft
+     `POST /household/setup` bzw. `POST /invite/{token}/join` ohne `localRegistration` auf.
+  4. Der Service nimmt die E-Mail aus der Identität, nie aus dem Request-Body. Er legt Mitglied und
+     Account ohne Passwort an (`createFederatedAccount`, E-Mail verifiziert), verknüpft die Identität
+     in `account_identity`, verbraucht die ausstehende Registrierung und meldet das Mitglied direkt an
+     (wie der Login-Handler aus P3.3: E-Mail als Name, `AUTHORIZATION_CODE`-Faktor). Das SPA schließt
+     mit `completeSilentOAuth2Login()` ab wie heute. Ohne ausstehende Registrierung und ohne
+     `localRegistration` antwortet der Service mit 400.
+- **`enrichExistingFederatedSession` entfällt:** Nach Schritt 2 gibt es keine externe Session mehr,
+  die man anreichern könnte. Die direkte Anmeldung als Mitglied (Schritt 4) ersetzt sie.
+- **Ausstehende Registrierung im `household`-Root-Package:** Der Store liegt in `household`, weil die
+  Services ihn lesen. `config` (Handler) darf `household` nutzen, umgekehrt nicht (Zyklus).
+- **Haushalts-Entwurf in sessionStorage:** Name, Bild und Haushalts-ID aus Schritt 0 legt der
+  Setup-Wizard vor dem Redirect in sessionStorage ab und stellt sie nach der Rückkehr wieder her.
+  Bewusste Ausnahme zur Browser-Storage-Regel; es ist Formular-Entwurf, kein Auth-Zustand.
+- **Nur verifizierte E-Mails:** Liefert der Anbieter keine verifizierte E-Mail (OIDC `email_verified`
+  nicht `true`, bei GitHub keine verifizierte Primär-Adresse über `/user/emails`), lehnt der Handler
+  die Registrierung ab und leitet mit `?error&reason=social-email-unverified` auf die Setup- bzw.
+  Invite-Seite zurück. Damit wandert P3.3 Aufgabe 6 (GitHub-E-Mail) hierher; GitHub braucht dafür
+  zusätzlich den Scope `user:email`.
+- **Name änderbar, E-Mail fest:** Der Bestätigungsschritt belegt den Namen vor und lässt ihn ändern.
+  Die E-Mail wird nur angezeigt.
+- **E-Mail schon vergeben:** bestehendes 409 `account-already-exists` (ADR-018).
+- **Lokaler Login abgeschaltet:** Setup und Join mit `localRegistration` antworten mit 403 und dem
+  Problem-Typ `/problems/local-login-disabled`. `POST /login` leitet auf
+  `/login?error&reason=local-login-disabled` um.
+- **`LocalLoginProperties` liegt in `household`:** Die Services in `household` brauchen den
+  Schalter, `household` darf aber nicht von `config` abhängen. Der Record wandert deshalb ins
+  Root-Package von `household`; `config` und `session` importieren ihn von dort.
+- **Bug gefunden und mitbehoben:** `MemberAlreadyExistsException` und
+  `HouseholdAlreadyExistsException` setzten keinen Problem-Typ. Das 409 kam als `about:blank`, und das
+  Frontend zeigte seit P1.7 nie „Konto existiert bereits“, sondern nur den allgemeinen Fehler. Beide
+  setzen jetzt den Typ aus der Spec. Der E-Mail-Konflikt im Member-PATCH trägt denselben Typ, die
+  Spec hat dort jetzt ein 409.
+- **Umsetzungsdetails:** Die ausstehende Registrierung wird erst nach erfolgreicher Anlage verbraucht,
+  ein gescheiterter Versuch (z. B. 409) verbraucht sie nicht. Bei unverifizierter E-Mail wird die
+  Session invalidiert. Föderierte Accounts lösen kein `AccountRegistered` aus, weil dessen Listener
+  eine Verifikations-Mail schickt. Fehlt GitHub der Scope `user:email` (eigene Scopes konfiguriert),
+  scheitert nur die Registrierung, nicht der Login.
+- **Bug beim E2E-Test gefunden und behoben (aus P3.3):** Beide Filter-Chains lesen dieselbe
+  gespeicherte Anfrage (`SPRING_SECURITY_SAVED_REQUEST`). Stieg der Nutzer über
+  `/oauth2/authorization/spa-backend-client` ein, spielte der Success-Handler des internen Clients
+  nach der frischen Continuation die veraltete `/oauth2/authorize`-Anfrage erneut ab und endete auf
+  `/login?error&reason=social-login-failed`, obwohl die Session angemeldet war. Betroffen waren
+  Social-Login, Social-Setup und auch Passwort-Setup/-Join. Federated-Handler und
+  `AccountSessionAuthenticator` entfernen die gespeicherte Anfrage jetzt.
+- **Ziel nach Social-Login:** Der interne Client leitet danach auf `/`. Der Welcome-Screen schickt
+  angemeldete Nutzer weiter nach `/app/dashboard`; das Backend kennt keine SPA-Routen.
 
 **Ergänzung aus P3.4 (Nutzerentscheidung):** Seit P3.4 wertet nur der Discover-Endpoint
 `librehousehold.security.local-login.enabled` aus. Bei `false` blendet der Client die Formulare aus,

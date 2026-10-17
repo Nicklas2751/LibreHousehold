@@ -1,5 +1,6 @@
 package eu.wiegandt.librehousehold.config;
 
+import eu.wiegandt.librehousehold.household.LocalLoginProperties;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication.Type;
@@ -19,6 +20,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.CsrfConfigurer;
 import org.springframework.security.config.annotation.web.configurers.oauth2.server.authorization.OAuth2AuthorizationServerConfigurer;
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserService;
+import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.registration.ClientRegistration;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.client.registration.InMemoryClientRegistrationRepository;
@@ -69,7 +71,7 @@ import java.util.stream.Stream;
  */
 @Configuration
 @EnableMethodSecurity
-@EnableConfigurationProperties({SocialLoginProperties.class, LocalLoginProperties.class})
+@EnableConfigurationProperties(SocialLoginProperties.class)
 public class SecurityConfig {
 
     // Without its own target, a failed oauth2Login() (e.g. the user cancels at the provider, which
@@ -231,6 +233,9 @@ public class SecurityConfig {
                                                           RevokeAuthorizedClientLogoutHandler revokeAuthorizedClientLogoutHandler,
                                                           UnverifiedAccountLoginFailureHandler unverifiedAccountLoginFailureHandler,
                                                           FederatedIdentityAuthenticationSuccessHandler federatedIdentityAuthenticationSuccessHandler,
+                                                          GitHubEmailClient gitHubEmailClient,
+                                                          CommonProvider commonProvider,
+                                                          LocalLoginProperties localLoginProperties,
                                                           SessionRegistry sessionRegistry,
                                                           OncePerRequestFilter rateLimitingFilter,
                                                           @Value("${openapi.libreHousehold.base-path:/v1}") String basePath)
@@ -252,6 +257,8 @@ public class SecurityConfig {
         var oauth2LoginSuccessHandler = new SpaClientAwareAuthenticationSuccessHandler(
                 spaClientLoginSuccessHandler, federatedIdentityAuthenticationSuccessHandler);
         var oauth2LoginUserService = new SpaClientAwareOidcUserService(oidcUserService, new OidcUserService());
+        var nonOidcLoginUserService = new GitHubEmailAwareOAuth2UserService(
+                new DefaultOAuth2UserService(), gitHubEmailClient, commonProvider);
         http.authorizeHttpRequests(authorize -> authorize
                         // All generated API controllers are mounted under this base path (see the
                         // @RequestMapping on the generated *ApiController classes) — read from the
@@ -268,6 +275,7 @@ public class SecurityConfig {
                                 basePath + "/password-reset/request",
                                 basePath + "/password-reset/confirm",
                                 basePath + "/auth/social-context",
+                                basePath + "/auth/social-registration",
                                 basePath + "/auth/discover")
                         .permitAll()
                         .anyRequest().authenticated())
@@ -305,7 +313,9 @@ public class SecurityConfig {
                         .failureHandler(unverifiedAccountLoginFailureHandler)
                         .successHandler(loginSuccessHandler))
                 .oauth2Login(login -> login
-                        .userInfoEndpoint(userInfo -> userInfo.oidcUserService(oauth2LoginUserService))
+                        .userInfoEndpoint(userInfo -> userInfo
+                                .oidcUserService(oauth2LoginUserService)
+                                .userService(nonOidcLoginUserService))
                         .successHandler(oauth2LoginSuccessHandler)
                         .failureUrl(SOCIAL_LOGIN_FAILURE_URL))
                 // ADR-014: logout must actively revoke the backend's cached tokens for this user,
@@ -325,6 +335,9 @@ public class SecurityConfig {
                         .defaultAuthenticationEntryPointFor(
                                 new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED),
                                 AnyRequestMatcher.INSTANCE));
+        if (!localLoginProperties.enabled()) {
+            http.addFilterBefore(new LocalLoginDisabledFilter(), UsernamePasswordAuthenticationFilter.class);
+        }
         return http.build();
     }
 }

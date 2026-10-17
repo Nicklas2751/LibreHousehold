@@ -1,27 +1,31 @@
 package eu.wiegandt.librehousehold.session.controller;
 
-import eu.wiegandt.librehousehold.config.LocalLoginProperties;
+import eu.wiegandt.librehousehold.household.LocalLoginProperties;
 import eu.wiegandt.librehousehold.config.SocialLoginContextStore;
 import eu.wiegandt.librehousehold.config.SocialLoginProperties;
 import eu.wiegandt.librehousehold.config.SocialLoginProperties.ProviderConfig;
 import eu.wiegandt.librehousehold.config.SocialLoginProperties.ProviderType;
 import eu.wiegandt.librehousehold.household.AccountOidcPrincipal;
 import eu.wiegandt.librehousehold.household.AccountPrincipal;
+import eu.wiegandt.librehousehold.household.ExternalIdentity;
 import eu.wiegandt.librehousehold.household.HouseholdQuery;
 import eu.wiegandt.librehousehold.household.MemberQuery;
 import eu.wiegandt.librehousehold.household.PasswordReset;
+import eu.wiegandt.librehousehold.household.PendingSocialRegistrationStore;
 import eu.wiegandt.librehousehold.model.AuthDiscovery;
 import eu.wiegandt.librehousehold.model.CurrentUser;
 import eu.wiegandt.librehousehold.model.Household;
 import eu.wiegandt.librehousehold.model.Member;
 import eu.wiegandt.librehousehold.model.PasswordResetConfirm;
 import eu.wiegandt.librehousehold.model.PasswordResetRequest;
+import eu.wiegandt.librehousehold.model.PendingSocialRegistration;
 import eu.wiegandt.librehousehold.model.SocialLoginContext;
 import eu.wiegandt.librehousehold.model.SocialLoginContext.ContextEnum;
 import eu.wiegandt.librehousehold.model.SocialLoginProvider;
 import eu.wiegandt.librehousehold.model.UserPreferences;
 import eu.wiegandt.librehousehold.session.exception.InviteTokenIsRequiredException;
 import eu.wiegandt.librehousehold.session.exception.NoAuthenticatedSessionException;
+import eu.wiegandt.librehousehold.session.exception.PendingSocialRegistrationNotFoundException;
 import eu.wiegandt.librehousehold.usersettings.PreferencesQuery;
 import org.instancio.Instancio;
 import org.junit.jupiter.api.AfterEach;
@@ -46,6 +50,7 @@ import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -73,6 +78,9 @@ class SessionApiDelegateImplTest {
 
     @Mock
     private SocialLoginContextStore socialLoginContextStore;
+
+    @Mock
+    private PendingSocialRegistrationStore pendingSocialRegistrationStore;
 
     @InjectMocks
     private SessionApiDelegateImpl delegate;
@@ -236,7 +244,8 @@ class SessionApiDelegateImplTest {
                                                                 AuthDiscovery expected) {
             // given
             var discoveryDelegate = new SessionApiDelegateImpl(memberQuery, householdQuery, preferencesQuery,
-                    passwordReset, socialLoginContextStore, socialLoginProperties, localLoginProperties);
+                    passwordReset, socialLoginContextStore, socialLoginProperties, localLoginProperties,
+                    pendingSocialRegistrationStore);
 
             // when
             var result = discoveryDelegate.getAuthDiscovery();
@@ -248,6 +257,43 @@ class SessionApiDelegateImplTest {
         private static ProviderConfig providerWithDisplayName(String displayName) {
             return new ProviderConfig(ProviderType.OIDC, null, "client-id", "client-secret", displayName,
                     null, null, null, null, List.of());
+        }
+    }
+
+    @Nested
+    class getPendingSocialRegistration {
+
+        static List<Arguments> pendingRegistrations() {
+            return List.of(
+                    argumentSet("provider reported a name",
+                            new ExternalIdentity("google", "external-subject", "max@example.com", "Max Mustermann"),
+                            new PendingSocialRegistration("max@example.com").name("Max Mustermann")),
+                    argumentSet("provider reported no name",
+                            new ExternalIdentity("google", "external-subject", "max@example.com", null),
+                            new PendingSocialRegistration("max@example.com")));
+        }
+
+        @ParameterizedTest
+        @MethodSource("pendingRegistrations")
+        void pendingRegistration_returnsNameAndEmail(ExternalIdentity identity, PendingSocialRegistration expected) {
+            // given
+            doReturn(Optional.of(identity)).when(pendingSocialRegistrationStore).find();
+
+            // when
+            var result = delegate.getPendingSocialRegistration();
+
+            // then
+            assertThat(result.getBody()).usingRecursiveComparison().isEqualTo(expected);
+        }
+
+        @Test
+        void noPendingRegistration_throwsPendingSocialRegistrationNotFoundException() {
+            // given
+            doReturn(Optional.empty()).when(pendingSocialRegistrationStore).find();
+
+            // when / then
+            assertThatThrownBy(delegate::getPendingSocialRegistration)
+                    .isInstanceOf(PendingSocialRegistrationNotFoundException.class);
         }
     }
 

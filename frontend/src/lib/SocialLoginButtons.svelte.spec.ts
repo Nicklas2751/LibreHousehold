@@ -56,6 +56,25 @@ describe('SocialLoginButtons', () => {
 		expect(mockStartSocialLogin).toHaveBeenCalledWith('google', socialLoginContext);
 	});
 
+	it('calls onbeforestart before starting the social login', async () => {
+		// given
+		authDiscovery.localEnabled = true;
+		authDiscovery.socialProviders = [{ id: 'google', displayName: 'Google' }];
+		const onbeforestart = vi.fn();
+		render(SocialLoginButtons, {
+			socialLoginContext: { context: SocialLoginContextContextEnum.Setup },
+			onbeforestart
+		});
+
+		// when
+		await page.getByRole('button', { name: 'Weiter mit Google' }).click();
+
+		// then
+		expect(onbeforestart.mock.invocationCallOrder[0]).toBeLessThan(
+			mockStartSocialLogin.mock.invocationCallOrder[0]
+		);
+	});
+
 	it('renders no divider when local login is disabled', async () => {
 		// given
 		authDiscovery.localEnabled = false;

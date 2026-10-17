@@ -209,10 +209,13 @@ muss aber sauber neu aus der überarbeiteten OpenAPI-Spec generiert werden.
   ausblenden, wenn deaktiviert. Setup und Invite zeigen die Buttons schon, scheitern bis P3.6 aber
   mit „kein Konto“. Abbrüche beim Provider melden sich mit eigenem Grund
   (`reason=social-login-failed`). Siehe [Detailplan](auth-plan-p3.0-p3.7.md).
-- **P3.6 — Setup/Invite ausschließlich via Social.** Erster Admin bzw. Invitee kann sich
+- ✅ **P3.6 — Setup/Invite ausschließlich via Social.** Erster Admin bzw. Invitee kann sich
   rein über Social registrieren, korrekte Haushalts-Bindung bleibt gewahrt. Umfasst auch die
   serverseitige Sperre von Formular-Login, Passwort-Setup und Passwort-Join bei
-  `local-login.enabled=false` (aus P3.4). Siehe [Detailplan](auth-plan-p3.0-p3.7.md).
+  `local-login.enabled=false` (aus P3.4). Dabei drei ältere Bugs gefunden und behoben: Die 409-
+  Exceptions setzten keinen Problem-Typ (das Frontend zeigte nie „Konto existiert bereits“), und eine
+  veraltete gespeicherte `/oauth2/authorize`-Anfrage ließ die SPA-Continuation nach Social-Login
+  sowie nach Passwort-Setup/-Join im Fehlerpfad enden. Siehe [Detailplan](auth-plan-p3.0-p3.7.md).
 - 🟡 **P3.7 — README: Diátaxis-How-To-Guides für Social-Login-Konfiguration (Englisch).**
   Ergänzt `README.adoc` um zielgerichtete How-to-Guides (kein Tutorial/Reference/Explanation) zur
   Einrichtung von Social Login je Provider, mit konkreten Beispielen für Google, Microsoft,

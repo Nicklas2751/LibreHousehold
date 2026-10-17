@@ -183,7 +183,8 @@ describe('login page', () => {
 
 	it.each([
 		{ reason: 'social-login-no-account', expectedText: 'kein Konto in LibreHousehold' },
-		{ reason: 'social-login-failed', expectedText: 'über den Anbieter ist fehlgeschlagen' }
+		{ reason: 'social-login-failed', expectedText: 'über den Anbieter ist fehlgeschlagen' },
+		{ reason: 'local-login-disabled', expectedText: 'nur über einen Anbieter' }
 	])(
 		'redirected back with reason $reason — shows the matching error message',
 		async ({ reason, expectedText }) => {

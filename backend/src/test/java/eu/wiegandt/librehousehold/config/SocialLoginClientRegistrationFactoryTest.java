@@ -217,8 +217,13 @@ class SocialLoginClientRegistrationFactoryTest {
             assertThat(result).usingRecursiveComparison().isEqualTo(List.of(expected));
         }
 
+        /**
+         * GitHub's user endpoint only returns the public e-mail address, without its verification
+         * status: registering via social login needs the verified addresses from /user/emails,
+         * which requires the user:email scope.
+         */
         @Test
-        void oauth2ProviderWithCommonProviderName_registrationFromCommonOAuth2Provider() {
+        void githubWithoutScopes_registrationWithDefaultScopesAndEmailScope() {
             // given
             var properties = new SocialLoginProperties(true, Map.of("github",
                     new ProviderConfig(ProviderType.OAUTH2, null, "client-id", "client-secret", "GitHub",
@@ -227,6 +232,27 @@ class SocialLoginClientRegistrationFactoryTest {
                     .clientId("client-id")
                     .clientSecret("client-secret")
                     .clientName("GitHub")
+                    .scope("read:user", "user:email")
+                    .build();
+
+            // when
+            var result = factory.buildClientRegistrations(properties);
+
+            // then
+            assertThat(result).usingRecursiveComparison().isEqualTo(List.of(expected));
+        }
+
+        @Test
+        void githubWithScopes_registrationWithConfiguredScopesOnly() {
+            // given
+            var properties = new SocialLoginProperties(true, Map.of("github",
+                    new ProviderConfig(ProviderType.OAUTH2, null, "client-id", "client-secret", "GitHub",
+                            null, null, null, null, List.of("read:user"))));
+            var expected = CommonOAuth2Provider.GITHUB.getBuilder("github")
+                    .clientId("client-id")
+                    .clientSecret("client-secret")
+                    .clientName("GitHub")
+                    .scope("read:user")
                     .build();
 
             // when
@@ -246,6 +272,7 @@ class SocialLoginClientRegistrationFactoryTest {
                     .clientId("client-id")
                     .clientSecret("client-secret")
                     .clientName("GitHub")
+                    .scope("read:user", "user:email")
                     .build();
 
             // when
