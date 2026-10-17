@@ -1,12 +1,13 @@
 package eu.wiegandt.librehousehold.session.controller;
 
 import eu.wiegandt.librehousehold.api.SessionApiController;
-import eu.wiegandt.librehousehold.config.LocalLoginProperties;
+import eu.wiegandt.librehousehold.household.LocalLoginProperties;
 import eu.wiegandt.librehousehold.config.SocialLoginContextStore;
 import eu.wiegandt.librehousehold.config.SocialLoginProperties;
 import eu.wiegandt.librehousehold.household.HouseholdQuery;
 import eu.wiegandt.librehousehold.household.MemberQuery;
 import eu.wiegandt.librehousehold.household.PasswordReset;
+import eu.wiegandt.librehousehold.household.PendingSocialRegistrationStore;
 import eu.wiegandt.librehousehold.usersettings.PreferencesQuery;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,6 +46,9 @@ class SessionValidationIT {
 
     @MockitoBean
     private SocialLoginContextStore socialLoginContextStore;
+
+    @MockitoBean
+    private PendingSocialRegistrationStore pendingSocialRegistrationStore;
 
     @Test
     void getCurrentUser_noAuthenticatedSession_returns401() throws Exception {

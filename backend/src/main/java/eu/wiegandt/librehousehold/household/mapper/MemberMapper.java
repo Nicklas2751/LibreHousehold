@@ -18,4 +18,13 @@ public interface MemberMapper extends CoreOptionalMapper {
     @Mapping(target = "avatar", source = "member.avatar", qualifiedByName = "fromOptionalString")
     @Mapping(target = "isAdmin", source = "isAdmin")
     MemberEntity toMemberEntity(Member member, UUID householdId, boolean isAdmin);
+
+    /**
+     * Maps a member registered via social login: the e-mail address comes from the external
+     * identity the provider verified, never from the request.
+     */
+    @Mapping(target = "avatar", source = "member.avatar", qualifiedByName = "fromOptionalString")
+    @Mapping(target = "isAdmin", source = "isAdmin")
+    @Mapping(target = "email", source = "email")
+    MemberEntity toMemberEntityWithEmail(Member member, UUID householdId, boolean isAdmin, String email);
 }

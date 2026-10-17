@@ -72,8 +72,8 @@ class SocialLoginFilterChainIT {
     private static final String DEX_REDIRECT_URI = SERVER_BASE_URL + "/login/oauth2/code/" + PROVIDER_ID;
     private static final String DEX_PASSWORD = "dex-password";
     private static final String BASE_PATH = "/v1";
-    private static final String XSRF_TOKEN_COOKIE_NAME = "XSRF-TOKEN";
-    private static final String XSRF_TOKEN_HEADER_NAME = "X-XSRF-TOKEN";
+    private static final String SPA_LOGIN_PATH = "/oauth2/authorization/spa-backend-client";
+    private static final int MAX_REDIRECTS = 10;
     private static final Map<String, String> NO_COOKIES = Map.of();
     private static final Pattern FORM_ACTION = Pattern.compile("<form[^>]*action=\"([^\"]*)\"");
 
@@ -138,6 +138,32 @@ class SocialLoginFilterChainIT {
             assertThat(meResponse.getStatus().value()).isEqualTo(200);
         }
 
+        /**
+         * Like a fresh browser: the SPA's own login reached /oauth2/authorize first, which saved that
+         * request before sending the user to /login. The social login must not resume this stale
+         * request afterwards, its authorization request no longer exists.
+         */
+        @Test
+        void startedFromSpaAuthorization_endsAtDefaultTargetInsteadOfStaleAuthorizationRequest() throws Exception {
+            // given
+            dexContainer.withClient(new DexContainer.Client(DexTestcontainersConfiguration.CLIENT_ID,
+                    DexTestcontainersConfiguration.CLIENT_SECRET, DEX_REDIRECT_URI));
+            var dexUser = new DexContainer.User("dex-" + UUID.randomUUID(), "dex-" + UUID.randomUUID() + "@example.com", DEX_PASSWORD);
+            dexContainer.withUser(dexUser);
+            var member = createMember(dexUser.email());
+            accountService.createFederatedAccount(member.getId());
+            accountService.linkExternalIdentity(member.getId(), PROVIDER_ID, dexSubjectOf(dexUser));
+            var spaAuthorization = get(NO_COOKIES, URI.create(SPA_LOGIN_PATH));
+            var staleAuthorize = get(spaAuthorization.cookies(), spaAuthorization.response().getResponseHeaders().getLocation());
+
+            // when
+            var callback = loginViaDex(staleAuthorize.cookies(), dexUser);
+            var finalRedirect = followBackendRedirects(callback);
+
+            // then
+            assertThat(finalRedirect).hasPath("/").hasNoQuery();
+        }
+
         @Test
         void noLinkedIdentity_rejectsWithNoAccountReason() throws Exception {
             // given
@@ -171,32 +197,6 @@ class SocialLoginFilterChainIT {
 
             // when
             var callback = loginViaDex(NO_COOKIES, dexUser);
-
-            // then
-            assertThat(callback.response().getResponseHeaders().getLocation())
-                    .hasPath("/login").hasQuery("error&reason=social-login-no-account");
-        }
-
-        @Test
-        void setupContextStored_rejectsWithNoAccountReason() throws Exception {
-            // given
-            dexContainer.withClient(new DexContainer.Client(DexTestcontainersConfiguration.CLIENT_ID,
-                    DexTestcontainersConfiguration.CLIENT_SECRET, DEX_REDIRECT_URI));
-            var dexUser = new DexContainer.User("dex-" + UUID.randomUUID(), "dex-" + UUID.randomUUID() + "@example.com", DEX_PASSWORD);
-            dexContainer.withUser(dexUser);
-            var member = createMember(dexUser.email());
-            accountService.createFederatedAccount(member.getId());
-            accountService.linkExternalIdentity(member.getId(), PROVIDER_ID, dexSubjectOf(dexUser));
-            var csrfPreflight = get(NO_COOKIES, URI.create(BASE_PATH + "/members/availability?email=social%40example.com"));
-            var storeContextResponse = applyCookies(restTestClient.post().uri(BASE_PATH + "/auth/social-context"), csrfPreflight.cookies())
-                    .header(XSRF_TOKEN_HEADER_NAME, csrfPreflight.cookies().get(XSRF_TOKEN_COOKIE_NAME))
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body("{\"context\":\"SETUP\"}")
-                    .exchange().returnResult(String.class);
-            var cookiesWithContext = mergeCookies(csrfPreflight.cookies(), storeContextResponse);
-
-            // when
-            var callback = loginViaDex(cookiesWithContext, dexUser);
 
             // then
             assertThat(callback.response().getResponseHeaders().getLocation())
@@ -331,6 +331,25 @@ class SocialLoginFilterChainIT {
                 .set(field(MemberEntity::householdId), createdHousehold.id())
                 .set(field(MemberEntity::email), email)
                 .create());
+    }
+
+    /**
+     * Follows the redirects within the backend's own OAuth2 endpoints and returns the first
+     * redirect target outside them, i.e. where the browser finally lands.
+     */
+    private URI followBackendRedirects(HttpStep start) {
+        var step = start;
+        var location = step.response().getResponseHeaders().getLocation();
+        for (var redirects = 0; redirects < MAX_REDIRECTS && isBackendOAuth2Endpoint(location); redirects++) {
+            step = get(step.cookies(), location);
+            location = step.response().getResponseHeaders().getLocation();
+        }
+        return location;
+    }
+
+    private boolean isBackendOAuth2Endpoint(URI location) {
+        return location != null
+                && (location.getPath().startsWith("/oauth2/") || location.getPath().startsWith("/login/oauth2/"));
     }
 
     private HttpStep get(Map<String, String> cookies, URI uri) {

@@ -284,7 +284,8 @@
 		"error_locked_unknown_time": "Dieses Konto ist wegen zu vieler fehlgeschlagener Anmeldeversuche vorübergehend gesperrt. Bitte versuche es später erneut.",
 		"forgot_password_link": "Passwort vergessen?",
 		"error_social_login_no_account": "Zu diesem Anbieter-Konto gibt es kein Konto in LibreHousehold. Melde dich mit E-Mail und Passwort an oder lass dich in einen Haushalt einladen.",
-		"error_social_login_failed": "Die Anmeldung über den Anbieter ist fehlgeschlagen. Bitte versuche es erneut."
+		"error_social_login_failed": "Die Anmeldung über den Anbieter ist fehlgeschlagen. Bitte versuche es erneut.",
+		"error_local_login_disabled": "Auf dieser Instanz ist die Anmeldung nur über einen Anbieter möglich."
 	},
 	"forgot_password": {
 		"title": "Passwort vergessen",
@@ -479,6 +480,11 @@
 	"auth": {
 		"social_login_button": "Weiter mit {provider}",
 		"social_login_divider": "oder",
-		"social_login_start_error": "Die Anmeldung über den Anbieter konnte nicht gestartet werden. Bitte versuche es erneut."
+		"social_login_start_error": "Die Anmeldung über den Anbieter konnte nicht gestartet werden. Bitte versuche es erneut.",
+		"social_registration_email_label": "E-Mail-Adresse",
+		"social_registration_email_hint": "Kommt von deinem Anbieter und lässt sich hier nicht ändern.",
+		"social_registration_hint": "Fast geschafft. Prüfe deinen Namen, die E-Mail-Adresse übernehmen wir von deinem Anbieter.",
+		"social_registration_missing": "Die Anmeldung über den Anbieter ist abgelaufen. Bitte starte sie erneut.",
+		"error_social_email_unverified": "Dein Anbieter hat keine bestätigte E-Mail-Adresse übermittelt. Bestätige deine E-Mail-Adresse dort oder wähle einen anderen Weg."
 	}
 }

@@ -5,8 +5,11 @@
 	import {
 		MembersApi,
 		type InviteInfo,
+		type LocalRegistration,
+		type PendingSocialRegistration,
 		type Problem,
-		ResponseError
+		ResponseError,
+		SessionApi
 	} from '../generated-sources/openapi';
 	import { apiConfiguration } from '$lib/api/httpClient';
 	import { extractErrorStatus } from '$lib/api/errorStatus';
@@ -23,8 +26,11 @@
 	import SocialLoginButtons from '$lib/SocialLoginButtons.svelte';
 	import { authDiscovery, loadAuthDiscovery } from '$lib/stores/authDiscoveryState.svelte';
 	import { SocialLoginContextContextEnum } from '../generated-sources/openapi';
+	import SocialRegistrationForm from '$lib/SocialRegistrationForm.svelte';
+	import { page } from '$app/state';
 
 	const EMAIL_AVAILABILITY_DEBOUNCE_MS = 400;
+	const SOCIAL_EMAIL_UNVERIFIED_REASON = 'social-email-unverified';
 
 	interface Props {
 		token: string;
@@ -33,6 +39,7 @@
 	const { token }: Props = $props();
 
 	const membersApi = new MembersApi(apiConfiguration);
+	const sessionApi = new SessionApi(apiConfiguration);
 	const checkEmailAvailability = createDebouncedAvailabilityChecker(
 		(email: string) => membersApi.checkEmailAvailability({ email }),
 		EMAIL_AVAILABILITY_DEBOUNCE_MS
@@ -48,6 +55,8 @@
 	let joining = $state(false);
 	let serverEmailError = $state<string | null>(null);
 	let enteringDashboard = $state(false);
+	let pendingRegistration: PendingSocialRegistration | null = $state(null);
+	let socialLoginError: string | null = $state(null);
 
 	onMount(async () => {
 		loadAuthDiscovery();
@@ -55,8 +64,27 @@
 			inviteInfo = await membersApi.resolveInvite({ token });
 		} catch {
 			invalidLink = true;
+			return;
 		}
+		await resumeAfterSocialLogin();
 	});
+
+	// A social login leaves the SPA; the provider's identity comes back from the server session.
+	async function resumeAfterSocialLogin() {
+		const params = page.url.searchParams;
+		if (params.get('reason') === SOCIAL_EMAIL_UNVERIFIED_REASON) {
+			socialLoginError = m['auth.error_social_email_unverified']();
+			return;
+		}
+		if (!params.has('social')) {
+			return;
+		}
+		try {
+			pendingRegistration = await sessionApi.getPendingSocialRegistration();
+		} catch {
+			addToast(new Toast(m['auth.social_registration_missing'](), 'error'));
+		}
+	}
 
 	async function handleEmailInput(email: string) {
 		if (!isValidEmail(email)) {
@@ -69,6 +97,24 @@
 	}
 
 	async function join(data: { name: string; email: string; avatar: string; password?: string }) {
+		await submitJoin(
+			{ name: data.name, email: data.email, avatar: data.avatar || undefined },
+			{ password: data.password ?? '' }
+		);
+	}
+
+	// Without localRegistration, the server takes the e-mail from the pending social login identity.
+	async function joinWithSocialRegistration(name: string) {
+		if (!pendingRegistration) {
+			return;
+		}
+		await submitJoin({ name, email: pendingRegistration.email });
+	}
+
+	async function submitJoin(
+		profile: { name: string; email: string; avatar?: string },
+		localRegistration?: LocalRegistration
+	) {
 		joining = true;
 		serverEmailError = null;
 		try {
@@ -76,10 +122,8 @@
 				token,
 				memberRegistration: {
 					id: crypto.randomUUID(),
-					name: data.name,
-					email: data.email,
-					avatar: data.avatar || undefined,
-					localRegistration: { password: data.password ?? '' }
+					...profile,
+					...(localRegistration ? { localRegistration } : {})
 				}
 			});
 			updateUserState(member);
@@ -162,39 +206,59 @@
 
 		{#if step === 0}
 			<h2 class="text-xl font-bold text-base-content">{m['invite.title']()}</h2>
-			{#if authDiscovery.localEnabled}
-				<MemberProfileForm
-					contextHint={m['invite.household_hint']({ name: inviteInfo.householdName })}
+			{#if pendingRegistration}
+				<SocialRegistrationForm
+					registration={pendingRegistration}
+					hint={m['auth.social_registration_hint']()}
 					nameLabel={m['invite.name_label']()}
 					nameHint={m['invite.name_error']()}
-					namePlaceholder={m['invite.name_placeholder']()}
-					emailLabel={m['invite.email_label']()}
-					emailHint={m['setup.create_account_step.admin_email_error']()}
-					emailPlaceholder={m['invite.email_placeholder']()}
-					backLabel={m['setup.create_step.back_button']()}
 					submitLabel={m['invite.join_button']()}
-					passwordLabel={m['invite.password_label']()}
-					passwordHint={m['invite.password_hint']()}
-					passwordPlaceholder={m['invite.password_placeholder']()}
-					{serverEmailError}
-					onClearEmailError={() => {
-						serverEmailError = null;
-					}}
-					onEmailInput={handleEmailInput}
+					backLabel={m['setup.create_step.back_button']()}
 					submitting={joining}
-					onformsubmit={join}
+					errorMessage={serverEmailError}
+					onformsubmit={joinWithSocialRegistration}
 					onback={() => goto('/')}
 				/>
 			{:else}
-				<p>{m['invite.household_hint']({ name: inviteInfo.householdName })}</p>
-			{/if}
-			<SocialLoginButtons
-				socialLoginContext={{ context: SocialLoginContextContextEnum.Invite, inviteToken: token }}
-			/>
-			{#if !authDiscovery.localEnabled}
-				<button type="button" class="btn w-full btn-outline" onclick={() => goto('/')}>
-					{m['setup.create_step.back_button']()}
-				</button>
+				{#if socialLoginError}
+					<div class="alert alert-warning">
+						<span>{socialLoginError}</span>
+					</div>
+				{/if}
+				{#if authDiscovery.localEnabled}
+					<MemberProfileForm
+						contextHint={m['invite.household_hint']({ name: inviteInfo.householdName })}
+						nameLabel={m['invite.name_label']()}
+						nameHint={m['invite.name_error']()}
+						namePlaceholder={m['invite.name_placeholder']()}
+						emailLabel={m['invite.email_label']()}
+						emailHint={m['setup.create_account_step.admin_email_error']()}
+						emailPlaceholder={m['invite.email_placeholder']()}
+						backLabel={m['setup.create_step.back_button']()}
+						submitLabel={m['invite.join_button']()}
+						passwordLabel={m['invite.password_label']()}
+						passwordHint={m['invite.password_hint']()}
+						passwordPlaceholder={m['invite.password_placeholder']()}
+						{serverEmailError}
+						onClearEmailError={() => {
+							serverEmailError = null;
+						}}
+						onEmailInput={handleEmailInput}
+						submitting={joining}
+						onformsubmit={join}
+						onback={() => goto('/')}
+					/>
+				{:else}
+					<p>{m['invite.household_hint']({ name: inviteInfo.householdName })}</p>
+				{/if}
+				<SocialLoginButtons
+					socialLoginContext={{ context: SocialLoginContextContextEnum.Invite, inviteToken: token }}
+				/>
+				{#if !authDiscovery.localEnabled}
+					<button type="button" class="btn w-full btn-outline" onclick={() => goto('/')}>
+						{m['setup.create_step.back_button']()}
+					</button>
+				{/if}
 			{/if}
 		{:else if step === 1}
 			<h2 class="text-xl font-bold text-base-content">{m['invite.success_title']()}</h2>

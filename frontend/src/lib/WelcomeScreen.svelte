@@ -5,6 +5,15 @@
 	import { EuroIcon } from '@indaco/svelte-iconoir/euro';
 	import { StatsReportIcon } from '@indaco/svelte-iconoir/stats-report';
 	import { OAUTH2_LOGIN_PATH } from '$lib/oauth2Login';
+	import { goto } from '$app/navigation';
+	import { session } from '$lib/stores/sessionState.svelte';
+
+	// A finished social login redirects the browser back to the app root, already signed in.
+	$effect(() => {
+		if (session.status === 'authenticated') {
+			goto('/app/dashboard');
+		}
+	});
 </script>
 
 <div class="hero min-h-screen bg-base-200">

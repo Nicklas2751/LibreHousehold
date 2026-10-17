@@ -16,6 +16,7 @@
 		| 'locked'
 		| 'social-login-no-account'
 		| 'social-login-failed'
+		| 'local-login-disabled'
 		| 'generic';
 
 	let email = $state('');
@@ -38,6 +39,7 @@
 		if (reason === 'locked') return 'locked';
 		if (reason === 'social-login-no-account') return 'social-login-no-account';
 		if (reason === 'social-login-failed') return 'social-login-failed';
+		if (reason === 'local-login-disabled') return 'local-login-disabled';
 		return 'generic';
 	}
 
@@ -105,6 +107,10 @@
 				{:else if loginErrorType === 'social-login-failed'}
 					<div class="mt-4 alert alert-error">
 						<span>{m['login.error_social_login_failed']()}</span>
+					</div>
+				{:else if loginErrorType === 'local-login-disabled'}
+					<div class="mt-4 alert alert-warning">
+						<span>{m['login.error_local_login_disabled']()}</span>
 					</div>
 				{:else if loginErrorType === 'generic'}
 					<div class="mt-4 alert alert-error">
