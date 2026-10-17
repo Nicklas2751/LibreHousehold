@@ -1,15 +1,20 @@
 package eu.wiegandt.librehousehold.household.service;
 
 import eu.wiegandt.librehousehold.household.AccountRegistered;
+import eu.wiegandt.librehousehold.household.ExternalIdentity;
+import eu.wiegandt.librehousehold.household.LocalLoginProperties;
 import eu.wiegandt.librehousehold.household.MemberQuery;
 import eu.wiegandt.librehousehold.household.MemberRemoved;
 import eu.wiegandt.librehousehold.household.PasswordResetRequested;
+import eu.wiegandt.librehousehold.household.PendingSocialRegistrationStore;
 import eu.wiegandt.librehousehold.household.VerificationEmailRequested;
 import eu.wiegandt.librehousehold.household.exception.EmailNotVerifiedException;
 import eu.wiegandt.librehousehold.household.exception.HouseholdAdminCannotBeRemovedException;
 import eu.wiegandt.librehousehold.household.exception.InvalidInviteException;
+import eu.wiegandt.librehousehold.household.exception.LocalLoginDisabledException;
 import eu.wiegandt.librehousehold.household.exception.MemberAlreadyExistsException;
 import eu.wiegandt.librehousehold.household.exception.MemberNotFoundException;
+import eu.wiegandt.librehousehold.household.exception.NoPendingSocialRegistrationException;
 import eu.wiegandt.librehousehold.household.mapper.MemberMapper;
 import eu.wiegandt.librehousehold.household.mapper.MemberRegistrationMapper;
 import eu.wiegandt.librehousehold.household.model.MemberEntity;
@@ -18,9 +23,11 @@ import eu.wiegandt.librehousehold.household.repository.HouseholdRepository;
 import eu.wiegandt.librehousehold.household.repository.InviteRepository;
 import eu.wiegandt.librehousehold.household.repository.MemberRepository;
 import eu.wiegandt.librehousehold.model.InviteInfo;
+import eu.wiegandt.librehousehold.model.LocalRegistration;
 import eu.wiegandt.librehousehold.model.Member;
 import eu.wiegandt.librehousehold.model.MemberRegistration;
 import eu.wiegandt.librehousehold.model.MemberUpdate;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -32,6 +39,7 @@ import java.util.*;
 import static java.util.stream.Collectors.toMap;
 
 @Service
+@EnableConfigurationProperties(LocalLoginProperties.class)
 public class MemberManagementService implements MemberQuery {
 
     private static final boolean JOINED_MEMBER_IS_ADMIN = false;
@@ -44,6 +52,8 @@ public class MemberManagementService implements MemberQuery {
     private final ApplicationEventPublisher eventPublisher;
     private final AccountService accountService;
     private final AccountSessionAuthenticator accountSessionAuthenticator;
+    private final PendingSocialRegistrationStore pendingSocialRegistrationStore;
+    private final LocalLoginProperties localLoginProperties;
 
     public MemberManagementService(MemberRepository memberRepository,
                                    HouseholdRepository householdRepository,
@@ -52,7 +62,9 @@ public class MemberManagementService implements MemberQuery {
                                    MemberRegistrationMapper memberRegistrationMapper,
                                    ApplicationEventPublisher eventPublisher,
                                    AccountService accountService,
-                                   AccountSessionAuthenticator accountSessionAuthenticator) {
+                                   AccountSessionAuthenticator accountSessionAuthenticator,
+                                   PendingSocialRegistrationStore pendingSocialRegistrationStore,
+                                   LocalLoginProperties localLoginProperties) {
         this.memberRepository = memberRepository;
         this.householdRepository = householdRepository;
         this.inviteRepository = inviteRepository;
@@ -61,6 +73,8 @@ public class MemberManagementService implements MemberQuery {
         this.eventPublisher = eventPublisher;
         this.accountService = accountService;
         this.accountSessionAuthenticator = accountSessionAuthenticator;
+        this.pendingSocialRegistrationStore = pendingSocialRegistrationStore;
+        this.localLoginProperties = localLoginProperties;
     }
 
     public List<Member> getMembers(UUID householdId) {
@@ -90,23 +104,62 @@ public class MemberManagementService implements MemberQuery {
         return new InviteInfo(invite.householdId(), householdName, invite.validUntil());
     }
 
+    /**
+     * Adds a member to the invite's household. With {@code localRegistration}, the member gets a
+     * password account, unless this instance turned local login off. Without it, the member is registered via the social login that left a
+     * pending registration in this session: the e-mail address then comes from the external
+     * identity, never from the request.
+     */
     @Transactional
     public Member joinHousehold(UUID token, MemberRegistration registration) {
         var invite = inviteRepository.findByToken(token)
                 .filter(i -> !i.validUntil().isBefore(LocalDate.now()))
                 .orElseThrow(InvalidInviteException::new);
-        MemberEntity saved;
+        if (registration.getLocalRegistration().isPresent()) {
+            assertLocalLoginEnabled();
+            return registerLocalMember(registration, invite.householdId(), registration.getLocalRegistration().get());
+        }
+        var identity = pendingSocialRegistrationStore.find().orElseThrow(NoPendingSocialRegistrationException::new);
+        return registerFederatedMember(registration, invite.householdId(), identity);
+    }
+
+    private void assertLocalLoginEnabled() {
+        if (!localLoginProperties.enabled()) {
+            throw new LocalLoginDisabledException();
+        }
+    }
+
+    private Member registerLocalMember(MemberRegistration registration, UUID householdId,
+                                       LocalRegistration localRegistration) {
+        var saved = saveMember(memberRegistrationMapper.toMemberEntity(registration, householdId, JOINED_MEMBER_IS_ADMIN));
+        accountService.createAccount(saved.getId(), localRegistration.getPassword());
+        eventPublisher.publishEvent(new AccountRegistered(saved.getId(), registration.getEmail()));
+        accountSessionAuthenticator.authenticateAndPersistSession(registration.getEmail(), localRegistration.getPassword());
+        return memberMapper.toMember(saved);
+    }
+
+    // No AccountRegistered event: it triggers the verification e-mail, but the provider already
+    // verified the address.
+    private Member registerFederatedMember(MemberRegistration registration, UUID householdId, ExternalIdentity identity) {
+        var saved = saveMember(memberRegistrationMapper.toMemberEntityWithEmail(
+                registration, householdId, JOINED_MEMBER_IS_ADMIN, identity.email()));
+        accountService.createFederatedAccount(saved.getId());
         try {
-            saved = memberRepository.save(
-                    memberRegistrationMapper.toMemberEntity(registration, invite.householdId(), JOINED_MEMBER_IS_ADMIN));
+            accountService.linkExternalIdentity(saved.getId(), identity.registrationId(), identity.subject());
         } catch (DataIntegrityViolationException _) {
             throw new MemberAlreadyExistsException();
         }
-        accountService.createAccount(saved.getId(), registration.getLocalRegistration().getPassword());
-        eventPublisher.publishEvent(new AccountRegistered(saved.getId(), registration.getEmail()));
-        accountSessionAuthenticator.authenticateAndPersistSession(
-                registration.getEmail(), registration.getLocalRegistration().getPassword());
+        pendingSocialRegistrationStore.consume();
+        accountSessionAuthenticator.authenticateFederatedAndPersistSession(identity.email());
         return memberMapper.toMember(saved);
+    }
+
+    private MemberEntity saveMember(MemberEntity member) {
+        try {
+            return memberRepository.save(member);
+        } catch (DataIntegrityViolationException _) {
+            throw new MemberAlreadyExistsException();
+        }
     }
 
     @Transactional

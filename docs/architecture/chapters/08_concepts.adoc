@@ -85,7 +85,7 @@ Authentication-related security controls are tracked against an https://github.c
 |RED2
 |No automatic redirect to untrusted hosts (invite links).
 |V3.7.2 (L2)
-|Open. The social-login context (`POST /auth/social-context`, xref:../adrs/adr-017.adoc[ADR 017]) adds a further input that carries an invite token through the provider redirect; it is stored server-side only and must be validated like any other invite token when it is evaluated.
+|Open. The social-login context (`POST /auth/social-context`, xref:../adrs/adr-017.adoc[ADR 017]) adds a further input that carries an invite token through the provider redirect; it is stored server-side only, as a UUID, and only forms the relative redirect path back to `/invite/{token}`; the subsequent join validates it like any other invite token.
 
 |ENUM1
 |No inference of existing accounts from login, registration, or password-reset responses (error messages, status codes, timing). Deliberate exceptions: login-blocking of unverified accounts (see VERIFY1) makes the account status distinguishable via a dedicated `DisabledException`, and account lockout (see RATE1) makes a locked account distinguishable via a dedicated `AccountLockedException` (the login page shows the exact unlock time) — both are accepted, documented deviations from the strict interpretation, not bugs. Chosen deliberately for both cases: the usability benefit of telling a genuine user what is happening with their own account outweighs the minor account-enumeration signal.
@@ -129,9 +129,9 @@ threshold of failed attempts is reached, regardless of how slowly they were made
 |Decided, see xref:../adrs/adr-013.adoc[ADR 013]
 
 |FED1
-|Social login against external OIDC/OAuth2 providers: the backend's Authorization Server is the only client of the provider, so provider tokens never reach the browser. `state` and OIDC `nonce` bind the callback to the session that started the flow, and the ID Token's issuer and audience are validated. A login resolves the local account only via the stored provider + subject pair (`account_identity`), never via the e-mail claim, and never attaches to an account that has a local password.
+|Social login against external OIDC/OAuth2 providers: the backend's Authorization Server is the only client of the provider, so provider tokens never reach the browser. `state` and OIDC `nonce` bind the callback to the session that started the flow, and the ID Token's issuer and audience are validated. A login resolves the local account only via the stored provider + subject pair (`account_identity`), never via the e-mail claim, and never attaches to an account that has a local password. Registering via social login (household setup, invite join) requires an e-mail address the provider verified (OIDC `email_verified`; for GitHub the verified primary address from `/user/emails`); it becomes the member's e-mail, the e-mail in the request is ignored. The callback only keeps the external identity as a pending registration in the session and drops the external authentication. An e-mail that already has an account, or an identity that is already linked, fails with `409` instead of linking anything.
 |V10.1.1 (L2), V10.1.2 (L2), V10.2.1 (L2), V10.5.1 (L2), V10.5.2 (L2), V10.5.3 (L2), V10.5.4 (L2)
-|Decided, see xref:../adrs/adr-016.adoc[ADR 016] and xref:../adrs/adr-018.adoc[ADR 018]. `state`/`nonce`/ID-Token validation is done by Spring Security's `oauth2Login()`; the account resolution is implemented in `FederatedIdentityAuthenticationSuccessHandler`.
+|Decided, see xref:../adrs/adr-016.adoc[ADR 016] and xref:../adrs/adr-018.adoc[ADR 018]. `state`/`nonce`/ID-Token validation is done by Spring Security's `oauth2Login()`; the account resolution is implemented in `FederatedIdentityAuthenticationSuccessHandler`, the registration additionally in `HouseholdSetupService`/`MemberManagementService`.
 
 |AC1
 |Object-/field-level access control per household (IDOR protection).

@@ -67,7 +67,7 @@ class HouseholdManagementServiceIT {
         var member = Instancio.create(Member.class);
         existingHousehold = Instancio.create(Household.class);
         var localRegistration = Instancio.create(LocalRegistration.class);
-        setupService.setupHousehold(new HouseholdSetup(existingHousehold, member, localRegistration));
+        setupService.setupHousehold(new HouseholdSetup(existingHousehold, member).localRegistration(localRegistration));
     }
 
     @AfterEach

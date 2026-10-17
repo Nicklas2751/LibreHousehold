@@ -296,6 +296,10 @@ ITs that run the real OAuth2 flow against the running server (e.g. `Authorizatio
 
 These tests therefore use `DEFINED_PORT` with a port picked via `TestSocketUtils.findAvailableTcpPort()` in a static constant. A `@DynamicPropertySource` registers it as `server.port`, issuer and redirect-uri together. Each test class does this itself, with no shared helper (see the DRY note under TDD). Don't hardcode port numbers: the former fixed 543xx ports collided intermittently with Testcontainers' port mappings ("address already in use"). Tests that don't need the port in their configuration should simply use `RANDOM_PORT`.
 
+### Both filter chains share one saved request: remove it before every SPA continuation
+
+The Authorization Server chain saves the unauthenticated `/oauth2/authorize` request in the session attribute `SPRING_SECURITY_SAVED_REQUEST` (`HttpSessionRequestCache`). The business chain's `NonSavingRequestCache` never writes that attribute, but the internal client's `SavedRequestAwareAuthenticationSuccessHandler` reads it. Any flow that authenticates outside the AS login form and then starts a *fresh* `/oauth2/authorization/spa-backend-client` continuation (social login, setup/join via `AccountSessionAuthenticator`) must remove the saved request first. Otherwise the success handler replays the stale authorize request with an outdated `state` and the browser ends on `/login?error&reason=social-login-failed`, although the session is signed in. Integration tests for such flows must enter via `GET /oauth2/authorization/spa-backend-client` like the browser does; ITs that start elsewhere never see a saved request and miss this.
+
 ### `./mvnw test` runs without integration tests — use `./mvnw verify`
 
 `backend/pom.xml` binds `maven-failsafe-plugin` with the `integration-test`+`verify` goals without

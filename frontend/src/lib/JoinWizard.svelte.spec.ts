@@ -13,7 +13,9 @@ const {
 	mockCompleteSilentOAuth2Login,
 	mockBootstrapSession,
 	mockLoadAuthDiscovery,
-	mockStartSocialLogin
+	mockStartSocialLogin,
+	mockGetPendingSocialRegistration,
+	mockPage
 } = vi.hoisted(() => ({
 	mockResolveInvite: vi.fn(),
 	mockJoinHousehold: vi.fn(),
@@ -23,7 +25,9 @@ const {
 	mockCompleteSilentOAuth2Login: vi.fn(),
 	mockBootstrapSession: vi.fn(),
 	mockLoadAuthDiscovery: vi.fn(),
-	mockStartSocialLogin: vi.fn()
+	mockStartSocialLogin: vi.fn(),
+	mockGetPendingSocialRegistration: vi.fn(),
+	mockPage: { url: new URL('http://localhost:5173/invite/invite-token') }
 }));
 
 vi.mock('../generated-sources/openapi', async (importOriginal) => {
@@ -34,9 +38,14 @@ vi.mock('../generated-sources/openapi', async (importOriginal) => {
 			this.resolveInvite = mockResolveInvite;
 			this.joinHousehold = mockJoinHousehold;
 			this.checkEmailAvailability = mockCheckEmailAvailability;
+		}),
+		SessionApi: vi.fn().mockImplementation(function (this: Record<string, unknown>) {
+			this.getPendingSocialRegistration = mockGetPendingSocialRegistration;
 		})
 	};
 });
+
+vi.mock('$app/state', () => ({ page: mockPage }));
 
 vi.mock('$app/navigation', () => ({ goto: mockGoto }));
 
@@ -74,6 +83,7 @@ describe('JoinWizard', () => {
 		mockCompleteSilentOAuth2Login.mockResolvedValue(undefined);
 		mockBootstrapSession.mockResolvedValue(undefined);
 		mockLoadAuthDiscovery.mockResolvedValue(undefined);
+		mockPage.url = new URL('http://localhost:5173/invite/invite-token');
 		authDiscovery.localEnabled = true;
 		authDiscovery.socialProviders = [];
 	});
@@ -271,5 +281,64 @@ describe('JoinWizard', () => {
 		// then
 		await expect.element(page.getByRole('button', { name: 'Weiter mit Google' })).toBeVisible();
 		await expect.element(page.getByRole('textbox', { name: /Name/i })).not.toBeInTheDocument();
+	});
+
+	it('back from the provider — joins without localRegistration, using the e-mail from the provider', async () => {
+		// given
+		mockResolveInvite.mockResolvedValue(validInviteInfo);
+		mockPage.url = new URL('http://localhost:5173/invite/invite-token?social');
+		mockGetPendingSocialRegistration.mockResolvedValue({
+			name: 'Max Mustermann',
+			email: 'max@example.com'
+		});
+		mockJoinHousehold.mockResolvedValue({
+			id: 'member-id',
+			name: 'Max Mustermann',
+			email: 'max@example.com',
+			isAdmin: false
+		});
+		render(JoinWizard, { token: 'invite-token' });
+
+		// when
+		await page.getByRole('button', { name: /Beitreten/i }).click();
+
+		// then
+		await vi.waitFor(() =>
+			expect(mockJoinHousehold).toHaveBeenCalledWith({
+				token: 'invite-token',
+				memberRegistration: {
+					id: expect.any(String),
+					name: 'Max Mustermann',
+					email: 'max@example.com'
+				}
+			})
+		);
+	});
+
+	it('back from the provider without a pending registration — shows an error toast', async () => {
+		// given
+		mockResolveInvite.mockResolvedValue(validInviteInfo);
+		mockPage.url = new URL('http://localhost:5173/invite/invite-token?social');
+		mockGetPendingSocialRegistration.mockRejectedValue({ status: 404 });
+
+		// when
+		render(JoinWizard, { token: 'invite-token' });
+
+		// then
+		await vi.waitFor(() => expect(mockAddToast).toHaveBeenCalled());
+	});
+
+	it('back from the provider with reason social-email-unverified — shows the unverified e-mail message', async () => {
+		// given
+		mockResolveInvite.mockResolvedValue(validInviteInfo);
+		mockPage.url = new URL(
+			'http://localhost:5173/invite/invite-token?error&reason=social-email-unverified'
+		);
+
+		// when
+		render(JoinWizard, { token: 'invite-token' });
+
+		// then
+		await expect.element(page.getByText(/keine bestätigte E-Mail-Adresse/)).toBeVisible();
 	});
 });

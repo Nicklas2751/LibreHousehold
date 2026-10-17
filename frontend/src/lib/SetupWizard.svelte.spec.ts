@@ -3,6 +3,7 @@ import { render } from 'vitest-browser-svelte';
 import { page } from 'vitest/browser';
 import SetupWizard from './SetupWizard.svelte';
 import { authDiscovery } from '$lib/stores/authDiscoveryState.svelte';
+import { saveSetupDraft } from '$lib/setupDraft';
 
 const {
 	mockSetupHousehold,
@@ -12,7 +13,9 @@ const {
 	mockCompleteSilentOAuth2Login,
 	mockBootstrapSession,
 	mockLoadAuthDiscovery,
-	mockStartSocialLogin
+	mockStartSocialLogin,
+	mockGetPendingSocialRegistration,
+	mockPage
 } = vi.hoisted(() => ({
 	mockSetupHousehold: vi.fn(),
 	mockCheckEmailAvailability: vi.fn(),
@@ -21,7 +24,9 @@ const {
 	mockCompleteSilentOAuth2Login: vi.fn(),
 	mockBootstrapSession: vi.fn(),
 	mockLoadAuthDiscovery: vi.fn(),
-	mockStartSocialLogin: vi.fn()
+	mockStartSocialLogin: vi.fn(),
+	mockGetPendingSocialRegistration: vi.fn(),
+	mockPage: { url: new URL('http://localhost:5173/setup') }
 }));
 
 vi.mock('../generated-sources/openapi', async (importOriginal) => {
@@ -33,9 +38,14 @@ vi.mock('../generated-sources/openapi', async (importOriginal) => {
 		}),
 		MembersApi: vi.fn().mockImplementation(function (this: Record<string, unknown>) {
 			this.checkEmailAvailability = mockCheckEmailAvailability;
+		}),
+		SessionApi: vi.fn().mockImplementation(function (this: Record<string, unknown>) {
+			this.getPendingSocialRegistration = mockGetPendingSocialRegistration;
 		})
 	};
 });
+
+vi.mock('$app/state', () => ({ page: mockPage }));
 
 vi.mock('$app/navigation', () => ({ goto: mockGoto }));
 
@@ -76,6 +86,8 @@ describe('SetupWizard', () => {
 		mockCompleteSilentOAuth2Login.mockResolvedValue(undefined);
 		mockBootstrapSession.mockResolvedValue(undefined);
 		mockLoadAuthDiscovery.mockResolvedValue(undefined);
+		mockPage.url = new URL('http://localhost:5173/setup');
+		sessionStorage.clear();
 		authDiscovery.localEnabled = true;
 		authDiscovery.socialProviders = [];
 	});
@@ -276,5 +288,86 @@ describe('SetupWizard', () => {
 
 		// then
 		await expect.element(page.getByRole('textbox', { name: /Dein Name/i })).not.toBeInTheDocument();
+	});
+
+	it('social provider on the account step — keeps the household draft before leaving the page', async () => {
+		// given
+		authDiscovery.socialProviders = [{ id: 'google', displayName: 'Google' }];
+		await fillAndGoToAccountStep();
+
+		// when
+		await page.getByRole('button', { name: 'Weiter mit Google' }).click();
+
+		// then
+		expect(sessionStorage.getItem('librehousehold.setupDraft')).toContain('Die Testfamilie');
+	});
+
+	it('back from the provider — submits setup with the restored household and without localRegistration', async () => {
+		// given
+		saveSetupDraft({
+			householdId: 'household-id',
+			householdName: 'Die Testfamilie',
+			householdImage: ''
+		});
+		mockPage.url = new URL('http://localhost:5173/setup?social');
+		mockGetPendingSocialRegistration.mockResolvedValue({
+			name: 'Max Mustermann',
+			email: 'max@example.com'
+		});
+		mockSetupHousehold.mockResolvedValue({
+			household: { id: 'household-id', name: 'Die Testfamilie' },
+			inviteToken: 'invite-token'
+		});
+		render(SetupWizard);
+
+		// when
+		await page.getByRole('button', { name: /Einrichtung abschließen/i }).click();
+
+		// then
+		await vi.waitFor(() =>
+			expect(mockSetupHousehold).toHaveBeenCalledWith({
+				householdSetup: {
+					household: { id: 'household-id', name: 'Die Testfamilie', image: '' },
+					member: expect.objectContaining({
+						name: 'Max Mustermann',
+						email: 'max@example.com',
+						isAdmin: true
+					})
+				}
+			})
+		);
+	});
+
+	it('back from the provider without a pending registration — shows an error toast', async () => {
+		// given
+		saveSetupDraft({
+			householdId: 'household-id',
+			householdName: 'Die Testfamilie',
+			householdImage: ''
+		});
+		mockPage.url = new URL('http://localhost:5173/setup?social');
+		mockGetPendingSocialRegistration.mockRejectedValue({ status: 404 });
+
+		// when
+		render(SetupWizard);
+
+		// then
+		await vi.waitFor(() => expect(mockAddToast).toHaveBeenCalled());
+	});
+
+	it('back from the provider with reason social-email-unverified — shows the unverified e-mail message', async () => {
+		// given
+		saveSetupDraft({
+			householdId: 'household-id',
+			householdName: 'Die Testfamilie',
+			householdImage: ''
+		});
+		mockPage.url = new URL('http://localhost:5173/setup?error&reason=social-email-unverified');
+
+		// when
+		render(SetupWizard);
+
+		// then
+		await expect.element(page.getByText(/keine bestätigte E-Mail-Adresse/)).toBeVisible();
 	});
 });

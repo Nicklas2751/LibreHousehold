@@ -9,10 +9,13 @@
 		type Household,
 		type HouseholdSetup,
 		HouseholdApi,
+		type LocalRegistration,
 		type Member,
 		MembersApi,
+		type PendingSocialRegistration,
 		type Problem,
-		ResponseError
+		ResponseError,
+		SessionApi
 	} from '../generated-sources/openapi';
 	import { apiConfiguration } from '$lib/api/httpClient';
 	import { extractErrorStatus } from '$lib/api/errorStatus';
@@ -39,10 +42,14 @@
 	import SocialLoginButtons from '$lib/SocialLoginButtons.svelte';
 	import { authDiscovery, loadAuthDiscovery } from '$lib/stores/authDiscoveryState.svelte';
 	import { SocialLoginContextContextEnum } from '../generated-sources/openapi';
+	import SocialRegistrationForm from '$lib/SocialRegistrationForm.svelte';
+	import { saveSetupDraft, takeSetupDraft } from '$lib/setupDraft';
+	import { page } from '$app/state';
 
 	const EMAIL_AVAILABILITY_DEBOUNCE_MS = 400;
+	const SOCIAL_EMAIL_UNVERIFIED_REASON = 'social-email-unverified';
 
-	const householdId: string = uuidv4();
+	let householdId: string = $state(uuidv4());
 	let inviteUrl: string = $state('');
 	const maxSteps: number = 3;
 	let step: number = $state(0);
@@ -51,8 +58,11 @@
 	let householdImage: string = $state('');
 	let serverEmailError: string | null = $state(null);
 	let closingSetup: boolean = $state(false);
+	let pendingRegistration: PendingSocialRegistration | null = $state(null);
+	let socialLoginError: string | null = $state(null);
 
 	const membersApi = new MembersApi(apiConfiguration);
+	const sessionApi = new SessionApi(apiConfiguration);
 	const checkEmailAvailability = createDebouncedAvailabilityChecker(
 		(email: string) => membersApi.checkEmailAvailability({ email }),
 		EMAIL_AVAILABILITY_DEBOUNCE_MS
@@ -60,7 +70,42 @@
 
 	onMount(() => {
 		loadAuthDiscovery();
+		resumeAfterSocialLogin();
 	});
+
+	// A social login leaves the SPA, so the household entered in step 0 comes back from the draft,
+	// and the provider's identity comes back from the server session.
+	async function resumeAfterSocialLogin() {
+		const params = page.url.searchParams;
+		if (!params.has('social') && !params.has('error')) {
+			return;
+		}
+		restoreSetupDraft();
+		if (params.get('reason') === SOCIAL_EMAIL_UNVERIFIED_REASON) {
+			socialLoginError = m['auth.error_social_email_unverified']();
+			return;
+		}
+		try {
+			pendingRegistration = await sessionApi.getPendingSocialRegistration();
+		} catch {
+			addToast(new Toast(m['auth.social_registration_missing'](), 'error'));
+		}
+	}
+
+	function restoreSetupDraft() {
+		const draft = takeSetupDraft();
+		if (!draft) {
+			return;
+		}
+		householdId = draft.householdId;
+		householdName = draft.householdName;
+		householdImage = draft.householdImage;
+		step = 1;
+	}
+
+	function keepSetupDraft() {
+		saveSetupDraft({ householdId, householdName, householdImage });
+	}
 
 	onDestroy(() => {
 		checkEmailAvailability.cancel();
@@ -144,8 +189,6 @@
 	}
 
 	async function finish(data: { name: string; email: string; avatar: string; password?: string }) {
-		const householdApi = new HouseholdApi(apiConfiguration);
-
 		const adminMember: Member = {
 			id: uuidv4(),
 			name: data.name,
@@ -153,16 +196,27 @@
 			avatar: data.avatar || undefined,
 			isAdmin: true
 		};
+		await submitSetup(adminMember, { password: data.password ?? '' });
+	}
+
+	// Without localRegistration, the server takes the e-mail from the pending social login identity.
+	async function finishSocialRegistration(name: string) {
+		if (!pendingRegistration) {
+			return;
+		}
+		await submitSetup({ id: uuidv4(), name, email: pendingRegistration.email, isAdmin: true });
+	}
+
+	async function submitSetup(adminMember: Member, localRegistration?: LocalRegistration) {
+		const householdApi = new HouseholdApi(apiConfiguration);
 		const household: Household = {
 			id: householdId,
 			name: householdName,
 			image: householdImage
 		};
-		const householdSetup: HouseholdSetup = {
-			household,
-			member: adminMember,
-			localRegistration: { password: data.password ?? '' }
-		};
+		const householdSetup: HouseholdSetup = localRegistration
+			? { household, member: adminMember, localRegistration }
+			: { household, member: adminMember };
 
 		serverEmailError = null;
 		try {
@@ -275,36 +329,58 @@
 		</form>
 	{:else if step === 1}
 		<h2 class="text-xl font-bold text-base-content">{m['setup.create_account_step.title']()}</h2>
-		{#if authDiscovery.localEnabled}
-			<MemberProfileForm
-				contextHint={m['setup.create_account_step.text']()}
+		{#if pendingRegistration}
+			<SocialRegistrationForm
+				registration={pendingRegistration}
+				hint={m['auth.social_registration_hint']()}
 				nameLabel={m['setup.create_account_step.admin_name_label']()}
 				nameHint={m['setup.create_account_step.admin_name_error']()}
-				namePlaceholder={m['setup.create_account_step.admin_name_placeholder']()}
-				emailLabel={m['setup.create_account_step.admin_email_label']()}
-				emailHint={m['setup.create_account_step.admin_email_error']()}
-				emailPlaceholder={m['setup.create_account_step.admin_email_placeholder']()}
-				backLabel={m['setup.create_account_step.back_button']()}
 				submitLabel={m['setup.finish_step.finish_button']()}
-				passwordLabel={m['setup.create_account_step.password_label']()}
-				passwordHint={m['setup.create_account_step.password_hint']()}
-				passwordPlaceholder={m['setup.create_account_step.password_placeholder']()}
-				{serverEmailError}
-				onClearEmailError={() => {
-					serverEmailError = null;
-				}}
-				onEmailInput={handleEmailInput}
-				onformsubmit={finish}
+				backLabel={m['setup.create_account_step.back_button']()}
+				errorMessage={serverEmailError}
+				onformsubmit={finishSocialRegistration}
 				onback={() => goBackToStep(step - 1)}
 			/>
 		{:else}
-			<p>{m['setup.create_account_step.text']()}</p>
-		{/if}
-		<SocialLoginButtons socialLoginContext={{ context: SocialLoginContextContextEnum.Setup }} />
-		{#if !authDiscovery.localEnabled}
-			<button type="button" class="btn w-full btn-outline" onclick={() => goBackToStep(step - 1)}>
-				{m['setup.create_account_step.back_button']()}
-			</button>
+			{#if socialLoginError}
+				<div class="alert alert-warning">
+					<span>{socialLoginError}</span>
+				</div>
+			{/if}
+			{#if authDiscovery.localEnabled}
+				<MemberProfileForm
+					contextHint={m['setup.create_account_step.text']()}
+					nameLabel={m['setup.create_account_step.admin_name_label']()}
+					nameHint={m['setup.create_account_step.admin_name_error']()}
+					namePlaceholder={m['setup.create_account_step.admin_name_placeholder']()}
+					emailLabel={m['setup.create_account_step.admin_email_label']()}
+					emailHint={m['setup.create_account_step.admin_email_error']()}
+					emailPlaceholder={m['setup.create_account_step.admin_email_placeholder']()}
+					backLabel={m['setup.create_account_step.back_button']()}
+					submitLabel={m['setup.finish_step.finish_button']()}
+					passwordLabel={m['setup.create_account_step.password_label']()}
+					passwordHint={m['setup.create_account_step.password_hint']()}
+					passwordPlaceholder={m['setup.create_account_step.password_placeholder']()}
+					{serverEmailError}
+					onClearEmailError={() => {
+						serverEmailError = null;
+					}}
+					onEmailInput={handleEmailInput}
+					onformsubmit={finish}
+					onback={() => goBackToStep(step - 1)}
+				/>
+			{:else}
+				<p>{m['setup.create_account_step.text']()}</p>
+			{/if}
+			<SocialLoginButtons
+				socialLoginContext={{ context: SocialLoginContextContextEnum.Setup }}
+				onbeforestart={keepSetupDraft}
+			/>
+			{#if !authDiscovery.localEnabled}
+				<button type="button" class="btn w-full btn-outline" onclick={() => goBackToStep(step - 1)}>
+					{m['setup.create_account_step.back_button']()}
+				</button>
+			{/if}
 		{/if}
 	{:else if step === 2}
 		<h2 class="text-xl font-bold text-base-content">{m['setup.finish_step.title']()}</h2>

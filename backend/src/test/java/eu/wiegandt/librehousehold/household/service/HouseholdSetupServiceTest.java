@@ -1,5 +1,8 @@
 package eu.wiegandt.librehousehold.household.service;
 import eu.wiegandt.librehousehold.household.AccountRegistered;
+import eu.wiegandt.librehousehold.household.ExternalIdentity;
+import eu.wiegandt.librehousehold.household.LocalLoginProperties;
+import eu.wiegandt.librehousehold.household.PendingSocialRegistrationStore;
 import eu.wiegandt.librehousehold.household.exception.*;
 import eu.wiegandt.librehousehold.household.mapper.*;
 import eu.wiegandt.librehousehold.household.model.*;
@@ -22,9 +25,11 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 
 import java.time.LocalDate;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.*;
@@ -49,6 +54,12 @@ class HouseholdSetupServiceTest {
 
     @Mock
     private ApplicationEventPublisher eventPublisher;
+
+    @Mock
+    private PendingSocialRegistrationStore pendingSocialRegistrationStore;
+
+    @Spy
+    private LocalLoginProperties localLoginProperties = new LocalLoginProperties(true);
 
     @Spy
     private HouseholdSetupMapper householdSetupMapper = Mappers.getMapper(HouseholdSetupMapper.class);
@@ -173,7 +184,7 @@ class HouseholdSetupServiceTest {
             service.setupHousehold(setup);
 
             // then
-            verify(accountService).createAccount(savedMember.getId(), setup.getLocalRegistration().getPassword());
+            verify(accountService).createAccount(savedMember.getId(), setup.getLocalRegistration().orElseThrow().getPassword());
         }
 
         @Test
@@ -189,7 +200,7 @@ class HouseholdSetupServiceTest {
 
             // then
             verify(accountSessionAuthenticator).authenticateAndPersistSession(
-                    setup.getMember().getEmail(), setup.getLocalRegistration().getPassword());
+                    setup.getMember().getEmail(), setup.getLocalRegistration().orElseThrow().getPassword());
         }
 
         @Test
@@ -224,10 +235,247 @@ class HouseholdSetupServiceTest {
         }
     }
 
+    @Nested
+    class setupHouseholdViaSocialLogin {
+
+        private static final ExternalIdentity IDENTITY =
+                new ExternalIdentity("google", "external-subject", "verified@example.com", "Provider Name");
+
+        @Test
+        void noPendingRegistration_throwsNoPendingSocialRegistrationException() {
+            // given
+            doReturn(Optional.empty()).when(pendingSocialRegistrationStore).find();
+
+            // when / then
+            assertThatThrownBy(() -> service.setupHousehold(buildSocialSetup()))
+                    .isInstanceOf(NoPendingSocialRegistrationException.class);
+        }
+
+        @Test
+        void noPendingRegistration_savesNothing() {
+            // given
+            doReturn(Optional.empty()).when(pendingSocialRegistrationStore).find();
+
+            // when
+            catchThrowable(() -> service.setupHousehold(buildSocialSetup()));
+
+            // then
+            verifyNoInteractions(householdRepository, memberRepository, accountService);
+        }
+
+        @Test
+        void pendingRegistration_savesAdminMemberWithIdentityEmailAndRequestedName() {
+            // given
+            var savedHousehold = Instancio.create(HouseholdEntity.class);
+            var setup = buildSocialSetup();
+            doReturn(Optional.of(IDENTITY)).when(pendingSocialRegistrationStore).find();
+            doReturn(savedHousehold).when(householdRepository).save(any(HouseholdEntity.class));
+            doReturn(Instancio.create(MemberEntity.class)).when(memberRepository).save(any(MemberEntity.class));
+            doReturn(Instancio.create(InviteEntity.class)).when(inviteRepository).save(any(InviteEntity.class));
+            var expected = new MemberEntity(setup.getMember().getId(), setup.getMember().getName(), IDENTITY.email(),
+                    setup.getMember().getAvatar().orElse(null), savedHousehold.id(), true);
+
+            // when
+            service.setupHousehold(setup);
+
+            // then
+            verify(memberRepository).save(expected);
+        }
+
+        @Test
+        void pendingRegistration_createsFederatedAccountForSavedMember() {
+            // given
+            var savedMember = Instancio.create(MemberEntity.class);
+            doReturn(Optional.of(IDENTITY)).when(pendingSocialRegistrationStore).find();
+            doReturn(Instancio.create(HouseholdEntity.class)).when(householdRepository).save(any(HouseholdEntity.class));
+            doReturn(savedMember).when(memberRepository).save(any(MemberEntity.class));
+            doReturn(Instancio.create(InviteEntity.class)).when(inviteRepository).save(any(InviteEntity.class));
+
+            // when
+            service.setupHousehold(buildSocialSetup());
+
+            // then
+            verify(accountService).createFederatedAccount(savedMember.getId());
+        }
+
+        @Test
+        void pendingRegistration_linksExternalIdentityToSavedMember() {
+            // given
+            var savedMember = Instancio.create(MemberEntity.class);
+            doReturn(Optional.of(IDENTITY)).when(pendingSocialRegistrationStore).find();
+            doReturn(Instancio.create(HouseholdEntity.class)).when(householdRepository).save(any(HouseholdEntity.class));
+            doReturn(savedMember).when(memberRepository).save(any(MemberEntity.class));
+            doReturn(Instancio.create(InviteEntity.class)).when(inviteRepository).save(any(InviteEntity.class));
+
+            // when
+            service.setupHousehold(buildSocialSetup());
+
+            // then
+            verify(accountService).linkExternalIdentity(savedMember.getId(), IDENTITY.registrationId(), IDENTITY.subject());
+        }
+
+        @Test
+        void pendingRegistration_consumesPendingRegistration() {
+            // given
+            doReturn(Optional.of(IDENTITY)).when(pendingSocialRegistrationStore).find();
+            doReturn(Instancio.create(HouseholdEntity.class)).when(householdRepository).save(any(HouseholdEntity.class));
+            doReturn(Instancio.create(MemberEntity.class)).when(memberRepository).save(any(MemberEntity.class));
+            doReturn(Instancio.create(InviteEntity.class)).when(inviteRepository).save(any(InviteEntity.class));
+
+            // when
+            service.setupHousehold(buildSocialSetup());
+
+            // then
+            verify(pendingSocialRegistrationStore).consume();
+        }
+
+        @Test
+        void pendingRegistration_authenticatesMemberByIdentityEmail() {
+            // given
+            doReturn(Optional.of(IDENTITY)).when(pendingSocialRegistrationStore).find();
+            doReturn(Instancio.create(HouseholdEntity.class)).when(householdRepository).save(any(HouseholdEntity.class));
+            doReturn(Instancio.create(MemberEntity.class)).when(memberRepository).save(any(MemberEntity.class));
+            doReturn(Instancio.create(InviteEntity.class)).when(inviteRepository).save(any(InviteEntity.class));
+
+            // when
+            service.setupHousehold(buildSocialSetup());
+
+            // then
+            verify(accountSessionAuthenticator).authenticateFederatedAndPersistSession(IDENTITY.email());
+        }
+
+        /**
+         * AccountRegistered triggers the verification e-mail, but the provider already verified
+         * the address.
+         */
+        @Test
+        void pendingRegistration_publishesNoAccountRegisteredEvent() {
+            // given
+            doReturn(Optional.of(IDENTITY)).when(pendingSocialRegistrationStore).find();
+            doReturn(Instancio.create(HouseholdEntity.class)).when(householdRepository).save(any(HouseholdEntity.class));
+            doReturn(Instancio.create(MemberEntity.class)).when(memberRepository).save(any(MemberEntity.class));
+            doReturn(Instancio.create(InviteEntity.class)).when(inviteRepository).save(any(InviteEntity.class));
+
+            // when
+            service.setupHousehold(buildSocialSetup());
+
+            // then
+            verifyNoInteractions(eventPublisher);
+        }
+
+        @Test
+        void pendingRegistration_inviteTokenReturnedInResponse() {
+            // given
+            var savedInvite = Instancio.create(InviteEntity.class);
+            doReturn(Optional.of(IDENTITY)).when(pendingSocialRegistrationStore).find();
+            doReturn(Instancio.create(HouseholdEntity.class)).when(householdRepository).save(any(HouseholdEntity.class));
+            doReturn(Instancio.create(MemberEntity.class)).when(memberRepository).save(any(MemberEntity.class));
+            doReturn(savedInvite).when(inviteRepository).save(any(InviteEntity.class));
+
+            // when
+            var result = service.setupHousehold(buildSocialSetup());
+
+            // then
+            assertThat(result.getInviteToken()).isEqualTo(savedInvite.token());
+        }
+
+        @Test
+        void emailAlreadyTaken_throwsMemberAlreadyExistsException() {
+            // given
+            doReturn(Optional.of(IDENTITY)).when(pendingSocialRegistrationStore).find();
+            doReturn(Instancio.create(HouseholdEntity.class)).when(householdRepository).save(any(HouseholdEntity.class));
+            doThrow(DataIntegrityViolationException.class).when(memberRepository).save(any(MemberEntity.class));
+
+            // when / then
+            assertThatThrownBy(() -> service.setupHousehold(buildSocialSetup()))
+                    .isInstanceOf(MemberAlreadyExistsException.class);
+        }
+
+        @Test
+        void identityAlreadyLinked_throwsMemberAlreadyExistsException() {
+            // given
+            var savedMember = Instancio.create(MemberEntity.class);
+            doReturn(Optional.of(IDENTITY)).when(pendingSocialRegistrationStore).find();
+            doReturn(Instancio.create(HouseholdEntity.class)).when(householdRepository).save(any(HouseholdEntity.class));
+            doReturn(savedMember).when(memberRepository).save(any(MemberEntity.class));
+            doThrow(DataIntegrityViolationException.class).when(accountService)
+                    .linkExternalIdentity(savedMember.getId(), IDENTITY.registrationId(), IDENTITY.subject());
+
+            // when / then
+            assertThatThrownBy(() -> service.setupHousehold(buildSocialSetup()))
+                    .isInstanceOf(MemberAlreadyExistsException.class);
+        }
+
+        @Test
+        void localRegistrationAlongsidePendingRegistration_createsPasswordAccount() {
+            // given — an explicit password in the request wins over a pending social registration
+            var savedMember = Instancio.create(MemberEntity.class);
+            lenient().doReturn(Optional.of(IDENTITY)).when(pendingSocialRegistrationStore).find();
+            doReturn(Instancio.create(HouseholdEntity.class)).when(householdRepository).save(any(HouseholdEntity.class));
+            doReturn(savedMember).when(memberRepository).save(any(MemberEntity.class));
+            doReturn(Instancio.create(InviteEntity.class)).when(inviteRepository).save(any(InviteEntity.class));
+            var setup = buildSetup();
+
+            // when
+            service.setupHousehold(setup);
+
+            // then
+            verify(accountService).createAccount(savedMember.getId(), setup.getLocalRegistration().orElseThrow().getPassword());
+        }
+    }
+
+    @Nested
+    class setupHouseholdWithLocalLoginDisabled {
+
+        @Test
+        void localRegistration_throwsLocalLoginDisabledException() {
+            // when / then
+            assertThatThrownBy(() -> serviceWithLocalLoginDisabled().setupHousehold(buildSetup()))
+                    .isInstanceOf(LocalLoginDisabledException.class);
+        }
+
+        @Test
+        void localRegistration_savesNothing() {
+            // when
+            catchThrowable(() -> serviceWithLocalLoginDisabled().setupHousehold(buildSetup()));
+
+            // then
+            verifyNoInteractions(householdRepository, memberRepository, accountService);
+        }
+
+        @Test
+        void pendingSocialRegistration_createsFederatedAccount() {
+            // given
+            var savedMember = Instancio.create(MemberEntity.class);
+            doReturn(Optional.of(new ExternalIdentity("google", "external-subject", "verified@example.com", null)))
+                    .when(pendingSocialRegistrationStore).find();
+            doReturn(Instancio.create(HouseholdEntity.class)).when(householdRepository).save(any(HouseholdEntity.class));
+            doReturn(savedMember).when(memberRepository).save(any(MemberEntity.class));
+            doReturn(Instancio.create(InviteEntity.class)).when(inviteRepository).save(any(InviteEntity.class));
+
+            // when
+            serviceWithLocalLoginDisabled().setupHousehold(buildSocialSetup());
+
+            // then
+            verify(accountService).createFederatedAccount(savedMember.getId());
+        }
+
+        private HouseholdSetupService serviceWithLocalLoginDisabled() {
+            return new HouseholdSetupService(householdRepository, memberRepository, inviteRepository,
+                    householdSetupMapper, memberMapper, accountService, accountSessionAuthenticator, eventPublisher,
+                    pendingSocialRegistrationStore, new LocalLoginProperties(false));
+        }
+    }
+
+    private HouseholdSetup buildSocialSetup() {
+        return new HouseholdSetup(Instancio.create(eu.wiegandt.librehousehold.model.Household.class),
+                Instancio.create(Member.class));
+    }
+
     private HouseholdSetup buildSetup() {
         var member = Instancio.create(Member.class);
         var household = Instancio.create(eu.wiegandt.librehousehold.model.Household.class);
         var localRegistration = Instancio.create(LocalRegistration.class);
-        return new HouseholdSetup(household, member, localRegistration);
+        return new HouseholdSetup(household, member).localRegistration(localRegistration);
     }
 }

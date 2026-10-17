@@ -1,6 +1,10 @@
 package eu.wiegandt.librehousehold.household.service;
 
 import eu.wiegandt.librehousehold.TestcontainersConfiguration;
+import eu.wiegandt.librehousehold.household.ExternalIdentity;
+import eu.wiegandt.librehousehold.household.MemberQuery;
+import eu.wiegandt.librehousehold.household.PendingSocialRegistrationStore;
+import eu.wiegandt.librehousehold.household.model.AccountEntity;
 import eu.wiegandt.librehousehold.household.exception.HouseholdAlreadyExistsException;
 import eu.wiegandt.librehousehold.household.exception.MemberAlreadyExistsException;
 import eu.wiegandt.librehousehold.household.mapper.HouseholdSetupMapper;
@@ -66,6 +70,12 @@ class HouseholdSetupServiceIT {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private PendingSocialRegistrationStore pendingSocialRegistrationStore;
+
+    @Autowired
+    private MemberQuery memberQuery;
+
     private UUID createdHouseholdId;
 
     @BeforeEach
@@ -93,7 +103,7 @@ class HouseholdSetupServiceIT {
         createdHouseholdId = household.getId();
 
         // when
-        service.setupHousehold(new HouseholdSetup(household, member, localRegistration));
+        service.setupHousehold(new HouseholdSetup(household, member).localRegistration(localRegistration));
 
         // then
         assertThat(accountRepository.findById(member.getId()))
@@ -110,7 +120,7 @@ class HouseholdSetupServiceIT {
         createdHouseholdId = household.getId();
 
         // when
-        service.setupHousehold(new HouseholdSetup(household, member, localRegistration));
+        service.setupHousehold(new HouseholdSetup(household, member).localRegistration(localRegistration));
 
         // then
         assertThat(householdRepository.findById(household.getId()))
@@ -126,7 +136,7 @@ class HouseholdSetupServiceIT {
         createdHouseholdId = household.getId();
 
         // when
-        service.setupHousehold(new HouseholdSetup(household, member, localRegistration));
+        service.setupHousehold(new HouseholdSetup(household, member).localRegistration(localRegistration));
 
         // then
         assertThat(memberRepository.findById(member.getId()))
@@ -142,7 +152,7 @@ class HouseholdSetupServiceIT {
         var member1 = Instancio.create(Member.class);
         var household = Instancio.create(Household.class);
         createdHouseholdId = household.getId();
-        service.setupHousehold(new HouseholdSetup(household, member1, Instancio.create(LocalRegistration.class)));
+        service.setupHousehold(new HouseholdSetup(household, member1).localRegistration(Instancio.create(LocalRegistration.class)));
 
         var member2 = Instancio.create(Member.class);
         var conflictingHousehold = Instancio.of(Household.class)
@@ -151,7 +161,7 @@ class HouseholdSetupServiceIT {
         var localRegistration = Instancio.create(LocalRegistration.class);
 
         // when / then
-        assertThatThrownBy(() -> service.setupHousehold(new HouseholdSetup(conflictingHousehold, member2, localRegistration)))
+        assertThatThrownBy(() -> service.setupHousehold(new HouseholdSetup(conflictingHousehold, member2).localRegistration(localRegistration)))
                 .isInstanceOf(HouseholdAlreadyExistsException.class);
     }
 
@@ -161,7 +171,7 @@ class HouseholdSetupServiceIT {
         var member1 = Instancio.create(Member.class);
         var household1 = Instancio.create(Household.class);
         createdHouseholdId = household1.getId();
-        service.setupHousehold(new HouseholdSetup(household1, member1, Instancio.create(LocalRegistration.class)));
+        service.setupHousehold(new HouseholdSetup(household1, member1).localRegistration(Instancio.create(LocalRegistration.class)));
 
         var member2 = Instancio.of(Member.class)
                 .set(field(Member::getEmail), member1.getEmail())
@@ -170,7 +180,7 @@ class HouseholdSetupServiceIT {
         var localRegistration = Instancio.create(LocalRegistration.class);
 
         // when / then
-        assertThatThrownBy(() -> service.setupHousehold(new HouseholdSetup(household2, member2, localRegistration)))
+        assertThatThrownBy(() -> service.setupHousehold(new HouseholdSetup(household2, member2).localRegistration(localRegistration)))
                 .isInstanceOf(MemberAlreadyExistsException.class);
     }
 
@@ -183,7 +193,7 @@ class HouseholdSetupServiceIT {
         createdHouseholdId = household.getId();
 
         // when
-        var result = service.setupHousehold(new HouseholdSetup(household, member, localRegistration));
+        var result = service.setupHousehold(new HouseholdSetup(household, member).localRegistration(localRegistration));
 
         // then
         assertThat(inviteRepository.findAll())
@@ -200,11 +210,51 @@ class HouseholdSetupServiceIT {
         createdHouseholdId = household.getId();
 
         // when
-        var result = service.setupHousehold(new HouseholdSetup(household, member, localRegistration));
+        var result = service.setupHousehold(new HouseholdSetup(household, member).localRegistration(localRegistration));
 
         // then
         assertThat(inviteRepository.findAll())
                 .anyMatch(invite -> invite.token().equals(result.getInviteToken())
                         && invite.validUntil().equals(expectedValidUntil));
+    }
+
+    @Test
+    void setupHousehold_pendingSocialRegistration_persistsMemberWithIdentityEmailLinkedToIdentity() {
+        // given
+        var household = Instancio.create(Household.class);
+        var identity = new ExternalIdentity("google", "subject-" + UUID.randomUUID(),
+                "social-" + UUID.randomUUID() + "@example.com", "Provider Name");
+        createdHouseholdId = household.getId();
+        RequestContextHolder.setRequestAttributes(
+                new ServletRequestAttributes(new MockHttpServletRequest(), new MockHttpServletResponse()));
+        pendingSocialRegistrationStore.store(identity);
+
+        // when
+        service.setupHousehold(new HouseholdSetup(household, Instancio.create(Member.class)));
+
+        // then
+        assertThat(memberQuery.findEmailByExternalIdentity(identity.registrationId(), identity.subject()))
+                .contains(identity.email());
+    }
+
+    @Test
+    void setupHousehold_pendingSocialRegistration_persistsVerifiedAccountWithoutPassword() {
+        // given
+        var household = Instancio.create(Household.class);
+        var member = Instancio.create(Member.class);
+        createdHouseholdId = household.getId();
+        RequestContextHolder.setRequestAttributes(
+                new ServletRequestAttributes(new MockHttpServletRequest(), new MockHttpServletResponse()));
+        pendingSocialRegistrationStore.store(new ExternalIdentity("google", "subject-" + UUID.randomUUID(),
+                "social-" + UUID.randomUUID() + "@example.com", null));
+
+        // when
+        service.setupHousehold(new HouseholdSetup(household, member));
+
+        // then
+        assertThat(accountRepository.findById(member.getId()))
+                .get()
+                .extracting(AccountEntity::passwordHash, AccountEntity::emailVerified)
+                .containsExactly(null, true);
     }
 }

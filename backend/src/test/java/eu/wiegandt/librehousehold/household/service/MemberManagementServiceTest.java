@@ -1,5 +1,8 @@
 package eu.wiegandt.librehousehold.household.service;
 import eu.wiegandt.librehousehold.household.AccountRegistered;
+import eu.wiegandt.librehousehold.household.ExternalIdentity;
+import eu.wiegandt.librehousehold.household.LocalLoginProperties;
+import eu.wiegandt.librehousehold.household.PendingSocialRegistrationStore;
 import eu.wiegandt.librehousehold.household.HouseholdDeleted;
 import eu.wiegandt.librehousehold.household.MemberRemoved;
 import eu.wiegandt.librehousehold.household.PasswordResetRequested;
@@ -7,12 +10,15 @@ import eu.wiegandt.librehousehold.household.VerificationEmailRequested;
 import eu.wiegandt.librehousehold.household.exception.EmailNotVerifiedException;
 import eu.wiegandt.librehousehold.household.exception.HouseholdAdminCannotBeRemovedException;
 import eu.wiegandt.librehousehold.household.exception.InvalidInviteException;
+import eu.wiegandt.librehousehold.household.exception.LocalLoginDisabledException;
 import eu.wiegandt.librehousehold.household.exception.MemberAlreadyExistsException;
 import eu.wiegandt.librehousehold.household.exception.MemberNotFoundException;
+import eu.wiegandt.librehousehold.household.exception.NoPendingSocialRegistrationException;
 import eu.wiegandt.librehousehold.household.mapper.*;
 import eu.wiegandt.librehousehold.household.model.*;
 import eu.wiegandt.librehousehold.household.repository.*;
 
+import eu.wiegandt.librehousehold.model.LocalRegistration;
 import eu.wiegandt.librehousehold.model.Member;
 import eu.wiegandt.librehousehold.model.MemberRegistration;
 import eu.wiegandt.librehousehold.model.MemberUpdate;
@@ -36,6 +42,7 @@ import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.instancio.Select.field;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -66,6 +73,12 @@ class MemberManagementServiceTest {
 
     @Mock
     private AccountSessionAuthenticator accountSessionAuthenticator;
+
+    @Mock
+    private PendingSocialRegistrationStore pendingSocialRegistrationStore;
+
+    @Spy
+    private LocalLoginProperties localLoginProperties = new LocalLoginProperties(true);
 
     @InjectMocks
     private MemberManagementService service;
@@ -304,7 +317,7 @@ class MemberManagementServiceTest {
             service.joinHousehold(token, registration);
 
             // then
-            verify(accountService).createAccount(savedEntity.id(), registration.getLocalRegistration().getPassword());
+            verify(accountService).createAccount(savedEntity.id(), registration.getLocalRegistration().orElseThrow().getPassword());
         }
 
         @Test
@@ -343,7 +356,287 @@ class MemberManagementServiceTest {
 
             // then
             verify(accountSessionAuthenticator).authenticateAndPersistSession(
-                    registration.getEmail(), registration.getLocalRegistration().getPassword());
+                    registration.getEmail(), registration.getLocalRegistration().orElseThrow().getPassword());
+        }
+    }
+
+    @Nested
+    class joinHouseholdViaSocialLogin {
+
+        private static final ExternalIdentity IDENTITY =
+                new ExternalIdentity("google", "external-subject", "verified@example.com", "Provider Name");
+
+        @Test
+        void noPendingRegistration_throwsNoPendingSocialRegistrationException() {
+            // given
+            var token = UUID.randomUUID();
+            var invite = Instancio.of(InviteEntity.class)
+                    .set(field(InviteEntity::validUntil), LocalDate.now().plusDays(3))
+                    .create();
+            doReturn(Optional.of(invite)).when(inviteRepository).findByToken(token);
+            doReturn(Optional.empty()).when(pendingSocialRegistrationStore).find();
+
+            // when / then
+            assertThatThrownBy(() -> service.joinHousehold(token, buildSocialRegistration()))
+                    .isInstanceOf(NoPendingSocialRegistrationException.class);
+        }
+
+        @Test
+        void noPendingRegistration_savesNothing() {
+            // given
+            var token = UUID.randomUUID();
+            var invite = Instancio.of(InviteEntity.class)
+                    .set(field(InviteEntity::validUntil), LocalDate.now().plusDays(3))
+                    .create();
+            doReturn(Optional.of(invite)).when(inviteRepository).findByToken(token);
+            doReturn(Optional.empty()).when(pendingSocialRegistrationStore).find();
+
+            // when
+            catchThrowable(() -> service.joinHousehold(token, buildSocialRegistration()));
+
+            // then
+            verifyNoInteractions(memberRepository, accountService);
+        }
+
+        @Test
+        void pendingRegistration_savesNonAdminMemberWithIdentityEmailAndRequestedName() {
+            // given
+            var token = UUID.randomUUID();
+            var invite = Instancio.of(InviteEntity.class)
+                    .set(field(InviteEntity::validUntil), LocalDate.now().plusDays(3))
+                    .create();
+            var registration = buildSocialRegistration();
+            doReturn(Optional.of(invite)).when(inviteRepository).findByToken(token);
+            doReturn(Optional.of(IDENTITY)).when(pendingSocialRegistrationStore).find();
+            doReturn(Instancio.of(memberEntityModel).create()).when(memberRepository).save(any(MemberEntity.class));
+            var expected = new MemberEntity(registration.getId(), registration.getName(), IDENTITY.email(),
+                    registration.getAvatar().orElse(null), invite.householdId(), false);
+
+            // when
+            service.joinHousehold(token, registration);
+
+            // then
+            verify(memberRepository).save(expected);
+        }
+
+        @Test
+        void pendingRegistration_createsFederatedAccountForSavedMember() {
+            // given
+            var token = UUID.randomUUID();
+            var invite = Instancio.of(InviteEntity.class)
+                    .set(field(InviteEntity::validUntil), LocalDate.now().plusDays(3))
+                    .create();
+            var savedEntity = Instancio.of(memberEntityModel).create();
+            doReturn(Optional.of(invite)).when(inviteRepository).findByToken(token);
+            doReturn(Optional.of(IDENTITY)).when(pendingSocialRegistrationStore).find();
+            doReturn(savedEntity).when(memberRepository).save(any(MemberEntity.class));
+
+            // when
+            service.joinHousehold(token, buildSocialRegistration());
+
+            // then
+            verify(accountService).createFederatedAccount(savedEntity.id());
+        }
+
+        @Test
+        void pendingRegistration_linksExternalIdentityToSavedMember() {
+            // given
+            var token = UUID.randomUUID();
+            var invite = Instancio.of(InviteEntity.class)
+                    .set(field(InviteEntity::validUntil), LocalDate.now().plusDays(3))
+                    .create();
+            var savedEntity = Instancio.of(memberEntityModel).create();
+            doReturn(Optional.of(invite)).when(inviteRepository).findByToken(token);
+            doReturn(Optional.of(IDENTITY)).when(pendingSocialRegistrationStore).find();
+            doReturn(savedEntity).when(memberRepository).save(any(MemberEntity.class));
+
+            // when
+            service.joinHousehold(token, buildSocialRegistration());
+
+            // then
+            verify(accountService).linkExternalIdentity(savedEntity.id(), IDENTITY.registrationId(), IDENTITY.subject());
+        }
+
+        @Test
+        void pendingRegistration_consumesPendingRegistration() {
+            // given
+            var token = UUID.randomUUID();
+            var invite = Instancio.of(InviteEntity.class)
+                    .set(field(InviteEntity::validUntil), LocalDate.now().plusDays(3))
+                    .create();
+            doReturn(Optional.of(invite)).when(inviteRepository).findByToken(token);
+            doReturn(Optional.of(IDENTITY)).when(pendingSocialRegistrationStore).find();
+            doReturn(Instancio.of(memberEntityModel).create()).when(memberRepository).save(any(MemberEntity.class));
+
+            // when
+            service.joinHousehold(token, buildSocialRegistration());
+
+            // then
+            verify(pendingSocialRegistrationStore).consume();
+        }
+
+        @Test
+        void pendingRegistration_authenticatesMemberByIdentityEmail() {
+            // given
+            var token = UUID.randomUUID();
+            var invite = Instancio.of(InviteEntity.class)
+                    .set(field(InviteEntity::validUntil), LocalDate.now().plusDays(3))
+                    .create();
+            doReturn(Optional.of(invite)).when(inviteRepository).findByToken(token);
+            doReturn(Optional.of(IDENTITY)).when(pendingSocialRegistrationStore).find();
+            doReturn(Instancio.of(memberEntityModel).create()).when(memberRepository).save(any(MemberEntity.class));
+
+            // when
+            service.joinHousehold(token, buildSocialRegistration());
+
+            // then
+            verify(accountSessionAuthenticator).authenticateFederatedAndPersistSession(IDENTITY.email());
+        }
+
+        /**
+         * AccountRegistered triggers the verification e-mail, but the provider already verified
+         * the address.
+         */
+        @Test
+        void pendingRegistration_publishesNoAccountRegisteredEvent() {
+            // given
+            var token = UUID.randomUUID();
+            var invite = Instancio.of(InviteEntity.class)
+                    .set(field(InviteEntity::validUntil), LocalDate.now().plusDays(3))
+                    .create();
+            doReturn(Optional.of(invite)).when(inviteRepository).findByToken(token);
+            doReturn(Optional.of(IDENTITY)).when(pendingSocialRegistrationStore).find();
+            doReturn(Instancio.of(memberEntityModel).create()).when(memberRepository).save(any(MemberEntity.class));
+
+            // when
+            service.joinHousehold(token, buildSocialRegistration());
+
+            // then
+            verifyNoInteractions(eventPublisher);
+        }
+
+        @Test
+        void emailAlreadyTaken_throwsMemberAlreadyExistsException() {
+            // given
+            var token = UUID.randomUUID();
+            var invite = Instancio.of(InviteEntity.class)
+                    .set(field(InviteEntity::validUntil), LocalDate.now().plusDays(3))
+                    .create();
+            doReturn(Optional.of(invite)).when(inviteRepository).findByToken(token);
+            doReturn(Optional.of(IDENTITY)).when(pendingSocialRegistrationStore).find();
+            doThrow(DataIntegrityViolationException.class).when(memberRepository).save(any(MemberEntity.class));
+
+            // when / then
+            assertThatThrownBy(() -> service.joinHousehold(token, buildSocialRegistration()))
+                    .isInstanceOf(MemberAlreadyExistsException.class);
+        }
+
+        @Test
+        void identityAlreadyLinked_throwsMemberAlreadyExistsException() {
+            // given
+            var token = UUID.randomUUID();
+            var invite = Instancio.of(InviteEntity.class)
+                    .set(field(InviteEntity::validUntil), LocalDate.now().plusDays(3))
+                    .create();
+            var savedEntity = Instancio.of(memberEntityModel).create();
+            doReturn(Optional.of(invite)).when(inviteRepository).findByToken(token);
+            doReturn(Optional.of(IDENTITY)).when(pendingSocialRegistrationStore).find();
+            doReturn(savedEntity).when(memberRepository).save(any(MemberEntity.class));
+            doThrow(DataIntegrityViolationException.class).when(accountService)
+                    .linkExternalIdentity(savedEntity.id(), IDENTITY.registrationId(), IDENTITY.subject());
+
+            // when / then
+            assertThatThrownBy(() -> service.joinHousehold(token, buildSocialRegistration()))
+                    .isInstanceOf(MemberAlreadyExistsException.class);
+        }
+
+        @Test
+        void localRegistrationAlongsidePendingRegistration_createsPasswordAccount() {
+            // given — an explicit password in the request wins over a pending social registration
+            var token = UUID.randomUUID();
+            var invite = Instancio.of(InviteEntity.class)
+                    .set(field(InviteEntity::validUntil), LocalDate.now().plusDays(3))
+                    .create();
+            var savedEntity = Instancio.of(memberEntityModel).create();
+            var registration = buildSocialRegistration().localRegistration(new LocalRegistration("correct horse battery staple"));
+            doReturn(Optional.of(invite)).when(inviteRepository).findByToken(token);
+            lenient().doReturn(Optional.of(IDENTITY)).when(pendingSocialRegistrationStore).find();
+            doReturn(savedEntity).when(memberRepository).save(any(MemberEntity.class));
+
+            // when
+            service.joinHousehold(token, registration);
+
+            // then
+            verify(accountService).createAccount(savedEntity.id(), "correct horse battery staple");
+        }
+
+        private MemberRegistration buildSocialRegistration() {
+            return new MemberRegistration(UUID.randomUUID(), "Requested Name", "typed@example.com");
+        }
+    }
+
+    @Nested
+    class joinHouseholdWithLocalLoginDisabled {
+
+        @Test
+        void localRegistration_throwsLocalLoginDisabledException() {
+            // given
+            var token = UUID.randomUUID();
+            var invite = Instancio.of(InviteEntity.class)
+                    .set(field(InviteEntity::validUntil), LocalDate.now().plusDays(3))
+                    .create();
+            var registration = new MemberRegistration(UUID.randomUUID(), "Max Mustermann", "max@example.com")
+                    .localRegistration(new LocalRegistration("correct horse battery staple"));
+            doReturn(Optional.of(invite)).when(inviteRepository).findByToken(token);
+
+            // when / then
+            assertThatThrownBy(() -> serviceWithLocalLoginDisabled().joinHousehold(token, registration))
+                    .isInstanceOf(LocalLoginDisabledException.class);
+        }
+
+        @Test
+        void localRegistration_savesNothing() {
+            // given
+            var token = UUID.randomUUID();
+            var invite = Instancio.of(InviteEntity.class)
+                    .set(field(InviteEntity::validUntil), LocalDate.now().plusDays(3))
+                    .create();
+            var registration = new MemberRegistration(UUID.randomUUID(), "Max Mustermann", "max@example.com")
+                    .localRegistration(new LocalRegistration("correct horse battery staple"));
+            doReturn(Optional.of(invite)).when(inviteRepository).findByToken(token);
+
+            // when
+            catchThrowable(() -> serviceWithLocalLoginDisabled().joinHousehold(token, registration));
+
+            // then
+            verifyNoInteractions(memberRepository, accountService);
+        }
+
+        @Test
+        void pendingSocialRegistration_createsFederatedAccount() {
+            // given
+            var token = UUID.randomUUID();
+            var invite = Instancio.of(InviteEntity.class)
+                    .set(field(InviteEntity::validUntil), LocalDate.now().plusDays(3))
+                    .create();
+            var savedEntity = Instancio.of(memberEntityModel).create();
+            doReturn(Optional.of(invite)).when(inviteRepository).findByToken(token);
+            doReturn(Optional.of(new ExternalIdentity("google", "external-subject", "verified@example.com", null)))
+                    .when(pendingSocialRegistrationStore).find();
+            doReturn(savedEntity).when(memberRepository).save(any(MemberEntity.class));
+
+            // when
+            serviceWithLocalLoginDisabled().joinHousehold(token,
+                    new MemberRegistration(UUID.randomUUID(), "Max Mustermann", "max@example.com"));
+
+            // then
+            verify(accountService).createFederatedAccount(savedEntity.id());
+        }
+
+        private MemberManagementService serviceWithLocalLoginDisabled() {
+            return new MemberManagementService(memberRepository, householdRepository, inviteRepository, memberMapper,
+                    memberRegistrationMapper, eventPublisher, accountService, accountSessionAuthenticator,
+                    pendingSocialRegistrationStore, new LocalLoginProperties(false));
         }
     }
 

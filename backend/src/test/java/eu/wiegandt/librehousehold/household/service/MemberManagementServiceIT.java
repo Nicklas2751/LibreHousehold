@@ -1,6 +1,9 @@
 package eu.wiegandt.librehousehold.household.service;
 
 import eu.wiegandt.librehousehold.TestcontainersConfiguration;
+import eu.wiegandt.librehousehold.household.ExternalIdentity;
+import eu.wiegandt.librehousehold.household.PendingSocialRegistrationStore;
+import eu.wiegandt.librehousehold.household.model.AccountEntity;
 import eu.wiegandt.librehousehold.household.exception.HouseholdAdminCannotBeRemovedException;
 import eu.wiegandt.librehousehold.household.exception.InvalidInviteException;
 import eu.wiegandt.librehousehold.household.exception.MemberAlreadyExistsException;
@@ -72,6 +75,9 @@ class MemberManagementServiceIT {
     @Autowired
     private AccountService accountService;
 
+    @Autowired
+    private PendingSocialRegistrationStore pendingSocialRegistrationStore;
+
     private HouseholdSetupResponse setupResponse;
     private Household existingHousehold;
     private final List<UUID> createdHouseholdIds = new ArrayList<>();
@@ -83,7 +89,7 @@ class MemberManagementServiceIT {
         var member = Instancio.create(Member.class);
         existingHousehold = Instancio.create(Household.class);
         var localRegistration = Instancio.create(LocalRegistration.class);
-        setupResponse = setupService.setupHousehold(new HouseholdSetup(existingHousehold, member, localRegistration));
+        setupResponse = setupService.setupHousehold(new HouseholdSetup(existingHousehold, member).localRegistration(localRegistration));
         createdHouseholdIds.add(existingHousehold.getId());
     }
 
@@ -157,7 +163,7 @@ class MemberManagementServiceIT {
             // then
             assertThat(accountRepository.findById(registration.getId()))
                     .hasValueSatisfying(account -> assertThat(passwordEncoder.matches(
-                            registration.getLocalRegistration().getPassword(), account.passwordHash())).isTrue());
+                            registration.getLocalRegistration().orElseThrow().getPassword(), account.passwordHash())).isTrue());
         }
 
         @Test
@@ -182,11 +188,8 @@ class MemberManagementServiceIT {
 
             var household = Instancio.create(Household.class);
             createdHouseholdIds.add(household.getId());
-            var token2 = setupService.setupHousehold(new HouseholdSetup(
-                    household,
-                    Instancio.create(Member.class),
-                    Instancio.create(LocalRegistration.class)
-            )).getInviteToken();
+            var token2 = setupService.setupHousehold(new HouseholdSetup(household, Instancio.create(Member.class))
+                    .localRegistration(Instancio.create(LocalRegistration.class))).getInviteToken();
             var registration2 = Instancio.of(MemberRegistration.class)
                     .set(field(MemberRegistration::getEmail), registration.getEmail())
                     .create();
@@ -194,6 +197,58 @@ class MemberManagementServiceIT {
             // when / then
             assertThatThrownBy(() -> memberManagementService.joinHousehold(token2, registration2))
                     .isInstanceOf(MemberAlreadyExistsException.class);
+        }
+    }
+
+    @Nested
+    class joinHouseholdViaSocialLogin {
+
+        @Test
+        void pendingRegistration_persistsMemberWithIdentityEmailLinkedToIdentity() {
+            // given
+            var household = Instancio.create(Household.class);
+            createdHouseholdIds.add(household.getId());
+            var token = setupService.setupHousehold(new HouseholdSetup(household, Instancio.create(Member.class))
+                    .localRegistration(Instancio.create(LocalRegistration.class))).getInviteToken();
+            var identity = new ExternalIdentity("google", "subject-" + UUID.randomUUID(),
+                    "social-" + UUID.randomUUID() + "@example.com", "Provider Name");
+            RequestContextHolder.setRequestAttributes(
+                    new ServletRequestAttributes(new MockHttpServletRequest(), new MockHttpServletResponse()));
+            pendingSocialRegistrationStore.store(identity);
+
+            // when
+            memberManagementService.joinHousehold(token, Instancio.of(MemberRegistration.class)
+                    .ignore(field(MemberRegistration::getLocalRegistration))
+                    .create());
+
+            // then
+            assertThat(memberManagementService.findEmailByExternalIdentity(identity.registrationId(), identity.subject()))
+                    .contains(identity.email());
+        }
+
+        @Test
+        void pendingRegistration_persistsVerifiedAccountWithoutPassword() {
+            // given
+            var household = Instancio.create(Household.class);
+            createdHouseholdIds.add(household.getId());
+            var token = setupService.setupHousehold(new HouseholdSetup(household, Instancio.create(Member.class))
+                    .localRegistration(Instancio.create(LocalRegistration.class))).getInviteToken();
+            var registration = Instancio.of(MemberRegistration.class)
+                    .ignore(field(MemberRegistration::getLocalRegistration))
+                    .create();
+            RequestContextHolder.setRequestAttributes(
+                    new ServletRequestAttributes(new MockHttpServletRequest(), new MockHttpServletResponse()));
+            pendingSocialRegistrationStore.store(new ExternalIdentity("google", "subject-" + UUID.randomUUID(),
+                    "social-" + UUID.randomUUID() + "@example.com", null));
+
+            // when
+            memberManagementService.joinHousehold(token, registration);
+
+            // then
+            assertThat(accountRepository.findById(registration.getId()))
+                    .get()
+                    .extracting(AccountEntity::passwordHash, AccountEntity::emailVerified)
+                    .containsExactly(null, true);
         }
     }
 
@@ -320,8 +375,8 @@ class MemberManagementServiceIT {
             // given — member joined a second, unrelated household
             var otherHousehold = Instancio.create(Household.class);
             createdHouseholdIds.add(otherHousehold.getId());
-            var otherToken = setupService.setupHousehold(new HouseholdSetup(
-                    otherHousehold, Instancio.create(Member.class), Instancio.create(LocalRegistration.class))).getInviteToken();
+            var otherToken = setupService.setupHousehold(new HouseholdSetup(otherHousehold, Instancio.create(Member.class))
+                    .localRegistration(Instancio.create(LocalRegistration.class))).getInviteToken();
             var memberOfOtherHousehold = memberManagementService.joinHousehold(otherToken, Instancio.create(MemberRegistration.class));
 
             // when / then
@@ -349,8 +404,8 @@ class MemberManagementServiceIT {
             // given — member joined a second, unrelated household
             var otherHousehold = Instancio.create(Household.class);
             createdHouseholdIds.add(otherHousehold.getId());
-            var otherToken = setupService.setupHousehold(new HouseholdSetup(
-                    otherHousehold, Instancio.create(Member.class), Instancio.create(LocalRegistration.class))).getInviteToken();
+            var otherToken = setupService.setupHousehold(new HouseholdSetup(otherHousehold, Instancio.create(Member.class))
+                    .localRegistration(Instancio.create(LocalRegistration.class))).getInviteToken();
             var memberOfOtherHousehold = memberManagementService.joinHousehold(otherToken, Instancio.create(MemberRegistration.class));
 
             // when / then

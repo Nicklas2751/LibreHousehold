@@ -6,14 +6,17 @@
 
 	interface Props {
 		socialLoginContext: SocialLoginContext;
+		// Runs right before the page is left for the provider, e.g. to keep unsaved form input.
+		onbeforestart?: () => void;
 	}
 
-	const { socialLoginContext }: Props = $props();
+	const { socialLoginContext, onbeforestart }: Props = $props();
 
 	let startingProviderId: string | null = $state(null);
 
 	async function handleProviderClick(registrationId: string) {
 		startingProviderId = registrationId;
+		onbeforestart?.();
 		await startSocialLogin(registrationId, socialLoginContext);
 		startingProviderId = null;
 	}

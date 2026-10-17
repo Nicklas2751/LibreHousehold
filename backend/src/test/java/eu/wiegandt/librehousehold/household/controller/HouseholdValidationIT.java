@@ -26,6 +26,8 @@ import tools.jackson.databind.ObjectMapper;
 import java.util.UUID;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -52,11 +54,41 @@ class HouseholdValidationIT {
     class setupHousehold {
 
         @Test
+        void accountAlreadyExists_returnsAccountAlreadyExistsProblemType() throws Exception {
+            // given
+            var setup = new HouseholdSetup(new Household(UUID.randomUUID(), "Household"),
+                    new Member(UUID.randomUUID(), "Max Mustermann", "max@example.com"))
+                    .localRegistration(new LocalRegistration("correct horse battery staple"));
+            doThrow(new MemberAlreadyExistsException()).when(householdSetupService).setupHousehold(any());
+
+            // when / then
+            mockMvc.perform(post("/v1/household/setup")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(setup)))
+                    .andExpect(jsonPath("$.type").value("/problems/account-already-exists"));
+        }
+
+        @Test
+        void householdAlreadyExists_returnsHouseholdAlreadyExistsProblemType() throws Exception {
+            // given
+            var setup = new HouseholdSetup(new Household(UUID.randomUUID(), "Household"),
+                    new Member(UUID.randomUUID(), "Max Mustermann", "max@example.com"))
+                    .localRegistration(new LocalRegistration("correct horse battery staple"));
+            doThrow(new HouseholdAlreadyExistsException()).when(householdSetupService).setupHousehold(any());
+
+            // when / then
+            mockMvc.perform(post("/v1/household/setup")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(setup)))
+                    .andExpect(jsonPath("$.type").value("/problems/household-already-exists"));
+        }
+
+        @Test
         void householdNameTooLong_returns400() throws Exception {
             // given
             var household = new Household(UUID.randomUUID(), "x".repeat(101));
             var member = new Member(UUID.randomUUID(), "Max Mustermann", "max@example.com");
-            var setup = new HouseholdSetup(household, member, new LocalRegistration("correct horse battery staple"));
+            var setup = new HouseholdSetup(household, member).localRegistration(new LocalRegistration("correct horse battery staple"));
 
             // when / then
             mockMvc.perform(post("/v1/household/setup")
@@ -70,7 +102,7 @@ class HouseholdValidationIT {
             // given
             var household = new Household(UUID.randomUUID(), "ab");
             var member = new Member(UUID.randomUUID(), "Max Mustermann", "max@example.com");
-            var setup = new HouseholdSetup(household, member, new LocalRegistration("correct horse battery staple"));
+            var setup = new HouseholdSetup(household, member).localRegistration(new LocalRegistration("correct horse battery staple"));
 
             // when / then
             mockMvc.perform(post("/v1/household/setup")

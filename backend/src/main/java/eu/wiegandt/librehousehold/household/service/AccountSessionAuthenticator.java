@@ -3,17 +3,22 @@ package eu.wiegandt.librehousehold.household.service;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.FactorGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.authentication.preauth.PreAuthenticatedAuthenticationToken;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.context.SecurityContextRepository;
+import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
+import org.springframework.security.web.savedrequest.RequestCache;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.util.LinkedHashSet;
+import java.util.List;
 
 /**
  * Programmatically establishes an authenticated Authorization Server session right after a new
@@ -66,6 +71,8 @@ public class AccountSessionAuthenticator {
     private final AccountUserDetailsService accountUserDetailsService;
     private final PasswordEncoder passwordEncoder;
     private final SecurityContextRepository securityContextRepository = new HttpSessionSecurityContextRepository();
+    // Same session attribute the authorization server chain saves the /oauth2/authorize request in.
+    private final RequestCache requestCache = new HttpSessionRequestCache();
 
     public AccountSessionAuthenticator(@Lazy AccountUserDetailsService accountUserDetailsService,
                                         PasswordEncoder passwordEncoder) {
@@ -80,9 +87,23 @@ public class AccountSessionAuthenticator {
         }
         var authorities = new LinkedHashSet<GrantedAuthority>(userDetails.getAuthorities());
         authorities.add(FactorGrantedAuthority.fromAuthority(FactorGrantedAuthority.PASSWORD_AUTHORITY));
-        var authenticationResult = UsernamePasswordAuthenticationToken.authenticated(userDetails, null, authorities);
+        persistSession(UsernamePasswordAuthenticationToken.authenticated(userDetails, null, authorities));
+    }
+
+    /**
+     * Signs in a member who just registered via social login. No password is involved: the
+     * external provider authenticated the user moments ago, in the callback that left the pending
+     * registration in this session. Mirrors the session that a social login establishes for an
+     * existing member, see {@code FederatedIdentityAuthenticationSuccessHandler}.
+     */
+    public void authenticateFederatedAndPersistSession(String email) {
+        persistSession(new PreAuthenticatedAuthenticationToken(email, null,
+                List.of(FactorGrantedAuthority.fromAuthority(FactorGrantedAuthority.AUTHORIZATION_CODE_AUTHORITY))));
+    }
+
+    private void persistSession(Authentication authentication) {
         var context = SecurityContextHolder.createEmptyContext();
-        context.setAuthentication(authenticationResult);
+        context.setAuthentication(authentication);
         SecurityContextHolder.setContext(context);
         var requestAttributes = (ServletRequestAttributes) RequestContextHolder.currentRequestAttributes();
         var response = requestAttributes.getResponse();
@@ -90,5 +111,9 @@ public class AccountSessionAuthenticator {
             throw new IllegalStateException("No HttpServletResponse available for the current request");
         }
         securityContextRepository.saveContext(context, requestAttributes.getRequest(), response);
+        // The SPA continues with a fresh authorization. An /oauth2/authorize request saved before
+        // (the SPA's own login ran into /login first) is stale: the SPA client's success handler
+        // would resume it afterwards and fail, because its authorization request no longer exists.
+        requestCache.removeRequest(requestAttributes.getRequest(), response);
     }
 }
