@@ -12,36 +12,53 @@ import eu.wiegandt.librehousehold.model.*;
 import org.instancio.Instancio;
 import org.instancio.junit.InstancioExtension;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
+import java.sql.Timestamp;
+import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.awaitility.Awaitility.await;
 import static org.instancio.Select.field;
 
 /**
- * {@code webEnvironment = MOCK} (not {@code NONE}): {@code setUp()} calls
- * {@code setupService.setupHousehold(...)}, which now also establishes an authenticated session
- * via {@code AccountSessionAuthenticator}, which needs a real {@code WebApplicationContext} (for
- * {@code AuthenticationConfiguration} autoconfiguration and the {@code request}/{@code response}
- * scopes) plus a thread-bound request (set up per test below).
+ * {@code webEnvironment = MOCK} (not {@code NONE}): {@code setupService.setupHousehold(...)} also
+ * establishes an authenticated session via {@code AccountSessionAuthenticator}, which needs a real
+ * {@code WebApplicationContext} (for {@code AuthenticationConfiguration} autoconfiguration and the
+ * {@code request}/{@code response} scopes) plus a thread-bound request (bound per test via
+ * {@link #bindRequest()}).
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK, properties = {"librehousehold.security.oauth2-client.client-secret=test-client-secret"})
 @Import(TestcontainersConfiguration.class)
 @ExtendWith(InstancioExtension.class)
 class HouseholdManagementServiceIT {
+
+    private static final Duration LISTENER_COMPLETION_TIMEOUT = Duration.ofSeconds(10);
+
+    // Only publications that a listener may still pick up or is still processing: FAILED (or
+    // COMPLETED) entries from earlier tests must not block the cleanup of this one.
+    private static final String COUNT_IN_PROGRESS_PUBLICATIONS_SQL = """
+            SELECT COUNT(*) FROM event_publication
+            WHERE status IN ('PUBLISHED', 'PROCESSING', 'RESUBMITTED') AND publication_date >= ?
+            """;
+
+    private final Instant testStartedAt = Instant.now();
 
     @Autowired
     private HouseholdManagementService managementService;
@@ -58,25 +75,40 @@ class HouseholdManagementServiceIT {
     @Autowired
     private InviteRepository inviteRepository;
 
-    private Household existingHousehold;
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
-    @BeforeEach
-    void setUp() {
-        RequestContextHolder.setRequestAttributes(
-                new ServletRequestAttributes(new MockHttpServletRequest(), new MockHttpServletResponse()));
-        var member = Instancio.create(Member.class);
-        existingHousehold = Instancio.create(Household.class);
-        var localRegistration = Instancio.create(LocalRegistration.class);
-        setupService.setupHousehold(new HouseholdSetup(existingHousehold, member).localRegistration(localRegistration));
-    }
+    private final List<UUID> createdHouseholdIds = new ArrayList<>();
 
     @AfterEach
     void tearDown() {
         RequestContextHolder.resetRequestAttributes();
+        // The listeners run asynchronously after commit and may still write rows referencing the
+        // members (e.g. account_token); deleting before they are done violates those foreign keys.
+        await().atMost(LISTENER_COMPLETION_TIMEOUT).until(this::noPublicationInProgress);
         // idempotent: some tests (e.g. deleteHousehold) already remove these rows themselves
-        inviteRepository.deleteByHouseholdId(existingHousehold.getId());
-        memberRepository.deleteByHouseholdId(existingHousehold.getId());
-        householdRepository.deleteById(existingHousehold.getId());
+        for (var householdId : createdHouseholdIds) {
+            inviteRepository.deleteByHouseholdId(householdId);
+            memberRepository.deleteByHouseholdId(householdId);
+            householdRepository.deleteById(householdId);
+        }
+    }
+
+    private boolean noPublicationInProgress() {
+        return jdbcTemplate.queryForObject(COUNT_IN_PROGRESS_PUBLICATIONS_SQL, Long.class,
+                Timestamp.from(testStartedAt)) == 0;
+    }
+
+    private void bindRequest() {
+        RequestContextHolder.setRequestAttributes(
+                new ServletRequestAttributes(new MockHttpServletRequest(), new MockHttpServletResponse()));
+    }
+
+    private HouseholdSetup localSetupWithValidAdminEmail(Household household) {
+        var admin = Instancio.of(Member.class)
+                .generate(field(Member::getEmail), gen -> gen.net().email())
+                .create();
+        return new HouseholdSetup(household, admin).localRegistration(Instancio.create(LocalRegistration.class));
     }
 
     @Nested
@@ -95,13 +127,17 @@ class HouseholdManagementServiceIT {
         @Test
         void validUpdate_persistsNewNameInDatabase() {
             // given
+            bindRequest();
+            var household = Instancio.create(Household.class);
+            createdHouseholdIds.add(household.getId());
+            setupService.setupHousehold(localSetupWithValidAdminEmail(household));
             var newName = "Updated Household Name";
 
             // when
-            managementService.updateName(existingHousehold.getId(), new HouseholdUpdate(newName));
+            managementService.updateName(household.getId(), new HouseholdUpdate(newName));
 
             // then
-            assertThat(householdRepository.findById(existingHousehold.getId()))
+            assertThat(householdRepository.findById(household.getId()))
                     .hasValueSatisfying(h -> assertThat(h.name()).isEqualTo(newName));
         }
     }
@@ -121,20 +157,36 @@ class HouseholdManagementServiceIT {
 
         @Test
         void householdFound_removesHouseholdFromDatabase() {
+            // given
+            bindRequest();
+            var household = Instancio.create(Household.class);
+            createdHouseholdIds.add(household.getId());
+            setupService.setupHousehold(localSetupWithValidAdminEmail(household));
+            // the verification token listener must not race the deletion below
+            await().atMost(LISTENER_COMPLETION_TIMEOUT).until(HouseholdManagementServiceIT.this::noPublicationInProgress);
+
             // when
-            managementService.deleteHousehold(existingHousehold.getId());
+            managementService.deleteHousehold(household.getId());
 
             // then
-            assertThat(householdRepository.existsById(existingHousehold.getId())).isFalse();
+            assertThat(householdRepository.existsById(household.getId())).isFalse();
         }
 
         @Test
         void householdFound_removesAssociatedInviteFromDatabase() {
+            // given
+            bindRequest();
+            var household = Instancio.create(Household.class);
+            createdHouseholdIds.add(household.getId());
+            setupService.setupHousehold(localSetupWithValidAdminEmail(household));
+            // the verification token listener must not race the deletion below
+            await().atMost(LISTENER_COMPLETION_TIMEOUT).until(HouseholdManagementServiceIT.this::noPublicationInProgress);
+
             // when
-            managementService.deleteHousehold(existingHousehold.getId());
+            managementService.deleteHousehold(household.getId());
 
             // then
-            assertThat(inviteRepository.findByHouseholdId(existingHousehold.getId())).isEmpty();
+            assertThat(inviteRepository.findByHouseholdId(household.getId())).isEmpty();
         }
     }
 
@@ -154,10 +206,14 @@ class HouseholdManagementServiceIT {
         @Test
         void inviteExists_returnsStoredToken() {
             // given
-            var storedInvite = inviteRepository.findByHouseholdId(existingHousehold.getId()).orElseThrow();
+            bindRequest();
+            var household = Instancio.create(Household.class);
+            createdHouseholdIds.add(household.getId());
+            setupService.setupHousehold(localSetupWithValidAdminEmail(household));
+            var storedInvite = inviteRepository.findByHouseholdId(household.getId()).orElseThrow();
 
             // when
-            var result = managementService.getInvite(existingHousehold.getId());
+            var result = managementService.getInvite(household.getId());
 
             // then
             assertThat(result.getInviteToken()).isEqualTo(storedInvite.token());
@@ -180,24 +236,32 @@ class HouseholdManagementServiceIT {
         @Test
         void householdFound_oldTokenIsInvalidated() {
             // given
-            var oldToken = inviteRepository.findByHouseholdId(existingHousehold.getId())
+            bindRequest();
+            var household = Instancio.create(Household.class);
+            createdHouseholdIds.add(household.getId());
+            setupService.setupHousehold(localSetupWithValidAdminEmail(household));
+            var oldToken = inviteRepository.findByHouseholdId(household.getId())
                     .orElseThrow().token();
 
             // when
-            managementService.regenerateInvite(existingHousehold.getId());
+            managementService.regenerateInvite(household.getId());
 
             // then — only one invite exists and it has a new token
-            var invites = inviteRepository.findByHouseholdId(existingHousehold.getId());
+            var invites = inviteRepository.findByHouseholdId(household.getId());
             assertThat(invites).hasValueSatisfying(invite -> assertThat(invite.token()).isNotEqualTo(oldToken));
         }
 
         @Test
         void householdFound_newTokenIsValidForSevenDays() {
             // given
+            bindRequest();
+            var household = Instancio.create(Household.class);
+            createdHouseholdIds.add(household.getId());
+            setupService.setupHousehold(localSetupWithValidAdminEmail(household));
             var expectedValidUntil = LocalDate.now().plusDays(7);
 
             // when
-            var result = managementService.regenerateInvite(existingHousehold.getId());
+            var result = managementService.regenerateInvite(household.getId());
 
             // then
             assertThat(result.getInviteValidUntil()).isEqualTo(expectedValidUntil);
@@ -229,18 +293,22 @@ class HouseholdManagementServiceIT {
         @Test
         void newAdminBelongsToDifferentHousehold_throwsMemberNotFoundExceptionAndOriginalAdminKeepsAdminRights() {
             // given — a member belonging to a completely unrelated household
+            bindRequest();
+            var household = Instancio.create(Household.class);
+            createdHouseholdIds.add(household.getId());
+            setupService.setupHousehold(localSetupWithValidAdminEmail(household));
             var otherHousehold = householdRepository.save(Instancio.create(HouseholdEntity.class));
             var memberOfOtherHousehold = memberRepository.save(Instancio.of(MemberEntity.class)
                     .set(field(MemberEntity::householdId), otherHousehold.id())
                     .set(field(MemberEntity::isAdmin), false)
                     .create());
-            var originalAdminId = memberRepository.findByHouseholdIdAndIsAdminTrue(existingHousehold.getId())
+            var originalAdminId = memberRepository.findByHouseholdIdAndIsAdminTrue(household.getId())
                     .orElseThrow().id();
 
             // when / then
-            assertThatThrownBy(() -> managementService.transferOwnership(existingHousehold.getId(), memberOfOtherHousehold.id()))
+            assertThatThrownBy(() -> managementService.transferOwnership(household.getId(), memberOfOtherHousehold.id()))
                     .isInstanceOf(MemberNotFoundException.class);
-            assertThat(memberRepository.findByHouseholdIdAndIsAdminTrue(existingHousehold.getId()))
+            assertThat(memberRepository.findByHouseholdIdAndIsAdminTrue(household.getId()))
                     .hasValueSatisfying(admin -> assertThat(admin.id()).isEqualTo(originalAdminId));
 
             memberRepository.deleteById(memberOfOtherHousehold.id());
@@ -250,16 +318,20 @@ class HouseholdManagementServiceIT {
         @Test
         void householdFound_updatesAdminInDatabase() {
             // given — persist a second member in the same household who will become the new admin
+            bindRequest();
+            var household = Instancio.create(Household.class);
+            createdHouseholdIds.add(household.getId());
+            setupService.setupHousehold(localSetupWithValidAdminEmail(household));
             var newAdmin = memberRepository.save(Instancio.of(MemberEntity.class)
-                    .set(field(MemberEntity::householdId), existingHousehold.getId())
+                    .set(field(MemberEntity::householdId), household.getId())
                     .set(field(MemberEntity::isAdmin), false)
                     .create());
 
             // when
-            managementService.transferOwnership(existingHousehold.getId(), newAdmin.id());
+            managementService.transferOwnership(household.getId(), newAdmin.id());
 
             // then
-            assertThat(memberRepository.findByHouseholdIdAndIsAdminTrue(existingHousehold.getId()))
+            assertThat(memberRepository.findByHouseholdIdAndIsAdminTrue(household.getId()))
                     .hasValueSatisfying(m -> assertThat(m.id()).isEqualTo(newAdmin.id()));
         }
     }

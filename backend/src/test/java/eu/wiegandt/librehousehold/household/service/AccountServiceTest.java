@@ -10,10 +10,14 @@ import eu.wiegandt.librehousehold.household.repository.AccountRepository;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.Instant;
@@ -21,9 +25,11 @@ import java.util.Comparator;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.params.provider.Arguments.argumentSet;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
@@ -133,6 +139,21 @@ class AccountServiceTest {
         }
 
         @Test
+        void federatedAccountWithoutPassword_throwsInvalidPasswordException() {
+            // given
+            var memberId = UUID.randomUUID();
+            var account = new AccountEntity(memberId, null, true, Instant.now(), null, 0, null);
+            doReturn(Optional.of(account)).when(accountRepository).findById(memberId);
+            // A real Argon2 encoder instead of the mock: how it treats a null hash is exactly what is under test.
+            var serviceWithArgon2 = new AccountService(accountRepository, accountIdentityRepository,
+                    Argon2PasswordEncoder.defaultsForSpringSecurity_v5_8());
+
+            // when / then
+            assertThatThrownBy(() -> serviceWithArgon2.changePassword(memberId, "anyOldPassword", "newPassword"))
+                    .isInstanceOf(InvalidPasswordException.class);
+        }
+
+        @Test
         void verifiedAccountCorrectOldPassword_updatesPasswordHash() {
             // given
             var memberId = UUID.randomUUID();
@@ -165,6 +186,33 @@ class AccountServiceTest {
 
             // then
             verify(accountRepository).updatePasswordHash(memberId, newHashedPassword);
+        }
+    }
+
+    @Nested
+    class hasPassword {
+
+        static Stream<Arguments> accounts() {
+            var memberId = UUID.randomUUID();
+            return Stream.of(
+                    argumentSet("no account", memberId, Optional.empty(), false),
+                    argumentSet("federated account without password", memberId,
+                            Optional.of(new AccountEntity(memberId, null, true, Instant.now(), null, 0, null)), false),
+                    argumentSet("local account with password", memberId,
+                            Optional.of(new AccountEntity(memberId, "$argon2id$...", true, Instant.now(), null, 0, null)), true));
+        }
+
+        @ParameterizedTest
+        @MethodSource("accounts")
+        void storedAccount_returnsWhetherPasswordHashExists(UUID memberId, Optional<AccountEntity> account, boolean expected) {
+            // given
+            doReturn(account).when(accountRepository).findById(memberId);
+
+            // when
+            var result = accountService.hasPassword(memberId);
+
+            // then
+            assertThat(result).isEqualTo(expected);
         }
     }
 

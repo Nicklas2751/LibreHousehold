@@ -34,6 +34,7 @@ function currentUser(overrides: Partial<CurrentUser> = {}): CurrentUser {
 		household: { id: 'household-1', name: 'Musterhaushalt' },
 		preferences: { theme: 'light', language: 'de' },
 		emailVerified: false,
+		socialLoginOnly: false,
 		...overrides
 	};
 }

@@ -106,8 +106,9 @@ class SessionApiDelegateImplTest {
             doReturn(member).when(memberQuery).getMember(member.getId());
             doReturn(household).when(householdQuery).getHousehold(householdId);
             doReturn(preferences).when(preferencesQuery).getPreferencesOrDefault(member.getId());
-            doReturn(true).when(memberQuery).isEmailVerified(member.getId());
-            var expected = new CurrentUser(member, household, preferences, true);
+            doReturn(false).when(memberQuery).isEmailVerified(member.getId());
+            doReturn(true).when(memberQuery).isSocialLoginOnly(member.getId());
+            var expected = new CurrentUser(member, household, preferences, false, true);
 
             // when
             var result = delegate.getCurrentUser();

@@ -4,6 +4,16 @@ spring:
   modulith:
     runtime:
       flyway-enabled: true
+    events:
+      # Publications stuck in a non-final state (e.g. after a crash mid-delivery) are marked FAILED
+      # after this time, so EventPublicationMaintenanceJob can resubmit them; it only picks up FAILED
+      # ones. Spring Modulith measures all three against the original publication date. 15 minutes
+      # matches librehousehold.events.resubmit-min-age and lies far above the seconds a delivery
+      # normally takes, so a delivery that is still running is not mistaken for a stuck one.
+      staleness:
+        published: 15m
+        processing: 15m
+        resubmitted: 15m
   mail:
     # Empty by default (same rationale as security.cors.allowed-origins below), not omitted: Spring
     # Boot's mail autoconfiguration only creates the JavaMailSender bean at all when this property is
@@ -138,6 +148,23 @@ librehousehold:
     # self-hosters serving the frontend from a different origin must override this, e.g.
     # LIBREHOUSEHOLD_FRONTEND_BASE_URL=https://household.example.com.
     base-url: "http://localhost:8080"
+
+  events:
+    # How often EventPublicationMaintenanceJob retries failed event publications and removes old
+    # completed ones (see "Event delivery and resubmission" in Arc42 Chapter 8). 15 minutes gives a
+    # temporarily unreachable mail server time to recover without delaying e-mails for hours.
+    run-interval: 15m
+    # Only publications at least this old (by publication date) are resubmitted, so a delivery that
+    # just failed is not retried right away while its cause most likely still persists.
+    resubmit-min-age: 15m
+    # Total delivery attempts per publication, the first delivery included. Caps retries of
+    # publications that can never succeed (e.g. for a member deleted in the meantime): with the
+    # 15-minute interval, a publication gets about an hour of retries before it stays FAILED for
+    # manual inspection.
+    max-attempts: 5
+    # Completed publications are kept this long for diagnosis (which event reached which listener,
+    # and when), then deleted so event_publication does not grow without bound.
+    completed-retention: 30d
 
   notifications:
     templates:

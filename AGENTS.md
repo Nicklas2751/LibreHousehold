@@ -300,6 +300,10 @@ These tests therefore use `DEFINED_PORT` with a port picked via `TestSocketUtils
 
 The Authorization Server chain saves the unauthenticated `/oauth2/authorize` request in the session attribute `SPRING_SECURITY_SAVED_REQUEST` (`HttpSessionRequestCache`). The business chain's `NonSavingRequestCache` never writes that attribute, but the internal client's `SavedRequestAwareAuthenticationSuccessHandler` reads it. Any flow that authenticates outside the AS login form and then starts a *fresh* `/oauth2/authorization/spa-backend-client` continuation (social login, setup/join via `AccountSessionAuthenticator`) must remove the saved request first. Otherwise the success handler replays the stale authorize request with an outdated `state` and the browser ends on `/login?error&reason=social-login-failed`, although the session is signed in. Integration tests for such flows must enter via `GET /oauth2/authorization/spa-backend-client` like the browser does; ITs that start elsewhere never see a saved request and miss this.
 
+### Publishing an event for an `@ApplicationModuleListener` requires an active transaction
+
+`@ApplicationModuleListener` is an async `@TransactionalEventListener(AFTER_COMMIT)`. If `publishEvent` runs without an active transaction, Spring silently skips the listener, while Spring Modulith still records the publication in `event_publication`. Nothing fails; the mail is just never sent. This bug hit twice (`UnverifiedAccountExpiryJob` deletion warning, `resendVerificationEmail`). Every method that publishes such an event must therefore run inside a transaction: `@Transactional` called through the Spring proxy, or `TransactionOperations` for loops in non-transactional jobs. Its test must check the real effect, e.g. the mail arriving in Mailpit; a test of a timestamp or a recorded event does not catch the bug. Failed publications are resubmitted by `EventPublicationMaintenanceJob` (see Arc42 chapter 8, "Event Delivery and Resubmission").
+
 ### `./mvnw test` runs without integration tests — use `./mvnw verify`
 
 `backend/pom.xml` binds `maven-failsafe-plugin` with the `integration-test`+`verify` goals without

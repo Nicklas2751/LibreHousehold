@@ -190,6 +190,40 @@ class AccountServiceIT {
     }
 
     @Test
+    void hasPassword_federatedAccount_returnsFalse() {
+        // given
+        var household = householdRepository.save(Instancio.create(HouseholdEntity.class));
+        createdHouseholdId = household.id();
+        var member = memberRepository.save(Instancio.of(MemberEntity.class)
+                .set(field(MemberEntity::householdId), household.id())
+                .create());
+        accountService.createFederatedAccount(member.getId());
+
+        // when
+        var result = accountService.hasPassword(member.getId());
+
+        // then
+        assertThat(result).isFalse();
+    }
+
+    @Test
+    void hasPassword_localAccount_returnsTrue() {
+        // given
+        var household = householdRepository.save(Instancio.create(HouseholdEntity.class));
+        createdHouseholdId = household.id();
+        var member = memberRepository.save(Instancio.of(MemberEntity.class)
+                .set(field(MemberEntity::householdId), household.id())
+                .create());
+        accountService.createAccount(member.getId(), "correct horse battery staple");
+
+        // when
+        var result = accountService.hasPassword(member.getId());
+
+        // then
+        assertThat(result).isTrue();
+    }
+
+    @Test
     void linkExternalIdentity_validCall_persistsAccountIdentityRow() {
         // given
         var household = householdRepository.save(Instancio.create(HouseholdEntity.class));

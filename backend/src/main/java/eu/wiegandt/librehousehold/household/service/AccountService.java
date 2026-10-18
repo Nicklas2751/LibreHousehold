@@ -48,6 +48,10 @@ public class AccountService {
         accountRepository.updatePasswordHash(memberId, passwordEncoder.encode(newPassword));
     }
 
+    public boolean hasPassword(UUID memberId) {
+        return accountRepository.findById(memberId).map(AccountEntity::passwordHash).isPresent();
+    }
+
     public boolean isEmailVerified(UUID memberId) {
         return accountRepository.findById(memberId).map(AccountEntity::emailVerified).orElse(false);
     }

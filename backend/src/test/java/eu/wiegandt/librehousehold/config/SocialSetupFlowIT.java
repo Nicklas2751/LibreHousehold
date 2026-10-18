@@ -210,6 +210,30 @@ class SocialSetupFlowIT {
             // then
             assertThat(toSignedInMember(meResponse)).isEqualTo(expected);
         }
+
+        @Test
+        void setupWithoutLocalRegistration_meReportsSocialLoginOnly() throws Exception {
+            // given
+            dexContainer.withClient(new DexContainer.Client(DexTestcontainersConfiguration.CLIENT_ID,
+                    DexTestcontainersConfiguration.CLIENT_SECRET, DEX_REDIRECT_URI));
+            var dexUser = new DexContainer.User("dex-" + UUID.randomUUID(), "dex-" + UUID.randomUUID() + "@example.com", DEX_PASSWORD);
+            dexContainer.withUser(dexUser);
+            var householdId = UUID.randomUUID();
+            createdHouseholdIds.add(householdId);
+            var callback = loginViaDex(storeSocialLoginContext("{\"context\":\"SETUP\"}"), dexUser);
+            var pendingRegistration = get(callback.cookies(), URI.create(BASE_PATH + "/auth/social-registration"));
+            var setupBody = """
+                    {"household": {"id": "%s", "name": "Social Household"},
+                     "member": {"id": "%s", "name": "Requested Name", "email": "ignored@example.com"}}
+                    """.formatted(householdId, UUID.randomUUID());
+
+            // when
+            var setup = post(pendingRegistration.cookies(), BASE_PATH + "/household/setup", setupBody);
+            var meResponse = completeSpaLogin(setup.cookies());
+
+            // then
+            assertThat(objectMapper.readTree(meResponse.getResponseBody()).get("socialLoginOnly").asBoolean()).isTrue();
+        }
     }
 
     @Nested
