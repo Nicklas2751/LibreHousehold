@@ -60,6 +60,15 @@ public interface MemberQuery {
     boolean isEmailVerified(UUID memberId);
 
     /**
+     * Returns {@code true} if the account belonging to the given member signs in only via a social-login
+     * provider, because it was registered there and has no local password.
+     *
+     * @param memberId the ID of the member
+     * @return {@code true} if the member's account has no local password
+     */
+    boolean isSocialLoginOnly(UUID memberId);
+
+    /**
      * Returns the e-mail address of the member whose account is linked to the given external identity.
      *
      * @param providerId      the client registration ID of the social-login provider

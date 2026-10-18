@@ -181,6 +181,14 @@ describe('login page', () => {
 		expect(mockStartSocialLogin).toHaveBeenCalledWith('google', { context: 'LOGIN' });
 	});
 
+	it('back button — links to the start page', async () => {
+		// when
+		render(LoginPage);
+
+		// then
+		await expect.element(page.getByRole('link', { name: 'Zurück' })).toHaveAttribute('href', '/');
+	});
+
 	it.each([
 		{ reason: 'social-login-no-account', expectedText: 'kein Konto in LibreHousehold' },
 		{ reason: 'social-login-failed', expectedText: 'über den Anbieter ist fehlgeschlagen' },

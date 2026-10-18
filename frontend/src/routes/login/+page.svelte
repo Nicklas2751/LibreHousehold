@@ -149,6 +149,7 @@
 					</a>
 				{/if}
 				<SocialLoginButtons socialLoginContext={{ context: SocialLoginContextContextEnum.Login }} />
+				<a class="btn mt-4 w-full btn-outline" href="/">{m['login.back_button']()}</a>
 			</div>
 		</div>
 	</div>

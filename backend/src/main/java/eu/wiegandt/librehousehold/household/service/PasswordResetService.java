@@ -65,6 +65,11 @@ public class PasswordResetService implements PasswordReset {
         var member = memberRepository.findById(memberId).orElseThrow(MemberNotFoundException::new);
         var account = accountRepository.findById(memberId).orElseThrow(MemberNotFoundException::new);
         var principal = new AccountPrincipal(member.email(), account.passwordHash(), account.emailVerified());
+        // A reset must never add a local password to a social-login-only account; answering like an
+        // invalid token keeps the response indistinguishable from any other unusable link.
+        if (!accountService.hasPassword(memberId)) {
+            throw new PasswordResetTokenInvalidException();
+        }
 
         accountService.resetPassword(memberId, newPassword);
 

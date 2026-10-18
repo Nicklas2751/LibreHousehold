@@ -1,5 +1,7 @@
 package eu.wiegandt.librehousehold.household.service;
 
+import ch.martinelli.oss.testcontainers.mailpit.MailpitClient;
+import ch.martinelli.oss.testcontainers.mailpit.assertions.MailpitAssertions;
 import eu.wiegandt.librehousehold.TestcontainersConfiguration;
 import eu.wiegandt.librehousehold.household.model.AccountEntity;
 import eu.wiegandt.librehousehold.household.model.HouseholdEntity;
@@ -15,28 +17,39 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
-import org.springframework.mail.javamail.JavaMailSenderImpl;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.jdbc.core.JdbcTemplate;
 
+import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 import static org.instancio.Select.field;
 
-// Excludes MailpitAutoConfiguration: it would otherwise register its own real JavaMailSender bean
-// alongside Boot's own (triggered by the mocked JavaMailSenderImpl below needing a bean of that
-// exact declared type to override), leaving two JavaMailSender candidates and breaking the
-// autowiring in EmailSenderService with a NoUniqueBeanDefinitionException.
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, properties = {
-        "librehousehold.security.oauth2-client.client-secret=test-client-secret",
-        "spring.mail.host=localhost",
-        "spring.autoconfigure.exclude=ch.martinelli.oss.testcontainers.mailpit.MailpitAutoConfiguration"
-})
+/**
+ * Runs against the real Mailpit container from {@link TestcontainersConfiguration}, which is shared
+ * across IT classes through Spring's context cache: assertions therefore filter on the (random)
+ * recipient address of the member created in each test.
+ */
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE,
+        properties = "librehousehold.security.oauth2-client.client-secret=test-client-secret")
 @Import(TestcontainersConfiguration.class)
 @ExtendWith(InstancioExtension.class)
 class UnverifiedAccountExpiryJobIT {
+
+    private static final Duration MAIL_DELIVERY_TIMEOUT = Duration.ofSeconds(10);
+    private static final Duration LISTENER_COMPLETION_TIMEOUT = Duration.ofSeconds(10);
+
+    // Only publications that a listener may still pick up or is still processing: FAILED (or
+    // COMPLETED) entries from earlier tests must not block the cleanup of this one.
+    private static final String COUNT_IN_PROGRESS_PUBLICATIONS_SQL = """
+            SELECT COUNT(*) FROM event_publication
+            WHERE status IN ('PUBLISHED', 'PROCESSING', 'RESUBMITTED') AND publication_date >= ?
+            """;
+
+    private final Instant testStartedAt = Instant.now();
 
     @Autowired
     private UnverifiedAccountExpiryJob job;
@@ -50,20 +63,28 @@ class UnverifiedAccountExpiryJobIT {
     @Autowired
     private AccountRepository accountRepository;
 
-    // Mocked as the concrete JavaMailSenderImpl (not the JavaMailSender interface): Boot's
-    // MailHealthContributorAutoConfiguration looks up beans by the concrete type specifically, and
-    // an interface-typed mock would not satisfy that lookup, breaking context startup.
-    @MockitoBean
-    private JavaMailSenderImpl mailSender;
+    @Autowired
+    private MailpitClient mailpitClient;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     private UUID createdHouseholdId;
 
     @AfterEach
     void tearDown() {
+        // The listeners run asynchronously after commit; deleting before they are done would pull
+        // the member out from under them.
+        await().atMost(LISTENER_COMPLETION_TIMEOUT).until(this::noPublicationInProgress);
         if (createdHouseholdId != null) {
             memberRepository.deleteByHouseholdId(createdHouseholdId);
             householdRepository.deleteById(createdHouseholdId);
         }
+    }
+
+    private boolean noPublicationInProgress() {
+        return jdbcTemplate.queryForObject(COUNT_IN_PROGRESS_PUBLICATIONS_SQL, Long.class,
+                Timestamp.from(testStartedAt)) == 0;
     }
 
     private MemberEntity createMember(boolean isAdmin) {
@@ -72,11 +93,12 @@ class UnverifiedAccountExpiryJobIT {
         return memberRepository.save(Instancio.of(MemberEntity.class)
                 .set(field(MemberEntity::householdId), household.id())
                 .set(field(MemberEntity::isAdmin), isAdmin)
+                .generate(field(MemberEntity::email), gen -> gen.net().email())
                 .create());
     }
 
     @Test
-    void run_accountPastWarningThresholdNotYetWarned_sendsWarningEmailAndSetsTimestamp() {
+    void run_accountPastWarningThresholdNotYetWarned_setsWarningTimestamp() {
         // given — grace-period-days=7, deletion-warning-hours-before=24 (see application.yaml):
         // registered 6 days and 1 hour ago is past the warning threshold but not the grace period.
         var member = createMember(false);
@@ -92,19 +114,53 @@ class UnverifiedAccountExpiryJobIT {
     }
 
     @Test
-    void run_adminAccountPastGracePeriod_deletesEntireHousehold() {
-        // given
-        var member = createMember(true);
-        var registeredAt = Instant.now().minus(Duration.ofDays(8));
-        accountRepository.save(new AccountEntity(member.getId(), "hash", false, registeredAt, Instant.now(), 0, null));
-        var householdId = createdHouseholdId;
+    void run_accountPastWarningThresholdNotYetWarned_deliversWarningEmail() {
+        // given — registered 6 days and 1 hour ago: past the warning threshold, not the grace period
+        var member = createMember(false);
+        var registeredAt = Instant.now().minus(Duration.ofDays(6)).minus(Duration.ofHours(1));
+        accountRepository.save(new AccountEntity(member.getId(), "hash", false, registeredAt, null, 0, null));
 
         // when
         job.run();
 
         // then
-        assertThat(householdRepository.existsById(householdId)).isFalse();
-        createdHouseholdId = null;
+        await().atMost(MAIL_DELIVERY_TIMEOUT)
+                .untilAsserted(() -> MailpitAssertions.assertThat(mailpitClient.getAllMessages())
+                        .filteredOnRecipient(member.email())
+                        .singleElement()
+                        .hasSubject("Your account will be deleted soon"));
+    }
+
+    @Test
+    void run_adminAccountPastGracePeriod_deletesEntireHousehold() {
+        // given
+        var member = createMember(true);
+        var registeredAt = Instant.now().minus(Duration.ofDays(8));
+        accountRepository.save(new AccountEntity(member.getId(), "hash", false, registeredAt, Instant.now(), 0, null));
+
+        // when
+        job.run();
+
+        // then
+        assertThat(householdRepository.existsById(member.householdId())).isFalse();
+    }
+
+    @Test
+    void run_adminAccountPastGracePeriod_deliversHouseholdDeletedEmail() {
+        // given
+        var member = createMember(true);
+        var registeredAt = Instant.now().minus(Duration.ofDays(8));
+        accountRepository.save(new AccountEntity(member.getId(), "hash", false, registeredAt, Instant.now(), 0, null));
+
+        // when
+        job.run();
+
+        // then
+        await().atMost(MAIL_DELIVERY_TIMEOUT)
+                .untilAsserted(() -> MailpitAssertions.assertThat(mailpitClient.getAllMessages())
+                        .filteredOnRecipient(member.email())
+                        .singleElement()
+                        .hasSubject("Your household has been deleted"));
     }
 
     @Test
@@ -119,5 +175,23 @@ class UnverifiedAccountExpiryJobIT {
 
         // then
         assertThat(memberRepository.existsById(member.getId())).isFalse();
+    }
+
+    @Test
+    void run_nonAdminAccountPastGracePeriod_deliversMemberRemovedEmail() {
+        // given
+        var member = createMember(false);
+        var registeredAt = Instant.now().minus(Duration.ofDays(8));
+        accountRepository.save(new AccountEntity(member.getId(), "hash", false, registeredAt, Instant.now(), 0, null));
+
+        // when
+        job.run();
+
+        // then
+        await().atMost(MAIL_DELIVERY_TIMEOUT)
+                .untilAsserted(() -> MailpitAssertions.assertThat(mailpitClient.getAllMessages())
+                        .filteredOnRecipient(member.email())
+                        .singleElement()
+                        .hasSubject("You have been removed from a household"));
     }
 }

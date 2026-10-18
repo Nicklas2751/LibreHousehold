@@ -1643,8 +1643,10 @@ paths:
     post:
       summary: Request a password reset
       description: >
-        Sends a password reset link to the given email address, if an account exists for it.
-        Always responds identically regardless of whether the email is registered, to avoid
+        Sends a password reset link to the given email address, if an account with a local
+        password exists for it. Accounts registered via a social login provider have no
+        password and get no link, so a reset cannot add a password to them. Always responds
+        identically regardless of whether the email is registered or has a password, to avoid
         leaking account existence (see ENUM1 in the security controls).
       tags:
         - session
@@ -1671,7 +1673,9 @@ paths:
       summary: Confirm a password reset
       description: >
         Sets a new password for the account identified by the given reset token, and
-        invalidates all of that account's existing sessions.
+        invalidates all of that account's existing sessions. An account that signs in only via a
+        social login provider never gets a local password this way: its token is answered like an
+        invalid one.
       tags:
         - session
       operationId: confirmPasswordReset
@@ -1686,7 +1690,9 @@ paths:
         "204":
           description: Password reset.
         "409":
-          description: The reset token is invalid, unknown or expired.
+          description: >
+            The reset token is invalid, unknown or expired, or it belongs to an account that
+            signs in only via a social login provider.
           content:
             application/problem+json:
               schema:
@@ -2919,6 +2925,7 @@ components:
         - household
         - preferences
         - emailVerified
+        - socialLoginOnly
       description: Member, household and preferences data for the authenticated session.
       properties:
         member:
@@ -2930,6 +2937,14 @@ components:
         emailVerified:
           type: boolean
           description: Whether the account's email address has been verified.
+          example: false
+        socialLoginOnly:
+          type: boolean
+          description: >
+            Whether the account signs in only via a social login provider, because it was
+            registered there and has no local password. Such accounts cannot change their
+            password or request a password reset. False for accounts with a local password, even
+            if a social login provider is linked to them.
           example: false
 
     EmailVerificationConfirm:

@@ -6,10 +6,13 @@ import eu.wiegandt.librehousehold.household.model.AccountEntity;
 import eu.wiegandt.librehousehold.household.model.MemberEntity;
 import eu.wiegandt.librehousehold.household.repository.AccountRepository;
 import eu.wiegandt.librehousehold.household.repository.MemberRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.support.TransactionOperations;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -28,6 +31,7 @@ import java.time.Instant;
 @Component
 public class UnverifiedAccountExpiryJob {
 
+    private static final Logger LOG = LoggerFactory.getLogger(UnverifiedAccountExpiryJob.class);
     private static final long RUN_INTERVAL_MILLIS = 3_600_000;
 
     private final AccountRepository accountRepository;
@@ -35,6 +39,7 @@ public class UnverifiedAccountExpiryJob {
     private final HouseholdManagementService householdManagementService;
     private final MemberManagementService memberManagementService;
     private final ApplicationEventPublisher eventPublisher;
+    private final TransactionOperations transactionOperations;
     private final int gracePeriodDays;
     private final int deletionWarningHoursBefore;
 
@@ -44,6 +49,7 @@ public class UnverifiedAccountExpiryJob {
             HouseholdManagementService householdManagementService,
             MemberManagementService memberManagementService,
             ApplicationEventPublisher eventPublisher,
+            TransactionOperations transactionOperations,
             @Value("${librehousehold.security.email-verification.grace-period-days}") int gracePeriodDays,
             @Value("${librehousehold.security.email-verification.deletion-warning-hours-before}") int deletionWarningHoursBefore) {
         this.accountRepository = accountRepository;
@@ -51,6 +57,7 @@ public class UnverifiedAccountExpiryJob {
         this.householdManagementService = householdManagementService;
         this.memberManagementService = memberManagementService;
         this.eventPublisher = eventPublisher;
+        this.transactionOperations = transactionOperations;
         this.gracePeriodDays = gracePeriodDays;
         this.deletionWarningHoursBefore = deletionWarningHoursBefore;
     }
@@ -67,7 +74,16 @@ public class UnverifiedAccountExpiryJob {
                 .plus(Duration.ofHours(deletionWarningHoursBefore));
         accountRepository
                 .findByEmailVerifiedFalseAndVerificationDeletionWarningSentAtIsNullAndRegisteredAtBefore(warningThreshold)
-                .forEach(this::sendDeletionWarning);
+                .forEach(this::sendDeletionWarningIsolated);
+    }
+
+    // One broken account must not keep all others from being warned in this run.
+    private void sendDeletionWarningIsolated(AccountEntity account) {
+        try {
+            transactionOperations.executeWithoutResult(_ -> sendDeletionWarning(account));
+        } catch (RuntimeException exception) {
+            logFailure("send deletion warning", account, exception);
+        }
     }
 
     private void sendDeletionWarning(AccountEntity account) {
@@ -79,7 +95,16 @@ public class UnverifiedAccountExpiryJob {
     private void deleteExpiredAccounts() {
         var deletionThreshold = Instant.now().minus(Duration.ofDays(gracePeriodDays));
         accountRepository.findByEmailVerifiedFalseAndRegisteredAtBefore(deletionThreshold)
-                .forEach(this::deleteExpiredAccount);
+                .forEach(this::deleteExpiredAccountIsolated);
+    }
+
+    // One broken account must not keep all others from being deleted in this run.
+    private void deleteExpiredAccountIsolated(AccountEntity account) {
+        try {
+            deleteExpiredAccount(account);
+        } catch (RuntimeException exception) {
+            logFailure("delete expired account", account, exception);
+        }
     }
 
     private void deleteExpiredAccount(AccountEntity account) {
@@ -89,6 +114,11 @@ public class UnverifiedAccountExpiryJob {
         } else {
             memberManagementService.removeMember(member.householdId(), member.getId());
         }
+    }
+
+    // Logs the member ID only: the e-mail address is personal data and must not end up in logs.
+    private void logFailure(String action, AccountEntity account, RuntimeException exception) {
+        LOG.error("Failed to {} for member {}", action, account.memberId(), exception);
     }
 
     private MemberEntity findMember(AccountEntity account) {

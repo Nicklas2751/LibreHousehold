@@ -283,6 +283,7 @@
 		"error_locked": "Dieses Konto ist wegen zu vieler fehlgeschlagener Anmeldeversuche vorübergehend gesperrt. Bitte versuche es nach {time} erneut.",
 		"error_locked_unknown_time": "Dieses Konto ist wegen zu vieler fehlgeschlagener Anmeldeversuche vorübergehend gesperrt. Bitte versuche es später erneut.",
 		"forgot_password_link": "Passwort vergessen?",
+		"back_button": "Zurück",
 		"error_social_login_no_account": "Zu diesem Anbieter-Konto gibt es kein Konto in LibreHousehold. Melde dich mit E-Mail und Passwort an oder lass dich in einen Haushalt einladen.",
 		"error_social_login_failed": "Die Anmeldung über den Anbieter ist fehlgeschlagen. Bitte versuche es erneut.",
 		"error_local_login_disabled": "Auf dieser Instanz ist die Anmeldung nur über einen Anbieter möglich."

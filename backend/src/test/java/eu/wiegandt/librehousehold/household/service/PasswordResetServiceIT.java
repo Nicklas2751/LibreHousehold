@@ -2,6 +2,7 @@ package eu.wiegandt.librehousehold.household.service;
 
 import eu.wiegandt.librehousehold.TestcontainersConfiguration;
 import eu.wiegandt.librehousehold.household.AccountPrincipal;
+import eu.wiegandt.librehousehold.household.exception.PasswordResetTokenInvalidException;
 import eu.wiegandt.librehousehold.household.model.AccountEntity;
 import eu.wiegandt.librehousehold.household.model.HouseholdEntity;
 import eu.wiegandt.librehousehold.household.model.MemberEntity;
@@ -23,6 +24,8 @@ import java.time.Instant;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.instancio.Select.field;
 
 /**
@@ -42,6 +45,9 @@ class PasswordResetServiceIT {
 
     @Autowired
     private AccountTokenService accountTokenService;
+
+    @Autowired
+    private AccountService accountService;
 
     @Autowired
     private AccountRepository accountRepository;
@@ -85,5 +91,41 @@ class PasswordResetServiceIT {
 
         // then
         assertThat(sessionRegistry.getSessionInformation(sessionId).isExpired()).isTrue();
+    }
+
+    @Test
+    void confirmPasswordReset_federatedAccountWithValidToken_throwsPasswordResetTokenInvalidException() {
+        // given
+        var household = householdRepository.save(Instancio.create(HouseholdEntity.class));
+        createdHouseholdId = household.id();
+        var member = memberRepository.save(Instancio.of(MemberEntity.class)
+                .set(field(MemberEntity::householdId), household.id())
+                .create());
+        accountService.createFederatedAccount(member.getId());
+        var token = accountTokenService.issueToken(member.getId(), PASSWORD_RESET_PURPOSE, Duration.ofHours(1));
+
+        // when / then
+        assertThatThrownBy(() -> service.confirmPasswordReset(token, "new correct horse battery staple"))
+                .isInstanceOf(PasswordResetTokenInvalidException.class);
+    }
+
+    @Test
+    void confirmPasswordReset_federatedAccountWithValidToken_setsNoPasswordHash() {
+        // given
+        var household = householdRepository.save(Instancio.create(HouseholdEntity.class));
+        createdHouseholdId = household.id();
+        var member = memberRepository.save(Instancio.of(MemberEntity.class)
+                .set(field(MemberEntity::householdId), household.id())
+                .create());
+        accountService.createFederatedAccount(member.getId());
+        var token = accountTokenService.issueToken(member.getId(), PASSWORD_RESET_PURPOSE, Duration.ofHours(1));
+
+        // when
+        catchThrowable(() -> service.confirmPasswordReset(token, "new correct horse battery staple"));
+
+        // then
+        assertThat(accountRepository.findById(member.getId())).get()
+                .extracting(AccountEntity::passwordHash)
+                .isNull();
     }
 }

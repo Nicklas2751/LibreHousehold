@@ -14,7 +14,8 @@ describe('sessionState', () => {
 			member: { id: 'member-id', name: 'Max Mustermann', email: 'max@example.com', isAdmin: true },
 			household: { id: 'household-id', name: 'Die Testfamilie' },
 			preferences: {},
-			emailVerified: true
+			emailVerified: true,
+			socialLoginOnly: false
 		};
 
 		// when

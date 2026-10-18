@@ -45,6 +45,7 @@ function currentUser(overrides: Partial<CurrentUser> = {}): CurrentUser {
 		household: { id: 'household-1', name: 'Musterhaushalt' },
 		preferences: { theme: 'light', language: 'de' },
 		emailVerified: true,
+		socialLoginOnly: false,
 		...overrides
 	};
 }
@@ -110,5 +111,45 @@ describe('settings user page - email verification lock', () => {
 				memberUpdate: { name: 'Neuer Name' }
 			})
 		);
+	});
+});
+
+describe('settings user page - password section', () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		setGuest();
+		userState.set(undefined);
+		householdState.set(undefined);
+		members.set([]);
+	});
+
+	it('local account — shows the password section', async () => {
+		// given
+		const user = currentUser({ socialLoginOnly: false });
+		setAuthenticated(user);
+		userState.set(user.member);
+		householdState.set(user.household);
+
+		// when
+		render(SettingsUserPage);
+
+		// then
+		await expect.element(page.getByRole('button', { name: 'Passwort ändern' })).toBeInTheDocument();
+	});
+
+	it('social-login-only account — hides the password section', async () => {
+		// given
+		const user = currentUser({ socialLoginOnly: true });
+		setAuthenticated(user);
+		userState.set(user.member);
+		householdState.set(user.household);
+
+		// when
+		render(SettingsUserPage);
+
+		// then
+		await expect
+			.element(page.getByRole('heading', { name: 'Passwort ändern' }))
+			.not.toBeInTheDocument();
 	});
 });

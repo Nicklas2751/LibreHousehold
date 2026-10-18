@@ -19,35 +19,51 @@ import eu.wiegandt.librehousehold.model.Member;
 import org.instancio.Instancio;
 import org.instancio.junit.InstancioExtension;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
+import java.sql.Timestamp;
+import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.awaitility.Awaitility.await;
 import static org.instancio.Select.field;
 
 /**
  * {@code webEnvironment = MOCK} (not {@code NONE}): {@code setupHousehold} now also establishes an
  * authenticated session via {@code AccountSessionAuthenticator}, which needs a real
  * {@code WebApplicationContext} (for {@code AuthenticationConfiguration} autoconfiguration and the
- * {@code request}/{@code response} scopes) plus a thread-bound request (set up per test below).
+ * {@code request}/{@code response} scopes) plus a thread-bound request (bound per test via
+ * {@link #bindRequest()}).
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK, properties = {"librehousehold.security.oauth2-client.client-secret=test-client-secret"})
 @Import(TestcontainersConfiguration.class)
 @ExtendWith(InstancioExtension.class)
 class HouseholdSetupServiceIT {
+
+    private static final Duration LISTENER_COMPLETION_TIMEOUT = Duration.ofSeconds(10);
+
+    // Only publications that a listener may still pick up or is still processing: FAILED (or
+    // COMPLETED) entries from earlier tests must not block the cleanup of this one.
+    private static final String COUNT_IN_PROGRESS_PUBLICATIONS_SQL = """
+            SELECT COUNT(*) FROM event_publication
+            WHERE status IN ('PUBLISHED', 'PROCESSING', 'RESUBMITTED') AND publication_date >= ?
+            """;
+
+    private final Instant testStartedAt = Instant.now();
 
     @Autowired
     private HouseholdSetupService service;
@@ -76,17 +92,17 @@ class HouseholdSetupServiceIT {
     @Autowired
     private MemberQuery memberQuery;
 
-    private UUID createdHouseholdId;
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
-    @BeforeEach
-    void bindRequestContext() {
-        RequestContextHolder.setRequestAttributes(
-                new ServletRequestAttributes(new MockHttpServletRequest(), new MockHttpServletResponse()));
-    }
+    private UUID createdHouseholdId;
 
     @AfterEach
     void tearDown() {
         RequestContextHolder.resetRequestAttributes();
+        // The listeners run asynchronously after commit and may still write rows referencing the
+        // members (e.g. account_token); deleting before they are done violates those foreign keys.
+        await().atMost(LISTENER_COMPLETION_TIMEOUT).until(this::noPublicationInProgress);
         if (createdHouseholdId != null) {
             inviteRepository.deleteByHouseholdId(createdHouseholdId);
             memberRepository.deleteByHouseholdId(createdHouseholdId);
@@ -94,10 +110,27 @@ class HouseholdSetupServiceIT {
         }
     }
 
+    private boolean noPublicationInProgress() {
+        return jdbcTemplate.queryForObject(COUNT_IN_PROGRESS_PUBLICATIONS_SQL, Long.class,
+                Timestamp.from(testStartedAt)) == 0;
+    }
+
+    private void bindRequest() {
+        RequestContextHolder.setRequestAttributes(
+                new ServletRequestAttributes(new MockHttpServletRequest(), new MockHttpServletResponse()));
+    }
+
+    private Member memberWithValidEmail() {
+        return Instancio.of(Member.class)
+                .generate(field(Member::getEmail), gen -> gen.net().email())
+                .create();
+    }
+
     @Test
     void setupHousehold_validSetup_persistsHashedPasswordInAccountTable() {
         // given
-        var member = Instancio.create(Member.class);
+        bindRequest();
+        var member = memberWithValidEmail();
         var household = Instancio.create(Household.class);
         var localRegistration = Instancio.create(LocalRegistration.class);
         createdHouseholdId = household.getId();
@@ -114,7 +147,8 @@ class HouseholdSetupServiceIT {
     @Test
     void setupHousehold_validSetup_persistsHouseholdInDatabase() {
         // given
-        var member = Instancio.create(Member.class);
+        bindRequest();
+        var member = memberWithValidEmail();
         var household = Instancio.create(Household.class);
         var localRegistration = Instancio.create(LocalRegistration.class);
         createdHouseholdId = household.getId();
@@ -130,7 +164,8 @@ class HouseholdSetupServiceIT {
     @Test
     void setupHousehold_validSetup_persistsMemberInDatabase() {
         // given
-        var member = Instancio.create(Member.class);
+        bindRequest();
+        var member = memberWithValidEmail();
         var household = Instancio.create(Household.class);
         var localRegistration = Instancio.create(LocalRegistration.class);
         createdHouseholdId = household.getId();
@@ -149,12 +184,13 @@ class HouseholdSetupServiceIT {
     @Test
     void setupHousehold_duplicateHouseholdId_throwsHouseholdAlreadyExistsException() {
         // given
-        var member1 = Instancio.create(Member.class);
+        bindRequest();
+        var member1 = memberWithValidEmail();
         var household = Instancio.create(Household.class);
         createdHouseholdId = household.getId();
         service.setupHousehold(new HouseholdSetup(household, member1).localRegistration(Instancio.create(LocalRegistration.class)));
 
-        var member2 = Instancio.create(Member.class);
+        var member2 = memberWithValidEmail();
         var conflictingHousehold = Instancio.of(Household.class)
                 .set(field(Household::getId), household.getId())
                 .create();
@@ -168,7 +204,8 @@ class HouseholdSetupServiceIT {
     @Test
     void setupHousehold_duplicateMemberEmail_throwsMemberAlreadyExistsException() {
         // given
-        var member1 = Instancio.create(Member.class);
+        bindRequest();
+        var member1 = memberWithValidEmail();
         var household1 = Instancio.create(Household.class);
         createdHouseholdId = household1.getId();
         service.setupHousehold(new HouseholdSetup(household1, member1).localRegistration(Instancio.create(LocalRegistration.class)));
@@ -187,7 +224,8 @@ class HouseholdSetupServiceIT {
     @Test
     void setupHousehold_validSetup_inviteTokenStoredInDatabase() {
         // given
-        var member = Instancio.create(Member.class);
+        bindRequest();
+        var member = memberWithValidEmail();
         var household = Instancio.create(Household.class);
         var localRegistration = Instancio.create(LocalRegistration.class);
         createdHouseholdId = household.getId();
@@ -203,7 +241,8 @@ class HouseholdSetupServiceIT {
     @Test
     void setupHousehold_validSetup_inviteValidForSevenDays() {
         // given
-        var member = Instancio.create(Member.class);
+        bindRequest();
+        var member = memberWithValidEmail();
         var household = Instancio.create(Household.class);
         var localRegistration = Instancio.create(LocalRegistration.class);
         var expectedValidUntil = LocalDate.now().plusDays(7);
@@ -225,12 +264,11 @@ class HouseholdSetupServiceIT {
         var identity = new ExternalIdentity("google", "subject-" + UUID.randomUUID(),
                 "social-" + UUID.randomUUID() + "@example.com", "Provider Name");
         createdHouseholdId = household.getId();
-        RequestContextHolder.setRequestAttributes(
-                new ServletRequestAttributes(new MockHttpServletRequest(), new MockHttpServletResponse()));
+        bindRequest();
         pendingSocialRegistrationStore.store(identity);
 
         // when
-        service.setupHousehold(new HouseholdSetup(household, Instancio.create(Member.class)));
+        service.setupHousehold(new HouseholdSetup(household, memberWithValidEmail()));
 
         // then
         assertThat(memberQuery.findEmailByExternalIdentity(identity.registrationId(), identity.subject()))
@@ -241,10 +279,9 @@ class HouseholdSetupServiceIT {
     void setupHousehold_pendingSocialRegistration_persistsVerifiedAccountWithoutPassword() {
         // given
         var household = Instancio.create(Household.class);
-        var member = Instancio.create(Member.class);
+        var member = memberWithValidEmail();
         createdHouseholdId = household.getId();
-        RequestContextHolder.setRequestAttributes(
-                new ServletRequestAttributes(new MockHttpServletRequest(), new MockHttpServletResponse()));
+        bindRequest();
         pendingSocialRegistrationStore.store(new ExternalIdentity("google", "subject-" + UUID.randomUUID(),
                 "social-" + UUID.randomUUID() + "@example.com", null));
 
