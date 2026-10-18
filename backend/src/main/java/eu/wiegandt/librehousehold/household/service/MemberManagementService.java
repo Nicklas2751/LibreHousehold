@@ -258,6 +258,15 @@ public class MemberManagementService implements MemberQuery {
         return accountService.isEmailVerified(memberId);
     }
 
+    @Override
+    public boolean isSocialLoginOnly(UUID memberId) {
+        return !accountService.hasPassword(memberId);
+    }
+
+    // @Transactional is required: AccountRegistrationListener handles VerificationEmailRequested as an
+    // @ApplicationModuleListener (AFTER_COMMIT), which Spring silently skips when the event is
+    // published outside a transaction, so the verification e-mail would never be sent.
+    @Transactional
     public void resendVerificationEmail(UUID memberId) {
         var member = memberRepository.findById(memberId).orElseThrow(MemberNotFoundException::new);
         eventPublisher.publishEvent(new VerificationEmailRequested(member.getId(), member.email()));
@@ -269,7 +278,10 @@ public class MemberManagementService implements MemberQuery {
     // a live event_publication row stuck with a null completion_date during manual E2E verification.
     @Transactional
     public void requestPasswordReset(String email) {
+        // Accounts without a local password (social login) get no reset link, but the caller sees no
+        // difference, so the endpoint still does not reveal which kind of account an e-mail belongs to.
         memberRepository.findByEmail(email)
+                .filter(member -> accountService.hasPassword(member.getId()))
                 .ifPresent(member -> eventPublisher.publishEvent(new PasswordResetRequested(member.getId(), email)));
     }
 }

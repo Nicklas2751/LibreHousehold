@@ -19,6 +19,7 @@
 	const memberId = $derived($userState?.id ?? '');
 	const isOwner = $derived($userState?.isAdmin === true);
 	const emailVerified = $derived(session.currentUser?.emailVerified !== false);
+	const socialLoginOnly = $derived(session.currentUser?.socialLoginOnly === true);
 	const otherMembers = $derived($members.filter((mb) => mb.id !== memberId));
 
 	// Load members if not yet loaded
@@ -192,73 +193,75 @@
 	</div>
 
 	<!-- Password section -->
-	<div class="card mb-4 bg-base-200 shadow-sm">
-		<div class="card-body p-4">
-			<h3 class="mb-3 text-base font-semibold">{m['settings.user.password.title']()}</h3>
-			{#if !emailVerified}
-				<p class="mb-3 text-xs text-warning">{m['settings.user.password.locked_hint']()}</p>
-			{/if}
-			<fieldset class="fieldset">
-				<legend class="fieldset-legend">{m['settings.user.password.old_label']()}</legend>
-				<input
-					type="password"
-					aria-label={m['settings.user.password.old_label']()}
-					class="validator input w-full"
-					autocomplete="current-password"
-					bind:value={oldPassword}
-					disabled={!emailVerified}
-					required
-				/>
-			</fieldset>
-			<fieldset class="mt-2 fieldset">
-				<legend class="fieldset-legend">{m['settings.user.password.new_label']()}</legend>
-				<input
-					type="password"
-					aria-label={m['settings.user.password.new_label']()}
-					class="input w-full"
-					autocomplete="new-password"
-					class:input-error={passwordMismatch}
-					bind:value={newPassword}
-					minlength="8"
-					disabled={!emailVerified}
-					required
-				/>
-			</fieldset>
-			<fieldset class="mt-2 fieldset">
-				<legend class="fieldset-legend">{m['settings.user.password.confirm_label']()}</legend>
-				<input
-					type="password"
-					aria-label={m['settings.user.password.confirm_label']()}
-					class="input w-full"
-					autocomplete="new-password"
-					class:input-error={passwordMismatch}
-					bind:value={confirmPassword}
-					disabled={!emailVerified}
-					required
-				/>
-				{#if passwordMismatch}
-					<p class="label mt-1 text-xs text-error">{m['settings.user.password.mismatch']()}</p>
+	{#if !socialLoginOnly}
+		<div class="card mb-4 bg-base-200 shadow-sm">
+			<div class="card-body p-4">
+				<h3 class="mb-3 text-base font-semibold">{m['settings.user.password.title']()}</h3>
+				{#if !emailVerified}
+					<p class="mb-3 text-xs text-warning">{m['settings.user.password.locked_hint']()}</p>
 				{/if}
-			</fieldset>
-			<div class="mt-3 card-actions justify-end">
-				<button
-					class="btn btn-sm btn-primary"
-					onclick={savePassword}
-					disabled={!emailVerified ||
-						passwordSaving ||
-						passwordMismatch ||
-						!oldPassword ||
-						!newPassword ||
-						!confirmPassword}
-				>
-					{#if passwordSaving}
-						<span class="loading loading-xs loading-spinner"></span>
+				<fieldset class="fieldset">
+					<legend class="fieldset-legend">{m['settings.user.password.old_label']()}</legend>
+					<input
+						type="password"
+						aria-label={m['settings.user.password.old_label']()}
+						class="validator input w-full"
+						autocomplete="current-password"
+						bind:value={oldPassword}
+						disabled={!emailVerified}
+						required
+					/>
+				</fieldset>
+				<fieldset class="mt-2 fieldset">
+					<legend class="fieldset-legend">{m['settings.user.password.new_label']()}</legend>
+					<input
+						type="password"
+						aria-label={m['settings.user.password.new_label']()}
+						class="input w-full"
+						autocomplete="new-password"
+						class:input-error={passwordMismatch}
+						bind:value={newPassword}
+						minlength="8"
+						disabled={!emailVerified}
+						required
+					/>
+				</fieldset>
+				<fieldset class="mt-2 fieldset">
+					<legend class="fieldset-legend">{m['settings.user.password.confirm_label']()}</legend>
+					<input
+						type="password"
+						aria-label={m['settings.user.password.confirm_label']()}
+						class="input w-full"
+						autocomplete="new-password"
+						class:input-error={passwordMismatch}
+						bind:value={confirmPassword}
+						disabled={!emailVerified}
+						required
+					/>
+					{#if passwordMismatch}
+						<p class="label mt-1 text-xs text-error">{m['settings.user.password.mismatch']()}</p>
 					{/if}
-					{m['settings.user.password.save_button']()}
-				</button>
+				</fieldset>
+				<div class="mt-3 card-actions justify-end">
+					<button
+						class="btn btn-sm btn-primary"
+						onclick={savePassword}
+						disabled={!emailVerified ||
+							passwordSaving ||
+							passwordMismatch ||
+							!oldPassword ||
+							!newPassword ||
+							!confirmPassword}
+					>
+						{#if passwordSaving}
+							<span class="loading loading-xs loading-spinner"></span>
+						{/if}
+						{m['settings.user.password.save_button']()}
+					</button>
+				</div>
 			</div>
 		</div>
-	</div>
+	{/if}
 
 	<!-- Danger zone -->
 	<div class="card border border-error/40 bg-error/5 shadow-sm">

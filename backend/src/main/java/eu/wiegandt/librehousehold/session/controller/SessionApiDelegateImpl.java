@@ -91,7 +91,8 @@ public class SessionApiDelegateImpl implements SessionApiDelegate {
         var household = householdQuery.getHousehold(principal.householdId());
         var preferences = preferencesQuery.getPreferencesOrDefault(principal.memberId());
         var emailVerified = memberQuery.isEmailVerified(principal.memberId());
-        return ResponseEntity.ok(new CurrentUser(member, household, preferences, emailVerified));
+        var socialLoginOnly = memberQuery.isSocialLoginOnly(principal.memberId());
+        return ResponseEntity.ok(new CurrentUser(member, household, preferences, emailVerified, socialLoginOnly));
     }
 
     @Override

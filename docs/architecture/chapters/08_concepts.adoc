@@ -138,3 +138,13 @@ threshold of failed attempts is reached, regardless of how slowly they were made
 |V8.2.2 (L1)
 |Open
 |===
+[[section-event-delivery-and-resubmission]]
+=== Event Delivery and Resubmission
+
+Modules react to each other's Domain Events (xref:../adrs/adr-011.adoc[ADR 011]) through `@ApplicationModuleListener`, which runs asynchronously after the publishing transaction has committed. Spring Modulith records one row per event and listener in `event_publication` before the commit, so a delivery that fails (e.g. an unreachable mail server) is not lost, only left unfinished. Three rules follow from this:
+
+* **Events are published inside a transaction.** Without an active transaction the after-commit listener is never invoked, and the publication stays in `PUBLISHED` without any error. Every service method that publishes an event is therefore `@Transactional`.
+* **Failed deliveries are retried, but not forever.** `EventPublicationMaintenanceJob` (in `config`, as application-wide infrastructure no module depends on) runs every `librehousehold.events.run-interval` and resubmits `FAILED` publications that are older than `resubmit-min-age`, as long as their `completion_attempts` (1 for the first delivery, plus one per resubmission) is below `max-attempts`. A publication that reaches the limit stays `FAILED` for manual inspection; this stops endless retries of events that can never succeed, such as a notification for a member deleted in the meantime. Publications stuck in `PUBLISHED`, `PROCESSING` or `RESUBMITTED` after a crash are marked `FAILED` by Spring Modulith's staleness monitor (`spring.modulith.events.staleness.*`) and thereby become eligible as well.
+* **Completed publications are deleted after a retention period.** The same job removes completed publications older than `completed-retention`, so the table keeps enough history for diagnosis without growing without bound.
+
+Listeners must tolerate being called more than once for the same event: a resubmission repeats the whole listener, e.g. a notification e-mail may arrive twice.

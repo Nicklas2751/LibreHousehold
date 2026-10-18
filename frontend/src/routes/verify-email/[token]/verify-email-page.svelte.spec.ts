@@ -35,7 +35,8 @@ function currentUser(): CurrentUser {
 		member: { id: 'member-1', name: 'Max', email: 'max@example.com', isAdmin: false },
 		household: { id: 'household-1', name: 'Musterhaushalt' },
 		preferences: { theme: 'light', language: 'de' },
-		emailVerified: false
+		emailVerified: false,
+		socialLoginOnly: false
 	};
 }
 

@@ -1196,22 +1196,70 @@ class MemberManagementServiceTest {
     }
 
     @Nested
+    class isSocialLoginOnly {
+
+        @Test
+        void accountWithoutPassword_returnsTrue() {
+            // given
+            var memberId = UUID.randomUUID();
+            doReturn(false).when(accountService).hasPassword(memberId);
+
+            // when
+            var result = service.isSocialLoginOnly(memberId);
+
+            // then
+            assertThat(result).isTrue();
+        }
+
+        @Test
+        void accountWithPassword_returnsFalse() {
+            // given
+            var memberId = UUID.randomUUID();
+            doReturn(true).when(accountService).hasPassword(memberId);
+
+            // when
+            var result = service.isSocialLoginOnly(memberId);
+
+            // then
+            assertThat(result).isFalse();
+        }
+    }
+
+    @Nested
     class requestPasswordReset {
 
         @Test
-        void existingEmail_publishesPasswordResetRequestedEvent() {
+        void existingEmailWithPassword_publishesPasswordResetRequestedEvent() {
             // given
             var email = "max@example.com";
             var entity = Instancio.of(memberEntityModel)
                     .set(field(MemberEntity::email), email)
                     .create();
             doReturn(Optional.of(entity)).when(memberRepository).findByEmail(email);
+            doReturn(true).when(accountService).hasPassword(entity.id());
 
             // when
             service.requestPasswordReset(email);
 
             // then
             verify(eventPublisher).publishEvent(new PasswordResetRequested(entity.id(), email));
+        }
+
+        @Test
+        void existingEmailWithoutPassword_publishesNothing() {
+            // given
+            var email = "federated@example.com";
+            var entity = Instancio.of(memberEntityModel)
+                    .set(field(MemberEntity::email), email)
+                    .create();
+            doReturn(Optional.of(entity)).when(memberRepository).findByEmail(email);
+            doReturn(false).when(accountService).hasPassword(entity.id());
+
+            // when
+            service.requestPasswordReset(email);
+
+            // then
+            verifyNoInteractions(eventPublisher);
         }
 
         @Test

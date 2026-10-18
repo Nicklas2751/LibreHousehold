@@ -27,6 +27,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.instancio.Select.field;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -34,6 +35,7 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 @ExtendWith({MockitoExtension.class, InstancioExtension.class})
 class PasswordResetServiceTest {
@@ -96,6 +98,7 @@ class PasswordResetServiceTest {
                     .consumeToken(token, AccountTokenService.PASSWORD_RESET_PURPOSE);
             doReturn(Optional.of(member)).when(memberRepository).findById(member.getId());
             doReturn(Optional.of(account)).when(accountRepository).findById(member.getId());
+            doReturn(true).when(accountService).hasPassword(member.getId());
             var principal = new AccountPrincipal(member.email(), account.passwordHash(), account.emailVerified());
             var session = new SessionInformation(principal, "session-1", Date.from(Instant.now()));
             doReturn(List.of(session)).when(sessionRegistry).getAllSessions(principal, false);
@@ -120,6 +123,7 @@ class PasswordResetServiceTest {
                     .consumeToken(token, AccountTokenService.PASSWORD_RESET_PURPOSE);
             doReturn(Optional.of(member)).when(memberRepository).findById(member.getId());
             doReturn(Optional.of(account)).when(accountRepository).findById(member.getId());
+            doReturn(true).when(accountService).hasPassword(member.getId());
             doReturn(List.of()).when(sessionRegistry).getAllSessions(any(), anyBoolean());
 
             // when
@@ -142,6 +146,7 @@ class PasswordResetServiceTest {
                     .consumeToken(token, AccountTokenService.PASSWORD_RESET_PURPOSE);
             doReturn(Optional.of(member)).when(memberRepository).findById(member.getId());
             doReturn(Optional.of(account)).when(accountRepository).findById(member.getId());
+            doReturn(true).when(accountService).hasPassword(member.getId());
             doReturn(List.of()).when(sessionRegistry).getAllSessions(any(), anyBoolean());
 
             // when
@@ -149,6 +154,43 @@ class PasswordResetServiceTest {
 
             // then
             verify(authorizedClientService).removeAuthorizedClient(CLIENT_REGISTRATION_ID, member.email());
+        }
+
+        @Test
+        void socialLoginOnlyAccount_throwsPasswordResetTokenInvalidException() {
+            // given
+            var token = UUID.randomUUID();
+            var member = Instancio.create(MemberEntity.class);
+            var account = new AccountEntity(member.getId(), null, true, Instant.now(), null, 0, null);
+            doReturn(member.getId()).when(accountTokenService)
+                    .consumeToken(token, AccountTokenService.PASSWORD_RESET_PURPOSE);
+            doReturn(Optional.of(member)).when(memberRepository).findById(member.getId());
+            doReturn(Optional.of(account)).when(accountRepository).findById(member.getId());
+            doReturn(false).when(accountService).hasPassword(member.getId());
+
+            // when / then
+            assertThatThrownBy(() -> service.confirmPasswordReset(token, "newPassword"))
+                    .isInstanceOf(PasswordResetTokenInvalidException.class);
+        }
+
+        @Test
+        void socialLoginOnlyAccount_neitherResetsPasswordNorTouchesSessions() {
+            // given
+            var token = UUID.randomUUID();
+            var member = Instancio.create(MemberEntity.class);
+            var account = new AccountEntity(member.getId(), null, true, Instant.now(), null, 0, null);
+            doReturn(member.getId()).when(accountTokenService)
+                    .consumeToken(token, AccountTokenService.PASSWORD_RESET_PURPOSE);
+            doReturn(Optional.of(member)).when(memberRepository).findById(member.getId());
+            doReturn(Optional.of(account)).when(accountRepository).findById(member.getId());
+            doReturn(false).when(accountService).hasPassword(member.getId());
+
+            // when
+            catchThrowable(() -> service.confirmPasswordReset(token, "newPassword"));
+
+            // then
+            verify(accountService, never()).resetPassword(any(), any());
+            verifyNoInteractions(sessionRegistry, authorizedClientService);
         }
 
         @Test

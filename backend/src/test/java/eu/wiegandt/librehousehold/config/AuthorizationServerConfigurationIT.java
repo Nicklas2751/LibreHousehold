@@ -410,7 +410,7 @@ class AuthorizationServerConfigurationIT {
             var email = "authtest-" + UUID.randomUUID() + "@example.com";
             var member = createMemberWithAccount(email, RAW_PASSWORD);
             var authenticatedCookies = performLoginAndFollowToCallback(email, RAW_PASSWORD).cookies();
-            var expected = new CurrentUser(memberMapper.toMember(member), householdMapper.toApiModel(createdHousehold), new UserPreferences(), true);
+            var expected = new CurrentUser(memberMapper.toMember(member), householdMapper.toApiModel(createdHousehold), new UserPreferences(), true, false);
 
             // when
             var result = getWithCookies(authenticatedCookies, URI.create(BASE_PATH + "/me"))
