@@ -28,7 +28,7 @@
 		"@tailwindcss/vite": "^4.3.3",
 		"@types/node": "^26",
 		"@vitest/browser": "^4.1.10",
-		"@vitest/browser-playwright": "^4.1.8",
+		"@vitest/browser-playwright": "^5.0.5",
 		"daisyui": "^5.7.50",
 		"eslint": "^10.13.0",
 		"eslint-config-prettier": "^10.1.8",
