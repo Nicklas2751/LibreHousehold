@@ -2,14 +2,15 @@
 
 Status: Entwurf / Referenzdokument. Dieses Dokument ist **kein Arc42-Kapitel und kein ADR** —
 es ist die Arbeits-Roadmap für die Einführung von Authentifizierung/Autorisierung in
-LibreHousehold. Jeder Punkt bekommt vor der Umsetzung einen eigenen Implementierungsplan
-(TDD-Pflicht, siehe `AGENTS.md`); dieses Dokument selbst wird nicht implementiert.
+LibreHousehold. Jeder Punkt bekommt vor der Umsetzung einen eigenen Implementierungsplan (TDD-Pflicht, siehe
+`../../AGENTS.md`); dieses Dokument selbst wird nicht implementiert.
 
 Referenzierung: Ein Detailplan-Auftrag kann direkt auf eine ID hier verweisen (z. B. „erstelle
 den Implementierungsplan für P1.4"). IDs sind stabil und werden nicht umnummeriert; erledigte
 Punkte werden mit ✅ markiert, nicht gelöscht.
 
 Bindende Leitplanken für alle Punkte:
+
 - ADR-009 (Argon2id), ADR-011 (Named Interfaces vs. Domain Events), ADR-012 (1 Account : 1 Household)
 - Arc42 Kap. 8 „Authentication and Authorization": kein eigenes Auth-Modul, keine Named Interface
   für Framework-Typen (`PasswordEncoder` etc. direkt injizieren), `AccountRegistration` bleibt im
@@ -34,7 +35,7 @@ Bindende Leitplanken für alle Punkte:
   "Out of Scope" darf ausschließlich für Punkte verwendet werden, die im Auftrag/Plan bereits
   explizit als bewusst-nicht-jetzt markiert sind, nicht für neu entdeckte, ungeklärte Fragen.
 
-Hinweis: `frontend/src/generated-sources` ist gitignored und enthielt (Stand 4. Juli, nicht in
+Hinweis: `../../frontend/src/generated-sources` ist gitignored und enthielt (Stand 4. Juli, nicht in
 `api/openapi.yml`/git) bereits einen verwaisten Entwurf (`AuthApi`, `LocalRegistration`,
 `joinHouseholdAuthenticated`, `AuthProviders`). Kann als Namens-Inspiration für P1.1/P3.4 dienen,
 muss aber sauber neu aus der überarbeiteten OpenAPI-Spec generiert werden.
@@ -46,13 +47,13 @@ muss aber sauber neu aus der überarbeiteten OpenAPI-Spec generiert werden.
 - ✅ **P0.1 — ADR: Auth-Architektur.** Spring Authorization Server als Authorization Server *und*
   Resource Server im selben Monolithen; Authorization Code Flow + PKCE für das SPA. Abgrenzung zu
   Alternativen (reiner Resource-Server-Ansatz, externer IdP). Bezug: QG2/QG4. Siehe
-  [ADR 013](architecture/adrs/adr-013.adoc).
+  [ADR 013](../../docs/architecture/adrs/adr-013.adoc).
 - ✅ **P0.2 — ADR: Session-Strategie (BFF-Pattern).** httpOnly/SameSite-Cookies, Tokens verbleiben
   serverseitig, CSRF-Schutzmechanismus, Logout-/Revocation-Semantik. *(Entscheidung: BFF+Cookies,
-  siehe oben.)* Siehe [ADR 014](architecture/adrs/adr-014.adoc).
+  siehe oben.)* Siehe [ADR 014](../../docs/architecture/adrs/adr-014.adoc).
 - 🟡 **P0.3 — Datenmodell & Flyway-Migrationen.** Ablage der Credentials im `household`-Schema:
   eigene `account`-Tabelle (1:1 zu `member`) statt Spalten direkt an `member`, siehe
-  [ADR 015](architecture/adrs/adr-015.adoc). Offen: Argon2id-Parameter, `email_verified`,
+  [ADR 015](../../docs/architecture/adrs/adr-015.adoc). Offen: Argon2id-Parameter, `email_verified`,
   plus die von Spring Authorization Server benötigten Tabellen explizit per Flyway (kein
   Schema-Autogen, siehe Findings zu `event_publication`) — das ist Umsetzungsdetail für den
   P1.3-Feinplan, nicht mehr Teil von Phase 0.
@@ -63,7 +64,7 @@ muss aber sauber neu aus der überarbeiteten OpenAPI-Spec generiert werden.
   sichere Cookies, CSRF, CORS, Redirect-Allow-List für Invite/OAuth-Callbacks,
   nicht-enumerierende Fehlermeldungen bei Login/Registrierung, Rate-Limiting bewusst auf P2.7
   verschoben). Liefert die Akzeptanzkriterien für P1–P3. Die Checkliste selbst lebt dauerhaft in
-  [Kapitel 8](architecture/chapters/08_concepts.adoc#section-security-controls-authentication)
+  [Kapitel 8](../../docs/architecture/chapters/08_concepts.adoc#section-security-controls-authentication)
   (arc42-Doku, nicht hier), da sie kein Umsetzungsplan ist, sondern ein Security-Konzept.
 
 ## Phase 1 — Lokale Accounts: Kernflow (Authorization Code + PKCE, BFF-Cookie-Session)
@@ -72,8 +73,8 @@ muss aber sauber neu aus der überarbeiteten OpenAPI-Spec generiert werden.
   `MemberRegistration` (Invite-Join) ergänzen, neuer Endpoint „E-Mail bereits registriert?"
   (bisher fehlend, siehe AGENTS.md), Passwort-Policy, non-enumerating Error-Responses.
   Siehe [Detailplan](auth-plan-p1.1-p1.2.md).
-- ✅ **P1.2 — OpenAPI: Session-Oberfläche.** Vertrag für „current user/me" und Logout festlegen
-  (Login/Callback selbst laufen über Spring-Authorization-Server-Endpunkte, nicht im
+- ✅ **P1.2 — OpenAPI: Session-Oberfläche.** Vertrag für „current user/me" und Logout festlegen (Login/Callback selbst
+  laufen über Spring-Authorization-Server-Endpunkte, nicht im
   Business-Contract). Siehe [Detailplan](auth-plan-p1.1-p1.2.md).
 - ✅ **P1.3 — Backend: `AccountRegistration` im `household`-Modul.** Argon2id-Hashing bei Setup &
   Join, `UserDetailsService` auf Member/Account, E-Mail-Verfügbarkeitsprüfung. TDD.
@@ -104,34 +105,33 @@ muss aber sauber neu aus der überarbeiteten OpenAPI-Spec generiert werden.
   Umstellung aller Fundstellen) und Teil B (`sessionExpiredMiddleware`, mit P1.8) umgesetzt.
   Siehe [Detailplan](auth-plan-p1.7-p1.10.md).
 - ✅ **P1.8/P1.10-Nachtrag — Beim manuellen Testen von P1.7–P1.10 gefundene Bugs, sofort behoben:**
-  - `SetupWizard.svelte` Schritt 0: `<form onsubmit={nextStep}>` rief `event.preventDefault()`
-    nirgends auf → nativer GET-Formular-Submit statt SPA-Navigation, kompletter State-Reset,
-    Wizard kam nie über Schritt 0 hinaus. Gefixt (`handleCreateStepSubmit` mit `preventDefault()`).
-  - **Fehlende Session nach Setup/Join:** `setupHousehold`/`joinHousehold` legten nur den Account
-    an, ohne je eine authentifizierte Session zu etablieren — der „Close setup"/„Zum Dashboard"-
-    Button navigierte direkt zu `/app/dashboard`, was mit „Could not load your session" fehlschlug.
-    Behoben per Hybrid-Ansatz: `AccountSessionAuthenticator` (neu, `household/service`)
-    authentifiziert serverseitig die Authorization-Server-Session direkt nach Account-Anlage
-    (`HouseholdSetupService`/`MemberManagementService`); das Frontend schließt danach über
-    `completeSilentOAuth2Login()` (`oauth2Login.ts`) den bestehenden OAuth2-Redirect-Flow still ab
-    (kein erneutes Passwort nötig, da die AS-Session schon authentifiziert ist) und ruft erst dann
-    `bootstrapSession()` + Navigation zum Dashboard auf.
-  - Stacktrace-Leak (OWASP A05) zusätzlich zum bereits bekannten Fall (`ConstraintViolationException`,
-    siehe P1.8-Eintrag oben) auch bei `MethodArgumentNotValidException` (z. B. leerer Body an
-    `POST /household/setup`) und bei der eigenen `NoAuthenticatedSessionException`
-    (`GET /me` ohne `AccountOidcPrincipal`) gefunden und nach demselben Muster
-    (`ValidationExceptionHandler`) behoben.
-  - Vorbestehender flakiger Test `ExpenseServiceIT.validExpense_persistedInDatabase` gefunden
-    (BigDecimal-Skalen-Mismatch nach dem `NUMERIC`-DB-Roundtrip, z. B. `5997.4` vs. `5997.40`) und
-    behoben (`withComparatorForType(BigDecimal::compareTo, ...)` in der Recursive Comparison).
-  - **Cross-User-Session-Verdacht untersucht, nicht reproduzierbar:** Nutzer meldete, nach Login
-    als User B in einem separaten Browser habe ein Reload (F5) im Browser-Tab von User A dessen
-    Session gezeigt. Gezielt getestet mit echt getrennten Cookie-Jars gegen Backend direkt, durch
-    den Vite-Dev-Proxy, über den OAuth2-Redirect-Flow und über den reinen Formular-Login —
-    sequenziell, verschränkt und mit parallelen Requests: in keinem Fall reproduzierbar, jedes
-    Cookie-Jar bekam zuverlässig nur seine eigenen Daten. Nutzer konnte es beim erneuten eigenen
-    Test ebenfalls nicht reproduzieren. Als nicht reproduzierbar geschlossen; bei erneutem
-    Auftreten genaue Repro-Schritte (Browser/Version, Timing, genaue Aktionsreihenfolge) festhalten.
+    - `SetupWizard.svelte` Schritt 0: `<form onsubmit={nextStep}>` rief `event.preventDefault()`
+      nirgends auf → nativer GET-Formular-Submit statt SPA-Navigation, kompletter State-Reset,
+      Wizard kam nie über Schritt 0 hinaus. Gefixt (`handleCreateStepSubmit` mit `preventDefault()`).
+    - **Fehlende Session nach Setup/Join:** `setupHousehold`/`joinHousehold` legten nur den Account
+      an, ohne je eine authentifizierte Session zu etablieren — der „Close setup"/„Zum Dashboard"-
+      Button navigierte direkt zu `/app/dashboard`, was mit „Could not load your session" fehlschlug.
+      Behoben per Hybrid-Ansatz: `AccountSessionAuthenticator` (neu, `household/service`)
+      authentifiziert serverseitig die Authorization-Server-Session direkt nach Account-Anlage (`HouseholdSetupService`/
+      `MemberManagementService`); das Frontend schließt danach über
+      `completeSilentOAuth2Login()` (`oauth2Login.ts`) den bestehenden OAuth2-Redirect-Flow still ab (kein erneutes
+      Passwort nötig, da die AS-Session schon authentifiziert ist) und ruft erst dann
+      `bootstrapSession()` + Navigation zum Dashboard auf.
+    - Stacktrace-Leak (OWASP A05) zusätzlich zum bereits bekannten Fall (`ConstraintViolationException`,
+      siehe P1.8-Eintrag oben) auch bei `MethodArgumentNotValidException` (z. B. leerer Body an
+      `POST /household/setup`) und bei der eigenen `NoAuthenticatedSessionException`
+      (`GET /me` ohne `AccountOidcPrincipal`) gefunden und nach demselben Muster (`ValidationExceptionHandler`) behoben.
+    - Vorbestehender flakiger Test `ExpenseServiceIT.validExpense_persistedInDatabase` gefunden
+      (BigDecimal-Skalen-Mismatch nach dem `NUMERIC`-DB-Roundtrip, z. B. `5997.4` vs. `5997.40`) und
+      behoben (`withComparatorForType(BigDecimal::compareTo, ...)` in der Recursive Comparison).
+    - **Cross-User-Session-Verdacht untersucht, nicht reproduzierbar:** Nutzer meldete, nach Login
+      als User B in einem separaten Browser habe ein Reload (F5) im Browser-Tab von User A dessen
+      Session gezeigt. Gezielt getestet mit echt getrennten Cookie-Jars gegen Backend direkt, durch
+      den Vite-Dev-Proxy, über den OAuth2-Redirect-Flow und über den reinen Formular-Login —
+      sequenziell, verschränkt und mit parallelen Requests: in keinem Fall reproduzierbar, jedes
+      Cookie-Jar bekam zuverlässig nur seine eigenen Daten. Nutzer konnte es beim erneuten eigenen
+      Test ebenfalls nicht reproduzieren. Als nicht reproduzierbar geschlossen; bei erneutem
+      Auftreten genaue Repro-Schritte (Browser/Version, Timing, genaue Aktionsreihenfolge) festhalten.
 
 ## Phase 2 — Lokale Accounts: Lifecycle-Härtung (OWASP ASVS)
 
@@ -142,8 +142,8 @@ muss aber sauber neu aus der überarbeiteten OpenAPI-Spec generiert werden.
   Konsequenzen einer dauerhaft unverifizierten E-Mail-Adresse: Login-Blocking (kein erneuter Login
   nach Logout/Session-Ablauf, bis verifiziert — die erste Session direkt nach Setup/Join bleibt
   unberührt), Sperre von Passwort-/E-Mail-Änderung bis zur Verifikation, sowie eine konfigurierbare
-  Grace-Period (Standard 7 Tage) nach der ein unverifizierter Account automatisch gelöscht wird
-  (mit konfigurierbarer Warn-Mail, Standard 24h vorher); ist der betroffene Account der
+  Grace-Period (Standard 7 Tage) nach der ein unverifizierter Account automatisch gelöscht wird (mit konfigurierbarer
+  Warn-Mail, Standard 24h vorher); ist der betroffene Account der
   Haushalts-Admin, wird der gesamte Haushalt gelöscht. Ausdrücklich **nicht** eingeschränkt:
   Ausgaben/Aufgaben erstellen, Einladungslink erzeugen/nutzen, Passwort-Reset anfordern/einlösen.
   Siehe [Detailplan](auth-plan-p2.1-p2.7.md), Abschnitte 2.9/3.7–3.10.
@@ -184,11 +184,11 @@ muss aber sauber neu aus der überarbeiteten OpenAPI-Spec generiert werden.
   Alternativen (u. a. Keycloak/Authentik als Dogfooding-Option, navikt/mock-oauth2-server als
   reines Test-Double) — Dex bevorzugt als leichtgewichtiger, aber „echter" OIDC-Server ohne
   Lizenz-Fallstricke. Siehe [Detailplan](auth-plan-p3.0-p3.7.md).
-- ✅ **P3.1 — ADR: Social-Integration.** Spring-Authorization-Server-Federation
-  (Provider auf der Login-Seite des Auth-Servers) vs. Multi-Client-Registrierung;
+- ✅ **P3.1 — ADR: Social-Integration.** Spring-Authorization-Server-Federation (Provider auf der Login-Seite des
+  Auth-Servers) vs. Multi-Client-Registrierung;
   Account-Linking über verifizierte E-Mail; Konsequenzen aus dem 1:1-Modell (ADR-012).
-  Siehe [ADR 016](architecture/adrs/adr-016.adoc), [ADR 017](architecture/adrs/adr-017.adoc),
-  [ADR 018](architecture/adrs/adr-018.adoc) und [Detailplan](auth-plan-p3.0-p3.7.md).
+  Siehe [ADR 016](../../docs/architecture/adrs/adr-016.adoc), [ADR 017](../../docs/architecture/adrs/adr-017.adoc),
+  [ADR 018](../../docs/architecture/adrs/adr-018.adoc) und [Detailplan](auth-plan-p3.0-p3.7.md).
 - ✅ **P3.2 — Konfigurationsmodell.** `application.yml`-Schalter (`local`/`social`/`both`),
   Provider-Registrierungen (z. B. Google, GitHub, generisches OIDC), Startvalidierung.
   Umgesetzt ist der Social-Schalter `librehousehold.security.social-login.enabled`. Der Schalter für
@@ -198,8 +198,8 @@ muss aber sauber neu aus der überarbeiteten OpenAPI-Spec generiert werden.
   Member/Account, Anlage bei Erst-Login im Setup-/Invite-Kontext, Linking per verifizierter
   E-Mail, 1:1-Regel bleibt erzwungen. Umgesetzt sind Kontext-Store (`POST /auth/social-context`)
   und der Login-Pfad: Ein Social-Login findet das Mitglied ausschließlich über
-  `account_identity` (Provider + Subject), ohne E-Mail-Abgleich und ohne automatisches Linking
-  (ADR-018). Die Account-Anlage im Setup-/Invite-Kontext und das Nachladen der GitHub-E-Mail
+  `account_identity` (Provider + Subject), ohne E-Mail-Abgleich und ohne automatisches Linking (ADR-018). Die
+  Account-Anlage im Setup-/Invite-Kontext und das Nachladen der GitHub-E-Mail
   folgen mit P3.6. Siehe [Detailplan](auth-plan-p3.0-p3.7.md).
 - ✅ **P3.4 — OpenAPI: Discover-Endpoint.** Liefert konfigurierte Methoden/Provider
   (`{ localEnabled, socialProviders: [...] }`). `GET /auth/discover` liegt am Tag `session`, kein
@@ -207,8 +207,8 @@ muss aber sauber neu aus der überarbeiteten OpenAPI-Spec generiert werden.
 - ✅ **P3.5 — Frontend: dynamische Auth-UI.** Login/Setup/Invite rendern abhängig vom
   Discover-Ergebnis (lokales Formular und/oder Provider-Buttons); lokale Registrierung
   ausblenden, wenn deaktiviert. Setup und Invite zeigen die Buttons schon, scheitern bis P3.6 aber
-  mit „kein Konto“. Abbrüche beim Provider melden sich mit eigenem Grund
-  (`reason=social-login-failed`). Siehe [Detailplan](auth-plan-p3.0-p3.7.md).
+  mit „kein Konto“. Abbrüche beim Provider melden sich mit eigenem Grund (`reason=social-login-failed`).
+  Siehe [Detailplan](auth-plan-p3.0-p3.7.md).
 - ✅ **P3.6 — Setup/Invite ausschließlich via Social.** Erster Admin bzw. Invitee kann sich
   rein über Social registrieren, korrekte Haushalts-Bindung bleibt gewahrt. Umfasst auch die
   serverseitige Sperre von Formular-Login, Passwort-Setup und Passwort-Join bei
@@ -217,11 +217,11 @@ muss aber sauber neu aus der überarbeiteten OpenAPI-Spec generiert werden.
   veraltete gespeicherte `/oauth2/authorize`-Anfrage ließ die SPA-Continuation nach Social-Login
   sowie nach Passwort-Setup/-Join im Fehlerpfad enden. Siehe [Detailplan](auth-plan-p3.0-p3.7.md).
 - 🟡 **P3.7 — README: Diátaxis-How-To-Guides für Social-Login-Konfiguration (Englisch).**
-  Ergänzt `README.adoc` um zielgerichtete How-to-Guides (kein Tutorial/Reference/Explanation) zur
+  Ergänzt `../../README.adoc` um zielgerichtete How-to-Guides (kein Tutorial/Reference/Explanation) zur
   Einrichtung von Social Login je Provider, mit konkreten Beispielen für Google, Microsoft,
   Keycloak, GitHub und Authentik. Apple bewusst nicht Teil dieser Phase (Nutzerentscheidung, siehe
   Detailplan). Siehe [Detailplan](auth-plan-p3.0-p3.7.md).
 
 ## Querschnittlich (laufend, kein eigener Implementierungsplan)
 
-- **X.1 — Doku-Pflege.** `AGENTS.md`, Arc42 Kap. 8/11, neue ADRs nach jeder Phase aktuell halten.
+- **X.1 — Doku-Pflege.** `../../AGENTS.md`, Arc42 Kap. 8/11, neue ADRs nach jeder Phase aktuell halten.
