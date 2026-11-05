@@ -12,6 +12,7 @@ import eu.wiegandt.librehousehold.household.repository.MemberRepository;
 import org.instancio.Instancio;
 import org.instancio.junit.InstancioExtension;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -71,61 +72,90 @@ class PasswordResetServiceIT {
         }
     }
 
-    @Test
-    void confirmPasswordReset_existingSession_expiresAllSessionsForThatAccount() {
-        // given
-        var household = householdRepository.save(Instancio.create(HouseholdEntity.class));
-        createdHouseholdId = household.id();
-        var member = memberRepository.save(Instancio.of(MemberEntity.class)
-                .set(field(MemberEntity::householdId), household.id())
-                .create());
-        var oldPasswordHash = "$argon2id$v=19$m=19456,t=2,p=1$oldHash";
-        accountRepository.save(new AccountEntity(member.getId(), oldPasswordHash, true, Instant.now(), null, 0, null));
-        var principal = new AccountPrincipal(member.email(), oldPasswordHash, true);
-        var sessionId = "session-" + UUID.randomUUID();
-        sessionRegistry.registerNewSession(sessionId, principal);
-        var token = accountTokenService.issueToken(member.getId(), PASSWORD_RESET_PURPOSE, Duration.ofHours(1));
+    @Nested
+    class confirmPasswordReset {
 
-        // when
-        service.confirmPasswordReset(token, "new correct horse battery staple");
+        @Test
+        void existingSession_expiresAllSessionsForThatAccount() {
+            // given
+            var household = householdRepository.save(Instancio.create(HouseholdEntity.class));
+            createdHouseholdId = household.id();
+            var member = memberRepository.save(Instancio.of(MemberEntity.class)
+                    .set(field(MemberEntity::householdId), household.id())
+                    .create());
+            var oldPasswordHash = "$argon2id$v=19$m=19456,t=2,p=1$oldHash";
+            accountRepository.save(new AccountEntity(member.getId(), oldPasswordHash, true, Instant.now(), null, 0, null));
+            var principal = new AccountPrincipal(member.email(), oldPasswordHash, true);
+            var sessionId = "session-" + UUID.randomUUID();
+            sessionRegistry.registerNewSession(sessionId, principal);
+            var token = accountTokenService.issueToken(member.getId(), PASSWORD_RESET_PURPOSE, Duration.ofHours(1));
 
-        // then
-        assertThat(sessionRegistry.getSessionInformation(sessionId).isExpired()).isTrue();
+            // when
+            service.confirmPasswordReset(token, "new correct horse battery staple");
+
+            // then
+            assertThat(sessionRegistry.getSessionInformation(sessionId).isExpired()).isTrue();
+        }
+
+        @Test
+        void federatedAccountWithValidToken_throwsPasswordResetTokenInvalidException() {
+            // given
+            var household = householdRepository.save(Instancio.create(HouseholdEntity.class));
+            createdHouseholdId = household.id();
+            var member = memberRepository.save(Instancio.of(MemberEntity.class)
+                    .set(field(MemberEntity::householdId), household.id())
+                    .create());
+            accountService.createFederatedAccount(member.getId());
+            var token = accountTokenService.issueToken(member.getId(), PASSWORD_RESET_PURPOSE, Duration.ofHours(1));
+
+            // when / then
+            assertThatThrownBy(() -> service.confirmPasswordReset(token, "new correct horse battery staple"))
+                    .isInstanceOf(PasswordResetTokenInvalidException.class);
+        }
+
+        @Test
+        void federatedAccountWithValidToken_setsNoPasswordHash() {
+            // given
+            var household = householdRepository.save(Instancio.create(HouseholdEntity.class));
+            createdHouseholdId = household.id();
+            var member = memberRepository.save(Instancio.of(MemberEntity.class)
+                    .set(field(MemberEntity::householdId), household.id())
+                    .create());
+            accountService.createFederatedAccount(member.getId());
+            var token = accountTokenService.issueToken(member.getId(), PASSWORD_RESET_PURPOSE, Duration.ofHours(1));
+
+            // when
+            catchThrowable(() -> service.confirmPasswordReset(token, "new correct horse battery staple"));
+
+            // then
+            assertThat(accountRepository.findById(member.getId())).get()
+                    .extracting(AccountEntity::passwordHash)
+                    .isNull();
+        }
+
+        @Test
+        void lockedAccount_unlocks() {
+            // given
+            var household = householdRepository.save(Instancio.create(HouseholdEntity.class));
+            createdHouseholdId = household.id();
+            var member = memberRepository.save(Instancio.of(MemberEntity.class)
+                    .set(field(MemberEntity::householdId), household.id())
+                    .create());
+            accountRepository.save(new AccountEntity(member.getId(), "$argon2id$v=19$m=19456,t=2,p=1$oldHash", true,
+                    Instant.now(), null, 10, Instant.now().plus(Duration.ofMinutes(15))));
+            var token = accountTokenService.issueToken(member.getId(), PASSWORD_RESET_PURPOSE, Duration.ofHours(1));
+            var expected = new LockoutState(0, null);
+
+            // when
+            service.confirmPasswordReset(token, "new correct horse battery staple");
+
+            // then
+            assertThat(accountRepository.findById(member.getId()))
+                    .map(account -> new LockoutState(account.failedLoginAttempts(), account.lockedUntil()))
+                    .hasValue(expected);
+        }
     }
 
-    @Test
-    void confirmPasswordReset_federatedAccountWithValidToken_throwsPasswordResetTokenInvalidException() {
-        // given
-        var household = householdRepository.save(Instancio.create(HouseholdEntity.class));
-        createdHouseholdId = household.id();
-        var member = memberRepository.save(Instancio.of(MemberEntity.class)
-                .set(field(MemberEntity::householdId), household.id())
-                .create());
-        accountService.createFederatedAccount(member.getId());
-        var token = accountTokenService.issueToken(member.getId(), PASSWORD_RESET_PURPOSE, Duration.ofHours(1));
-
-        // when / then
-        assertThatThrownBy(() -> service.confirmPasswordReset(token, "new correct horse battery staple"))
-                .isInstanceOf(PasswordResetTokenInvalidException.class);
-    }
-
-    @Test
-    void confirmPasswordReset_federatedAccountWithValidToken_setsNoPasswordHash() {
-        // given
-        var household = householdRepository.save(Instancio.create(HouseholdEntity.class));
-        createdHouseholdId = household.id();
-        var member = memberRepository.save(Instancio.of(MemberEntity.class)
-                .set(field(MemberEntity::householdId), household.id())
-                .create());
-        accountService.createFederatedAccount(member.getId());
-        var token = accountTokenService.issueToken(member.getId(), PASSWORD_RESET_PURPOSE, Duration.ofHours(1));
-
-        // when
-        catchThrowable(() -> service.confirmPasswordReset(token, "new correct horse battery staple"));
-
-        // then
-        assertThat(accountRepository.findById(member.getId())).get()
-                .extracting(AccountEntity::passwordHash)
-                .isNull();
+    private record LockoutState(int failedLoginAttempts, Instant lockedUntil) {
     }
 }

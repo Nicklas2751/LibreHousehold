@@ -9,12 +9,11 @@
 :toc:
 
 [[section-deployment-view]]
-
 == Deployment View
 
 === Infrastructure Level 1
 
-[plantuml, deployment_view, svg]
+[plantuml,deployment_view,svg]
 ....
 include::../images/deployment_view.puml[]
 ....
@@ -24,71 +23,69 @@ The LibreHousehold system is deployed using a simple container-based architectur
 ==== Server Infrastructure
 
 ===== Nginx Container (Frontend)
+
 **Technology:** Nginx Web Server in Docker Container
 
 **Responsibilities:**
-- Serving static PWA files (HTML, JavaScript, CSS)
-- Reverse proxy for API calls to the backend
+- Serving static PWA files (HTML, JavaScript, CSS) - Reverse proxy for API calls to the backend
 
 **Quality attributes:**
-- Fast delivery of static content
-- Simple configuration and deployment
-- Low resource requirements
+- Fast delivery of static content - Simple configuration and deployment - Low resource requirements
 
 ===== Backend Container
+
 **Technology:** Java Spring Boot Application in Docker Container
 
 **Responsibilities:**
-- REST API for all business logic
-- Database connection and persistence
-- User authentication and authorization
-- Integration with email services
+- REST API for all business logic - Database connection and persistence - User authentication and authorization - Integration with email services
 
 **Quality attributes:**
-- Scalability through container replication
-- Easy deployments through container updates
-- Application isolation
+- Scalability through container replication - Easy deployments through container updates - Application isolation
 
 ==== Client Devices
 
 ===== Desktop Browser
+
 **Technology:** Standard Web Browser (Chrome, Firefox, Safari)
 
 **Responsibilities:**
-- Execution of the Progressive Web App
-- Local data storage for offline functionality
-- Service Worker for background synchronization
+- Execution of the Progressive Web App - Local data storage for offline functionality - Service Worker for background synchronization
 
 ===== Mobile Browser/PWA
+
 **Technology:** Embedded Browser (WebView) or PWA installation
 
 **Responsibilities:**
-- Native app-like experience on smartphones
-- Offline functionality
+- Native app-like experience on smartphones - Offline functionality
 
 **Quality attributes:**
-- Cross-platform compatibility
-- No app store dependencies
-- Automatic updates via browser
+- Cross-platform compatibility - No app store dependencies - Automatic updates via browser
 
 ==== External Services
 
 ===== E-Mail Server
+
 **Technology:** SMTP-compatible email service
 
 **Responsibilities:**
-- Sending household invitations
-- Notifications about important events
-- Password reset emails
+- Sending household invitations - Notifications about important events - Password reset emails
 
 ===== Database
+
 Can be either a (cloud) hosted database service or a containerized database instance.
 
 **Technology:** PostgreSQL Database
 
 **Responsibilities:**
-- Persistent storage of user data, household data, and application state
-- Data integrity and consistency
+- Persistent storage of user data, household data, and application state - Data integrity and consistency
+
+[[section-reverse-proxy-requirements]]
+=== Reverse Proxy Requirements
+
+Any future configuration in front of the backend must meet these requirements:
+
+* **Client IP:** The proxy must *overwrite* `X-Forwarded-For` with the IP of the connecting client instead of appending to a value sent by the client.
+The backend trusts this header (`server.forward-headers-strategy: framework`) and keys its rate limits by it (RATE1 in xref:08_concepts.adoc[Chapter 8]); an appended header would let a client choose its own IP and bypass every IP-keyed limit.
 
 === Deployment Mapping
 

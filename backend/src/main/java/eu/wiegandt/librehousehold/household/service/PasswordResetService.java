@@ -16,9 +16,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.UUID;
 
 /**
- * Orchestrates the password-reset confirmation flow: resets the password, then invalidates all of
- * the account's existing sessions and revokes its cached OAuth2 authorized client (see RESET1 in
- * Arc42 Chapter 8). Kept separate from {@link AccountService} on purpose (SRP): {@code AccountService}
+ * Orchestrates the password-reset confirmation flow: resets the password and lifts a login lockout,
+ * then invalidates all of the account's existing sessions and revokes its cached OAuth2 authorized
+ * client (see RESET1 in Arc42 Chapter 8). Kept separate from {@link AccountService} on purpose (SRP): {@code AccountService}
  * stays free of session/OAuth2 security-infrastructure concerns.
  */
 @Service
@@ -72,6 +72,9 @@ public class PasswordResetService implements PasswordReset {
         }
 
         accountService.resetPassword(memberId, newPassword);
+        // Proving control of the mailbox lifts a lockout at once, so an attacker who keeps a known
+        // address locked out (RATE1) cannot lock its owner out for good
+        accountRepository.resetFailedLoginAttempts(memberId);
 
         sessionRegistry.getAllSessions(principal, false).forEach(SessionInformation::expireNow);
         authorizedClientService.removeAuthorizedClient(CLIENT_REGISTRATION_ID, member.email());

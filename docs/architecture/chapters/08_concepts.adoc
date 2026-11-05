@@ -109,14 +109,15 @@ Authentication-related security controls are tracked against an https://github.c
 
 |RATE1
 |Rate limiting / anti-automation against credential stuffing and brute force.
-|V6.1.1 (L1), V6.3.1 (L1)
-|Decided, implemented via two complementary mechanisms: a local, in-memory Bucket4j token bucket (`RateLimitingFilter`/`RateLimitingConfig`)
-throttles the *rate* of requests to `POST /login` (keyed by username+IP) and to the
-password-reset/email-verification endpoints (keyed by IP, since several of them are
-unauthenticated), returning `429 Too Many Requests` once exceeded; independently, a DB-backed
-account lockout (`AccountLockoutListener`, `AccountUserDetailsService`, `account.locked_until`/
-`account.failed_login_attempts`) locks an account for a configurable duration after a higher
-threshold of failed attempts is reached, regardless of how slowly they were made.
+|V6.1.1 (L1, partially met), V6.3.1 (L1, depends on the deployment)
+a|Decided, implemented via two complementary mechanisms:
+
+* A local, in-memory Bucket4j token bucket (`RateLimitingFilter`/`RateLimitingConfig`) throttles the *rate* of requests: `POST /login` per submitted e-mail+IP and, across all e-mail addresses, per IP; the password-reset/email-verification endpoints per IP, since several of them are unauthenticated. A rejected request gets `429` with the problem type `/problems/too-many-requests` and a `Retry-After` header (seconds until the next attempt is allowed).
+* A DB-backed account lockout (`AccountLockoutListener`, `AccountUserDetailsService`, `account.locked_until`/`account.failed_login_attempts`) locks an account for a configurable duration after a higher threshold of failed attempts, regardless of how slowly they were made.
+
+The IP-keyed limits only work if the client IP is trustworthy: the backend takes it from `X-Forwarded-For` (`server.forward-headers-strategy: framework`), so the reverse proxy must overwrite that header with the client IP instead of appending to it (see xref:07_deployment_view.adoc#section-reverse-proxy-requirements[Chapter 7]). V6.3.1 is therefore met only with a correctly configured proxy.
+
+Lockout policy, intended as is: after a lock expires, the counter is not reset, so every further failed attempt locks the account again; only a successful login or a password reset resets it. This is the stricter and simpler policy. It lets an attacker who knows an e-mail address keep that account locked, so V6.1.1 is only partially met (accepted deviation, see xref:11_technical_risks.adoc[Chapter 11, R6]). Countermeasure: a password reset lifts the lockout immediately (`PasswordResetService`).
 
 |HASH1
 |Password hashing with a computationally intensive key derivation function.
