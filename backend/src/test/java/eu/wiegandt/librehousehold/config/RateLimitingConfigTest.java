@@ -16,7 +16,7 @@ class RateLimitingConfigTest {
             // given
             var request = new MockHttpServletRequest();
             request.setRemoteAddr("127.0.0.1");
-            request.setParameter("username", "a".repeat(300));
+            request.setParameter("email", "a".repeat(300));
             var expected = "a".repeat(254) + "|127.0.0.1";
 
             // when
@@ -31,7 +31,7 @@ class RateLimitingConfigTest {
             // given
             var request = new MockHttpServletRequest();
             request.setRemoteAddr("127.0.0.1");
-            request.setParameter("username", "max@example.com");
+            request.setParameter("email", "max@example.com");
 
             // when
             var result = RateLimitingConfig.loginKey(request);

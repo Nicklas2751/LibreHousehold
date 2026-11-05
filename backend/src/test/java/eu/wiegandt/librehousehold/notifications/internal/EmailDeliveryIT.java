@@ -24,8 +24,7 @@ import static org.awaitility.Awaitility.await;
  * test context caching reuses the same Mailpit container across both classes, so the recipient
  * address here is unique per test to avoid cross-test message pollution.
  */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE,
-        properties = "librehousehold.security.oauth2-client.client-secret=test-client-secret")
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @Import(TestcontainersConfiguration.class)
 class EmailDeliveryIT {
 

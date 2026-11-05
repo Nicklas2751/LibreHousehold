@@ -33,8 +33,7 @@ import static org.instancio.Select.field;
  * across IT classes through Spring's context cache: assertions therefore filter on the (random)
  * recipient address of the member created in each test.
  */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE,
-        properties = "librehousehold.security.oauth2-client.client-secret=test-client-secret")
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @Import(TestcontainersConfiguration.class)
 @ExtendWith(InstancioExtension.class)
 class UnverifiedAccountExpiryJobIT {

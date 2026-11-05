@@ -1,10 +1,10 @@
 package eu.wiegandt.librehousehold.config;
 
 import eu.wiegandt.librehousehold.TestcontainersConfiguration;
-import eu.wiegandt.librehousehold.household.repository.HouseholdRepository;
-import eu.wiegandt.librehousehold.household.repository.InviteRepository;
-import eu.wiegandt.librehousehold.household.repository.MemberRepository;
-import org.junit.jupiter.api.AfterEach;
+import eu.wiegandt.librehousehold.household.PasswordReset;
+import eu.wiegandt.librehousehold.household.repository.AccountRepository;
+import eu.wiegandt.librehousehold.household.service.AccountTokenService;
+import eu.wiegandt.librehousehold.model.HouseholdSetupResponse;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,14 +12,11 @@ import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureRestTe
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
-import org.springframework.test.util.TestSocketUtils;
 import org.springframework.test.web.servlet.client.EntityExchangeResult;
 import org.springframework.test.web.servlet.client.ExchangeResult;
 import org.springframework.test.web.servlet.client.RestTestClient;
+import tools.jackson.databind.json.JsonMapper;
 
-import java.net.URI;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,135 +25,192 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Drives household setup with a password the way a fresh browser does: the SPA's own login reached
- * /oauth2/authorize first, which saved that request before sending the user to /login. Uses a port
- * picked before startup for the reason given in {@link CsrfProtectionIT}.
+ * Drives household setup and invite join with a password the way the SPA does: the new member is
+ * signed in right after the registration, with a new session ID and a new XSRF-TOKEN (ADR-013).
+ * Before the registration, the browser already has a session (here from storing a social-login
+ * context), so the tests can prove that the old session ID is no longer accepted.
  */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT, properties = {
-        "librehousehold.security.oauth2-client.client-secret=test-client-secret"
-})
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Import(TestcontainersConfiguration.class)
 @AutoConfigureRestTestClient
 class PasswordSetupFlowIT {
 
-    private static final int SERVER_PORT = TestSocketUtils.findAvailableTcpPort();
-    private static final String SERVER_BASE_URL = "http://localhost:" + SERVER_PORT;
-
     private static final String BASE_PATH = "/v1";
-    private static final String SPA_LOGIN_PATH = "/oauth2/authorization/spa-backend-client";
-    private static final String XSRF_TOKEN_COOKIE_NAME = "XSRF-TOKEN";
-    private static final String XSRF_TOKEN_HEADER_NAME = "X-XSRF-TOKEN";
+    private static final String RAW_PASSWORD = "correct horse battery staple";
+    private static final String SESSION_COOKIE = "JSESSIONID";
+    private static final String XSRF_COOKIE = "XSRF-TOKEN";
+    private static final String XSRF_HEADER = "X-XSRF-TOKEN";
     private static final Map<String, String> NO_COOKIES = Map.of();
-    private static final int MAX_REDIRECTS = 10;
-
-    @DynamicPropertySource
-    static void serverPortProperties(DynamicPropertyRegistry registry) {
-        registry.add("server.port", () -> SERVER_PORT);
-        registry.add("librehousehold.security.oauth2-authorization-server.issuer", () -> SERVER_BASE_URL);
-        registry.add("librehousehold.security.oauth2-client.redirect-uri",
-                () -> SERVER_BASE_URL + "/login/oauth2/code/spa-backend-client");
-    }
 
     @Autowired
     private RestTestClient restTestClient;
 
     @Autowired
-    private HouseholdRepository householdRepository;
+    private JsonMapper jsonMapper;
 
     @Autowired
-    private MemberRepository memberRepository;
+    private AccountRepository accountRepository;
 
     @Autowired
-    private InviteRepository inviteRepository;
+    private AccountTokenService accountTokenService;
 
-    private UUID createdHouseholdId;
-
-    @AfterEach
-    void tearDown() {
-        if (createdHouseholdId != null) {
-            inviteRepository.deleteByHouseholdId(createdHouseholdId);
-            memberRepository.deleteByHouseholdId(createdHouseholdId);
-            householdRepository.deleteById(createdHouseholdId);
-        }
-    }
+    @Autowired
+    private PasswordReset passwordReset;
 
     @Nested
     class householdSetup {
 
-        /**
-         * The stale request's authorization request no longer exists once the SPA started a fresh
-         * one, so resuming it would end on the login error page.
-         */
         @Test
-        void startedFromSpaAuthorization_spaLoginEndsAtDefaultTargetInsteadOfStaleAuthorizationRequest() {
+        void localRegistration_meReturns200() {
             // given
-            createdHouseholdId = UUID.randomUUID();
-            var spaAuthorization = get(NO_COOKIES, URI.create(SPA_LOGIN_PATH));
-            var staleAuthorize = get(spaAuthorization.cookies(), spaAuthorization.response().getResponseHeaders().getLocation());
-            var csrfPreflight = get(staleAuthorize.cookies(), URI.create(BASE_PATH + "/members/availability?email=local%40example.com"));
-            var setupBody = """
-                    {"household": {"id": "%s", "name": "Password Household"},
-                     "member": {"id": "%s", "name": "Max Mustermann", "email": "local-%s@example.com"},
-                     "localRegistration": {"password": "correct horse battery staple"}}
-                    """.formatted(createdHouseholdId, UUID.randomUUID(), UUID.randomUUID());
-            var setup = post(csrfPreflight.cookies(), BASE_PATH + "/household/setup", setupBody);
+            var anonymousSession = anonymousSessionCookies();
+            var setupCookies = merge(anonymousSession, setup(anonymousSession, UUID.randomUUID()));
 
             // when
-            var finalRedirect = followBackendRedirects(get(setup.cookies(), URI.create(SPA_LOGIN_PATH)));
+            var response = get(setupCookies, BASE_PATH + "/me");
 
             // then
-            assertThat(finalRedirect).hasPath("/").hasNoQuery();
+            assertThat(response.getStatus().value()).isEqualTo(200);
+        }
+
+        @Test
+        void localRegistration_oldSessionIdRejected() {
+            // given
+            var anonymousSession = anonymousSessionCookies();
+            var setupCookies = merge(anonymousSession, setup(anonymousSession, UUID.randomUUID()));
+            var oldSessionCookies = new LinkedHashMap<>(setupCookies);
+            oldSessionCookies.put(SESSION_COOKIE, anonymousSession.get(SESSION_COOKIE));
+
+            // when
+            var response = get(oldSessionCookies, BASE_PATH + "/me");
+
+            // then
+            assertThat(response.getStatus().value()).isEqualTo(401);
+        }
+
+        @Test
+        void localRegistration_postDirectlyAfterSetup_notForbidden() {
+            // given
+            var anonymousSession = anonymousSessionCookies();
+            var setupCookies = merge(anonymousSession, setup(anonymousSession, UUID.randomUUID()));
+
+            // when
+            var response = postJson(setupCookies, BASE_PATH + "/auth/social-context", "{\"context\":\"LOGIN\"}");
+
+            // then
+            assertThat(response.getStatus().value()).isEqualTo(204);
+        }
+
+        @Test
+        void localRegistration_verifyEmailThenPasswordReset_invalidatesSetupSession() {
+            // given
+            var memberId = UUID.randomUUID();
+            var anonymousSession = anonymousSessionCookies();
+            var setupCookies = merge(anonymousSession, setup(anonymousSession, memberId));
+            accountRepository.markEmailVerified(memberId);
+            var resetToken = accountTokenService.issuePasswordResetToken(memberId);
+            passwordReset.confirmPasswordReset(resetToken, "new correct horse battery staple");
+
+            // when
+            var response = get(setupCookies, BASE_PATH + "/me");
+
+            // then
+            assertThat(response.getStatus().value()).isEqualTo(401);
         }
     }
 
-    /**
-     * Follows the redirects within the backend's own OAuth2 endpoints and returns the first
-     * redirect target outside them, i.e. where the browser finally lands.
-     */
-    private URI followBackendRedirects(HttpStep start) {
-        var step = start;
-        var location = step.response().getResponseHeaders().getLocation();
-        for (var redirects = 0; redirects < MAX_REDIRECTS && isBackendOAuth2Endpoint(location); redirects++) {
-            step = get(step.cookies(), location);
-            location = step.response().getResponseHeaders().getLocation();
+    @Nested
+    class joinHousehold {
+
+        @Test
+        void localRegistration_meReturns200() {
+            // given
+            var inviteToken = inviteTokenOfNewHousehold();
+            var anonymousSession = anonymousSessionCookies();
+            var joinCookies = merge(anonymousSession, join(anonymousSession, inviteToken));
+
+            // when
+            var response = get(joinCookies, BASE_PATH + "/me");
+
+            // then
+            assertThat(response.getStatus().value()).isEqualTo(200);
         }
-        return location;
+
+        @Test
+        void localRegistration_oldSessionIdRejected() {
+            // given
+            var inviteToken = inviteTokenOfNewHousehold();
+            var anonymousSession = anonymousSessionCookies();
+            var joinCookies = merge(anonymousSession, join(anonymousSession, inviteToken));
+            var oldSessionCookies = new LinkedHashMap<>(joinCookies);
+            oldSessionCookies.put(SESSION_COOKIE, anonymousSession.get(SESSION_COOKIE));
+
+            // when
+            var response = get(oldSessionCookies, BASE_PATH + "/me");
+
+            // then
+            assertThat(response.getStatus().value()).isEqualTo(401);
+        }
     }
 
-    private boolean isBackendOAuth2Endpoint(URI location) {
-        return location != null
-                && (location.getPath().startsWith("/oauth2/") || location.getPath().startsWith("/login/oauth2/"));
+    private UUID inviteTokenOfNewHousehold() {
+        var setupResponse = setup(anonymousSessionCookies(), UUID.randomUUID());
+        return jsonMapper.readValue(setupResponse.getResponseBody(), HouseholdSetupResponse.class).getInviteToken();
     }
 
-    private HttpStep get(Map<String, String> cookies, URI uri) {
-        var response = applyCookies(restTestClient.get().uri(uri), cookies).exchange().returnResult(String.class);
-        return new HttpStep(mergeCookies(cookies, response), response);
+    private EntityExchangeResult<String> setup(Map<String, String> cookies, UUID memberId) {
+        var body = """
+                {"household": {"id": "%s", "name": "Password Household"},
+                 "member": {"id": "%s", "name": "Max Mustermann", "email": "%s"},
+                 "localRegistration": {"password": "%s"}}
+                """.formatted(UUID.randomUUID(), memberId, uniqueEmail(), RAW_PASSWORD);
+        return postJson(cookies, BASE_PATH + "/household/setup", body);
     }
 
-    private HttpStep post(Map<String, String> cookies, String uri, String jsonBody) {
-        var response = applyCookies(restTestClient.post().uri(uri), cookies)
-                .header(XSRF_TOKEN_HEADER_NAME, cookies.get(XSRF_TOKEN_COOKIE_NAME))
+    private EntityExchangeResult<String> join(Map<String, String> cookies, UUID inviteToken) {
+        var body = """
+                {"id": "%s", "name": "Erika Mustermann", "email": "%s",
+                 "localRegistration": {"password": "%s"}}
+                """.formatted(UUID.randomUUID(), uniqueEmail(), RAW_PASSWORD);
+        return postJson(cookies, BASE_PATH + "/invite/" + inviteToken + "/join", body);
+    }
+
+    // Storing a social-login context is the SPA's only way to get a session before registering
+    private Map<String, String> anonymousSessionCookies() {
+        var cookies = merge(NO_COOKIES, get(NO_COOKIES, BASE_PATH + "/auth/discover"));
+        return merge(cookies, postJson(cookies, BASE_PATH + "/auth/social-context", "{\"context\":\"LOGIN\"}"));
+    }
+
+    private EntityExchangeResult<String> get(Map<String, String> cookies, String uri) {
+        return withCookies(restTestClient.get().uri(uri), cookies)
+                .accept(MediaType.APPLICATION_JSON)
+                .exchange()
+                .returnResult(String.class);
+    }
+
+    private EntityExchangeResult<String> postJson(Map<String, String> cookies, String uri, String json) {
+        return withCookies(restTestClient.post().uri(uri), cookies)
+                .header(XSRF_HEADER, cookies.get(XSRF_COOKIE))
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(jsonBody)
-                .exchange().returnResult(String.class);
-        return new HttpStep(mergeCookies(cookies, response), response);
+                .body(json)
+                .exchange()
+                .returnResult(String.class);
     }
 
-    private <S extends RestTestClient.RequestHeadersSpec<?>> S applyCookies(S spec, Map<String, String> cookies) {
-        for (var cookie : cookies.entrySet()) {
-            spec.cookie(cookie.getKey(), cookie.getValue());
-        }
+    private <S extends RestTestClient.RequestHeadersSpec<?>> S withCookies(S spec, Map<String, String> cookies) {
+        cookies.forEach(spec::cookie);
         return spec;
     }
 
-    private Map<String, String> mergeCookies(Map<String, String> existingCookies, ExchangeResult response) {
-        var merged = new LinkedHashMap<>(existingCookies);
+    private Map<String, String> merge(Map<String, String> cookies, ExchangeResult response) {
+        var merged = new LinkedHashMap<>(cookies);
         response.getResponseCookies().values().stream()
                 .flatMap(List::stream)
                 .forEach(cookie -> merged.put(cookie.getName(), cookie.getValue()));
         return merged;
     }
 
-    private record HttpStep(Map<String, String> cookies, EntityExchangeResult<String> response) {
+    private static String uniqueEmail() {
+        return "setupflow-" + UUID.randomUUID() + "@example.com";
     }
 }

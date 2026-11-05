@@ -8,10 +8,10 @@ import eu.wiegandt.librehousehold.household.MemberRemoved;
 import eu.wiegandt.librehousehold.household.PasswordResetRequested;
 import eu.wiegandt.librehousehold.household.PendingSocialRegistrationStore;
 import eu.wiegandt.librehousehold.household.VerificationEmailRequested;
-import eu.wiegandt.librehousehold.household.exception.EmailNotVerifiedException;
+import eu.wiegandt.librehousehold.household.EmailNotVerifiedException;
 import eu.wiegandt.librehousehold.household.exception.HouseholdAdminCannotBeRemovedException;
 import eu.wiegandt.librehousehold.household.exception.InvalidInviteException;
-import eu.wiegandt.librehousehold.household.exception.LocalLoginDisabledException;
+import eu.wiegandt.librehousehold.household.LocalLoginDisabledException;
 import eu.wiegandt.librehousehold.household.exception.MemberAlreadyExistsException;
 import eu.wiegandt.librehousehold.household.exception.MemberNotFoundException;
 import eu.wiegandt.librehousehold.household.exception.NoPendingSocialRegistrationException;
@@ -51,7 +51,6 @@ public class MemberManagementService implements MemberQuery {
     private final MemberRegistrationMapper memberRegistrationMapper;
     private final ApplicationEventPublisher eventPublisher;
     private final AccountService accountService;
-    private final AccountSessionAuthenticator accountSessionAuthenticator;
     private final PendingSocialRegistrationStore pendingSocialRegistrationStore;
     private final LocalLoginProperties localLoginProperties;
 
@@ -62,7 +61,6 @@ public class MemberManagementService implements MemberQuery {
                                    MemberRegistrationMapper memberRegistrationMapper,
                                    ApplicationEventPublisher eventPublisher,
                                    AccountService accountService,
-                                   AccountSessionAuthenticator accountSessionAuthenticator,
                                    PendingSocialRegistrationStore pendingSocialRegistrationStore,
                                    LocalLoginProperties localLoginProperties) {
         this.memberRepository = memberRepository;
@@ -72,7 +70,6 @@ public class MemberManagementService implements MemberQuery {
         this.memberRegistrationMapper = memberRegistrationMapper;
         this.eventPublisher = eventPublisher;
         this.accountService = accountService;
-        this.accountSessionAuthenticator = accountSessionAuthenticator;
         this.pendingSocialRegistrationStore = pendingSocialRegistrationStore;
         this.localLoginProperties = localLoginProperties;
     }
@@ -134,7 +131,6 @@ public class MemberManagementService implements MemberQuery {
         var saved = saveMember(memberRegistrationMapper.toMemberEntity(registration, householdId, JOINED_MEMBER_IS_ADMIN));
         accountService.createAccount(saved.getId(), localRegistration.getPassword());
         eventPublisher.publishEvent(new AccountRegistered(saved.getId(), registration.getEmail()));
-        accountSessionAuthenticator.authenticateAndPersistSession(registration.getEmail(), localRegistration.getPassword());
         return memberMapper.toMember(saved);
     }
 
@@ -150,7 +146,6 @@ public class MemberManagementService implements MemberQuery {
             throw new MemberAlreadyExistsException();
         }
         pendingSocialRegistrationStore.consume();
-        accountSessionAuthenticator.authenticateFederatedAndPersistSession(identity.email());
         return memberMapper.toMember(saved);
     }
 
@@ -244,13 +239,6 @@ public class MemberManagementService implements MemberQuery {
 
     public Optional<UUID> findMemberIdByEmail(String email) {
         return memberRepository.findByEmail(email).map(MemberEntity::getId);
-    }
-
-    @Override
-    public Optional<String> findEmailByExternalIdentity(String providerId, String externalSubject) {
-        return accountService.findMemberIdByExternalIdentity(providerId, externalSubject)
-                .flatMap(memberRepository::findById)
-                .map(MemberEntity::email);
     }
 
     @Override

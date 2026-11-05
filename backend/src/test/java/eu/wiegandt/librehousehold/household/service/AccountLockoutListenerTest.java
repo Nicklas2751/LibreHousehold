@@ -1,5 +1,6 @@
 package eu.wiegandt.librehousehold.household.service;
 
+import eu.wiegandt.librehousehold.household.AccountPrincipal;
 import eu.wiegandt.librehousehold.household.model.AccountEntity;
 import eu.wiegandt.librehousehold.household.repository.AccountRepository;
 import org.junit.jupiter.api.Nested;
@@ -26,6 +27,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 @ExtendWith(MockitoExtension.class)
 class AccountLockoutListenerTest {
@@ -92,18 +94,29 @@ class AccountLockoutListenerTest {
     class onAuthenticationSuccess {
 
         @Test
-        void successfulLogin_resetsFailedAttemptCounter() {
+        void accountPrincipal_resetsAttemptsForMemberId() {
             // given
-            var email = "max@example.com";
             var memberId = UUID.randomUUID();
-            var event = new AuthenticationSuccessEvent(new TestingAuthenticationToken(email, "correct-password"));
-            doReturn(Optional.of(memberId)).when(memberManagementService).findMemberIdByEmail(email);
+            var principal = new AccountPrincipal(memberId, UUID.randomUUID(), null, true);
+            var event = new AuthenticationSuccessEvent(new TestingAuthenticationToken(principal, null));
 
             // when
             newListener().onAuthenticationSuccess(event);
 
             // then
             verify(accountRepository).resetFailedLoginAttempts(memberId);
+        }
+
+        @Test
+        void otherPrincipal_noInteraction() {
+            // given
+            var event = new AuthenticationSuccessEvent(new TestingAuthenticationToken("max@example.com", "correct-password"));
+
+            // when
+            newListener().onAuthenticationSuccess(event);
+
+            // then
+            verifyNoInteractions(memberManagementService, accountRepository);
         }
     }
 }

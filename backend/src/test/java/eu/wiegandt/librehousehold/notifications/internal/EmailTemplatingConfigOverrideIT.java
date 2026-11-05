@@ -27,8 +27,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * message and the "verification" template are overridden here; German is deliberately left
  * un-overridden to prove the fallback path in the same test run.
  */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE,
-        properties = "librehousehold.security.oauth2-client.client-secret=test-client-secret")
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @Import(TestcontainersConfiguration.class)
 class EmailTemplatingConfigOverrideIT {
 

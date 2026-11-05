@@ -52,12 +52,10 @@ import static org.instancio.Select.field;
 
 /**
  * {@code webEnvironment = MOCK} (not {@code NONE}): {@code joinHousehold}/{@code setupHousehold}
- * now also establish an authenticated session via {@code AccountSessionAuthenticator}, which needs
- * a real {@code WebApplicationContext} (for {@code AuthenticationConfiguration} autoconfiguration
- * and the {@code request}/{@code response} scopes) plus a thread-bound request (bound per test via
- * {@link #bindRequest()}).
+ * look up a pending social registration in the HTTP session ({@code PendingSocialRegistrationStore}),
+ * which needs a thread-bound request (bound per test via {@link #bindRequest()}).
  */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK, properties = {"librehousehold.security.oauth2-client.client-secret=test-client-secret"})
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
 @Import(TestcontainersConfiguration.class)
 @ExtendWith(InstancioExtension.class)
 @RecordApplicationEvents
@@ -295,8 +293,8 @@ class MemberManagementServiceIT {
                     .create());
 
             // then
-            assertThat(memberManagementService.findEmailByExternalIdentity(identity.registrationId(), identity.subject()))
-                    .contains(identity.email());
+            assertThat(accountService.findMemberIdByExternalIdentity(identity.registrationId(), identity.subject()))
+                    .contains(memberRepository.findByEmail(identity.email()).orElseThrow().id());
         }
 
         @Test
@@ -387,29 +385,6 @@ class MemberManagementServiceIT {
 
             // then
             assertThat(result).contains(registration.getId());
-        }
-    }
-
-    @Nested
-    class findEmailByExternalIdentity {
-
-        @Test
-        void linkedIdentity_returnsEmailOfLinkedMember() {
-            // given
-            bindRequest();
-            var household = Instancio.create(Household.class);
-            createdHouseholdIds.add(household.getId());
-            var token = setupService.setupHousehold(localSetup(household, memberWithValidEmail())).getInviteToken();
-            var registration = registrationWithValidEmail();
-            var member = memberManagementService.joinHousehold(token, registration);
-            var externalSubject = UUID.randomUUID().toString();
-            accountService.linkExternalIdentity(member.getId(), "dev-provider", externalSubject);
-
-            // when
-            var result = memberManagementService.findEmailByExternalIdentity("dev-provider", externalSubject);
-
-            // then
-            assertThat(result).contains(registration.getEmail());
         }
     }
 

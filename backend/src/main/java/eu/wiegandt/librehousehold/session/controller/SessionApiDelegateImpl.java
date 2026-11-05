@@ -3,11 +3,10 @@ package eu.wiegandt.librehousehold.session.controller;
 import eu.wiegandt.librehousehold.api.SessionApiDelegate;
 import eu.wiegandt.librehousehold.household.LocalLoginProperties;
 import eu.wiegandt.librehousehold.config.SocialLoginContextStore;
-import eu.wiegandt.librehousehold.config.SocialLoginProperties;
-import eu.wiegandt.librehousehold.config.SocialLoginProperties.ProviderConfig;
-import eu.wiegandt.librehousehold.household.AccountOidcPrincipal;
+import eu.wiegandt.librehousehold.household.AccountPrincipal;
 import eu.wiegandt.librehousehold.household.ExternalIdentity;
 import eu.wiegandt.librehousehold.household.HouseholdQuery;
+import eu.wiegandt.librehousehold.household.LocalLoginDisabledException;
 import eu.wiegandt.librehousehold.household.MemberQuery;
 import eu.wiegandt.librehousehold.household.PasswordReset;
 import eu.wiegandt.librehousehold.household.PendingSocialRegistrationStore;
@@ -23,21 +22,23 @@ import eu.wiegandt.librehousehold.session.exception.InviteTokenIsRequiredExcepti
 import eu.wiegandt.librehousehold.session.exception.NoAuthenticatedSessionException;
 import eu.wiegandt.librehousehold.session.exception.PendingSocialRegistrationNotFoundException;
 import eu.wiegandt.librehousehold.usersettings.PreferencesQuery;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.client.registration.ClientRegistration;
+import org.springframework.security.oauth2.client.registration.InMemoryClientRegistrationRepository;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 
 import java.util.List;
-import java.util.Map;
+import java.util.stream.StreamSupport;
 
 /**
- * Handles {@code GET /me} (see P1.4.7), the password-reset endpoints, storing the social-login
- * context and the login-method discovery. {@code POST /logout} is
- * deliberately not implemented here: it is fully handled by Spring Security's own {@code logout()}
- * filter (see {@code SecurityConfig}/{@code RevokeAuthorizedClientLogoutHandler}), which intercepts
- * the request before it would ever reach this controller.
+ * Handles {@code GET /me}, the password-reset endpoints, storing the social-login context and the
+ * login-method discovery. {@code POST /login} and {@code POST /logout} are handled by Spring
+ * Security's form login and logout filters (see {@code SecurityConfig}), which intercept the
+ * request before it reaches this controller. {@code login} is therefore only reached when this
+ * instance turned local login off, and rejects the request.
  *
  * <p>The password-reset endpoints share the OpenAPI {@code session} tag (and therefore this single
  * generated delegate) even though their business logic belongs to {@code household}. Delegated to
@@ -49,9 +50,10 @@ import java.util.Map;
  * Only name and e-mail leave the server, never the provider's subject.
  *
  * <p>{@code GET /auth/discover} tells the client before any login which login methods this instance
- * offers, read from {@link LocalLoginProperties} and {@link SocialLoginProperties}. Only the
- * registration ID and display name of each social provider leave the server, never client
- * credentials or endpoint configuration.
+ * offers, read from {@link LocalLoginProperties} and the social-login registrations Spring Boot
+ * built from {@code spring.security.oauth2.client.*} (none configured: no repository). Only the
+ * registration ID and client name of each provider leave the server, never client credentials or
+ * endpoint configuration.
  */
 @Component
 public class SessionApiDelegateImpl implements SessionApiDelegate {
@@ -61,14 +63,14 @@ public class SessionApiDelegateImpl implements SessionApiDelegate {
     private final PreferencesQuery preferencesQuery;
     private final PasswordReset passwordReset;
     private final SocialLoginContextStore socialLoginContextStore;
-    private final SocialLoginProperties socialLoginProperties;
+    private final ObjectProvider<InMemoryClientRegistrationRepository> clientRegistrationRepository;
     private final LocalLoginProperties localLoginProperties;
     private final PendingSocialRegistrationStore pendingSocialRegistrationStore;
 
     public SessionApiDelegateImpl(MemberQuery memberQuery, HouseholdQuery householdQuery,
                                    PreferencesQuery preferencesQuery, PasswordReset passwordReset,
                                    SocialLoginContextStore socialLoginContextStore,
-                                   SocialLoginProperties socialLoginProperties,
+                                   ObjectProvider<InMemoryClientRegistrationRepository> clientRegistrationRepository,
                                    LocalLoginProperties localLoginProperties,
                                    PendingSocialRegistrationStore pendingSocialRegistrationStore) {
         this.memberQuery = memberQuery;
@@ -76,7 +78,7 @@ public class SessionApiDelegateImpl implements SessionApiDelegate {
         this.preferencesQuery = preferencesQuery;
         this.passwordReset = passwordReset;
         this.socialLoginContextStore = socialLoginContextStore;
-        this.socialLoginProperties = socialLoginProperties;
+        this.clientRegistrationRepository = clientRegistrationRepository;
         this.localLoginProperties = localLoginProperties;
         this.pendingSocialRegistrationStore = pendingSocialRegistrationStore;
     }
@@ -84,7 +86,7 @@ public class SessionApiDelegateImpl implements SessionApiDelegate {
     @Override
     public ResponseEntity<CurrentUser> getCurrentUser() {
         var authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !(authentication.getPrincipal() instanceof AccountOidcPrincipal principal)) {
+        if (authentication == null || !(authentication.getPrincipal() instanceof AccountPrincipal principal)) {
             throw new NoAuthenticatedSessionException();
         }
         var member = memberQuery.getMember(principal.memberId());
@@ -93,6 +95,11 @@ public class SessionApiDelegateImpl implements SessionApiDelegate {
         var emailVerified = memberQuery.isEmailVerified(principal.memberId());
         var socialLoginOnly = memberQuery.isSocialLoginOnly(principal.memberId());
         return ResponseEntity.ok(new CurrentUser(member, household, preferences, emailVerified, socialLoginOnly));
+    }
+
+    @Override
+    public ResponseEntity<Void> login(String email, String password) {
+        throw new LocalLoginDisabledException();
     }
 
     @Override
@@ -134,17 +141,17 @@ public class SessionApiDelegateImpl implements SessionApiDelegate {
     }
 
     private List<SocialLoginProvider> socialProviders() {
-        if (!socialLoginProperties.enabled()) {
+        var registrations = clientRegistrationRepository.getIfAvailable();
+        if (registrations == null) {
             return List.of();
         }
-        return socialLoginProperties.providers().entrySet().stream()
+        return StreamSupport.stream(registrations.spliterator(), false)
                 .map(SessionApiDelegateImpl::toSocialLoginProvider)
                 .toList();
     }
 
-    private static SocialLoginProvider toSocialLoginProvider(Map.Entry<String, ProviderConfig> provider) {
-        var registrationId = provider.getKey();
-        var displayName = provider.getValue().displayName();
-        return new SocialLoginProvider(registrationId, StringUtils.hasText(displayName) ? displayName : registrationId);
+    // ClientRegistration falls back to the registration ID when no client-name is configured
+    private static SocialLoginProvider toSocialLoginProvider(ClientRegistration registration) {
+        return new SocialLoginProvider(registration.getRegistrationId(), registration.getClientName());
     }
 }

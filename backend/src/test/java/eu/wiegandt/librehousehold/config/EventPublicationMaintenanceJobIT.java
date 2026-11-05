@@ -32,7 +32,6 @@ import static org.awaitility.Awaitility.await;
  * database, and publications left behind by other IT classes must not be retried here.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, properties = {
-        "librehousehold.security.oauth2-client.client-secret=test-client-secret",
         "librehousehold.events.run-interval=1d"})
 @Import(TestcontainersConfiguration.class)
 class EventPublicationMaintenanceJobIT {

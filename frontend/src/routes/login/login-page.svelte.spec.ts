@@ -3,6 +3,7 @@ import { render } from 'vitest-browser-svelte';
 import { page } from 'vitest/browser';
 import LoginPage from './+page.svelte';
 import { authDiscovery } from '$lib/stores/authDiscoveryState.svelte';
+import { setAuthenticated, setGuest } from '$lib/stores/sessionState.svelte';
 
 const { mockGoto, mockBootstrapSession, mockLoadAuthDiscovery, mockStartSocialLogin, mockPage } =
 	vi.hoisted(() => ({
@@ -40,6 +41,25 @@ function clearCookies() {
 	});
 }
 
+const currentUser = {
+	member: { id: 'member-id', name: 'Max Mustermann', email: 'max@example.com', isAdmin: true },
+	household: { id: 'household-id', name: 'Die Testfamilie' },
+	preferences: {},
+	emailVerified: true,
+	socialLoginOnly: false
+};
+
+function problemResponse(status: number, body: object, headers: Record<string, string> = {}) {
+	return new Response(JSON.stringify(body), {
+		status,
+		headers: { 'Content-Type': 'application/problem+json', ...headers }
+	});
+}
+
+function requestedUrls(mockFetch: ReturnType<typeof vi.fn>): string[] {
+	return mockFetch.mock.calls.map(([url]) => String(url));
+}
+
 async function fillAndSubmit() {
 	render(LoginPage);
 
@@ -52,6 +72,7 @@ describe('login page', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		clearCookies();
+		setGuest();
 		document.cookie = 'XSRF-TOKEN=test-csrf-token';
 		mockPage.url = new URL('http://localhost:5173/login');
 		mockLoadAuthDiscovery.mockResolvedValue(undefined);
@@ -63,90 +84,248 @@ describe('login page', () => {
 		vi.unstubAllGlobals();
 	});
 
-	it('successful login — posts to /login with the correct body and CSRF header, then navigates to the dashboard', async () => {
+	it('success_postsCredentialsWithCsrfHeader', async () => {
 		// given
-		const mockFetch = vi
-			.fn()
-			.mockResolvedValue({ url: 'http://localhost:5173/app/dashboard' } as Response);
+		const mockFetch = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
 		vi.stubGlobal('fetch', mockFetch);
-		mockBootstrapSession.mockResolvedValue(undefined);
 
 		// when
 		await fillAndSubmit();
 
 		// then
-		await vi.waitFor(() => expect(mockGoto).toHaveBeenCalledWith('/app/dashboard'));
-		expect(mockFetch).toHaveBeenCalledWith(
-			'/login',
-			expect.objectContaining({
-				method: 'POST',
-				credentials: 'include',
-				headers: expect.objectContaining({ 'X-XSRF-TOKEN': 'test-csrf-token' }),
-				body: new URLSearchParams({ username: 'max@example.com', password: 'supersecret' })
-			})
+		await vi.waitFor(() =>
+			expect(mockFetch).toHaveBeenCalledWith(
+				'/api/login',
+				expect.objectContaining({
+					method: 'POST',
+					headers: expect.objectContaining({ 'X-XSRF-TOKEN': 'test-csrf-token' }),
+					body: new URLSearchParams({ email: 'max@example.com', password: 'supersecret' })
+				})
+			)
 		);
-		expect(mockBootstrapSession).toHaveBeenCalled();
 	});
 
-	it('failed login (wrong password) — shows an error message and does not navigate', async () => {
+	it('success_navigatesToDashboardWithReplaceState', async () => {
 		// given
-		const mockFetch = vi
-			.fn()
-			.mockResolvedValue({ url: 'http://localhost:5173/login?error' } as Response);
-		vi.stubGlobal('fetch', mockFetch);
+		vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 204 })));
+		mockBootstrapSession.mockImplementation(async () => setAuthenticated(currentUser));
 
 		// when
 		await fillAndSubmit();
 
 		// then
-		await expect.element(page.getByText('falsch')).toBeVisible();
-		expect(mockGoto).not.toHaveBeenCalled();
-		expect(mockBootstrapSession).not.toHaveBeenCalled();
+		await vi.waitFor(() =>
+			expect(mockGoto).toHaveBeenCalledWith('/app/dashboard', { replaceState: true })
+		);
 	});
 
-	it('locked account — shows the lockout message with the formatted unlock time', async () => {
+	it('invalidCredentials_doesNotNavigate', async () => {
+		// given
+		vi.stubGlobal(
+			'fetch',
+			vi.fn().mockResolvedValue(problemResponse(401, { type: '/problems/invalid-credentials' }))
+		);
+
+		// when
+		await fillAndSubmit();
+
+		// then
+		await expect.element(page.getByText('E-Mail oder Passwort falsch')).toBeVisible();
+		expect({
+			navigated: mockGoto.mock.calls.length,
+			bootstrapped: mockBootstrapSession.mock.calls.length
+		}).toEqual({ navigated: 0, bootstrapped: 0 });
+	});
+
+	it('unverified_showsUnverifiedMessage', async () => {
+		// given
+		vi.stubGlobal(
+			'fetch',
+			vi.fn().mockResolvedValue(problemResponse(403, { type: '/problems/email-not-verified' }))
+		);
+
+		// when
+		await fillAndSubmit();
+
+		// then
+		await expect.element(page.getByText('bestätige zuerst deine E-Mail-Adresse')).toBeVisible();
+	});
+
+	it('localLoginDisabled_showsLocalLoginDisabledMessage', async () => {
+		// given
+		vi.stubGlobal(
+			'fetch',
+			vi.fn().mockResolvedValue(problemResponse(403, { type: '/problems/local-login-disabled' }))
+		);
+
+		// when
+		await fillAndSubmit();
+
+		// then
+		await expect.element(page.getByText('nur über einen Anbieter')).toBeVisible();
+	});
+
+	it('locked_showsFormattedUnlockTime', async () => {
 		// given
 		const lockedUntil = new Date(Date.now() + 15 * 60 * 1000);
-		const mockFetch = vi.fn().mockResolvedValue({
-			url: `http://localhost:5173/login?error&reason=locked&lockedUntil=${encodeURIComponent(lockedUntil.toISOString())}`
-		} as Response);
-		vi.stubGlobal('fetch', mockFetch);
+		vi.stubGlobal(
+			'fetch',
+			vi
+				.fn()
+				.mockResolvedValue(
+					problemResponse(
+						403,
+						{ type: '/problems/account-locked', lockedUntil: lockedUntil.toISOString() },
+						{ 'Retry-After': '900' }
+					)
+				)
+		);
 
 		// when
 		await fillAndSubmit();
 
 		// then
 		await expect.element(page.getByText(lockedUntil.toLocaleTimeString())).toBeVisible();
-		expect(mockGoto).not.toHaveBeenCalled();
-		expect(mockBootstrapSession).not.toHaveBeenCalled();
 	});
 
-	it('locked account without a lockedUntil value — shows the generic lockout message', async () => {
+	it('locked_doesNotNavigate', async () => {
 		// given
-		const mockFetch = vi
-			.fn()
-			.mockResolvedValue({ url: 'http://localhost:5173/login?error&reason=locked' } as Response);
-		vi.stubGlobal('fetch', mockFetch);
+		vi.stubGlobal(
+			'fetch',
+			vi.fn().mockResolvedValue(problemResponse(403, { type: '/problems/account-locked' }))
+		);
 
 		// when
 		await fillAndSubmit();
 
 		// then
 		await expect.element(page.getByText('später erneut')).toBeVisible();
-		expect(mockGoto).not.toHaveBeenCalled();
+		expect({
+			navigated: mockGoto.mock.calls.length,
+			bootstrapped: mockBootstrapSession.mock.calls.length
+		}).toEqual({ navigated: 0, bootstrapped: 0 });
 	});
 
-	it('network error — shows an error message', async () => {
+	it('rateLimited_doesNotNavigate', async () => {
 		// given
-		const mockFetch = vi.fn().mockRejectedValue(new Error('network error'));
+		vi.stubGlobal(
+			'fetch',
+			vi
+				.fn()
+				.mockResolvedValue(
+					problemResponse(429, { type: '/problems/too-many-requests' }, { 'Retry-After': '42' })
+				)
+		);
+
+		// when
+		await fillAndSubmit();
+
+		// then
+		await expect.element(page.getByText('Zu viele Anmeldeversuche')).toBeVisible();
+		expect({
+			navigated: mockGoto.mock.calls.length,
+			bootstrapped: mockBootstrapSession.mock.calls.length
+		}).toEqual({ navigated: 0, bootstrapped: 0 });
+	});
+
+	it('rateLimited_showsRetryAfterSeconds', async () => {
+		// given
+		vi.stubGlobal(
+			'fetch',
+			vi
+				.fn()
+				.mockResolvedValue(
+					problemResponse(429, { type: '/problems/too-many-requests' }, { 'Retry-After': '42' })
+				)
+		);
+
+		// when
+		await fillAndSubmit();
+
+		// then
+		await expect.element(page.getByText('42 Sekunden')).toBeVisible();
+	});
+
+	it('rateLimitedWithoutRetryAfter_showsFallback', async () => {
+		// given
+		vi.stubGlobal(
+			'fetch',
+			vi.fn().mockResolvedValue(problemResponse(429, { type: '/problems/too-many-requests' }))
+		);
+
+		// when
+		await fillAndSubmit();
+
+		// then
+		await expect.element(page.getByText('Bitte warte einen Moment')).toBeVisible();
+	});
+
+	it('network_showsNetworkMessage', async () => {
+		// given
+		vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')));
+
+		// when
+		await fillAndSubmit();
+
+		// then
+		await expect.element(page.getByText('Keine Verbindung zum Server')).toBeVisible();
+	});
+
+	it('unexpected_showsUnexpectedMessage', async () => {
+		// given
+		vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 500 })));
+
+		// when
+		await fillAndSubmit();
+
+		// then
+		await expect.element(page.getByText('Etwas ist schiefgelaufen')).toBeVisible();
+	});
+
+	it('missingXsrfCookie_fetchesDiscoverFirst', async () => {
+		// given
+		clearCookies();
+		const mockFetch = vi
+			.fn()
+			.mockImplementation(async (url: string) =>
+				url === '/api/auth/discover'
+					? Response.json({ localEnabled: true, socialProviders: [] })
+					: new Response(null, { status: 204 })
+			);
 		vi.stubGlobal('fetch', mockFetch);
 
 		// when
 		await fillAndSubmit();
 
 		// then
-		await expect.element(page.getByText('falsch')).toBeVisible();
-		expect(mockGoto).not.toHaveBeenCalled();
+		await vi.waitFor(() =>
+			expect(requestedUrls(mockFetch)).toEqual(['/api/auth/discover', '/api/login'])
+		);
+	});
+
+	it('existingXsrfCookie_postsLoginWithoutDiscover', async () => {
+		// given
+		const mockFetch = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
+		vi.stubGlobal('fetch', mockFetch);
+
+		// when
+		await fillAndSubmit();
+
+		// then
+		await vi.waitFor(() => expect(requestedUrls(mockFetch)).toEqual(['/api/login']));
+	});
+
+	it('authenticated_redirectsToDashboard', async () => {
+		// given
+		setAuthenticated(currentUser);
+
+		// when
+		render(LoginPage);
+
+		// then
+		await vi.waitFor(() =>
+			expect(mockGoto).toHaveBeenCalledWith('/app/dashboard', { replaceState: true })
+		);
 	});
 
 	it('on mount — loads the available login methods', async () => {
@@ -192,7 +371,7 @@ describe('login page', () => {
 	it.each([
 		{ reason: 'social-login-no-account', expectedText: 'kein Konto in LibreHousehold' },
 		{ reason: 'social-login-failed', expectedText: 'über den Anbieter ist fehlgeschlagen' },
-		{ reason: 'local-login-disabled', expectedText: 'nur über einen Anbieter' }
+		{ reason: 'some-unknown-reason', expectedText: 'Etwas ist schiefgelaufen' }
 	])(
 		'redirected back with reason $reason — shows the matching error message',
 		async ({ reason, expectedText }) => {

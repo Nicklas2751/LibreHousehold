@@ -1,6 +1,8 @@
 package eu.wiegandt.librehousehold.household.controller;
 
+import eu.wiegandt.librehousehold.household.exception.HouseholdAlreadyExistsException;
 import eu.wiegandt.librehousehold.household.exception.HouseholdSetupIsRequiredException;
+import eu.wiegandt.librehousehold.household.service.AccountSessionSignIn;
 import eu.wiegandt.librehousehold.household.service.HouseholdManagementService;
 import eu.wiegandt.librehousehold.household.service.HouseholdSetupService;
 import eu.wiegandt.librehousehold.model.HouseholdSetup;
@@ -19,8 +21,11 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 @ExtendWith({MockitoExtension.class, InstancioExtension.class})
 class HouseholdApiDelegateImplTest {
@@ -30,6 +35,9 @@ class HouseholdApiDelegateImplTest {
 
     @Mock
     private HouseholdManagementService householdManagementService;
+
+    @Mock
+    private AccountSessionSignIn accountSessionSignIn;
 
     @InjectMocks
     private HouseholdApiDelegateImpl householdApiDelegate;
@@ -59,6 +67,31 @@ class HouseholdApiDelegateImplTest {
             verify(householdSetupService).setupHousehold(setup);
             assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
             assertThat(result.getBody()).isEqualTo(response);
+        }
+
+        @Test
+        void anySetup_signsInSetupMemberId() {
+            // given
+            var setup = Instancio.create(HouseholdSetup.class);
+
+            // when
+            householdApiDelegate.setupHousehold(Optional.of(setup));
+
+            // then
+            verify(accountSessionSignIn).signIn(setup.getMember().getId());
+        }
+
+        @Test
+        void serviceThrows_doesNotSignIn() {
+            // given
+            var setup = Instancio.create(HouseholdSetup.class);
+            doThrow(HouseholdAlreadyExistsException.class).when(householdSetupService).setupHousehold(setup);
+
+            // when
+            catchThrowable(() -> householdApiDelegate.setupHousehold(Optional.of(setup)));
+
+            // then
+            verifyNoInteractions(accountSessionSignIn);
         }
     }
 }

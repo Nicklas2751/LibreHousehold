@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render } from 'vitest-browser-svelte';
+import { page } from 'vitest/browser';
 import WelcomeScreen from './WelcomeScreen.svelte';
 import { setAuthenticated, setGuest } from '$lib/stores/sessionState.svelte';
 
@@ -19,7 +20,7 @@ describe('WelcomeScreen', () => {
 		vi.clearAllMocks();
 	});
 
-	it('authenticated session — navigates to the dashboard', async () => {
+	it('authenticated_navigatesToDashboard', async () => {
 		// given
 		setAuthenticated({
 			member: { id: 'member-id', name: 'Max Mustermann', email: 'max@example.com', isAdmin: true },
@@ -36,7 +37,7 @@ describe('WelcomeScreen', () => {
 		await vi.waitFor(() => expect(mockGoto).toHaveBeenCalledWith('/app/dashboard'));
 	});
 
-	it('guest session — stays on the welcome screen', async () => {
+	it('guest_staysOnWelcome', async () => {
 		// given
 		setGuest();
 
@@ -46,5 +47,18 @@ describe('WelcomeScreen', () => {
 		// then
 		await new Promise((resolve) => setTimeout(resolve, 50));
 		expect(mockGoto).not.toHaveBeenCalled();
+	});
+
+	it('guest_loginButtonLinksToLogin', async () => {
+		// given
+		setGuest();
+
+		// when
+		render(WelcomeScreen);
+
+		// then
+		await expect
+			.element(page.getByRole('link', { name: 'Anmelden' }))
+			.toHaveAttribute('href', '/login');
 	});
 });

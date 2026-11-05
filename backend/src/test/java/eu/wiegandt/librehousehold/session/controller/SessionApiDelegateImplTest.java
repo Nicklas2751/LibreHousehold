@@ -2,12 +2,15 @@ package eu.wiegandt.librehousehold.session.controller;
 
 import eu.wiegandt.librehousehold.household.LocalLoginProperties;
 import eu.wiegandt.librehousehold.config.SocialLoginContextStore;
-import eu.wiegandt.librehousehold.config.SocialLoginProperties;
-import eu.wiegandt.librehousehold.config.SocialLoginProperties.ProviderConfig;
-import eu.wiegandt.librehousehold.config.SocialLoginProperties.ProviderType;
-import eu.wiegandt.librehousehold.household.AccountOidcPrincipal;
 import eu.wiegandt.librehousehold.household.AccountPrincipal;
 import eu.wiegandt.librehousehold.household.ExternalIdentity;
+import eu.wiegandt.librehousehold.household.LocalLoginDisabledException;
+import org.springframework.beans.factory.support.StaticListableBeanFactory;
+import org.springframework.security.config.oauth2.client.CommonOAuth2Provider;
+import org.springframework.security.oauth2.client.registration.ClientRegistration;
+import org.springframework.security.oauth2.client.registration.InMemoryClientRegistrationRepository;
+import org.springframework.security.oauth2.core.AuthorizationGrantType;
+import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 import eu.wiegandt.librehousehold.household.HouseholdQuery;
 import eu.wiegandt.librehousehold.household.MemberQuery;
 import eu.wiegandt.librehousehold.household.PasswordReset;
@@ -42,12 +45,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
-import org.springframework.security.oauth2.core.oidc.IdTokenClaimNames;
-import org.springframework.security.oauth2.core.oidc.OidcIdToken;
-import org.springframework.security.oauth2.core.oidc.user.DefaultOidcUser;
 
-import java.time.Instant;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -100,9 +98,9 @@ class SessionApiDelegateImplTest {
             var householdId = UUID.randomUUID();
             var household = Instancio.create(Household.class);
             var preferences = Instancio.create(UserPreferences.class);
-            var principal = new AccountOidcPrincipal(oidcUserWithSubject(member.getEmail()), member.getId(), householdId, true);
+            var principal = new AccountPrincipal(member.getId(), householdId, null, true);
             SecurityContextHolder.getContext().setAuthentication(
-                    new OAuth2AuthenticationToken(principal, List.of(), "spa-backend-client"));
+                    UsernamePasswordAuthenticationToken.authenticated(principal, null, List.of()));
             doReturn(member).when(memberQuery).getMember(member.getId());
             doReturn(household).when(householdQuery).getHousehold(householdId);
             doReturn(preferences).when(preferencesQuery).getPreferencesOrDefault(member.getId());
@@ -118,16 +116,22 @@ class SessionApiDelegateImplTest {
         }
 
         @Test
-        void nonOidcPrincipal_throwsNoAuthenticatedSessionException() {
+        void foreignPrincipal_throwsNoAuthenticatedSessionException() {
             // given
-            var principal = new AccountPrincipal("someone@example.com", "hash", true);
+            var externalUser = new DefaultOAuth2User(List.of(), Map.of("sub", "external-subject"), "sub");
             SecurityContextHolder.getContext().setAuthentication(
-                    new UsernamePasswordAuthenticationToken(principal, null, List.of()));
+                    new OAuth2AuthenticationToken(externalUser, List.of(), "google"));
 
-            // when
-            // then
+            // when / then
             assertThatThrownBy(delegate::getCurrentUser).isInstanceOf(NoAuthenticatedSessionException.class);
         }
+    }
+
+    @Test
+    void login_anyRequest_throwsLocalLoginDisabled() {
+        // when / then
+        assertThatThrownBy(() -> delegate.login("max@example.com", "secret"))
+                .isInstanceOf(LocalLoginDisabledException.class);
     }
 
     @Nested
@@ -213,51 +217,50 @@ class SessionApiDelegateImplTest {
     @Nested
     class getAuthDiscovery {
 
-        static List<Arguments> configuredLoginMethods() {
-            var googleAndDex = new LinkedHashMap<String, ProviderConfig>();
-            googleAndDex.put("google", providerWithDisplayName("Google"));
-            googleAndDex.put("dex", providerWithDisplayName(null));
-            return List.of(
-                    argumentSet("social login enabled with two providers, one without display name",
-                            new SocialLoginProperties(true, googleAndDex),
-                            new LocalLoginProperties(true),
-                            new AuthDiscovery(true, List.of(
-                                    new SocialLoginProvider("google", "Google"),
-                                    new SocialLoginProvider("dex", "dex")))),
-                    argumentSet("social login disabled although a provider is configured",
-                            new SocialLoginProperties(false, Map.of("google", providerWithDisplayName("Google"))),
-                            new LocalLoginProperties(true),
-                            new AuthDiscovery(true, List.of())),
-                    argumentSet("local login disabled",
-                            new SocialLoginProperties(false, Map.of()),
-                            new LocalLoginProperties(false),
-                            new AuthDiscovery(false, List.of())),
-                    argumentSet("social login enabled with a blank display name",
-                            new SocialLoginProperties(true, Map.of("dex", providerWithDisplayName("   "))),
-                            new LocalLoginProperties(true),
-                            new AuthDiscovery(true, List.of(new SocialLoginProvider("dex", "dex")))));
-        }
-
-        @ParameterizedTest
-        @MethodSource("configuredLoginMethods")
-        void configuredLoginMethods_returnsMatchingAuthDiscovery(SocialLoginProperties socialLoginProperties,
-                                                                LocalLoginProperties localLoginProperties,
-                                                                AuthDiscovery expected) {
+        @Test
+        void withRegistrations_listsClientNames() {
             // given
-            var discoveryDelegate = new SessionApiDelegateImpl(memberQuery, householdQuery, preferencesQuery,
-                    passwordReset, socialLoginContextStore, socialLoginProperties, localLoginProperties,
-                    pendingSocialRegistrationStore);
+            var registrations = new InMemoryClientRegistrationRepository(
+                    CommonOAuth2Provider.GOOGLE.getBuilder("google").clientId("client-id").clientName("Google").build(),
+                    ClientRegistration.withRegistrationId("dex")
+                            .clientId("client-id")
+                            .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+                            .redirectUri("{baseUrl}/login/oauth2/code/{registrationId}")
+                            .authorizationUri("https://dex.example.com/dex/auth")
+                            .tokenUri("https://dex.example.com/dex/token")
+                            .build());
+            var expected = new AuthDiscovery(true, List.of(
+                    new SocialLoginProvider("google", "Google"),
+                    new SocialLoginProvider("dex", "dex")));
 
             // when
-            var result = discoveryDelegate.getAuthDiscovery();
+            var result = discoveryDelegate(registrations, new LocalLoginProperties(true)).getAuthDiscovery();
+
+            // then — the repository does not keep the configuration order
+            assertThat(result.getBody()).usingRecursiveComparison().ignoringCollectionOrder().isEqualTo(expected);
+        }
+
+        @Test
+        void withoutRepository_empty() {
+            // given
+            var expected = new AuthDiscovery(false, List.of());
+
+            // when
+            var result = discoveryDelegate(null, new LocalLoginProperties(false)).getAuthDiscovery();
 
             // then
             assertThat(result.getBody()).usingRecursiveComparison().isEqualTo(expected);
         }
 
-        private static ProviderConfig providerWithDisplayName(String displayName) {
-            return new ProviderConfig(ProviderType.OIDC, null, "client-id", "client-secret", displayName,
-                    null, null, null, null, List.of());
+        private SessionApiDelegateImpl discoveryDelegate(InMemoryClientRegistrationRepository registrations,
+                                                         LocalLoginProperties localLoginProperties) {
+            var beanFactory = new StaticListableBeanFactory();
+            if (registrations != null) {
+                beanFactory.addBean("clientRegistrationRepository", registrations);
+            }
+            return new SessionApiDelegateImpl(memberQuery, householdQuery, preferencesQuery, passwordReset,
+                    socialLoginContextStore, beanFactory.getBeanProvider(InMemoryClientRegistrationRepository.class),
+                    localLoginProperties, pendingSocialRegistrationStore);
         }
     }
 
@@ -296,11 +299,5 @@ class SessionApiDelegateImplTest {
             assertThatThrownBy(delegate::getPendingSocialRegistration)
                     .isInstanceOf(PendingSocialRegistrationNotFoundException.class);
         }
-    }
-
-    private DefaultOidcUser oidcUserWithSubject(String email) {
-        var idToken = new OidcIdToken("token-value", Instant.now(), Instant.now().plusSeconds(300),
-                Map.of(IdTokenClaimNames.SUB, email, IdTokenClaimNames.ISS, "http://localhost/issuer"));
-        return new DefaultOidcUser(List.of(), idToken);
     }
 }

@@ -21,7 +21,6 @@
 	import { goto } from '$app/navigation';
 	import { onDestroy, onMount } from 'svelte';
 	import MemberProfileForm from '$lib/MemberProfileForm.svelte';
-	import { completeSilentOAuth2Login } from '$lib/oauth2Login';
 	import { bootstrapSession } from '$lib/stores/sessionBootstrap';
 	import SocialLoginButtons from '$lib/SocialLoginButtons.svelte';
 	import { authDiscovery, loadAuthDiscovery } from '$lib/stores/authDiscoveryState.svelte';
@@ -163,9 +162,9 @@
 
 	async function enterDashboard() {
 		enteringDashboard = true;
-		await completeSilentOAuth2Login();
+		// The backend already signed the new member in when setup/join committed.
 		await bootstrapSession();
-		await goto('/app/dashboard');
+		await goto('/app/dashboard', { replaceState: true });
 	}
 
 	async function readConflictProblem(err: unknown): Promise<Problem | undefined> {

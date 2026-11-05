@@ -3,6 +3,7 @@ import eu.wiegandt.librehousehold.household.exception.*;
 import eu.wiegandt.librehousehold.household.mapper.*;
 import eu.wiegandt.librehousehold.household.model.*;
 import eu.wiegandt.librehousehold.household.repository.*;
+import eu.wiegandt.librehousehold.household.service.AccountSessionSignIn;
 import eu.wiegandt.librehousehold.household.service.*;
 
 import eu.wiegandt.librehousehold.api.HouseholdApiController;
@@ -49,6 +50,9 @@ class HouseholdValidationIT {
 
     @MockitoBean
     private HouseholdManagementService householdManagementService;
+
+    @MockitoBean
+    private AccountSessionSignIn accountSessionSignIn;
 
     @Nested
     class setupHousehold {

@@ -14,7 +14,7 @@ import org.springframework.web.context.request.ServletRequestAttributes;
  *
  * <p>The current request is resolved via {@link RequestContextHolder} instead of being passed in:
  * the generated {@code SessionApiDelegate} methods that store the context get no request parameter
- * (same reasoning as {@code AccountSessionAuthenticator}).
+ * (same reasoning as {@code AccountSessionSignIn}).
  */
 @Component
 public class SocialLoginContextStore {

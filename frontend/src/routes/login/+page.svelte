@@ -7,74 +7,56 @@
 	import { authDiscovery, loadAuthDiscovery } from '$lib/stores/authDiscoveryState.svelte';
 	import { SocialLoginContextContextEnum } from '../../generated-sources/openapi';
 	import PasswordField from '$lib/PasswordField.svelte';
-	import { getCsrfTokenFromCookieHeader } from '$lib/api/csrf';
 	import { bootstrapSession } from '$lib/stores/sessionBootstrap';
+	import { session } from '$lib/stores/sessionState.svelte';
+	import { loginWithPassword } from '$lib/stores/sessionLogin';
+	import { type LoginProblem, readLoginProblem } from '$lib/api/problemMapping';
 
-	type LoginErrorType =
-		| 'none'
-		| 'unverified'
-		| 'locked'
-		| 'social-login-no-account'
-		| 'social-login-failed'
-		| 'local-login-disabled'
-		| 'generic';
+	type LoginError =
+		| LoginProblem
+		| { kind: 'none' }
+		| { kind: 'social-login-no-account' }
+		| { kind: 'social-login-failed' };
 
 	let email = $state('');
 	let password = $state('');
 	let submitting = $state(false);
 	// A failed social login comes back as a full page redirect to this page, so its reason is in
 	// the page URL rather than in a fetch response.
-	let loginErrorType = $state<LoginErrorType>(classifyErrorQueryParam(page.url.href));
-	let lockedUntil = $state<Date | null>(null);
+	let loginError = $state<LoginError>(classifyErrorQueryParam(page.url));
 
 	onMount(() => {
 		loadAuthDiscovery();
 	});
 
-	function classifyErrorQueryParam(url: string): LoginErrorType {
-		const params = new URL(url).searchParams;
-		if (!params.has('error')) return 'none';
-		const reason = params.get('reason');
-		if (reason === 'unverified') return 'unverified';
-		if (reason === 'locked') return 'locked';
-		if (reason === 'social-login-no-account') return 'social-login-no-account';
-		if (reason === 'social-login-failed') return 'social-login-failed';
-		if (reason === 'local-login-disabled') return 'local-login-disabled';
-		return 'generic';
+	// Covers both an already signed-in visitor and the session bootstrapped after a successful login.
+	$effect(() => {
+		if (session.status === 'authenticated') {
+			goto('/app/dashboard', { replaceState: true });
+		}
+	});
+
+	function classifyErrorQueryParam(url: URL): LoginError {
+		if (!url.searchParams.has('error')) return { kind: 'none' };
+		const reason = url.searchParams.get('reason');
+		if (reason === 'social-login-no-account') return { kind: 'social-login-no-account' };
+		if (reason === 'social-login-failed') return { kind: 'social-login-failed' };
+		return { kind: 'unexpected' };
 	}
 
 	async function handleSubmit(event: SubmitEvent) {
 		event.preventDefault();
-		loginErrorType = 'none';
-		lockedUntil = null;
+		loginError = { kind: 'none' };
 		submitting = true;
 		try {
-			const csrfToken = getCsrfTokenFromCookieHeader(document.cookie);
-			const response = await fetch('/login', {
-				method: 'POST',
-				credentials: 'include',
-				headers: {
-					'Content-Type': 'application/x-www-form-urlencoded',
-					...(csrfToken ? { 'X-XSRF-TOKEN': csrfToken } : {})
-				},
-				body: new URLSearchParams({ username: email, password })
-			});
-			const errorType = classifyErrorQueryParam(response.url);
-			if (errorType !== 'none') {
-				loginErrorType = errorType;
-				if (errorType === 'locked') {
-					const rawLockedUntil = new URL(response.url).searchParams.get('lockedUntil');
-					lockedUntil = rawLockedUntil ? new Date(rawLockedUntil) : null;
-				}
-				return;
-			}
-			await bootstrapSession();
-			await goto('/app/dashboard');
-		} catch {
-			loginErrorType = 'generic';
-		} finally {
+			await loginWithPassword(email, password);
+		} catch (err: unknown) {
+			loginError = await readLoginProblem(err);
 			submitting = false;
+			return;
 		}
+		await bootstrapSession();
+		submitting = false;
 	}
 </script>
 
@@ -88,33 +70,49 @@
 				<h1 class="text-center text-2xl font-bold text-base-content">LibreHousehold</h1>
 				<p class="mt-2 text-center text-base-content/70">{m['subtitle']()}</p>
 				<h2 class="mt-4 text-xl font-bold text-base-content">{m['login.title']()}</h2>
-				{#if loginErrorType === 'unverified'}
+				{#if loginError.kind === 'invalid-credentials'}
+					<div class="mt-4 alert alert-error">
+						<span>{m['login.error_invalid_credentials']()}</span>
+					</div>
+				{:else if loginError.kind === 'unverified'}
 					<div class="mt-4 alert alert-warning">
 						<span>{m['login.error_unverified']()}</span>
 					</div>
-				{:else if loginErrorType === 'locked'}
+				{:else if loginError.kind === 'locked'}
 					<div class="mt-4 alert alert-warning">
 						<span>
-							{lockedUntil
-								? m['login.error_locked']({ time: lockedUntil.toLocaleTimeString() })
+							{loginError.lockedUntil
+								? m['login.error_locked']({ time: loginError.lockedUntil.toLocaleTimeString() })
 								: m['login.error_locked_unknown_time']()}
 						</span>
 					</div>
-				{:else if loginErrorType === 'social-login-no-account'}
+				{:else if loginError.kind === 'rate-limited'}
 					<div class="mt-4 alert alert-warning">
-						<span>{m['login.error_social_login_no_account']()}</span>
+						<span>
+							{loginError.retryAfterSeconds === null
+								? m['login.error_rate_limited_unknown']()
+								: m['login.error_rate_limited']({ seconds: loginError.retryAfterSeconds })}
+						</span>
 					</div>
-				{:else if loginErrorType === 'social-login-failed'}
-					<div class="mt-4 alert alert-error">
-						<span>{m['login.error_social_login_failed']()}</span>
-					</div>
-				{:else if loginErrorType === 'local-login-disabled'}
+				{:else if loginError.kind === 'local-login-disabled'}
 					<div class="mt-4 alert alert-warning">
 						<span>{m['login.error_local_login_disabled']()}</span>
 					</div>
-				{:else if loginErrorType === 'generic'}
+				{:else if loginError.kind === 'social-login-no-account'}
+					<div class="mt-4 alert alert-warning">
+						<span>{m['login.error_social_login_no_account']()}</span>
+					</div>
+				{:else if loginError.kind === 'social-login-failed'}
 					<div class="mt-4 alert alert-error">
-						<span>{m['login.error']()}</span>
+						<span>{m['login.error_social_login_failed']()}</span>
+					</div>
+				{:else if loginError.kind === 'network'}
+					<div class="mt-4 alert alert-error">
+						<span>{m['login.error_network']()}</span>
+					</div>
+				{:else if loginError.kind === 'unexpected'}
+					<div class="mt-4 alert alert-error">
+						<span>{m['login.error_unexpected']()}</span>
 					</div>
 				{/if}
 				{#if authDiscovery.localEnabled}

@@ -21,7 +21,7 @@ import java.util.Objects;
 
 /**
  * Wires the RATE1 rate-limiting rules (Arc42 Chapter 8): a username+IP-keyed and an IP-keyed rule
- * for {@code POST /login}, and one IP-keyed rule shared by the password-reset/verification
+ * for {@code POST {basePath}/login}, and one IP-keyed rule shared by the password-reset/verification
  * endpoints, which are partly unauthenticated and therefore have no meaningful "username" to key
  * on. The IP-keyed rules slow down an attacker cycling through many email addresses, which the
  * username+IP rule alone never throttles.
@@ -31,7 +31,6 @@ import java.util.Objects;
         SensitiveEndpointsRateLimitProperties.class})
 class RateLimitingConfig {
 
-    private static final String LOGIN_USERNAME_PARAMETER = "username";
     // RFC 5321 caps an e-mail address at 254 characters; capping the key keeps attacker-chosen
     // parameter lengths from inflating the in-memory bucket map
     private static final int MAX_EMAIL_LENGTH = 254;
@@ -48,7 +47,7 @@ class RateLimitingConfig {
             SensitiveEndpointsRateLimitProperties sensitiveEndpointsProperties,
             @Value("${openapi.libreHousehold.base-path:/v1}") String basePath,
             @Lazy @Qualifier("handlerExceptionResolver") HandlerExceptionResolver handlerExceptionResolver) {
-        var loginMatcher = PathPatternRequestMatcher.pathPattern(HttpMethod.POST, "/login");
+        var loginMatcher = PathPatternRequestMatcher.pathPattern(HttpMethod.POST, basePath + "/login");
         var loginRule = new RateLimitRule(
                 loginMatcher,
                 new Bucket4jRateLimiter(loginProperties.maxAttempts(), loginProperties.windowDuration()),
@@ -73,7 +72,7 @@ class RateLimitingConfig {
     }
 
     static String loginKey(HttpServletRequest request) {
-        var email = Objects.requireNonNullElse(request.getParameter(LOGIN_USERNAME_PARAMETER), "");
+        var email = Objects.requireNonNullElse(request.getParameter(SecurityConfig.LOGIN_EMAIL_PARAMETER), "");
         return email.substring(0, Math.min(email.length(), MAX_EMAIL_LENGTH)) + "|" + request.getRemoteAddr();
     }
 }

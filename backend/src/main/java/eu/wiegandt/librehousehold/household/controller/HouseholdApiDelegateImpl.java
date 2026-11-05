@@ -2,6 +2,7 @@ package eu.wiegandt.librehousehold.household.controller;
 
 import eu.wiegandt.librehousehold.api.HouseholdApiDelegate;
 import eu.wiegandt.librehousehold.household.exception.HouseholdSetupIsRequiredException;
+import eu.wiegandt.librehousehold.household.service.AccountSessionSignIn;
 import eu.wiegandt.librehousehold.household.service.HouseholdManagementService;
 import eu.wiegandt.librehousehold.household.service.HouseholdSetupService;
 import eu.wiegandt.librehousehold.model.*;
@@ -17,17 +18,24 @@ public class HouseholdApiDelegateImpl implements HouseholdApiDelegate {
 
     private final HouseholdSetupService householdSetupService;
     private final HouseholdManagementService householdManagementService;
+    private final AccountSessionSignIn accountSessionSignIn;
 
     public HouseholdApiDelegateImpl(HouseholdSetupService householdSetupService,
-                             HouseholdManagementService householdManagementService) {
+                                    HouseholdManagementService householdManagementService,
+                                    AccountSessionSignIn accountSessionSignIn) {
         this.householdSetupService = householdSetupService;
         this.householdManagementService = householdManagementService;
+        this.accountSessionSignIn = accountSessionSignIn;
     }
 
+    // Signs in only after the setup transaction committed, so a rollback never leaves a session
+    // for a member that does not exist
     @Override
     public ResponseEntity<HouseholdSetupResponse> setupHousehold(Optional<HouseholdSetup> householdSetup) {
         var setup = householdSetup.orElseThrow(HouseholdSetupIsRequiredException::new);
-        return ResponseEntity.ok(householdSetupService.setupHousehold(setup));
+        var response = householdSetupService.setupHousehold(setup);
+        accountSessionSignIn.signIn(setup.getMember().getId());
+        return ResponseEntity.ok(response);
     }
 
     @Override

@@ -1,189 +1,67 @@
 package eu.wiegandt.librehousehold.config;
 
 import eu.wiegandt.librehousehold.household.LocalLoginProperties;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication.Type;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Lazy;
-import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.jdbc.core.JdbcOperations;
-import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.Customizer;
-import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configurers.CsrfConfigurer;
-import org.springframework.security.config.annotation.web.configurers.oauth2.server.authorization.OAuth2AuthorizationServerConfigurer;
-import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserService;
-import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
-import org.springframework.security.oauth2.client.registration.ClientRegistration;
-import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.client.registration.InMemoryClientRegistrationRepository;
-import org.springframework.security.oauth2.core.AuthorizationGrantType;
-import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
-import org.springframework.security.oauth2.core.oidc.IdTokenClaimNames;
-import org.springframework.security.oauth2.core.oidc.OidcScopes;
-import org.springframework.security.oauth2.server.authorization.client.JdbcRegisteredClientRepository;
-import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository;
-import org.springframework.security.oauth2.server.authorization.settings.AuthorizationServerSettings;
-import org.springframework.security.core.session.SessionRegistry;
-import org.springframework.security.core.session.SessionRegistryImpl;
+import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
+import org.springframework.security.oauth2.client.web.HttpSessionOAuth2AuthorizedClientRepository;
+import org.springframework.security.oauth2.client.web.OAuth2AuthorizedClientRepository;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
-import org.springframework.security.web.authentication.SavedRequestAwareAuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.authentication.session.SessionAuthenticationStrategy;
 import org.springframework.security.web.csrf.CsrfFilter;
-import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
-import org.springframework.security.web.session.ConcurrentSessionFilter;
-import org.springframework.security.web.session.HttpSessionEventPublisher;
+import org.springframework.security.web.csrf.CsrfTokenRepository;
+import org.springframework.security.core.session.SessionRegistry;
+import org.springframework.security.web.savedrequest.NullRequestCache;
 import org.springframework.security.web.util.matcher.AnyRequestMatcher;
 import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.util.List;
-import java.util.stream.Stream;
 
 /**
- * Composition root for the Spring Security / Spring Authorization Server wiring (see ADR-013,
- * ADR-014). Lives in its own {@code config} package, not in {@code core} or {@code household}: an
- * {@code household}-internal {@code UserDetailsService}/{@code PasswordEncoder}-based
- * {@code DaoAuthenticationProvider} is wired automatically by Spring Security's autoconfiguration
- * (type-based, no explicit reference here), which would otherwise be a forbidden
- * {@code core -> household} dependency (see the "Module Dependency Direction" rule in Arc42
- * Chapter 5). The {@code household}-provided {@link OidcUserService} bean (see
- * {@code AccountOidcUserService}) is injected here only by its framework-owned supertype, not by
- * its {@code household}-internal concrete type, so this class itself has no compile-time
- * dependency on {@code household} either — verified by Spring Modulith's
- * {@code ApplicationModules.verify()} (see {@code ApplicationTests}).
+ * Composition root of the single Spring Security filter chain (see ADR-013, ADR-014): form login
+ * under {@code POST {basePath}/login}, {@code oauth2Login()} for external providers (ADR-016) and
+ * logout under {@code POST {basePath}/logout}. The HTTP session is the only credential; the
+ * session building blocks shared by every sign-in path live in {@link SessionManagementConfig}.
  *
- * <p>{@code @EnableMethodSecurity} activates {@code @PreAuthorize} support (enabled by default
- * alongside it), which the various {@code *ApiDelegateImpl} classes use together with
- * {@code household.HouseholdAccessGuard} for per-household/role access control (P1.6, DD-8).
+ * <p>Lives in {@code config}, not in {@code household}: Spring Security wires the
+ * {@code household}-provided {@code UserDetailsService} into its {@code DaoAuthenticationProvider}
+ * by type, so this class has no compile-time dependency on {@code household}'s internals (verified
+ * by {@code ApplicationModules.verify()}, see {@code ApplicationTests}).
+ *
+ * <p>{@code @EnableMethodSecurity} activates {@code @PreAuthorize}, which the {@code *ApiDelegateImpl}
+ * classes use together with {@code household.HouseholdAccessGuard} for per-household access control.
  */
 @Configuration
 @EnableMethodSecurity
-@EnableConfigurationProperties(SocialLoginProperties.class)
 public class SecurityConfig {
 
-    // Without its own target, a failed oauth2Login() (e.g. the user cancels at the provider, which
-    // calls back with error=access_denied) lands on formLogin()'s default /login?error, which the
-    // login page can only present as wrong credentials.
-    private static final String SOCIAL_LOGIN_FAILURE_URL = "/login?error&reason=social-login-failed";
+    // Shared with the rate limit key (see RateLimitingConfig): members log in with their e-mail address
+    static final String LOGIN_EMAIL_PARAMETER = "email";
+    private static final int UNLIMITED_SESSIONS = -1;
+    private static final String LOGIN_PAGE = "/login";
 
-    @Bean
-    public RegisteredClientRepository registeredClientRepository(JdbcOperations jdbcOperations) {
-        return new JdbcRegisteredClientRepository(jdbcOperations);
-    }
+    private final String basePath;
 
-    /**
-     * Not exposed as a bean by Spring Security's autoconfiguration by default. Needed by
-     * {@code AccountSessionAuthenticator} to programmatically authenticate a freshly created
-     * account right after household setup / invite join, without going through the {@code /login}
-     * form (see P1.4-follow-up).
-     *
-     * <p>{@code @Lazy} on the bean definition itself (not just at injection points): plain
-     * {@code @Lazy} constructor injection only defers *wiring*, not Spring's own eager singleton
-     * pre-instantiation of this bean during context refresh. {@link AuthenticationConfiguration} is
-     * only auto-configured for servlet web applications, so eagerly instantiating this bean would
-     * fail to even build the {@code ApplicationContext} for non-web tests
-     * ({@code @SpringBootTest(webEnvironment = WebEnvironment.NONE)}) that never actually trigger
-     * the login flow.
-     */
-    @Bean
-    @Lazy
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) {
-        return configuration.getAuthenticationManager();
-    }
-
-    /**
-     * Since OIDC is enabled on the authorization server (see {@code authorizationServerSecurityFilterChain}),
-     * Spring Authorization Server's authorization endpoint automatically uses this {@link SessionRegistry}
-     * bean to register every newly authenticated session (see RESET1 in Arc42 Chapter 8) — no
-     * additional {@code sessionManagement()} wiring is needed on {@code defaultSecurityFilterChain}.
-     * {@code PasswordResetService} uses it to expire all of an account's sessions on password reset.
-     */
-    @Bean
-    public SessionRegistry sessionRegistry() {
-        return new SessionRegistryImpl();
-    }
-
-    /**
-     * Notifies {@link SessionRegistryImpl} of session lifecycle events (e.g. destruction), so it can
-     * remove the corresponding {@code SessionInformation} entries.
-     */
-    @Bean
-    public HttpSessionEventPublisher httpSessionEventPublisher() {
-        return new HttpSessionEventPublisher();
-    }
-
-    @Bean
-    public AuthorizationServerSettings authorizationServerSettings(
-            @Value("${librehousehold.security.oauth2-authorization-server.issuer}") String issuer) {
-        return AuthorizationServerSettings.builder().issuer(issuer).build();
-    }
-
-    /**
-     * The backend registers itself as an OAuth2 client of its own, embedded Authorization Server
-     * (see DD-7). Endpoints are built from the configured issuer instead of relying on OIDC
-     * issuer-discovery ({@code ClientRegistrations.fromIssuerLocation}): that call happens eagerly
-     * during context refresh, before the embedded servlet container accepts requests, which would
-     * make the authorization server unreachable from its own client at startup.
-     *
-     * <p>{@code authorizationUri} is deliberately decoupled from {@code issuer} instead of being
-     * built as {@code issuer + "/oauth2/authorize"} like the other three: it is the only one of the
-     * four URIs a real browser navigates to. In local development the frontend dev server proxies
-     * the browser-facing endpoints to a different origin than the backend's own, so this URI must
-     * reflect that proxy origin, while {@code tokenUri}/{@code jwkSetUri}/{@code userInfoUri} are
-     * called exclusively server-to-server by this backend itself and must keep resolving directly
-     * against {@code issuer} — routing those internal calls through the dev proxy as well-made the
-     * backend proxy a request back to itself, hanging the code-exchange step indefinitely.
-     *
-     * <p>This reasoning does not apply to the external social-login providers added alongside the
-     * SPA's own registration below (see ADR-016): those are already-running, independent
-     * third-party services (Google, GitHub, a self-hosted Keycloak, ...), not this app's own
-     * embedded Authorization Server, so {@link SocialLoginClientRegistrationFactory} freely uses
-     * OIDC issuer discovery (see {@link OidcIssuerDiscovery}) for them. {@code validate} is
-     * called before building any registration so a misconfigured provider fails with the clear,
-     * provider-naming message from {@link SocialLoginConfigurationValidator} instead of a generic
-     * {@code ClientRegistration.Builder} assertion.
-     */
-    @Bean
-    public ClientRegistrationRepository clientRegistrationRepository(
-            @Value("${librehousehold.security.oauth2-authorization-server.issuer}") String issuer,
-            @Value("${librehousehold.security.oauth2-client.authorization-uri:${librehousehold.security.oauth2-authorization-server.issuer}/oauth2/authorize}") String authorizationUri,
-            @Value("${librehousehold.security.oauth2-client.redirect-uri}") String redirectUri,
-            @Value("${librehousehold.security.oauth2-client.client-secret}") String clientSecret,
-            SocialLoginProperties socialLoginProperties,
-            SocialLoginClientRegistrationFactory socialLoginClientRegistrationFactory,
-            SocialLoginConfigurationValidator socialLoginConfigurationValidator) {
-        socialLoginConfigurationValidator.validate(socialLoginProperties);
-        var spaClientRegistration = ClientRegistration.withRegistrationId(RegisteredClientSeeder.CLIENT_ID)
-                .clientId(RegisteredClientSeeder.CLIENT_ID)
-                .clientSecret(clientSecret)
-                .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
-                .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
-                .redirectUri(redirectUri)
-                .scope(OidcScopes.OPENID)
-                .authorizationUri(authorizationUri)
-                .tokenUri(issuer + "/oauth2/token")
-                .jwkSetUri(issuer + "/oauth2/jwks")
-                .userInfoUri(issuer + "/userinfo")
-                .userNameAttributeName(IdTokenClaimNames.SUB)
-                .clientName(RegisteredClientSeeder.CLIENT_ID)
-                .build();
-        var socialLoginClientRegistrations =
-                socialLoginClientRegistrationFactory.buildClientRegistrations(socialLoginProperties);
-        return new InMemoryClientRegistrationRepository(
-                Stream.concat(Stream.of(spaClientRegistration), socialLoginClientRegistrations.stream()).toList());
+    SecurityConfig(@Value("${openapi.libreHousehold.base-path:/v1}") String basePath) {
+        this.basePath = basePath;
     }
 
     /**
@@ -207,67 +85,37 @@ public class SecurityConfig {
         return source;
     }
 
+    /**
+     * Keeps the provider's authorized client in the session instead of Spring Boot's in-memory
+     * default, so it never outlives the session, even if the social-login callback could not
+     * remove it (see {@link FederatedIdentityAuthenticationSuccessHandler}).
+     */
     @Bean
-    @Order(1)
-    @ConditionalOnWebApplication(type = Type.SERVLET)
-    public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http) {
-        var authorizationServerConfigurer = new OAuth2AuthorizationServerConfigurer();
-        http.securityMatcher(authorizationServerConfigurer.getEndpointsMatcher())
-                .with(authorizationServerConfigurer, as -> as.oidc(Customizer.withDefaults()))
-                // Required even though every request in this chain must be authenticated anyway:
-                // without an explicit authorizeHttpRequests rule, Spring Security never installs an
-                // authorization filter for this chain, so the default AnonymousAuthenticationFilter's
-                // token (isAuthenticated() == true) satisfies the authorization server's own
-                // authentication check and it would issue authorization codes for "anonymousUser".
-                .authorizeHttpRequests(authorize -> authorize.anyRequest().authenticated())
-                .requestCache(cache -> cache.requestCache(new HttpSessionRequestCache()))
-                .exceptionHandling(ex -> ex.defaultAuthenticationEntryPointFor(
-                        new LoginUrlAuthenticationEntryPoint("/login"),
-                        new MediaTypeRequestMatcher(MediaType.TEXT_HTML)));
-        return http.build();
+    OAuth2AuthorizedClientRepository authorizedClientRepository() {
+        return new HttpSessionOAuth2AuthorizedClientRepository();
     }
 
     @Bean
     @ConditionalOnWebApplication(type = Type.SERVLET)
-    public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http, OidcUserService oidcUserService,
-                                                          RevokeAuthorizedClientLogoutHandler revokeAuthorizedClientLogoutHandler,
-                                                          UnverifiedAccountLoginFailureHandler unverifiedAccountLoginFailureHandler,
-                                                          FederatedIdentityAuthenticationSuccessHandler federatedIdentityAuthenticationSuccessHandler,
-                                                          GitHubEmailClient gitHubEmailClient,
-                                                          CommonProvider commonProvider,
-                                                          LocalLoginProperties localLoginProperties,
-                                                          SessionRegistry sessionRegistry,
-                                                          OncePerRequestFilter rateLimitingFilter,
-                                                          @Value("${openapi.libreHousehold.base-path:/v1}") String basePath)
-            throws Exception {
-        // Same continuation the frontend's own redirectToOAuth2Login() (frontend/src/lib/oauth2Login.ts)
-        // navigates to. Used as formLogin()'s default success target below (Bug B): without it, /login
-        // reached directly (e.g. the "back to login" link on the verify-email/reset-password
-        // confirmation pages) has no saved /oauth2/authorize request to resume, so the session would
-        // stay at the plain AccountPrincipal from formLogin() and never get upgraded to the full
-        // AccountOidcPrincipal that business endpoints need.
-        var oauth2LoginPath = "/oauth2/authorization/" + RegisteredClientSeeder.CLIENT_ID;
-        var loginSuccessHandler = new SavedRequestAwareAuthenticationSuccessHandler();
-        loginSuccessHandler.setDefaultTargetUrl(oauth2LoginPath);
-        var requestCache = new NonSavingRequestCache();
-        // Same handler oauth2Login() would use by default for the SPA's own loop-back registration;
-        // external social-login registrations still need to be mapped to a member account first.
-        var spaClientLoginSuccessHandler = new SavedRequestAwareAuthenticationSuccessHandler();
-        spaClientLoginSuccessHandler.setRequestCache(requestCache);
-        var oauth2LoginSuccessHandler = new SpaClientAwareAuthenticationSuccessHandler(
-                spaClientLoginSuccessHandler, federatedIdentityAuthenticationSuccessHandler);
-        var oauth2LoginUserService = new SpaClientAwareOidcUserService(oidcUserService, new OidcUserService());
-        var nonOidcLoginUserService = new GitHubEmailAwareOAuth2UserService(
-                new DefaultOAuth2UserService(), gitHubEmailClient, commonProvider);
+    SecurityFilterChain defaultSecurityFilterChain(
+            HttpSecurity http,
+            LocalLoginProperties localLoginProperties,
+            ObjectProvider<InMemoryClientRegistrationRepository> clientRegistrationRepository,
+            SocialLoginRegistrationCheck socialLoginRegistrationCheck,
+            FederatedIdentityAuthenticationSuccessHandler federatedIdentityAuthenticationSuccessHandler,
+            ProblemDetailLoginFailureHandler loginFailureHandler,
+            GitHubEmailClient gitHubEmailClient,
+            SessionRegistry sessionRegistry,
+            CsrfTokenRepository csrfTokenRepository,
+            @Qualifier(SessionManagementConfig.CSRF_SESSION_AUTHENTICATION_STRATEGY)
+            SessionAuthenticationStrategy csrfSessionAuthenticationStrategy,
+            OncePerRequestFilter rateLimitingFilter,
+            @Value("${server.servlet.session.cookie.name:JSESSIONID}") String sessionCookieName) {
         http.authorizeHttpRequests(authorize -> authorize
-                        // All generated API controllers are mounted under this base path (see the
-                        // @RequestMapping on the generated *ApiController classes) — read from the
-                        // same property so the two locations cannot drift apart. "/login" and "/error"
-                        // are Spring's own endpoints, never under the API base path. "/error" must stay
-                        // public too: Spring MVC forwards internally to it for any non-2xx response
-                        // (e.g. validation failures, 404s) even from an otherwise permitAll endpoint,
-                        // and that internal forward is itself a new request subject to these very rules.
-                        .requestMatchers("/login", "/error",
+                        // "/error" must stay public: Spring MVC forwards internally to it for any
+                        // non-2xx response, and that forward is itself subject to these rules.
+                        .requestMatchers("/error",
+                                basePath + "/login",
                                 basePath + "/household/setup",
                                 basePath + "/invite/**",
                                 basePath + "/members/availability",
@@ -278,66 +126,83 @@ public class SecurityConfig {
                                 basePath + "/auth/social-registration",
                                 basePath + "/auth/discover")
                         .permitAll()
-                        .anyRequest().authenticated())
+                        .anyRequest().access(new AccountPrincipalAuthorizationManager()))
                 .cors(Customizer.withDefaults())
-                // Both filter chains share the same HttpSession, so without this, an unauthenticated
-                // 401 on a business endpoint (e.g. the frontend's own bootstrapSession() GET /me,
-                // fired on every page load including the login page itself) would overwrite the
-                // /oauth2/authorize continuation already saved by authorizationServerSecurityFilterChain,
-                // causing login to redirect back to /me instead of resuming the original request.
-                // A plain NullRequestCache would also break resuming that continuation: formLogin()'s
-                // SavedRequestAwareAuthenticationSuccessHandler below shares this very RequestCache
-                // instance and needs to still be able to *read* it (see NonSavingRequestCache).
-                .requestCache(cache -> cache.requestCache(requestCache))
-                // ADR-014: XSRF-TOKEN must be JS-readable (spa() wires a cookie-based repository plus
-                // a request handler that resolves the raw, unmasked token value, matching what the SPA
-                // reads straight from the cookie). No permitAll exception from CSRF is added here for
-                // /household/setup or /invite/{token}/join even though they are unauthenticated: the
-                // SPA already performs a preceding GET (e.g. /members/availability, /invite/{token})
-                // that hands it a fresh XSRF-TOKEN cookie before the POST (see P1.5.2).
-                .csrf(CsrfConfigurer::spa)
+                // Nothing to resume after a login: the SPA navigates itself
+                .requestCache(cache -> cache.requestCache(new NullRequestCache()))
+                // ADR-014: spa() resolves the raw token the SPA reads from the XSRF-TOKEN cookie. No
+                // exception is needed for the unauthenticated POSTs (login, setup, join): the SPA
+                // always gets the cookie from a preceding GET.
+                .csrf(csrf -> csrf.spa()
+                        .csrfTokenRepository(csrfTokenRepository)
+                        .sessionAuthenticationStrategy(csrfSessionAuthenticationStrategy))
                 .addFilterAfter(new CsrfCookieFilter(), CsrfFilter.class)
-                // RATE1: covers both POST /login (username+IP-keyed) and the password-reset/
-                // verification endpoints (IP-keyed), see RateLimitingConfig. Must run before the
-                // request reaches formLogin()'s own authentication filter, and does not depend on
-                // authentication having happened yet, so it also protects the permitAll() endpoints.
-                .addFilterBefore(rateLimitingFilter, UsernamePasswordAuthenticationFilter.class)
-                // Bug A: PasswordResetService marks an account's SessionInformation entries as
-                // expired on the shared SessionRegistry bean (see its Javadoc), but nothing enforced
-                // that per request without this filter — the old session cookie kept working.
-                // ConcurrentSessionFilter is a framework-known filter type (see HttpSecurityBuilder#addFilter),
-                // so Spring Security places it at its own standard position automatically, the same
-                // position sessionManagement().maximumSessions() would use internally.
-                .addFilter(new ConcurrentSessionFilter(sessionRegistry, new ConcurrentSessionExpiredStrategy()))
-                .formLogin(login -> login
-                        .failureHandler(unverifiedAccountLoginFailureHandler)
-                        .successHandler(loginSuccessHandler))
-                .oauth2Login(login -> login
-                        .userInfoEndpoint(userInfo -> userInfo
-                                .oidcUserService(oauth2LoginUserService)
-                                .userService(nonOidcLoginUserService))
-                        .successHandler(oauth2LoginSuccessHandler)
-                        .failureUrl(SOCIAL_LOGIN_FAILURE_URL))
-                // ADR-014: logout must actively revoke the backend's cached tokens for this user,
-                // not just invalidate the session (see RevokeAuthorizedClientLogoutHandler).
-                // POST /logout is therefore fully handled here, not by SessionApiDelegateImpl.
-                .logout(logout -> logout
-                        .logoutUrl("/logout")
-                        .addLogoutHandler(revokeAuthorizedClientLogoutHandler)
-                        .logoutSuccessHandler((_, response, _) ->
-                                response.setStatus(HttpStatus.NO_CONTENT.value())))
-                // Browser navigations (Accept: text/html) get redirected to the login page;
-                // API/XHR calls from the SPA get a plain 401 instead of an HTML redirect.
-                .exceptionHandling(ex -> ex
-                        .defaultAuthenticationEntryPointFor(
-                                new LoginUrlAuthenticationEntryPoint("/login"),
-                                new MediaTypeRequestMatcher(MediaType.TEXT_HTML))
-                        .defaultAuthenticationEntryPointFor(
-                                new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED),
-                                AnyRequestMatcher.INSTANCE));
-        if (!localLoginProperties.enabled()) {
-            http.addFilterBefore(new LocalLoginDisabledFilter(), UsernamePasswordAuthenticationFilter.class);
+                // RATE1: must reject before the form login filter authenticates
+                .addFilterBefore(rateLimitingFilter, UsernamePasswordAuthenticationFilter.class);
+        configureSessionManagement(http, sessionRegistry);
+        if (localLoginProperties.enabled()) {
+            configureFormLogin(http, loginFailureHandler);
         }
+        var registrations = clientRegistrationRepository.getIfAvailable();
+        if (registrations != null) {
+            socialLoginRegistrationCheck.check(registrations);
+            configureOAuth2Login(http, federatedIdentityAuthenticationSuccessHandler, gitHubEmailClient);
+        }
+        configureLogout(http, csrfTokenRepository, sessionCookieName);
+        configureExceptionHandling(http);
         return http.build();
+    }
+
+    // The ConcurrentSessionFilter rejects sessions expired via the SessionRegistry, e.g. by a password reset
+    private static void configureSessionManagement(HttpSecurity http, SessionRegistry sessionRegistry) {
+        http.sessionManagement(session -> session
+                .sessionConcurrency(concurrency -> concurrency
+                        .maximumSessions(UNLIMITED_SESSIONS)
+                        .sessionRegistry(sessionRegistry)
+                        .expiredSessionStrategy(new ConcurrentSessionExpiredStrategy())));
+    }
+
+    // Without form login, POST {basePath}/login reaches SessionApiDelegateImpl, which rejects it
+    private void configureFormLogin(HttpSecurity http, ProblemDetailLoginFailureHandler loginFailureHandler) {
+        http.formLogin(login -> login
+                .loginPage(LOGIN_PAGE)
+                .loginProcessingUrl(basePath + LOGIN_PAGE)
+                .usernameParameter(LOGIN_EMAIL_PARAMETER)
+                .successHandler((_, response, _) -> response.setStatus(HttpStatus.NO_CONTENT.value()))
+                .failureHandler(loginFailureHandler));
+    }
+
+    private static void configureOAuth2Login(HttpSecurity http,
+                                             FederatedIdentityAuthenticationSuccessHandler successHandler,
+                                             GitHubEmailClient gitHubEmailClient) {
+        var userService = new GitHubEmailAwareOAuth2UserService(new DefaultOAuth2UserService(), gitHubEmailClient);
+        http.oauth2Login(login -> login
+                .loginPage(LOGIN_PAGE)
+                .userInfoEndpoint(userInfo -> userInfo.userService(userService))
+                .successHandler(successHandler)
+                // E.g. the user cancels at the provider, which calls back with error=access_denied
+                .failureUrl(FederatedIdentityAuthenticationSuccessHandler.SOCIAL_LOGIN_FAILURE_URL));
+    }
+
+    // Reading the deferred token after the logout handlers removed the old one issues a new XSRF-TOKEN
+    private void configureLogout(HttpSecurity http, CsrfTokenRepository csrfTokenRepository, String sessionCookieName) {
+        http.logout(logout -> logout
+                .logoutUrl(basePath + "/logout")
+                .deleteCookies(sessionCookieName)
+                .logoutSuccessHandler((request, response, _) -> {
+                    csrfTokenRepository.loadDeferredToken(request, response).get();
+                    response.setStatus(HttpStatus.NO_CONTENT.value());
+                }));
+    }
+
+    // Browser navigations (Accept: text/html) are redirected to the login page; API calls get a plain 401
+    private static void configureExceptionHandling(HttpSecurity http) {
+        http.exceptionHandling(exceptions -> exceptions
+                .defaultAuthenticationEntryPointFor(
+                        new LoginUrlAuthenticationEntryPoint(LOGIN_PAGE),
+                        new MediaTypeRequestMatcher(MediaType.TEXT_HTML))
+                .defaultAuthenticationEntryPointFor(
+                        new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED),
+                        AnyRequestMatcher.INSTANCE));
     }
 }

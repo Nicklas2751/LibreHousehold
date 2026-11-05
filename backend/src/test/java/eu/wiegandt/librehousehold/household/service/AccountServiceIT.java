@@ -1,7 +1,7 @@
 package eu.wiegandt.librehousehold.household.service;
 
 import eu.wiegandt.librehousehold.TestcontainersConfiguration;
-import eu.wiegandt.librehousehold.household.exception.EmailNotVerifiedException;
+import eu.wiegandt.librehousehold.household.EmailNotVerifiedException;
 import eu.wiegandt.librehousehold.household.exception.InvalidPasswordException;
 import eu.wiegandt.librehousehold.household.model.AccountEntity;
 import eu.wiegandt.librehousehold.household.model.AccountIdentityEntity;
@@ -28,7 +28,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.instancio.Select.field;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, properties = {"librehousehold.security.oauth2-client.client-secret=test-client-secret"})
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @Import(TestcontainersConfiguration.class)
 @ExtendWith(InstancioExtension.class)
 class AccountServiceIT {

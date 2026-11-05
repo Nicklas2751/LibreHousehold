@@ -7,15 +7,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
-import org.springframework.security.oauth2.core.oidc.IdTokenClaimNames;
-import org.springframework.security.oauth2.core.oidc.OidcIdToken;
-import org.springframework.security.oauth2.core.oidc.user.DefaultOidcUser;
-import org.springframework.security.oauth2.core.oidc.user.OidcUser;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 
-import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -23,8 +17,6 @@ import static org.mockito.Mockito.doReturn;
 
 @ExtendWith(MockitoExtension.class)
 class HouseholdAccessGuardTest {
-
-    private static final String CLIENT_REGISTRATION_ID = "spa-backend-client";
 
     @Mock
     private MemberRepository memberRepository;
@@ -40,7 +32,7 @@ class HouseholdAccessGuardTest {
             // given
             var householdId = UUID.randomUUID();
             var memberId = UUID.randomUUID();
-            var authentication = authenticationOf(memberId, UUID.randomUUID(), false);
+            var authentication = authenticationOf(memberId, UUID.randomUUID());
             doReturn(true).when(memberRepository).existsByIdAndHouseholdId(memberId, householdId);
 
             // when
@@ -55,7 +47,7 @@ class HouseholdAccessGuardTest {
             // given
             var householdId = UUID.randomUUID();
             var memberId = UUID.randomUUID();
-            var authentication = authenticationOf(memberId, UUID.randomUUID(), false);
+            var authentication = authenticationOf(memberId, UUID.randomUUID());
             doReturn(false).when(memberRepository).existsByIdAndHouseholdId(memberId, householdId);
 
             // when
@@ -74,7 +66,7 @@ class HouseholdAccessGuardTest {
             // given
             var householdId = UUID.randomUUID();
             var memberId = UUID.randomUUID();
-            var authentication = authenticationOf(memberId, householdId, true);
+            var authentication = authenticationOf(memberId, householdId);
             doReturn(true).when(memberRepository).existsByIdAndHouseholdIdAndIsAdminTrue(memberId, householdId);
 
             // when
@@ -89,7 +81,7 @@ class HouseholdAccessGuardTest {
             // given
             var householdId = UUID.randomUUID();
             var memberId = UUID.randomUUID();
-            var authentication = authenticationOf(memberId, householdId, false);
+            var authentication = authenticationOf(memberId, householdId);
             doReturn(false).when(memberRepository).existsByIdAndHouseholdIdAndIsAdminTrue(memberId, householdId);
 
             // when
@@ -104,7 +96,7 @@ class HouseholdAccessGuardTest {
             // given
             var householdId = UUID.randomUUID();
             var memberId = UUID.randomUUID();
-            var authentication = authenticationOf(memberId, UUID.randomUUID(), true);
+            var authentication = authenticationOf(memberId, UUID.randomUUID());
             doReturn(false).when(memberRepository).existsByIdAndHouseholdIdAndIsAdminTrue(memberId, householdId);
 
             // when
@@ -120,7 +112,7 @@ class HouseholdAccessGuardTest {
             // admin right was revoked in the database afterwards (e.g. via transferOwnership)
             var householdId = UUID.randomUUID();
             var memberId = UUID.randomUUID();
-            var authentication = authenticationOf(memberId, householdId, true);
+            var authentication = authenticationOf(memberId, householdId);
             doReturn(false).when(memberRepository).existsByIdAndHouseholdIdAndIsAdminTrue(memberId, householdId);
 
             // when
@@ -138,7 +130,7 @@ class HouseholdAccessGuardTest {
         void sameMemberId_true() {
             // given
             var memberId = UUID.randomUUID();
-            var authentication = authenticationOf(memberId, UUID.randomUUID(), false);
+            var authentication = authenticationOf(memberId, UUID.randomUUID());
 
             // when
             var result = guard.isSelf(memberId, authentication);
@@ -151,7 +143,7 @@ class HouseholdAccessGuardTest {
         void differentMemberId_false() {
             // given
             var memberId = UUID.randomUUID();
-            var authentication = authenticationOf(memberId, UUID.randomUUID(), false);
+            var authentication = authenticationOf(memberId, UUID.randomUUID());
 
             // when
             var result = guard.isSelf(UUID.randomUUID(), authentication);
@@ -161,14 +153,8 @@ class HouseholdAccessGuardTest {
         }
     }
 
-    private OAuth2AuthenticationToken authenticationOf(UUID memberId, UUID householdId, boolean isAdmin) {
-        var principal = new AccountOidcPrincipal(oidcUser(), memberId, householdId, isAdmin);
-        return new OAuth2AuthenticationToken(principal, List.of(), CLIENT_REGISTRATION_ID);
-    }
-
-    private OidcUser oidcUser() {
-        var idToken = new OidcIdToken("token-value", Instant.now(), Instant.now().plusSeconds(300),
-                Map.of(IdTokenClaimNames.SUB, "max@example.com", IdTokenClaimNames.ISS, "http://localhost/issuer"));
-        return new DefaultOidcUser(List.of(), idToken);
+    private UsernamePasswordAuthenticationToken authenticationOf(UUID memberId, UUID householdId) {
+        var principal = new AccountPrincipal(memberId, householdId, null, true);
+        return UsernamePasswordAuthenticationToken.authenticated(principal, null, List.of());
     }
 }

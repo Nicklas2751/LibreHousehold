@@ -1,6 +1,7 @@
 package eu.wiegandt.librehousehold.household.controller;
 
 import eu.wiegandt.librehousehold.household.exception.MemberAlreadyExistsException;
+import eu.wiegandt.librehousehold.household.service.AccountSessionSignIn;
 import eu.wiegandt.librehousehold.household.service.AccountService;
 import eu.wiegandt.librehousehold.household.service.AccountTokenService;
 import eu.wiegandt.librehousehold.household.service.MemberManagementService;
@@ -46,6 +47,9 @@ class MembersValidationIT {
 
     @MockitoBean
     private AccountTokenService accountTokenService;
+
+    @MockitoBean
+    private AccountSessionSignIn accountSessionSignIn;
 
     @Test
     void updateMember_emailTakenByAnotherAccount_returnsAccountAlreadyExistsProblemType() throws Exception {

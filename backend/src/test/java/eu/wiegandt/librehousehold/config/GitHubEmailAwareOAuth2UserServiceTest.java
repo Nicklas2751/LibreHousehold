@@ -110,7 +110,7 @@ class GitHubEmailAwareOAuth2UserServiceTest {
         }
 
         @Test
-        void otherProvider_returnsUserUnchanged() {
+        void nonGithubUserInfoUri_returnsUserUnchanged() {
             // given
             var userRequest = userRequest(ClientRegistration.withRegistrationId("forgejo")
                     .clientId("client-id")
@@ -131,6 +131,23 @@ class GitHubEmailAwareOAuth2UserServiceTest {
         }
 
         @Test
+        void githubUnderOtherRegistrationId_addsVerifiedEmailToAttributes() {
+            // given
+            var userRequest = userRequest(CommonOAuth2Provider.GITHUB.getBuilder("company-github"));
+            var githubUser = new DefaultOAuth2User(List.of(), Map.of("id", 4711, "login", "octocat"), "id");
+            doReturn(githubUser).when(delegate).loadUser(userRequest);
+            doReturn(List.of(new GitHubEmail("primary@example.com", true, true))).when(gitHubEmailClient).fetchEmails(ACCESS_TOKEN);
+            var expected = new DefaultOAuth2User(List.of(),
+                    Map.of("id", 4711, "login", "octocat", "email", "primary@example.com", "email_verified", true), "id");
+
+            // when
+            var result = userService().loadUser(userRequest);
+
+            // then
+            assertThat(result).usingRecursiveComparison().isEqualTo(expected);
+        }
+
+        @Test
         void otherProvider_fetchesNoGitHubEmails() {
             // given
             var userRequest = userRequest(CommonOAuth2Provider.GOOGLE.getBuilder("google").clientId("client-id"));
@@ -145,7 +162,7 @@ class GitHubEmailAwareOAuth2UserServiceTest {
     }
 
     private GitHubEmailAwareOAuth2UserService userService() {
-        return new GitHubEmailAwareOAuth2UserService(delegate, gitHubEmailClient, new CommonProvider());
+        return new GitHubEmailAwareOAuth2UserService(delegate, gitHubEmailClient);
     }
 
     private OAuth2UserRequest userRequest(ClientRegistration.Builder registration) {

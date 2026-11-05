@@ -53,20 +53,13 @@ server:
       cookie:
         http-only: true
         secure: true
-        # Lax, not Strict (see DD-7/ADR-014): the login flow relies on a cross-site GET navigation
-        # (e.g. the SPA navigating to /oauth2/authorization/spa-backend-client), which Strict would
-        # not send the cookie for.
+        # Lax, not Strict (see ADR-014): a social login returns from the provider with a cross-site
+        # top-level GET (/login/oauth2/code/{registrationId}), which must carry the session cookie
+        # that holds the authorization request; Strict would not send it.
         same-site: lax
 
 librehousehold:
   security:
-    oauth2-authorization-server:
-      issuer: http://localhost:8080
-    oauth2-client:
-      redirect-uri: http://localhost:8080/login/oauth2/code/spa-backend-client
-      # No default on purpose (fail-fast): a confidential OAuth2 client secret must never ship with
-      # a committed, publicly-known default value. Self-hosters must set this explicitly, e.g. via
-      # LIBREHOUSEHOLD_SECURITY_OAUTH2_CLIENT_CLIENT_SECRET or an untracked application.yaml.
     cors:
       # Comma-separated allow-list of origins permitted to send credentialed cross-origin requests
       # (see CORS1 in Arc42 Chapter 8). Empty by default (locked down): the target deployment serves
@@ -77,25 +70,38 @@ librehousehold:
     local-login:
       # On by default: login, setup and invite join with e-mail and password. Self-hosters offering
       # only social login can set this to false. GET /auth/discover then tells the client to hide
-      # the local forms, and the form login (POST /login) is rejected server-side.
+      # the local forms, and the form login (POST /v1/login) is rejected server-side.
       enabled: true
-    social-login:
-      # Off by default: external OIDC/OAuth2 login providers (see ADR-016) are an
-      # opt-in self-hoster feature on top of local password login. Self-hosters configure one entry
-      # per provider under `providers`, e.g.:
-      # social-login:
-      #   enabled: true
-      #   providers:
-      #     google:
-      #       type: oidc
-      #       client-id: ${GOOGLE_CLIENT_ID:}
-      #       client-secret: ${GOOGLE_CLIENT_SECRET:}
-      #       display-name: "Google"
-      #       # Optional. Replaces the default scopes when set: openid, profile, email for
-      #       # issuer-uri (discovery) providers, the provider's own defaults for well-known names
-      #       # like google/github, none for explicit oauth2 providers.
-      #       scopes: [openid, profile, email]
-      enabled: false
+      # Social login (see ADR-016) is off unless providers are configured with Spring Boot's
+      # standard OAuth2 client properties. The startup fails for a registration that lacks the
+      # scopes social login needs (see SocialLoginRegistrationCheck and Arc42 Chapter 7). Example:
+      # spring:
+      #   security:
+      #     oauth2:
+      #       client:
+      #         registration:
+      #           google:
+      #             client-id: ${GOOGLE_CLIENT_ID}
+      #             client-secret: ${GOOGLE_CLIENT_SECRET}
+      #             client-name: "Google"
+      #             # Absolute in production; must match the URI registered at the provider
+      #             redirect-uri: https://household.example.com/login/oauth2/code/google
+      #           github:
+      #             client-id: ${GITHUB_CLIENT_ID}
+      #             client-secret: ${GITHUB_CLIENT_SECRET}
+      #             client-name: "GitHub"
+      #             redirect-uri: https://household.example.com/login/oauth2/code/github
+      #             # GitHub's default (read:user) lacks the verified e-mail address
+      #             scope: read:user,user:email
+      #           keycloak:
+      #             client-id: ${KEYCLOAK_CLIENT_ID}
+      #             client-secret: ${KEYCLOAK_CLIENT_SECRET}
+      #             redirect-uri: https://household.example.com/login/oauth2/code/keycloak
+      #             # Issuer discovery sets no scopes
+      #             scope: openid,profile,email
+      #         provider:
+      #           keycloak:
+      #             issuer-uri: https://keycloak.example.com/realms/household
     email-verification:
       # How long a freshly issued email verification token stays valid (see VERIFY1 in Arc42
       # Chapter 8, and the account_token migration). 24h balances giving users enough time to check
@@ -117,14 +123,14 @@ librehousehold:
       # for long. Requesting a new one at any time issues a fresh token with a new deadline.
       token-validity: 1h
     rate-limit:
-      # RATE1 (see Arc42 Chapter 8): throttles POST /login per username+IP combination, on top of
+      # RATE1 (see Arc42 Chapter 8): throttles POST /v1/login per e-mail+IP combination, on top of
       # the account-wide lockout below. 5 attempts per minute is generous enough for a genuine user
       # who mistypes their password a couple of times, while still meaningfully slowing down
       # credential-stuffing/brute-force attempts against a single account.
       login:
         max-attempts: 5
         window-duration: 1m
-      # Throttles POST /login per IP across all e-mail addresses, so cycling through many addresses
+      # Throttles POST /v1/login per IP across all e-mail addresses, so cycling through many addresses
       # (credential stuffing, lockout of many accounts) is slowed down too. Higher than the per-
       # address limit, since several household members may share one IP (NAT).
       login-per-ip:

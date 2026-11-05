@@ -10,7 +10,6 @@ const {
 	mockCheckEmailAvailability,
 	mockGoto,
 	mockAddToast,
-	mockCompleteSilentOAuth2Login,
 	mockBootstrapSession,
 	mockLoadAuthDiscovery,
 	mockStartSocialLogin,
@@ -22,7 +21,6 @@ const {
 	mockCheckEmailAvailability: vi.fn(),
 	mockGoto: vi.fn(),
 	mockAddToast: vi.fn(),
-	mockCompleteSilentOAuth2Login: vi.fn(),
 	mockBootstrapSession: vi.fn(),
 	mockLoadAuthDiscovery: vi.fn(),
 	mockStartSocialLogin: vi.fn(),
@@ -51,11 +49,6 @@ vi.mock('$app/navigation', () => ({ goto: mockGoto }));
 
 vi.mock('$lib/stores/toastStore', () => ({ addToast: mockAddToast }));
 
-vi.mock('$lib/oauth2Login', async (importOriginal) => {
-	const original = await importOriginal<typeof import('$lib/oauth2Login')>();
-	return { ...original, completeSilentOAuth2Login: mockCompleteSilentOAuth2Login };
-});
-
 vi.mock('$lib/stores/sessionBootstrap', () => ({ bootstrapSession: mockBootstrapSession }));
 
 vi.mock('$lib/stores/authDiscoveryState.svelte', async (importOriginal) => {
@@ -80,7 +73,6 @@ describe('JoinWizard', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		mockCheckEmailAvailability.mockResolvedValue({ available: true });
-		mockCompleteSilentOAuth2Login.mockResolvedValue(undefined);
 		mockBootstrapSession.mockResolvedValue(undefined);
 		mockLoadAuthDiscovery.mockResolvedValue(undefined);
 		mockPage.url = new URL('http://localhost:5173/invite/invite-token');
@@ -160,9 +152,12 @@ describe('JoinWizard', () => {
 		// then
 		await expect.element(page.getByText('Erfolgreich beigetreten')).toBeVisible();
 		await page.getByRole('button', { name: /Zum Dashboard/i }).click();
-		await vi.waitFor(() => expect(mockGoto).toHaveBeenCalledWith('/app/dashboard'));
-		expect(mockCompleteSilentOAuth2Login).toHaveBeenCalled();
-		expect(mockBootstrapSession).toHaveBeenCalled();
+		await vi.waitFor(() =>
+			expect(mockGoto).toHaveBeenCalledWith('/app/dashboard', { replaceState: true })
+		);
+		expect(mockBootstrapSession.mock.invocationCallOrder[0]).toBeLessThan(
+			mockGoto.mock.invocationCallOrder[0]
+		);
 	});
 
 	it('409 account-already-exists — shows a specific error on the email field', async () => {

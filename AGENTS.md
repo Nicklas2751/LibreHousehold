@@ -54,14 +54,17 @@ cd backend
 ```
 This starts `TestLibrehouseholdApplication`, which uses Testcontainers to automatically spin up PostgreSQL, Grafana LGTM, Mailpit and Dex. No manual DB setup required.
 
-Dex is a local OIDC provider (`DexTestcontainersConfiguration`), registered as the social-login provider `dev-provider`, so social login can be exercised without real Google/GitHub credentials:
+Dex is a local OIDC provider (`DexTestcontainersConfiguration`), registered as the social-login provider `dev-provider` via Spring Boot's standard properties (`spring.security.oauth2.client.registration.dev-provider.*`, `spring.security.oauth2.client.provider.dev-provider.issuer-uri`), so social login can be exercised without real Google/GitHub credentials:
 
 - Test user: `dev@example.com` / `password`
 - Client: `librehousehold-dev` / `librehousehold-dev-secret`
 - Dex runs on a random port; its issuer is `http://localhost:<port>/dex`.
-- The Testcontainers Dex module accepts only one redirect URI per client. The Dex client allows `http://localhost:5173/login/oauth2/code/dev-provider`, the Vite dev-proxy origin: the proxy forwards `/oauth2` with `X-Forwarded-Host`, so the backend builds its redirect URI from that origin. Log in through the frontend (`npm run dev` with `VITE_API_URL=http://localhost:8080/v1`). Calling the backend directly on port 8080 produces a redirect URI that Dex rejects.
+- The Testcontainers Dex module accepts only one redirect URI per client. The Dex client allows `http://localhost:5173/login/oauth2/code/dev-provider`, the Vite dev-proxy origin: the proxy forwards `/oauth2` and `/login/oauth2` (not `/login`, which is the SPA's login route) with `X-Forwarded-Host`, and the redirect URI is `{baseUrl}/login/oauth2/code/{registrationId}`, so the backend builds it from that origin. Log in through the frontend (`npm run dev` with `VITE_API_URL=http://localhost:8080/v1`). Calling the backend directly on port 8080 produces a redirect URI that Dex rejects.
+- Integration tests run on `RANDOM_PORT`. Because of the one-redirect-URI limit, Dex ITs register the Dex client per test with the `@LocalServerPort` in its redirect URI.
 
 `DexTestcontainersConfiguration` is deliberately separate from `TestcontainersConfiguration`: importing it enables social login for the whole application context, so only tests that need Dex import it.
+
+Client registrations must not come only from a `DynamicPropertyRegistrar`: Spring Boot creates the `ClientRegistrationRepository` only if `spring.security.oauth2.client.registration.*` is already set when it evaluates its auto-configuration, which happens before registrar values exist. Without the repository, `oauth2Login()` is silently not configured and `/oauth2/authorization/{id}` just redirects to `/login`. The static registration values therefore live in `src/test/resources/dex-dev-provider.properties` (`@PropertySource`); only the Dex `issuer-uri` is registered dynamically.
 
 For a plain start without containers (requires an external DB):
 ```bash
@@ -290,15 +293,9 @@ modal?.close();
 
 ## Findings & Notes
 
-### Integration tests that need the server port: pick a free port before startup, never hardcode one
+### Auth integration tests: `RANDOM_PORT`, log in like the SPA does
 
-ITs that run the real OAuth2 flow against the running server (e.g. `AuthorizationServerConfigurationIT`, `OidcIssuerDiscoveryIT`) can't use `RANDOM_PORT`. The port has to be in `librehousehold.security.oauth2-authorization-server.issuer` and `...oauth2-client.redirect-uri` **before** the context starts: `SecurityConfig.clientRegistrationRepository()` builds the internal client's token/jwks/userinfo URIs from the issuer at bean creation, the backend calls that URL on itself during the code exchange, and OIDC discovery requires an exact issuer match. A random port only exists after Tomcat has started, which is too late.
-
-These tests therefore use `DEFINED_PORT` with a port picked via `TestSocketUtils.findAvailableTcpPort()` in a static constant. A `@DynamicPropertySource` registers it as `server.port`, issuer and redirect-uri together. Each test class does this itself, with no shared helper (see the DRY note under TDD). Don't hardcode port numbers: the former fixed 543xx ports collided intermittently with Testcontainers' port mappings ("address already in use"). Tests that don't need the port in their configuration should simply use `RANDOM_PORT`.
-
-### Both filter chains share one saved request: remove it before every SPA continuation
-
-The Authorization Server chain saves the unauthenticated `/oauth2/authorize` request in the session attribute `SPRING_SECURITY_SAVED_REQUEST` (`HttpSessionRequestCache`). The business chain's `NonSavingRequestCache` never writes that attribute, but the internal client's `SavedRequestAwareAuthenticationSuccessHandler` reads it. Any flow that authenticates outside the AS login form and then starts a *fresh* `/oauth2/authorization/spa-backend-client` continuation (social login, setup/join via `AccountSessionAuthenticator`) must remove the saved request first. Otherwise the success handler replays the stale authorize request with an outdated `state` and the browser ends on `/login?error&reason=social-login-failed`, although the session is signed in. Integration tests for such flows must enter via `GET /oauth2/authorization/spa-backend-client` like the browser does; ITs that start elsewhere never see a saved request and miss this.
+Integration tests for login, logout, session and CSRF behaviour run the real server with `RANDOM_PORT` (not `MockMvc`), so they see real `Set-Cookie` attributes, the real session-ID change and real provider redirects. A local login in such a test goes through the same steps as the SPA: first a `GET` that issues the `XSRF-TOKEN` cookie (e.g. `GET /v1/auth/discover`), then `POST /v1/login` as form data with the field `email` (not `username`) plus `password`, and the token in the `X-XSRF-TOKEN` header. Every login and the logout issue a new `XSRF-TOKEN`; a follow-up request must use the new one.
 
 ### Publishing an event for an `@ApplicationModuleListener` requires an active transaction
 
@@ -397,9 +394,14 @@ Spring Data JDBC automatically derives methods such as `findByHouseholdId`, `del
 
 `@MockitoBean private JavaMailSender mailSender;` breaks full-context tests (`@SpringBootTest`) with `IllegalArgumentException: 'beans' must not be empty` from `MailHealthContributorAutoConfiguration`: Boot's mail health indicator looks up beans by the concrete `JavaMailSenderImpl` type specifically (`@ConditionalOnBean(JavaMailSenderImpl.class)` / `getBeansOfType(JavaMailSenderImpl.class)`), and a mock declared against the `JavaMailSender` interface doesn't satisfy that lookup. Use `@MockitoBean private JavaMailSenderImpl mailSender;` instead (Mockito's CGLIB proxy for a concrete class still satisfies `instanceof JavaMailSenderImpl`); the `JavaMailSender`-typed constructor parameter elsewhere still resolves to the same mock, since the interface is implemented by that class.
 
-### `AccountSessionAuthenticator` Does Not Go Through `AuthenticationManager`
+### `AccountSessionSignIn` Bypasses `isEnabled` on Purpose and Stays Module-Internal
 
-Since P2.2 (login-blocking for unverified accounts via `AccountPrincipal.isEnabled()`), `AccountSessionAuthenticator` (used right after household setup/invite join to establish the first session) deliberately does **not** authenticate via the shared `AuthenticationManager`/`DaoAuthenticationProvider`: that pipeline's `DefaultPreAuthenticationChecks` enforces `UserDetails.isEnabled()`, which would reject this very first session too, since a freshly created account is always unverified at that point. It instead loads `AccountUserDetailsService` directly (`@Lazy`, to break the constructor-injection cycle back through `MemberManagementService`) and re-verifies the password itself via `PasswordEncoder`, building the authenticated token manually — bypassing the enabled/account-status checks entirely, on purpose, only for this one immediately-post-registration session.
+`household.service.AccountSessionSignIn.signIn(memberId)` establishes the first session right after household setup or invite join. It deliberately does **not** go through the `AuthenticationManager`/`DaoAuthenticationProvider`: that pipeline enforces `UserDetails.isEnabled()`, which would reject this session, since a freshly registered account is always unverified. It loads the principal via `AccountUserDetailsService.loadUserByMemberId` (no lock or verification check) and applies the `@Primary` `SessionAuthenticationStrategy` (session-ID change, session registration, new CSRF token).
+
+Two rules keep this credential-less sign-in safe:
+
+- **Only after the commit.** It is called only from `HouseholdApiDelegateImpl.setupHousehold` and `MembersApiDelegateImpl.joinHousehold`, after the `@Transactional` service call has returned. Never call it from inside the service: if the transaction rolls back, a session for a non-existent member would remain.
+- **Never cross-module.** It is internal to `household`. The Named Interface `household.AccountSignIn` exposes only `signInByExternalIdentity(providerId, externalSubject)`, which `config` uses after the social-login callback. Do not add a `signIn(memberId)` to the Named Interface: any module could then sign in any member without a credential.
 
 ### Pending Backend Implementations
 

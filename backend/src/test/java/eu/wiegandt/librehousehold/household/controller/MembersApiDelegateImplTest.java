@@ -27,11 +27,13 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 @ExtendWith({MockitoExtension.class, InstancioExtension.class})
 class MembersApiDelegateImplTest {
@@ -44,6 +46,9 @@ class MembersApiDelegateImplTest {
 
     @Mock
     private AccountTokenService accountTokenService;
+
+    @Mock
+    private AccountSessionSignIn accountSessionSignIn;
 
     @InjectMocks
     private MembersApiDelegateImpl delegate;
@@ -159,6 +164,35 @@ class MembersApiDelegateImplTest {
             verify(memberManagementService).joinHousehold(token, registration);
             assertThat(result.getStatusCode()).isEqualTo(HttpStatus.CREATED);
             assertThat(result.getBody()).isEqualTo(member);
+        }
+
+        @Test
+        void anyRegistration_signsInJoinedMemberId() {
+            // given
+            var token = UUID.randomUUID();
+            var registration = Instancio.create(MemberRegistration.class);
+            var member = Instancio.create(Member.class);
+            doReturn(member).when(memberManagementService).joinHousehold(token, registration);
+
+            // when
+            delegate.joinHousehold(token, registration);
+
+            // then
+            verify(accountSessionSignIn).signIn(member.getId());
+        }
+
+        @Test
+        void serviceThrows_doesNotSignIn() {
+            // given
+            var token = UUID.randomUUID();
+            var registration = Instancio.create(MemberRegistration.class);
+            doThrow(InvalidInviteException.class).when(memberManagementService).joinHousehold(token, registration);
+
+            // when
+            catchThrowable(() -> delegate.joinHousehold(token, registration));
+
+            // then
+            verifyNoInteractions(accountSessionSignIn);
         }
     }
 

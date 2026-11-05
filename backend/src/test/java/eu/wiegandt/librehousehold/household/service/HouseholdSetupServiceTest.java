@@ -1,6 +1,7 @@
 package eu.wiegandt.librehousehold.household.service;
 import eu.wiegandt.librehousehold.household.AccountRegistered;
 import eu.wiegandt.librehousehold.household.ExternalIdentity;
+import eu.wiegandt.librehousehold.household.LocalLoginDisabledException;
 import eu.wiegandt.librehousehold.household.LocalLoginProperties;
 import eu.wiegandt.librehousehold.household.PendingSocialRegistrationStore;
 import eu.wiegandt.librehousehold.household.exception.*;
@@ -48,9 +49,6 @@ class HouseholdSetupServiceTest {
 
     @Mock
     private AccountService accountService;
-
-    @Mock
-    private AccountSessionAuthenticator accountSessionAuthenticator;
 
     @Mock
     private ApplicationEventPublisher eventPublisher;
@@ -188,22 +186,6 @@ class HouseholdSetupServiceTest {
         }
 
         @Test
-        void validSetup_authenticatesAndPersistsSessionForCreatedAccount() {
-            // given
-            doReturn(Instancio.create(HouseholdEntity.class)).when(householdRepository).save(any(HouseholdEntity.class));
-            doReturn(Instancio.create(MemberEntity.class)).when(memberRepository).save(any(MemberEntity.class));
-            doReturn(Instancio.create(InviteEntity.class)).when(inviteRepository).save(any(InviteEntity.class));
-            var setup = buildSetup();
-
-            // when
-            service.setupHousehold(setup);
-
-            // then
-            verify(accountSessionAuthenticator).authenticateAndPersistSession(
-                    setup.getMember().getEmail(), setup.getLocalRegistration().orElseThrow().getPassword());
-        }
-
-        @Test
         void validSetup_publishesAccountRegisteredEvent() {
             // given
             var savedMember = Instancio.create(MemberEntity.class);
@@ -329,21 +311,6 @@ class HouseholdSetupServiceTest {
             verify(pendingSocialRegistrationStore).consume();
         }
 
-        @Test
-        void pendingRegistration_authenticatesMemberByIdentityEmail() {
-            // given
-            doReturn(Optional.of(IDENTITY)).when(pendingSocialRegistrationStore).find();
-            doReturn(Instancio.create(HouseholdEntity.class)).when(householdRepository).save(any(HouseholdEntity.class));
-            doReturn(Instancio.create(MemberEntity.class)).when(memberRepository).save(any(MemberEntity.class));
-            doReturn(Instancio.create(InviteEntity.class)).when(inviteRepository).save(any(InviteEntity.class));
-
-            // when
-            service.setupHousehold(buildSocialSetup());
-
-            // then
-            verify(accountSessionAuthenticator).authenticateFederatedAndPersistSession(IDENTITY.email());
-        }
-
         /**
          * AccountRegistered triggers the verification e-mail, but the provider already verified
          * the address.
@@ -462,7 +429,7 @@ class HouseholdSetupServiceTest {
 
         private HouseholdSetupService serviceWithLocalLoginDisabled() {
             return new HouseholdSetupService(householdRepository, memberRepository, inviteRepository,
-                    householdSetupMapper, memberMapper, accountService, accountSessionAuthenticator, eventPublisher,
+                    householdSetupMapper, memberMapper, accountService, eventPublisher,
                     pendingSocialRegistrationStore, new LocalLoginProperties(false));
         }
     }

@@ -5,14 +5,9 @@ import { createRawSnippet } from 'svelte';
 import AppLayout from './+layout.svelte';
 import { session, setAuthenticated, setGuest } from '$lib/stores/sessionState.svelte';
 
-const { mockRedirectToOAuth2Login } = vi.hoisted(() => ({
-	mockRedirectToOAuth2Login: vi.fn()
-}));
+const { mockGoto } = vi.hoisted(() => ({ mockGoto: vi.fn() }));
 
-vi.mock('$lib/oauth2Login', () => ({
-	OAUTH2_LOGIN_PATH: '/oauth2/authorization/spa-backend-client',
-	redirectToOAuth2Login: mockRedirectToOAuth2Login
-}));
+vi.mock('$app/navigation', () => ({ goto: mockGoto }));
 
 const currentUser = {
 	member: { id: 'member-id', name: 'Max Mustermann', email: 'max@example.com', isAdmin: true },
@@ -31,7 +26,18 @@ describe('App layout guard', () => {
 		vi.clearAllMocks();
 	});
 
-	it('status guest — redirects to the OAuth2 login entry point and does not render children', async () => {
+	it('guest_navigatesToLoginWithReplaceState', async () => {
+		// given
+		setGuest();
+
+		// when
+		render(AppLayout, { children: childrenSnippet });
+
+		// then
+		await vi.waitFor(() => expect(mockGoto).toHaveBeenCalledWith('/login', { replaceState: true }));
+	});
+
+	it('guest_doesNotRenderChildren', async () => {
 		// given
 		setGuest();
 
@@ -40,7 +46,6 @@ describe('App layout guard', () => {
 
 		// then
 		await expect.element(page.getByText('protected content')).not.toBeInTheDocument();
-		await vi.waitFor(() => expect(mockRedirectToOAuth2Login).toHaveBeenCalled());
 	});
 
 	it('status bootstrapping — shows a loading indicator and does not render children', async () => {
@@ -54,7 +59,7 @@ describe('App layout guard', () => {
 		// then
 		await expect.element(page.getByText('protected content')).not.toBeInTheDocument();
 		expect(document.querySelector('.loading-spinner')).not.toBeNull();
-		expect(mockRedirectToOAuth2Login).not.toHaveBeenCalled();
+		expect(mockGoto).not.toHaveBeenCalled();
 	});
 
 	it('status authenticated — renders children', async () => {
@@ -66,6 +71,6 @@ describe('App layout guard', () => {
 
 		// then
 		await expect.element(page.getByText('protected content')).toBeVisible();
-		expect(mockRedirectToOAuth2Login).not.toHaveBeenCalled();
+		expect(mockGoto).not.toHaveBeenCalled();
 	});
 });

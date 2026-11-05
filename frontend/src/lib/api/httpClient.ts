@@ -2,7 +2,6 @@ import { Configuration, type Middleware } from '../../generated-sources/openapi'
 import { getCsrfTokenFromCookieHeader, isStateChangingMethod } from './csrf';
 import { session, setGuest } from '../stores/sessionState.svelte';
 import { shouldTreatAsSessionExpiry } from '../stores/sessionGuard';
-import { redirectToOAuth2Login } from '../oauth2Login';
 
 const HTTP_STATUS_UNAUTHORIZED = 401;
 
@@ -30,10 +29,8 @@ export const sessionExpiredMiddleware: Middleware = {
 		if (!shouldTreatAsSessionExpiry(session.status)) {
 			return;
 		}
+		// The app guard reacts to the guest status and navigates to /login.
 		setGuest();
-		// A real navigation (not goto) always reloads the page, so a second call before the
-		// browser has actually left is harmless — no duplicate-navigation guard needed here.
-		redirectToOAuth2Login();
 	}
 };
 

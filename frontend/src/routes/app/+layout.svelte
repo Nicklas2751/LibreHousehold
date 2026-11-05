@@ -4,7 +4,7 @@
 	import { initSettings } from '$lib/stores/settingsStore';
 	import { session } from '$lib/stores/sessionState.svelte';
 	import { shouldRedirectToLogin } from '$lib/stores/sessionGuard';
-	import { redirectToOAuth2Login } from '$lib/oauth2Login';
+	import { goto } from '$app/navigation';
 	import { resendVerificationEmail } from '$lib/stores/memberStore';
 	import {
 		dismissVerificationBanner,
@@ -18,7 +18,7 @@
 
 	$effect(() => {
 		if (shouldRedirectToLogin(session.status)) {
-			redirectToOAuth2Login();
+			goto('/login', { replaceState: true });
 		}
 	});
 

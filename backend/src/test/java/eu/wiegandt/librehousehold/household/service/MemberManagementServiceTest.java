@@ -7,10 +7,10 @@ import eu.wiegandt.librehousehold.household.HouseholdDeleted;
 import eu.wiegandt.librehousehold.household.MemberRemoved;
 import eu.wiegandt.librehousehold.household.PasswordResetRequested;
 import eu.wiegandt.librehousehold.household.VerificationEmailRequested;
-import eu.wiegandt.librehousehold.household.exception.EmailNotVerifiedException;
+import eu.wiegandt.librehousehold.household.EmailNotVerifiedException;
 import eu.wiegandt.librehousehold.household.exception.HouseholdAdminCannotBeRemovedException;
 import eu.wiegandt.librehousehold.household.exception.InvalidInviteException;
-import eu.wiegandt.librehousehold.household.exception.LocalLoginDisabledException;
+import eu.wiegandt.librehousehold.household.LocalLoginDisabledException;
 import eu.wiegandt.librehousehold.household.exception.MemberAlreadyExistsException;
 import eu.wiegandt.librehousehold.household.exception.MemberNotFoundException;
 import eu.wiegandt.librehousehold.household.exception.NoPendingSocialRegistrationException;
@@ -70,9 +70,6 @@ class MemberManagementServiceTest {
 
     @Mock
     private AccountService accountService;
-
-    @Mock
-    private AccountSessionAuthenticator accountSessionAuthenticator;
 
     @Mock
     private PendingSocialRegistrationStore pendingSocialRegistrationStore;
@@ -338,26 +335,6 @@ class MemberManagementServiceTest {
             // then
             verify(eventPublisher).publishEvent(new AccountRegistered(savedEntity.id(), registration.getEmail()));
         }
-
-        @Test
-        void validToken_authenticatesAndPersistsSessionForCreatedAccount() {
-            // given
-            var token = UUID.randomUUID();
-            var registration = Instancio.create(MemberRegistration.class);
-            var invite = Instancio.of(InviteEntity.class)
-                    .set(field(InviteEntity::validUntil), LocalDate.now().plusDays(3))
-                    .create();
-            var savedEntity = Instancio.of(memberEntityModel).create();
-            doReturn(Optional.of(invite)).when(inviteRepository).findByToken(token);
-            doReturn(savedEntity).when(memberRepository).save(any(MemberEntity.class));
-
-            // when
-            service.joinHousehold(token, registration);
-
-            // then
-            verify(accountSessionAuthenticator).authenticateAndPersistSession(
-                    registration.getEmail(), registration.getLocalRegistration().orElseThrow().getPassword());
-        }
     }
 
     @Nested
@@ -473,24 +450,6 @@ class MemberManagementServiceTest {
 
             // then
             verify(pendingSocialRegistrationStore).consume();
-        }
-
-        @Test
-        void pendingRegistration_authenticatesMemberByIdentityEmail() {
-            // given
-            var token = UUID.randomUUID();
-            var invite = Instancio.of(InviteEntity.class)
-                    .set(field(InviteEntity::validUntil), LocalDate.now().plusDays(3))
-                    .create();
-            doReturn(Optional.of(invite)).when(inviteRepository).findByToken(token);
-            doReturn(Optional.of(IDENTITY)).when(pendingSocialRegistrationStore).find();
-            doReturn(Instancio.of(memberEntityModel).create()).when(memberRepository).save(any(MemberEntity.class));
-
-            // when
-            service.joinHousehold(token, buildSocialRegistration());
-
-            // then
-            verify(accountSessionAuthenticator).authenticateFederatedAndPersistSession(IDENTITY.email());
         }
 
         /**
@@ -635,7 +594,7 @@ class MemberManagementServiceTest {
 
         private MemberManagementService serviceWithLocalLoginDisabled() {
             return new MemberManagementService(memberRepository, householdRepository, inviteRepository, memberMapper,
-                    memberRegistrationMapper, eventPublisher, accountService, accountSessionAuthenticator,
+                    memberRegistrationMapper, eventPublisher, accountService,
                     pendingSocialRegistrationStore, new LocalLoginProperties(false));
         }
     }
@@ -917,38 +876,6 @@ class MemberManagementServiceTest {
 
             // then
             assertThat(result).contains(entity.id());
-        }
-    }
-
-    @Nested
-    class findEmailByExternalIdentity {
-
-        @Test
-        void linkedIdentity_returnsEmailOfLinkedMember() {
-            // given
-            var entity = Instancio.create(memberEntityModel);
-            doReturn(Optional.of(entity.id())).when(accountService)
-                    .findMemberIdByExternalIdentity("dev-provider", "external-subject");
-            doReturn(Optional.of(entity)).when(memberRepository).findById(entity.id());
-
-            // when
-            var result = service.findEmailByExternalIdentity("dev-provider", "external-subject");
-
-            // then
-            assertThat(result).contains(entity.email());
-        }
-
-        @Test
-        void unlinkedIdentity_returnsEmpty() {
-            // given
-            doReturn(Optional.empty()).when(accountService)
-                    .findMemberIdByExternalIdentity("dev-provider", "external-subject");
-
-            // when
-            var result = service.findEmailByExternalIdentity("dev-provider", "external-subject");
-
-            // then
-            assertThat(result).isEmpty();
         }
     }
 

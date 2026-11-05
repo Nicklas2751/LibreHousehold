@@ -35,9 +35,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
-import org.springframework.test.util.TestSocketUtils;
 import org.springframework.test.web.servlet.client.EntityExchangeResult;
 import org.springframework.test.web.servlet.client.ExchangeResult;
 import org.springframework.test.web.servlet.client.RestTestClient;
@@ -62,40 +59,22 @@ import static org.instancio.Select.field;
  * parametrized test per failure category, covering every endpoint from the P1.6 role table, instead
  * of one test per endpoint (project rule: ">2 similar tests -> parameterized").
  *
- * <p>Drives three real logins through the full authorization-code flow (same technique as {@link
- * AuthorizationServerConfigurationIT}) exactly once in {@link #logInAllActors()}, reused read-only
- * across every parameterized case: each login is a real multi-request PKCE round trip against
- * Testcontainers Postgres, and repeating it per test case (as {@code @BeforeEach} inline setup
- * normally would) would multiply the ~30 endpoint cases by three logins each for no additional
+ * <p>Drives three real form logins (same technique as {@link FormLoginIT}) exactly once in
+ * {@link #logInAllActors()}, reused read-only across every parameterized case: repeating them per
+ * test case would multiply the ~30 endpoint cases by three logins each for no additional
  * coverage — the three sessions themselves are never mutated by any test.
  */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT, properties = {
-        "librehousehold.security.oauth2-client.client-secret=test-client-secret"
-})
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Import(TestcontainersConfiguration.class)
 @AutoConfigureRestTestClient
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class HouseholdAccessControlIT {
 
-    private static final int SERVER_PORT = TestSocketUtils.findAvailableTcpPort();
-    private static final String SERVER_BASE_URL = "http://localhost:" + SERVER_PORT;
-
     private static final String BASE_PATH = "/v1";
-    private static final String CLIENT_ID = "spa-backend-client";
     private static final String RAW_PASSWORD = "correct horse battery staple";
     private static final String XSRF_TOKEN_COOKIE = "XSRF-TOKEN";
     private static final String XSRF_TOKEN_HEADER = "X-XSRF-TOKEN";
     private static final Pattern REMAINING_PATH_PLACEHOLDER = Pattern.compile("\\{[a-zA-Z]+}");
-
-    // SecurityConfig builds the internal client's endpoints from the issuer at bean creation, so the
-    // issuer must already contain the actual port before the context starts
-    @DynamicPropertySource
-    static void serverPortProperties(DynamicPropertyRegistry registry) {
-        registry.add("server.port", () -> SERVER_PORT);
-        registry.add("librehousehold.security.oauth2-authorization-server.issuer", () -> SERVER_BASE_URL);
-        registry.add("librehousehold.security.oauth2-client.redirect-uri",
-                () -> SERVER_BASE_URL + "/login/oauth2/code/spa-backend-client");
-    }
 
     @Autowired
     private RestTestClient restTestClient;
@@ -338,7 +317,7 @@ class HouseholdAccessControlIT {
         accountService.createAccount(member.getId(), RAW_PASSWORD);
         // Verified immediately: this class drives real logins for every actor, and login is
         // blocked for unverified accounts (see AccountPrincipal#isEnabled()) — the login-blocking
-        // behavior itself is covered separately in AuthorizationServerConfigurationIT.
+        // behavior itself is covered separately in FormLoginIT.
         accountRepository.markEmailVerified(member.getId());
         return member;
     }
@@ -404,26 +383,20 @@ class HouseholdAccessControlIT {
         return response.response().getResponseCookies().getFirst(XSRF_TOKEN_COOKIE).getValue();
     }
 
-    /**
-     * Drives a full, real login (authorization-code flow with the backend as its own OAuth2 client,
-     * see DD-7) and returns the resulting authenticated session cookies. Adapted from the equivalent
-     * helper in {@link AuthorizationServerConfigurationIT}.
-     */
+    // Logs in like the SPA: XSRF-TOKEN from a GET, then the form login with that token
     private Map<String, String> login(String email) {
-        var loginPage = requestLoginPageViaAuthorizationCodeFlow();
-        var loginResult = submitLogin(loginPage.cookies(), loginPage.csrfToken(), email);
-        var cookiesAfterLogin = mergeCookies(loginPage.cookies(), loginResult);
-        var authorizeAgain = get(cookiesAfterLogin, loginResult.getResponseHeaders().getLocation());
-        var callback = get(authorizeAgain.cookies(), authorizeAgain.response().getResponseHeaders().getLocation());
-        return callback.cookies();
-    }
-
-    private LoginPage requestLoginPageViaAuthorizationCodeFlow() {
-        var authorizationRequest = get(Map.of(), URI.create("/oauth2/authorization/" + CLIENT_ID));
-        var authorizeRequest = get(authorizationRequest.cookies(), authorizationRequest.response().getResponseHeaders().getLocation());
-        var loginPageRequest = get(authorizeRequest.cookies(), authorizeRequest.response().getResponseHeaders().getLocation());
-        var csrfToken = extractCsrfToken(loginPageRequest.response().getResponseBody());
-        return new LoginPage(loginPageRequest.cookies(), csrfToken);
+        var xsrfStep = get(Map.of(), URI.create(BASE_PATH + "/auth/discover"));
+        var form = new LinkedMultiValueMap<String, String>();
+        form.add("email", email);
+        form.add("password", RAW_PASSWORD);
+        RestTestClient.RequestBodySpec spec = restTestClient.post().uri(BASE_PATH + "/login")
+                .header(XSRF_TOKEN_HEADER, xsrfStep.cookies().get(XSRF_TOKEN_COOKIE))
+                .contentType(MediaType.APPLICATION_FORM_URLENCODED);
+        for (var cookie : xsrfStep.cookies().entrySet()) {
+            spec = spec.cookie(cookie.getKey(), cookie.getValue());
+        }
+        var loginResult = spec.body(form).exchange().returnResult(Void.class);
+        return mergeCookies(xsrfStep.cookies(), loginResult);
     }
 
     private HttpStep get(Map<String, String> cookies, URI uri) {
@@ -435,19 +408,6 @@ class HouseholdAccessControlIT {
         return new HttpStep(mergeCookies(cookies, response), response);
     }
 
-    private EntityExchangeResult<Void> submitLogin(Map<String, String> cookies, String csrfToken, String email) {
-        var form = new LinkedMultiValueMap<String, String>();
-        form.add("username", email);
-        form.add("password", RAW_PASSWORD);
-        form.add("_csrf", csrfToken);
-        RestTestClient.RequestBodySpec spec = restTestClient.post().uri("/login")
-                .contentType(MediaType.APPLICATION_FORM_URLENCODED);
-        for (var cookie : cookies.entrySet()) {
-            spec = spec.cookie(cookie.getKey(), cookie.getValue());
-        }
-        return spec.body(form).exchange().returnResult(Void.class);
-    }
-
     private Map<String, String> mergeCookies(Map<String, String> existingCookies, ExchangeResult response) {
         var merged = new LinkedHashMap<>(existingCookies);
         response.getResponseCookies().values().stream()
@@ -456,18 +416,7 @@ class HouseholdAccessControlIT {
         return merged;
     }
 
-    private String extractCsrfToken(String loginPageHtml) {
-        var csrfInputStart = loginPageHtml.indexOf("name=\"_csrf\"");
-        var inputTag = loginPageHtml.substring(csrfInputStart, loginPageHtml.indexOf('>', csrfInputStart));
-        var matcher = Pattern.compile("value=\"([^\"]*)\"").matcher(inputTag);
-        matcher.find();
-        return matcher.group(1);
-    }
-
     private record HttpStep(Map<String, String> cookies, EntityExchangeResult<String> response) {
-    }
-
-    private record LoginPage(Map<String, String> cookies, String csrfToken) {
     }
 
     private record Endpoint(HttpMethod method, String pathTemplate, Object body) {

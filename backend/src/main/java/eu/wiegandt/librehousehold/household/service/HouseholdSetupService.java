@@ -5,7 +5,7 @@ import eu.wiegandt.librehousehold.household.ExternalIdentity;
 import eu.wiegandt.librehousehold.household.LocalLoginProperties;
 import eu.wiegandt.librehousehold.household.PendingSocialRegistrationStore;
 import eu.wiegandt.librehousehold.household.exception.HouseholdAlreadyExistsException;
-import eu.wiegandt.librehousehold.household.exception.LocalLoginDisabledException;
+import eu.wiegandt.librehousehold.household.LocalLoginDisabledException;
 import eu.wiegandt.librehousehold.household.exception.MemberAlreadyExistsException;
 import eu.wiegandt.librehousehold.household.exception.NoPendingSocialRegistrationException;
 import eu.wiegandt.librehousehold.household.mapper.HouseholdSetupMapper;
@@ -43,7 +43,6 @@ public class HouseholdSetupService {
     private final HouseholdSetupMapper householdSetupMapper;
     private final MemberMapper memberMapper;
     private final AccountService accountService;
-    private final AccountSessionAuthenticator accountSessionAuthenticator;
     private final ApplicationEventPublisher eventPublisher;
     private final PendingSocialRegistrationStore pendingSocialRegistrationStore;
     private final LocalLoginProperties localLoginProperties;
@@ -51,7 +50,6 @@ public class HouseholdSetupService {
     public HouseholdSetupService(HouseholdRepository householdRepository, MemberRepository memberRepository,
                           InviteRepository inviteRepository, HouseholdSetupMapper householdSetupMapper,
                           MemberMapper memberMapper, AccountService accountService,
-                          AccountSessionAuthenticator accountSessionAuthenticator,
                           ApplicationEventPublisher eventPublisher,
                           PendingSocialRegistrationStore pendingSocialRegistrationStore,
                           LocalLoginProperties localLoginProperties) {
@@ -61,7 +59,6 @@ public class HouseholdSetupService {
         this.householdSetupMapper = householdSetupMapper;
         this.memberMapper = memberMapper;
         this.accountService = accountService;
-        this.accountSessionAuthenticator = accountSessionAuthenticator;
         this.eventPublisher = eventPublisher;
         this.pendingSocialRegistrationStore = pendingSocialRegistrationStore;
         this.localLoginProperties = localLoginProperties;
@@ -105,7 +102,6 @@ public class HouseholdSetupService {
         var savedMember = saveMember(memberMapper.toMemberEntity(member, householdId, SETUP_MEMBER_IS_ADMIN));
         accountService.createAccount(savedMember.getId(), localRegistration.getPassword());
         eventPublisher.publishEvent(new AccountRegistered(savedMember.getId(), member.getEmail()));
-        accountSessionAuthenticator.authenticateAndPersistSession(member.getEmail(), localRegistration.getPassword());
     }
 
     // No AccountRegistered event: it triggers the verification e-mail, but the provider already
@@ -120,7 +116,6 @@ public class HouseholdSetupService {
             throw new MemberAlreadyExistsException();
         }
         pendingSocialRegistrationStore.consume();
-        accountSessionAuthenticator.authenticateFederatedAndPersistSession(identity.email());
     }
 
     private MemberEntity saveMember(MemberEntity member) {
