@@ -21,7 +21,7 @@ vi.mock('$lib/stores/toastStore', () => ({ addToast: mockAddToast }));
 
 vi.mock('$lib/stores/settingsStore', () => ({ initSettings: vi.fn() }));
 
-vi.mock('$lib/oauth2Login', () => ({ redirectToOAuth2Login: vi.fn() }));
+vi.mock('$app/navigation', () => ({ goto: vi.fn() }));
 
 vi.mock('$lib/paraglide/runtime.js', async (importOriginal) => {
 	const original = await importOriginal<typeof import('$lib/paraglide/runtime.js')>();

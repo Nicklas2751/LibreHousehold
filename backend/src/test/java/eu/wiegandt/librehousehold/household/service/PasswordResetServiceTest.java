@@ -3,44 +3,34 @@ package eu.wiegandt.librehousehold.household.service;
 import eu.wiegandt.librehousehold.household.AccountPrincipal;
 import eu.wiegandt.librehousehold.household.exception.AccountTokenInvalidException;
 import eu.wiegandt.librehousehold.household.exception.PasswordResetTokenInvalidException;
-import eu.wiegandt.librehousehold.household.model.AccountEntity;
-import eu.wiegandt.librehousehold.household.model.MemberEntity;
 import eu.wiegandt.librehousehold.household.repository.AccountRepository;
-import eu.wiegandt.librehousehold.household.repository.MemberRepository;
-import org.instancio.Instancio;
-import org.instancio.junit.InstancioExtension;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.core.session.SessionInformation;
 import org.springframework.security.core.session.SessionRegistry;
-import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
 
 import java.time.Instant;
 import java.util.Date;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
-import static org.instancio.Select.field;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
-@ExtendWith({MockitoExtension.class, InstancioExtension.class})
+@ExtendWith(MockitoExtension.class)
 class PasswordResetServiceTest {
 
-    private static final String CLIENT_REGISTRATION_ID = "spa-backend-client";
+    private static final String NEW_PASSWORD = "new correct horse battery staple";
 
     @Mock
     private MemberManagementService memberManagementService;
@@ -52,19 +42,16 @@ class PasswordResetServiceTest {
     private AccountService accountService;
 
     @Mock
-    private MemberRepository memberRepository;
-
-    @Mock
     private AccountRepository accountRepository;
 
     @Mock
     private SessionRegistry sessionRegistry;
 
-    @Mock
-    private OAuth2AuthorizedClientService authorizedClientService;
-
-    @InjectMocks
-    private PasswordResetService service;
+    // MemberSessions is a module-internal collaborator, so it runs for real on top of the mocked registry
+    private PasswordResetService newService() {
+        return new PasswordResetService(memberManagementService, accountTokenService, accountService,
+                accountRepository, new MemberSessions(sessionRegistry));
+    }
 
     @Nested
     class requestPasswordReset {
@@ -75,7 +62,7 @@ class PasswordResetServiceTest {
             var email = "max@example.com";
 
             // when
-            service.requestPasswordReset(email);
+            newService().requestPasswordReset(email);
 
             // then
             verify(memberManagementService).requestPasswordReset(email);
@@ -86,25 +73,18 @@ class PasswordResetServiceTest {
     class confirmPasswordReset {
 
         @Test
-        void validToken_resetsPasswordExpiresSessionsAndRemovesAuthorizedClient() {
+        void validToken_expiresSessionsOfMember() {
             // given
             var token = UUID.randomUUID();
-            var newPassword = "new correct horse battery staple";
-            var member = Instancio.create(MemberEntity.class);
-            var account = Instancio.of(AccountEntity.class)
-                    .set(field(AccountEntity::memberId), member.getId())
-                    .create();
-            doReturn(member.getId()).when(accountTokenService)
-                    .consumeToken(token, AccountTokenService.PASSWORD_RESET_PURPOSE);
-            doReturn(Optional.of(member)).when(memberRepository).findById(member.getId());
-            doReturn(Optional.of(account)).when(accountRepository).findById(member.getId());
-            doReturn(true).when(accountService).hasPassword(member.getId());
-            var principal = new AccountPrincipal(member.email(), account.passwordHash(), account.emailVerified());
-            var session = new SessionInformation(principal, "session-1", Date.from(Instant.now()));
-            doReturn(List.of(session)).when(sessionRegistry).getAllSessions(principal, false);
+            var memberId = UUID.randomUUID();
+            var session = new SessionInformation(AccountPrincipal.identifiedBy(memberId), "session-1",
+                    Date.from(Instant.now()));
+            doReturn(memberId).when(accountTokenService).consumeToken(token, AccountTokenService.PASSWORD_RESET_PURPOSE);
+            doReturn(true).when(accountService).hasPassword(memberId);
+            doReturn(List.of(session)).when(sessionRegistry).getAllSessions(AccountPrincipal.identifiedBy(memberId), false);
 
             // when
-            service.confirmPasswordReset(token, newPassword);
+            newService().confirmPasswordReset(token, NEW_PASSWORD);
 
             // then
             assertThat(session.isExpired()).isTrue();
@@ -114,132 +94,99 @@ class PasswordResetServiceTest {
         void validToken_resetsPassword() {
             // given
             var token = UUID.randomUUID();
-            var newPassword = "new correct horse battery staple";
-            var member = Instancio.create(MemberEntity.class);
-            var account = Instancio.of(AccountEntity.class)
-                    .set(field(AccountEntity::memberId), member.getId())
-                    .create();
-            doReturn(member.getId()).when(accountTokenService)
-                    .consumeToken(token, AccountTokenService.PASSWORD_RESET_PURPOSE);
-            doReturn(Optional.of(member)).when(memberRepository).findById(member.getId());
-            doReturn(Optional.of(account)).when(accountRepository).findById(member.getId());
-            doReturn(true).when(accountService).hasPassword(member.getId());
-            doReturn(List.of()).when(sessionRegistry).getAllSessions(any(), anyBoolean());
+            var memberId = UUID.randomUUID();
+            doReturn(memberId).when(accountTokenService).consumeToken(token, AccountTokenService.PASSWORD_RESET_PURPOSE);
+            doReturn(true).when(accountService).hasPassword(memberId);
 
             // when
-            service.confirmPasswordReset(token, newPassword);
+            newService().confirmPasswordReset(token, NEW_PASSWORD);
 
             // then
-            verify(accountService).resetPassword(member.getId(), newPassword);
-        }
-
-        @Test
-        void validToken_removesAuthorizedClientForMemberEmail() {
-            // given
-            var token = UUID.randomUUID();
-            var newPassword = "new correct horse battery staple";
-            var member = Instancio.create(MemberEntity.class);
-            var account = Instancio.of(AccountEntity.class)
-                    .set(field(AccountEntity::memberId), member.getId())
-                    .create();
-            doReturn(member.getId()).when(accountTokenService)
-                    .consumeToken(token, AccountTokenService.PASSWORD_RESET_PURPOSE);
-            doReturn(Optional.of(member)).when(memberRepository).findById(member.getId());
-            doReturn(Optional.of(account)).when(accountRepository).findById(member.getId());
-            doReturn(true).when(accountService).hasPassword(member.getId());
-            doReturn(List.of()).when(sessionRegistry).getAllSessions(any(), anyBoolean());
-
-            // when
-            service.confirmPasswordReset(token, newPassword);
-
-            // then
-            verify(authorizedClientService).removeAuthorizedClient(CLIENT_REGISTRATION_ID, member.email());
+            verify(accountService).resetPassword(memberId, NEW_PASSWORD);
         }
 
         @Test
         void validToken_resetsLockout() {
             // given
             var token = UUID.randomUUID();
-            var member = Instancio.create(MemberEntity.class);
-            var account = Instancio.of(AccountEntity.class)
-                    .set(field(AccountEntity::memberId), member.getId())
-                    .create();
-            doReturn(member.getId()).when(accountTokenService)
-                    .consumeToken(token, AccountTokenService.PASSWORD_RESET_PURPOSE);
-            doReturn(Optional.of(member)).when(memberRepository).findById(member.getId());
-            doReturn(Optional.of(account)).when(accountRepository).findById(member.getId());
-            doReturn(true).when(accountService).hasPassword(member.getId());
-            doReturn(List.of()).when(sessionRegistry).getAllSessions(any(), anyBoolean());
+            var memberId = UUID.randomUUID();
+            doReturn(memberId).when(accountTokenService).consumeToken(token, AccountTokenService.PASSWORD_RESET_PURPOSE);
+            doReturn(true).when(accountService).hasPassword(memberId);
 
             // when
-            service.confirmPasswordReset(token, "new correct horse battery staple");
+            newService().confirmPasswordReset(token, NEW_PASSWORD);
 
             // then
-            verify(accountRepository).resetFailedLoginAttempts(member.getId());
+            verify(accountRepository).resetFailedLoginAttempts(memberId);
         }
 
         @Test
-        void invalidToken_doesNotResetLockout() {
+        void invalidToken_throwsPasswordResetTokenInvalidException() {
+            // given
+            var token = UUID.randomUUID();
+            doThrow(AccountTokenInvalidException.class).when(accountTokenService)
+                    .consumeToken(token, AccountTokenService.PASSWORD_RESET_PURPOSE);
+
+            // when / then
+            assertThatThrownBy(() -> newService().confirmPasswordReset(token, NEW_PASSWORD))
+                    .isInstanceOf(PasswordResetTokenInvalidException.class);
+        }
+
+        @Test
+        void invalidToken_changesNothing() {
             // given
             var token = UUID.randomUUID();
             doThrow(AccountTokenInvalidException.class).when(accountTokenService)
                     .consumeToken(token, AccountTokenService.PASSWORD_RESET_PURPOSE);
 
             // when
-            catchThrowable(() -> service.confirmPasswordReset(token, "new correct horse battery staple"));
+            catchThrowable(() -> newService().confirmPasswordReset(token, NEW_PASSWORD));
 
             // then
-            verify(accountRepository, never()).resetFailedLoginAttempts(any());
+            verifyNoInteractions(accountService, accountRepository, sessionRegistry);
         }
 
         @Test
         void socialLoginOnlyAccount_throwsPasswordResetTokenInvalidException() {
             // given
             var token = UUID.randomUUID();
-            var member = Instancio.create(MemberEntity.class);
-            var account = new AccountEntity(member.getId(), null, true, Instant.now(), null, 0, null);
-            doReturn(member.getId()).when(accountTokenService)
-                    .consumeToken(token, AccountTokenService.PASSWORD_RESET_PURPOSE);
-            doReturn(Optional.of(member)).when(memberRepository).findById(member.getId());
-            doReturn(Optional.of(account)).when(accountRepository).findById(member.getId());
-            doReturn(false).when(accountService).hasPassword(member.getId());
+            var memberId = UUID.randomUUID();
+            doReturn(memberId).when(accountTokenService).consumeToken(token, AccountTokenService.PASSWORD_RESET_PURPOSE);
+            doReturn(false).when(accountService).hasPassword(memberId);
 
             // when / then
-            assertThatThrownBy(() -> service.confirmPasswordReset(token, "newPassword"))
+            assertThatThrownBy(() -> newService().confirmPasswordReset(token, NEW_PASSWORD))
                     .isInstanceOf(PasswordResetTokenInvalidException.class);
         }
 
         @Test
-        void socialLoginOnlyAccount_neitherResetsPasswordNorTouchesSessions() {
+        void socialLoginOnlyAccount_doesNotResetPassword() {
             // given
             var token = UUID.randomUUID();
-            var member = Instancio.create(MemberEntity.class);
-            var account = new AccountEntity(member.getId(), null, true, Instant.now(), null, 0, null);
-            doReturn(member.getId()).when(accountTokenService)
-                    .consumeToken(token, AccountTokenService.PASSWORD_RESET_PURPOSE);
-            doReturn(Optional.of(member)).when(memberRepository).findById(member.getId());
-            doReturn(Optional.of(account)).when(accountRepository).findById(member.getId());
-            doReturn(false).when(accountService).hasPassword(member.getId());
+            var memberId = UUID.randomUUID();
+            doReturn(memberId).when(accountTokenService).consumeToken(token, AccountTokenService.PASSWORD_RESET_PURPOSE);
+            doReturn(false).when(accountService).hasPassword(memberId);
 
             // when
-            catchThrowable(() -> service.confirmPasswordReset(token, "newPassword"));
+            catchThrowable(() -> newService().confirmPasswordReset(token, NEW_PASSWORD));
 
             // then
             verify(accountService, never()).resetPassword(any(), any());
-            verifyNoInteractions(sessionRegistry, authorizedClientService);
         }
 
         @Test
-        void invalidToken_throwsPasswordResetTokenInvalidExceptionWithoutResettingPassword() {
+        void socialLoginOnlyAccount_neitherResetsLockoutNorTouchesSessions() {
             // given
             var token = UUID.randomUUID();
-            doThrow(AccountTokenInvalidException.class).when(accountTokenService)
-                    .consumeToken(token, AccountTokenService.PASSWORD_RESET_PURPOSE);
+            var memberId = UUID.randomUUID();
+            doReturn(memberId).when(accountTokenService).consumeToken(token, AccountTokenService.PASSWORD_RESET_PURPOSE);
+            doReturn(false).when(accountService).hasPassword(memberId);
 
-            // when / then
-            assertThatThrownBy(() -> service.confirmPasswordReset(token, "newPassword"))
-                    .isInstanceOf(PasswordResetTokenInvalidException.class);
-            verify(accountService, never()).resetPassword(any(), any());
+            // when
+            catchThrowable(() -> newService().confirmPasswordReset(token, NEW_PASSWORD));
+
+            // then
+            verifyNoInteractions(accountRepository, sessionRegistry);
         }
     }
 }

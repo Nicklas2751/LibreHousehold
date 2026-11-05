@@ -34,7 +34,7 @@ import static org.instancio.Select.field;
  * {@code SessionInformation} entries are only meaningfully exercised in a servlet-aware context,
  * analogous to {@code HouseholdSetupServiceIT}.
  */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK, properties = {"librehousehold.security.oauth2-client.client-secret=test-client-secret"})
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
 @Import(TestcontainersConfiguration.class)
 @ExtendWith(InstancioExtension.class)
 class PasswordResetServiceIT {
@@ -83,11 +83,10 @@ class PasswordResetServiceIT {
             var member = memberRepository.save(Instancio.of(MemberEntity.class)
                     .set(field(MemberEntity::householdId), household.id())
                     .create());
-            var oldPasswordHash = "$argon2id$v=19$m=19456,t=2,p=1$oldHash";
-            accountRepository.save(new AccountEntity(member.getId(), oldPasswordHash, true, Instant.now(), null, 0, null));
-            var principal = new AccountPrincipal(member.email(), oldPasswordHash, true);
+            accountRepository.save(new AccountEntity(member.getId(), "$argon2id$v=19$m=19456,t=2,p=1$oldHash", true,
+                    Instant.now(), null, 0, null));
             var sessionId = "session-" + UUID.randomUUID();
-            sessionRegistry.registerNewSession(sessionId, principal);
+            sessionRegistry.registerNewSession(sessionId, AccountPrincipal.identifiedBy(member.getId()));
             var token = accountTokenService.issueToken(member.getId(), PASSWORD_RESET_PURPOSE, Duration.ofHours(1));
 
             // when

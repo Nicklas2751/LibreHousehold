@@ -41,7 +41,6 @@ import static org.mockito.Mockito.verify;
 // exact declared type to override), leaving two JavaMailSender candidates and breaking the
 // autowiring in EmailSenderService with a NoUniqueBeanDefinitionException.
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, properties = {
-        "librehousehold.security.oauth2-client.client-secret=test-client-secret",
         "spring.mail.host=localhost",
         "spring.autoconfigure.exclude=ch.martinelli.oss.testcontainers.mailpit.MailpitAutoConfiguration"
 })

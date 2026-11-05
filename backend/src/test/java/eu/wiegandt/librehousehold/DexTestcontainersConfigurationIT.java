@@ -11,8 +11,7 @@ import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE,
-        properties = "librehousehold.security.oauth2-client.client-secret=test-client-secret")
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @Import({TestcontainersConfiguration.class, DexTestcontainersConfiguration.class})
 class DexTestcontainersConfigurationIT {
 
@@ -25,7 +24,7 @@ class DexTestcontainersConfigurationIT {
     private DexContainer dexContainer;
 
     @Test
-    void findByRegistrationId_devProvider_registrationDiscoveredFromDexContainerWithDefaultOidcScopes() {
+    void findByRegistrationId_devProvider_registrationDiscoveredFromDexContainerWithConfiguredOidcScopes() {
         // given
         var expected = new DevProviderRegistration(dexContainer.getIssuerUri(),
                 DexTestcontainersConfiguration.CLIENT_ID, Set.of("openid", "profile", "email"));

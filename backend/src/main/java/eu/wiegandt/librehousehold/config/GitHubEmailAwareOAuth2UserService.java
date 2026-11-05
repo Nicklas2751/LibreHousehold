@@ -2,7 +2,6 @@ package eu.wiegandt.librehousehold.config;
 
 import eu.wiegandt.librehousehold.config.GitHubEmailClient.GitHubEmail;
 import org.jspecify.annotations.NonNull;
-import org.springframework.security.config.oauth2.client.CommonOAuth2Provider;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserService;
 import org.springframework.security.oauth2.core.oidc.StandardClaimNames;
@@ -26,20 +25,17 @@ class GitHubEmailAwareOAuth2UserService implements OAuth2UserService<OAuth2UserR
 
     private final OAuth2UserService<OAuth2UserRequest, OAuth2User> delegate;
     private final GitHubEmailClient gitHubEmailClient;
-    private final CommonProvider commonProvider;
 
     GitHubEmailAwareOAuth2UserService(OAuth2UserService<OAuth2UserRequest, OAuth2User> delegate,
-                                      GitHubEmailClient gitHubEmailClient, CommonProvider commonProvider) {
+                                      GitHubEmailClient gitHubEmailClient) {
         this.delegate = delegate;
         this.gitHubEmailClient = gitHubEmailClient;
-        this.commonProvider = commonProvider;
     }
 
     @Override
     public OAuth2User loadUser(@NonNull OAuth2UserRequest userRequest) {
         var user = delegate.loadUser(userRequest);
-        var registrationId = userRequest.getClientRegistration().getRegistrationId();
-        if (commonProvider.find(registrationId).filter(CommonOAuth2Provider.GITHUB::equals).isEmpty()) {
+        if (!GitHubProvider.isGitHub(userRequest.getClientRegistration())) {
             return user;
         }
         return findVerifiedPrimaryEmail(userRequest)

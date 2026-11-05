@@ -276,7 +276,20 @@
 		"password_label": "Password",
 		"password_placeholder": "Your password",
 		"submit_button": "Log in",
-		"error": "Incorrect email or password.",
+		"error_invalid_credentials": "Incorrect email or password.",
+		"error_rate_limited": [
+			{
+				"declarations": ["input seconds", "local secondsPlural = seconds: plural"],
+				"selectors": ["secondsPlural"],
+				"match": {
+					"secondsPlural=one": "Too many login attempts. Please try again in {seconds} second.",
+					"secondsPlural=*": "Too many login attempts. Please try again in {seconds} seconds."
+				}
+			}
+		],
+		"error_rate_limited_unknown": "Too many login attempts. Please wait a moment and try again.",
+		"error_network": "Cannot reach the server. Please check your internet connection and try again.",
+		"error_unexpected": "Something went wrong. Please try again later.",
 		"error_unverified": "Please confirm your email address first. We've sent you a link by email.",
 		"error_locked": "This account is temporarily locked due to too many failed login attempts. Please try again after {time}.",
 		"error_locked_unknown_time": "This account is temporarily locked due to too many failed login attempts. Please try again later.",

@@ -10,13 +10,12 @@ import java.util.Optional;
 /**
  * Keeps the external identity of a social login with the SETUP or INVITE context in the
  * {@code HttpSession} until household setup or invite join turns it into a member. The external
- * authentication itself must not survive the provider callback (the embedded Authorization Server
- * would otherwise issue tokens for a subject that is no member), so the identity has to be kept
- * separately.
+ * authentication itself must not survive the provider callback, since it does not identify a
+ * member, so the identity has to be kept separately.
  *
  * <p>Part of the module's public API, because the social-login callback in {@code config} stores
  * the identity, while the {@code household} services read and consume it. The current request is
- * resolved via {@link RequestContextHolder} for the reason given in {@code AccountSessionAuthenticator}.
+ * resolved via {@link RequestContextHolder} for the reason given in {@code AccountSessionSignIn}.
  */
 @Component
 public class PendingSocialRegistrationStore {

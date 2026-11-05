@@ -10,7 +10,6 @@ const {
 	mockCheckEmailAvailability,
 	mockGoto,
 	mockAddToast,
-	mockCompleteSilentOAuth2Login,
 	mockBootstrapSession,
 	mockLoadAuthDiscovery,
 	mockStartSocialLogin,
@@ -21,7 +20,6 @@ const {
 	mockCheckEmailAvailability: vi.fn(),
 	mockGoto: vi.fn(),
 	mockAddToast: vi.fn(),
-	mockCompleteSilentOAuth2Login: vi.fn(),
 	mockBootstrapSession: vi.fn(),
 	mockLoadAuthDiscovery: vi.fn(),
 	mockStartSocialLogin: vi.fn(),
@@ -51,11 +49,6 @@ vi.mock('$app/navigation', () => ({ goto: mockGoto }));
 
 vi.mock('$lib/stores/toastStore', () => ({ addToast: mockAddToast }));
 
-vi.mock('$lib/oauth2Login', async (importOriginal) => {
-	const original = await importOriginal<typeof import('$lib/oauth2Login')>();
-	return { ...original, completeSilentOAuth2Login: mockCompleteSilentOAuth2Login };
-});
-
 vi.mock('$lib/stores/sessionBootstrap', () => ({ bootstrapSession: mockBootstrapSession }));
 
 vi.mock('$lib/stores/authDiscoveryState.svelte', async (importOriginal) => {
@@ -83,7 +76,6 @@ describe('SetupWizard', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		mockCheckEmailAvailability.mockResolvedValue({ available: true });
-		mockCompleteSilentOAuth2Login.mockResolvedValue(undefined);
 		mockBootstrapSession.mockResolvedValue(undefined);
 		mockLoadAuthDiscovery.mockResolvedValue(undefined);
 		mockPage.url = new URL('http://localhost:5173/setup');
@@ -117,7 +109,7 @@ describe('SetupWizard', () => {
 		);
 	});
 
-	it('closing setup after successful setup — completes the OAuth2 login silently and navigates to the dashboard', async () => {
+	it('closing setup after successful setup — bootstraps the session, then navigates to the dashboard replacing the history entry', async () => {
 		// given
 		mockSetupHousehold.mockResolvedValue({
 			household: { id: 'household-id', name: 'Die Testfamilie' },
@@ -134,9 +126,12 @@ describe('SetupWizard', () => {
 		await page.getByRole('button', { name: /Zum Dashboard gehen/i }).click();
 
 		// then
-		await vi.waitFor(() => expect(mockGoto).toHaveBeenCalledWith('/app/dashboard'));
-		expect(mockCompleteSilentOAuth2Login).toHaveBeenCalled();
-		expect(mockBootstrapSession).toHaveBeenCalled();
+		await vi.waitFor(() =>
+			expect(mockGoto).toHaveBeenCalledWith('/app/dashboard', { replaceState: true })
+		);
+		expect(mockBootstrapSession.mock.invocationCallOrder[0]).toBeLessThan(
+			mockGoto.mock.invocationCallOrder[0]
+		);
 	});
 
 	it('email already taken (account-already-exists) — shows a specific error on the email field', async () => {

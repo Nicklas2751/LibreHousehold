@@ -1,10 +1,10 @@
 package eu.wiegandt.librehousehold.household.service;
 
+import eu.wiegandt.librehousehold.household.AccountPrincipal;
 import eu.wiegandt.librehousehold.household.model.AccountEntity;
 import eu.wiegandt.librehousehold.household.repository.AccountRepository;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.event.EventListener;
-import org.springframework.security.authentication.event.AbstractAuthenticationEvent;
 import org.springframework.security.authentication.event.AuthenticationFailureBadCredentialsEvent;
 import org.springframework.security.authentication.event.AuthenticationSuccessEvent;
 import org.springframework.stereotype.Component;
@@ -41,7 +41,9 @@ public class AccountLockoutListener {
 
     @EventListener
     public void onAuthenticationSuccess(AuthenticationSuccessEvent event) {
-        findMemberId(event).ifPresent(accountRepository::resetFailedLoginAttempts);
+        if (event.getAuthentication().getPrincipal() instanceof AccountPrincipal accountPrincipal) {
+            accountRepository.resetFailedLoginAttempts(accountPrincipal.memberId());
+        }
     }
 
     private void registerFailedAttempt(UUID memberId) {
@@ -54,7 +56,8 @@ public class AccountLockoutListener {
         }
     }
 
-    private Optional<UUID> findMemberId(AbstractAuthenticationEvent event) {
+    // A failed attempt carries only the e-mail address the user typed in
+    private Optional<UUID> findMemberId(AuthenticationFailureBadCredentialsEvent event) {
         return memberManagementService.findMemberIdByEmail(event.getAuthentication().getName());
     }
 }

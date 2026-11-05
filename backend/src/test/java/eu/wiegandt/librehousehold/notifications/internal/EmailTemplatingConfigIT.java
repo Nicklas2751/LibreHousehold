@@ -24,8 +24,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * would require a single {@code @DynamicPropertySource} shared by all test methods in the class,
  * which would force the override directory to be active for these bundled-default assertions too.
  */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE,
-        properties = "librehousehold.security.oauth2-client.client-secret=test-client-secret")
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @Import(TestcontainersConfiguration.class)
 class EmailTemplatingConfigIT {
 

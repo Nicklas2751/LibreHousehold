@@ -16,12 +16,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureRestTestClient;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
-import org.springframework.test.util.TestSocketUtils;
 import org.springframework.test.web.servlet.client.EntityExchangeResult;
 import org.springframework.test.web.servlet.client.ExchangeResult;
 import org.springframework.test.web.servlet.client.RestTestClient;
@@ -49,26 +47,20 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * Drives household setup and invite join via social login end to end: storing the context, the
  * real login at a Dex container, the confirmation via {@code GET /auth/social-registration}, the
- * registration request without {@code localRegistration} and finally the SPA's own login at the
- * embedded Authorization Server. Uses a port picked before startup and re-registers the Dex client
- * per test for the reasons given in {@link SocialLoginFilterChainIT}.
+ * registration request without {@code localRegistration}, which signs the new member in. Runs on a
+ * random port and re-registers the Dex client per test for the reasons given in
+ * {@link SocialLoginFilterChainIT}.
  */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT, properties = {
-        "librehousehold.security.oauth2-client.client-secret=test-client-secret"
-})
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Import({TestcontainersConfiguration.class, DexTestcontainersConfiguration.class})
 @AutoConfigureRestTestClient
 @ExtendWith(InstancioExtension.class)
 class SocialSetupFlowIT {
 
-    private static final int SERVER_PORT = TestSocketUtils.findAvailableTcpPort();
-    private static final String SERVER_BASE_URL = "http://localhost:" + SERVER_PORT;
-
     private static final String PROVIDER_ID = "dev-provider";
-    private static final String DEX_REDIRECT_URI = SERVER_BASE_URL + "/login/oauth2/code/" + PROVIDER_ID;
+    private static final String CALLBACK_PATH = "/login/oauth2/code/" + PROVIDER_ID;
     private static final String DEX_PASSWORD = "dex-password";
     private static final String BASE_PATH = "/v1";
-    private static final String SPA_LOGIN_PATH = "/oauth2/authorization/spa-backend-client";
     private static final String XSRF_TOKEN_COOKIE_NAME = "XSRF-TOKEN";
     private static final String XSRF_TOKEN_HEADER_NAME = "X-XSRF-TOKEN";
     private static final String SESSION_COOKIE_NAME = "JSESSIONID";
@@ -76,13 +68,8 @@ class SocialSetupFlowIT {
     private static final int MAX_REDIRECTS = 10;
     private static final Pattern FORM_ACTION = Pattern.compile("<form[^>]*action=\"([^\"]*)\"");
 
-    @DynamicPropertySource
-    static void serverPortProperties(DynamicPropertyRegistry registry) {
-        registry.add("server.port", () -> SERVER_PORT);
-        registry.add("librehousehold.security.oauth2-authorization-server.issuer", () -> SERVER_BASE_URL);
-        registry.add("librehousehold.security.oauth2-client.redirect-uri",
-                () -> SERVER_BASE_URL + "/login/oauth2/code/spa-backend-client");
-    }
+    @LocalServerPort
+    private int port;
 
     @Autowired
     private RestTestClient restTestClient;
@@ -120,7 +107,7 @@ class SocialSetupFlowIT {
         void dexLoginWithSetupContext_redirectsBackToSetupPage() throws Exception {
             // given
             dexContainer.withClient(new DexContainer.Client(DexTestcontainersConfiguration.CLIENT_ID,
-                    DexTestcontainersConfiguration.CLIENT_SECRET, DEX_REDIRECT_URI));
+                    DexTestcontainersConfiguration.CLIENT_SECRET, dexRedirectUri()));
             var dexUser = new DexContainer.User("dex-" + UUID.randomUUID(), "dex-" + UUID.randomUUID() + "@example.com", DEX_PASSWORD);
             dexContainer.withUser(dexUser);
             var cookiesWithContext = storeSocialLoginContext("{\"context\":\"SETUP\"}");
@@ -136,7 +123,7 @@ class SocialSetupFlowIT {
         void dexLoginWithSetupContext_pendingRegistrationCarriesDexIdentity() throws Exception {
             // given
             dexContainer.withClient(new DexContainer.Client(DexTestcontainersConfiguration.CLIENT_ID,
-                    DexTestcontainersConfiguration.CLIENT_SECRET, DEX_REDIRECT_URI));
+                    DexTestcontainersConfiguration.CLIENT_SECRET, dexRedirectUri()));
             var dexUser = new DexContainer.User("dex-" + UUID.randomUUID(), "dex-" + UUID.randomUUID() + "@example.com", DEX_PASSWORD);
             dexContainer.withUser(dexUser);
             var callback = loginViaDex(storeSocialLoginContext("{\"context\":\"SETUP\"}"), dexUser);
@@ -153,7 +140,7 @@ class SocialSetupFlowIT {
         void getPendingSocialRegistration_otherClientWithoutCookies_notFound() throws Exception {
             // given
             dexContainer.withClient(new DexContainer.Client(DexTestcontainersConfiguration.CLIENT_ID,
-                    DexTestcontainersConfiguration.CLIENT_SECRET, DEX_REDIRECT_URI));
+                    DexTestcontainersConfiguration.CLIENT_SECRET, dexRedirectUri()));
             var dexUser = new DexContainer.User("dex-" + UUID.randomUUID(), "dex-" + UUID.randomUUID() + "@example.com", DEX_PASSWORD);
             dexContainer.withUser(dexUser);
             loginViaDex(storeSocialLoginContext("{\"context\":\"SETUP\"}"), dexUser);
@@ -169,7 +156,7 @@ class SocialSetupFlowIT {
         void getPendingSocialRegistration_otherClientWithOwnSession_notFound() throws Exception {
             // given
             dexContainer.withClient(new DexContainer.Client(DexTestcontainersConfiguration.CLIENT_ID,
-                    DexTestcontainersConfiguration.CLIENT_SECRET, DEX_REDIRECT_URI));
+                    DexTestcontainersConfiguration.CLIENT_SECRET, dexRedirectUri()));
             var dexUser = new DexContainer.User("dex-" + UUID.randomUUID(), "dex-" + UUID.randomUUID() + "@example.com", DEX_PASSWORD);
             dexContainer.withUser(dexUser);
             var callback = loginViaDex(storeSocialLoginContext("{\"context\":\"SETUP\"}"), dexUser);
@@ -190,7 +177,7 @@ class SocialSetupFlowIT {
         void setupWithoutLocalRegistration_signsInNewAdminWithDexEmail() throws Exception {
             // given
             dexContainer.withClient(new DexContainer.Client(DexTestcontainersConfiguration.CLIENT_ID,
-                    DexTestcontainersConfiguration.CLIENT_SECRET, DEX_REDIRECT_URI));
+                    DexTestcontainersConfiguration.CLIENT_SECRET, dexRedirectUri()));
             var dexUser = new DexContainer.User("dex-" + UUID.randomUUID(), "dex-" + UUID.randomUUID() + "@example.com", DEX_PASSWORD);
             dexContainer.withUser(dexUser);
             var householdId = UUID.randomUUID();
@@ -205,7 +192,7 @@ class SocialSetupFlowIT {
 
             // when
             var setup = post(pendingRegistration.cookies(), BASE_PATH + "/household/setup", setupBody);
-            var meResponse = completeSpaLogin(setup.cookies());
+            var meResponse = get(setup.cookies(), URI.create(BASE_PATH + "/me")).response();
 
             // then
             assertThat(toSignedInMember(meResponse)).isEqualTo(expected);
@@ -215,7 +202,7 @@ class SocialSetupFlowIT {
         void setupWithoutLocalRegistration_meReportsSocialLoginOnly() throws Exception {
             // given
             dexContainer.withClient(new DexContainer.Client(DexTestcontainersConfiguration.CLIENT_ID,
-                    DexTestcontainersConfiguration.CLIENT_SECRET, DEX_REDIRECT_URI));
+                    DexTestcontainersConfiguration.CLIENT_SECRET, dexRedirectUri()));
             var dexUser = new DexContainer.User("dex-" + UUID.randomUUID(), "dex-" + UUID.randomUUID() + "@example.com", DEX_PASSWORD);
             dexContainer.withUser(dexUser);
             var householdId = UUID.randomUUID();
@@ -229,35 +216,22 @@ class SocialSetupFlowIT {
 
             // when
             var setup = post(pendingRegistration.cookies(), BASE_PATH + "/household/setup", setupBody);
-            var meResponse = completeSpaLogin(setup.cookies());
+            var meResponse = get(setup.cookies(), URI.create(BASE_PATH + "/me")).response();
 
             // then
             assertThat(objectMapper.readTree(meResponse.getResponseBody()).get("socialLoginOnly").asBoolean()).isTrue();
         }
-    }
 
-    @Nested
-    class householdSetupStartedFromSpaAuthorization {
-
-        /**
-         * Like a fresh browser: the SPA's own login reached /oauth2/authorize first, which saved that
-         * request before sending the user to /login. Completing the setup must not resume this stale
-         * request, its authorization request no longer exists.
-         */
         @Test
-        void completingSpaLogin_endsAtDefaultTargetInsteadOfStaleAuthorizationRequest() throws Exception {
+        void setupWithoutLocalRegistration_meReturns200() throws Exception {
             // given
             dexContainer.withClient(new DexContainer.Client(DexTestcontainersConfiguration.CLIENT_ID,
-                    DexTestcontainersConfiguration.CLIENT_SECRET, DEX_REDIRECT_URI));
+                    DexTestcontainersConfiguration.CLIENT_SECRET, dexRedirectUri()));
             var dexUser = new DexContainer.User("dex-" + UUID.randomUUID(), "dex-" + UUID.randomUUID() + "@example.com", DEX_PASSWORD);
             dexContainer.withUser(dexUser);
             var householdId = UUID.randomUUID();
             createdHouseholdIds.add(householdId);
-            var spaAuthorization = get(NO_COOKIES, URI.create(SPA_LOGIN_PATH));
-            var staleAuthorize = get(spaAuthorization.cookies(), spaAuthorization.response().getResponseHeaders().getLocation());
-            var csrfPreflight = get(staleAuthorize.cookies(), URI.create(BASE_PATH + "/members/availability?email=social%40example.com"));
-            var cookiesWithContext = post(csrfPreflight.cookies(), BASE_PATH + "/auth/social-context", "{\"context\":\"SETUP\"}").cookies();
-            var callback = loginViaDex(cookiesWithContext, dexUser);
+            var callback = loginViaDex(storeSocialLoginContext("{\"context\":\"SETUP\"}"), dexUser);
             var setupBody = """
                     {"household": {"id": "%s", "name": "Social Household"},
                      "member": {"id": "%s", "name": "Requested Name", "email": "ignored@example.com"}}
@@ -265,10 +239,35 @@ class SocialSetupFlowIT {
             var setup = post(callback.cookies(), BASE_PATH + "/household/setup", setupBody);
 
             // when
-            var finalRedirect = followBackendRedirects(get(setup.cookies(), URI.create(SPA_LOGIN_PATH)));
+            var meResponse = get(setup.cookies(), URI.create(BASE_PATH + "/me")).response();
 
             // then
-            assertThat(finalRedirect).hasPath("/").hasNoQuery();
+            assertThat(meResponse.getStatus().value()).isEqualTo(200);
+        }
+
+        @Test
+        void setupWithoutLocalRegistration_oldSessionIdRejected() throws Exception {
+            // given
+            dexContainer.withClient(new DexContainer.Client(DexTestcontainersConfiguration.CLIENT_ID,
+                    DexTestcontainersConfiguration.CLIENT_SECRET, dexRedirectUri()));
+            var dexUser = new DexContainer.User("dex-" + UUID.randomUUID(), "dex-" + UUID.randomUUID() + "@example.com", DEX_PASSWORD);
+            dexContainer.withUser(dexUser);
+            var householdId = UUID.randomUUID();
+            createdHouseholdIds.add(householdId);
+            var callback = loginViaDex(storeSocialLoginContext("{\"context\":\"SETUP\"}"), dexUser);
+            var setupBody = """
+                    {"household": {"id": "%s", "name": "Social Household"},
+                     "member": {"id": "%s", "name": "Requested Name", "email": "ignored@example.com"}}
+                    """.formatted(householdId, UUID.randomUUID());
+            var setup = post(callback.cookies(), BASE_PATH + "/household/setup", setupBody);
+            var oldSessionCookies = new LinkedHashMap<>(setup.cookies());
+            oldSessionCookies.put(SESSION_COOKIE_NAME, callback.cookies().get(SESSION_COOKIE_NAME));
+
+            // when
+            var meResponse = get(oldSessionCookies, URI.create(BASE_PATH + "/me")).response();
+
+            // then
+            assertThat(meResponse.getStatus().value()).isEqualTo(401);
         }
     }
 
@@ -279,7 +278,7 @@ class SocialSetupFlowIT {
         void joinWithoutLocalRegistration_signsInNewMemberWithDexEmail() throws Exception {
             // given
             dexContainer.withClient(new DexContainer.Client(DexTestcontainersConfiguration.CLIENT_ID,
-                    DexTestcontainersConfiguration.CLIENT_SECRET, DEX_REDIRECT_URI));
+                    DexTestcontainersConfiguration.CLIENT_SECRET, dexRedirectUri()));
             var dexUser = new DexContainer.User("dex-" + UUID.randomUUID(), "dex-" + UUID.randomUUID() + "@example.com", DEX_PASSWORD);
             dexContainer.withUser(dexUser);
             var household = householdRepository.save(Instancio.create(HouseholdEntity.class));
@@ -295,17 +294,69 @@ class SocialSetupFlowIT {
 
             // when
             var join = post(callback.cookies(), BASE_PATH + "/invite/" + inviteToken + "/join", joinBody);
-            var meResponse = completeSpaLogin(join.cookies());
+            var meResponse = get(join.cookies(), URI.create(BASE_PATH + "/me")).response();
 
             // then
             assertThat(toSignedInMember(meResponse)).isEqualTo(expected);
         }
 
         @Test
+        void joinWithoutLocalRegistration_meReturns200() throws Exception {
+            // given
+            dexContainer.withClient(new DexContainer.Client(DexTestcontainersConfiguration.CLIENT_ID,
+                    DexTestcontainersConfiguration.CLIENT_SECRET, dexRedirectUri()));
+            var dexUser = new DexContainer.User("dex-" + UUID.randomUUID(), "dex-" + UUID.randomUUID() + "@example.com", DEX_PASSWORD);
+            dexContainer.withUser(dexUser);
+            var household = householdRepository.save(Instancio.create(HouseholdEntity.class));
+            createdHouseholdIds.add(household.id());
+            var inviteToken = UUID.randomUUID();
+            inviteRepository.save(new InviteEntity(null, household.id(), inviteToken, LocalDate.now().plusDays(7)));
+            var callback = loginViaDex(storeSocialLoginContext(
+                    "{\"context\":\"INVITE\",\"inviteToken\":\"%s\"}".formatted(inviteToken)), dexUser);
+            var joinBody = """
+                    {"id": "%s", "name": "Requested Name", "email": "ignored@example.com"}
+                    """.formatted(UUID.randomUUID());
+            var join = post(callback.cookies(), BASE_PATH + "/invite/" + inviteToken + "/join", joinBody);
+
+            // when
+            var meResponse = get(join.cookies(), URI.create(BASE_PATH + "/me")).response();
+
+            // then
+            assertThat(meResponse.getStatus().value()).isEqualTo(200);
+        }
+
+        @Test
+        void joinWithoutLocalRegistration_oldSessionIdRejected() throws Exception {
+            // given
+            dexContainer.withClient(new DexContainer.Client(DexTestcontainersConfiguration.CLIENT_ID,
+                    DexTestcontainersConfiguration.CLIENT_SECRET, dexRedirectUri()));
+            var dexUser = new DexContainer.User("dex-" + UUID.randomUUID(), "dex-" + UUID.randomUUID() + "@example.com", DEX_PASSWORD);
+            dexContainer.withUser(dexUser);
+            var household = householdRepository.save(Instancio.create(HouseholdEntity.class));
+            createdHouseholdIds.add(household.id());
+            var inviteToken = UUID.randomUUID();
+            inviteRepository.save(new InviteEntity(null, household.id(), inviteToken, LocalDate.now().plusDays(7)));
+            var callback = loginViaDex(storeSocialLoginContext(
+                    "{\"context\":\"INVITE\",\"inviteToken\":\"%s\"}".formatted(inviteToken)), dexUser);
+            var joinBody = """
+                    {"id": "%s", "name": "Requested Name", "email": "ignored@example.com"}
+                    """.formatted(UUID.randomUUID());
+            var join = post(callback.cookies(), BASE_PATH + "/invite/" + inviteToken + "/join", joinBody);
+            var oldSessionCookies = new LinkedHashMap<>(join.cookies());
+            oldSessionCookies.put(SESSION_COOKIE_NAME, callback.cookies().get(SESSION_COOKIE_NAME));
+
+            // when
+            var meResponse = get(oldSessionCookies, URI.create(BASE_PATH + "/me")).response();
+
+            // then
+            assertThat(meResponse.getStatus().value()).isEqualTo(401);
+        }
+
+        @Test
         void dexLoginWithInviteContext_redirectsBackToInvitePage() throws Exception {
             // given
             dexContainer.withClient(new DexContainer.Client(DexTestcontainersConfiguration.CLIENT_ID,
-                    DexTestcontainersConfiguration.CLIENT_SECRET, DEX_REDIRECT_URI));
+                    DexTestcontainersConfiguration.CLIENT_SECRET, dexRedirectUri()));
             var dexUser = new DexContainer.User("dex-" + UUID.randomUUID(), "dex-" + UUID.randomUUID() + "@example.com", DEX_PASSWORD);
             dexContainer.withUser(dexUser);
             var inviteToken = UUID.randomUUID();
@@ -328,16 +379,6 @@ class SocialSetupFlowIT {
                 currentUser.get("household").get("id").asString(), member.get("isAdmin").asBoolean());
     }
 
-    /**
-     * Same continuation as the SPA's completeSilentOAuth2Login(): the login at the embedded
-     * Authorization Server, whose resulting session is what business endpoints accept.
-     */
-    private EntityExchangeResult<String> completeSpaLogin(Map<String, String> cookies) {
-        var authorize = get(cookies, get(cookies, URI.create(SPA_LOGIN_PATH)).response().getResponseHeaders().getLocation());
-        var spaCallback = get(authorize.cookies(), authorize.response().getResponseHeaders().getLocation());
-        return get(spaCallback.cookies(), URI.create(BASE_PATH + "/me")).response();
-    }
-
     private Map<String, String> storeSocialLoginContext(String context) {
         var csrfPreflight = get(NO_COOKIES, URI.create(BASE_PATH + "/members/availability?email=social%40example.com"));
         return post(csrfPreflight.cookies(), BASE_PATH + "/auth/social-context", context).cookies();
@@ -355,7 +396,7 @@ class SocialSetupFlowIT {
 
     /**
      * Follows Dex's redirects to its password login form, submits the user's credentials and
-     * follows the redirects until Dex sends the browser back to {@link #DEX_REDIRECT_URI}.
+     * follows the redirects until Dex sends the browser back to {@link #dexRedirectUri()}.
      */
     private URI loginAtDex(URI authorizationUri, DexContainer.User dexUser) throws IOException, InterruptedException {
         try (var dexBrowser = HttpClient.newBuilder()
@@ -372,7 +413,7 @@ class SocialSetupFlowIT {
                     .build();
             var location = dexBrowser.send(loginRequest, HttpResponse.BodyHandlers.ofString()).headers()
                     .firstValue("Location").map(formAction::resolve).orElseThrow();
-            while (!location.toString().startsWith(DEX_REDIRECT_URI)) {
+            while (!location.toString().startsWith(dexRedirectUri())) {
                 var redirect = dexBrowser.send(HttpRequest.newBuilder(location).build(), HttpResponse.BodyHandlers.ofString());
                 location = location.resolve(redirect.headers().firstValue("Location").orElseThrow());
             }
@@ -382,8 +423,12 @@ class SocialSetupFlowIT {
 
     private HttpResponse<String> followRedirectsUntilPage(HttpClient dexBrowser, URI uri) throws IOException, InterruptedException {
         var response = dexBrowser.send(HttpRequest.newBuilder(uri).build(), HttpResponse.BodyHandlers.ofString());
-        while (response.headers().firstValue("Location").isPresent()) {
+        // Bounded, so a misconfigured provider (e.g. a redirect loop on /login) fails the test instead of hanging it
+        for (var redirects = 0; response.headers().firstValue("Location").isPresent(); redirects++) {
             var next = response.uri().resolve(response.headers().firstValue("Location").get());
+            if (redirects == MAX_REDIRECTS) {
+                throw new IllegalStateException("Too many redirects, last to " + next);
+            }
             response = dexBrowser.send(HttpRequest.newBuilder(next).build(), HttpResponse.BodyHandlers.ofString());
         }
         return response;
@@ -410,27 +455,16 @@ class SocialSetupFlowIT {
         return joiner.toString();
     }
 
-    /**
-     * Follows the redirects within the backend's own OAuth2 endpoints and returns the first
-     * redirect target outside them, i.e. where the browser finally lands.
-     */
-    private URI followBackendRedirects(HttpStep start) {
-        var step = start;
-        var location = step.response().getResponseHeaders().getLocation();
-        for (var redirects = 0; redirects < MAX_REDIRECTS && isBackendOAuth2Endpoint(location); redirects++) {
-            step = get(step.cookies(), location);
-            location = step.response().getResponseHeaders().getLocation();
-        }
-        return location;
-    }
-
-    private boolean isBackendOAuth2Endpoint(URI location) {
-        return location != null
-                && (location.getPath().startsWith("/oauth2/") || location.getPath().startsWith("/login/oauth2/"));
+    // Boot's default redirect URI {baseUrl}/login/oauth2/code/{registrationId}, as seen from this server
+    private String dexRedirectUri() {
+        return "http://localhost:" + port + CALLBACK_PATH;
     }
 
     private HttpStep get(Map<String, String> cookies, URI uri) {
-        var response = applyCookies(restTestClient.get().uri(uri), cookies).exchange().returnResult(String.class);
+        // Like the SPA's fetch calls; a browser navigation (text/html) would be redirected to the login page instead of a 401
+        var response = applyCookies(restTestClient.get().uri(uri), cookies)
+                .accept(MediaType.APPLICATION_JSON)
+                .exchange().returnResult(String.class);
         return new HttpStep(mergeCookies(cookies, response), response);
     }
 

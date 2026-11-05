@@ -38,13 +38,11 @@ import static org.awaitility.Awaitility.await;
 import static org.instancio.Select.field;
 
 /**
- * {@code webEnvironment = MOCK} (not {@code NONE}): {@code setupService.setupHousehold(...)} also
- * establishes an authenticated session via {@code AccountSessionAuthenticator}, which needs a real
- * {@code WebApplicationContext} (for {@code AuthenticationConfiguration} autoconfiguration and the
- * {@code request}/{@code response} scopes) plus a thread-bound request (bound per test via
- * {@link #bindRequest()}).
+ * {@code webEnvironment = MOCK} (not {@code NONE}): {@code setupService.setupHousehold(...)} looks up
+ * a pending social registration in the HTTP session ({@code PendingSocialRegistrationStore}), which
+ * needs a thread-bound request (bound per test via {@link #bindRequest()}).
  */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK, properties = {"librehousehold.security.oauth2-client.client-secret=test-client-secret"})
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
 @Import(TestcontainersConfiguration.class)
 @ExtendWith(InstancioExtension.class)
 class HouseholdManagementServiceIT {

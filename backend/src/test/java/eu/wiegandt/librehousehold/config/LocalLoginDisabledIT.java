@@ -19,9 +19,6 @@ import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureRestTe
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
-import org.springframework.test.util.TestSocketUtils;
 import org.springframework.test.web.servlet.client.EntityExchangeResult;
 import org.springframework.test.web.servlet.client.RestTestClient;
 import org.springframework.util.LinkedMultiValueMap;
@@ -35,10 +32,10 @@ import static org.instancio.Select.field;
 
 /**
  * Verifies that turning local login off also locks the form login and registering with a password
- * server-side, not only in the client. Uses a port picked before startup for the reason given in {@link CsrfProtectionIT}.
+ * server-side, not only in the client: without form login, {@code POST /v1/login} reaches the
+ * controller, which rejects it.
  */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT, properties = {
-        "librehousehold.security.oauth2-client.client-secret=test-client-secret",
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
         "librehousehold.security.local-login.enabled=false"
 })
 @Import(TestcontainersConfiguration.class)
@@ -46,22 +43,11 @@ import static org.instancio.Select.field;
 @ExtendWith(InstancioExtension.class)
 class LocalLoginDisabledIT {
 
-    private static final int SERVER_PORT = TestSocketUtils.findAvailableTcpPort();
-    private static final String SERVER_BASE_URL = "http://localhost:" + SERVER_PORT;
-
     private static final String XSRF_TOKEN_COOKIE_NAME = "XSRF-TOKEN";
     private static final String XSRF_TOKEN_HEADER_NAME = "X-XSRF-TOKEN";
     private static final String RAW_PASSWORD = "correct horse battery staple";
     private static final Problem LOCAL_LOGIN_DISABLED_PROBLEM = new Problem(403, "/problems/local-login-disabled",
-            "Local login disabled", "This instance only allows registering via a social login provider.");
-
-    @DynamicPropertySource
-    static void serverPortProperties(DynamicPropertyRegistry registry) {
-        registry.add("server.port", () -> SERVER_PORT);
-        registry.add("librehousehold.security.oauth2-authorization-server.issuer", () -> SERVER_BASE_URL);
-        registry.add("librehousehold.security.oauth2-client.redirect-uri",
-                () -> SERVER_BASE_URL + "/login/oauth2/code/spa-backend-client");
-    }
+            "Local login disabled", "This instance only allows logging in and registering via a social login provider.");
 
     @Autowired
     private RestTestClient restTestClient;
@@ -96,7 +82,7 @@ class LocalLoginDisabledIT {
     class formLogin {
 
         @Test
-        void validCredentials_redirectsToLoginWithLocalLoginDisabledReason() {
+        void validCredentials_rejectedWithLocalLoginDisabledProblem() {
             // given
             var household = householdRepository.save(Instancio.create(HouseholdEntity.class));
             createdHouseholdId = household.id();
@@ -111,11 +97,11 @@ class LocalLoginDisabledIT {
                     .exchange().returnResult(String.class)
                     .getResponseCookies().getFirst(XSRF_TOKEN_COOKIE_NAME).getValue();
             var credentials = new LinkedMultiValueMap<String, String>();
-            credentials.add("username", email);
+            credentials.add("email", email);
             credentials.add("password", RAW_PASSWORD);
 
             // when
-            var response = restTestClient.post().uri("/login")
+            var response = restTestClient.post().uri("/v1/login")
                     .cookie(XSRF_TOKEN_COOKIE_NAME, xsrfToken)
                     .header(XSRF_TOKEN_HEADER_NAME, xsrfToken)
                     .contentType(MediaType.APPLICATION_FORM_URLENCODED)
@@ -124,8 +110,7 @@ class LocalLoginDisabledIT {
                     .returnResult(String.class);
 
             // then
-            assertThat(response.getResponseHeaders().getLocation())
-                    .hasPath("/login").hasQuery("error&reason=local-login-disabled");
+            assertThat(toProblem(response)).isEqualTo(LOCAL_LOGIN_DISABLED_PROBLEM);
         }
     }
 

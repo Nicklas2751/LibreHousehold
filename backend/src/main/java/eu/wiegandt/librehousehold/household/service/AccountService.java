@@ -1,6 +1,6 @@
 package eu.wiegandt.librehousehold.household.service;
 
-import eu.wiegandt.librehousehold.household.exception.EmailNotVerifiedException;
+import eu.wiegandt.librehousehold.household.EmailNotVerifiedException;
 import eu.wiegandt.librehousehold.household.exception.InvalidPasswordException;
 import eu.wiegandt.librehousehold.household.exception.MemberNotFoundException;
 import eu.wiegandt.librehousehold.household.model.AccountEntity;

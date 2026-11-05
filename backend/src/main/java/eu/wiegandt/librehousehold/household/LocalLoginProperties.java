@@ -9,7 +9,7 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * {@link DefaultValue}, so local login stays available unless a self-hoster explicitly turns it off.
  * <p>
  * {@code GET /auth/discover} tells the client which login methods to render. Turned off, the
- * server also rejects the form login ({@code POST /login}, see {@code LocalLoginDisabledFilter}) and
+ * server also rejects the form login ({@code POST /login}, see {@code SecurityConfig}) and
  * setup or invite join with a password; registering via social login stays possible.
  * <p>
  * Part of the module's public API: the household services enforce the switch, while {@code config}

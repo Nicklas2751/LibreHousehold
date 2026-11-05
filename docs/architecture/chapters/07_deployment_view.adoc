@@ -82,10 +82,22 @@ Can be either a (cloud) hosted database service or a containerized database inst
 [[section-reverse-proxy-requirements]]
 === Reverse Proxy Requirements
 
-Any future configuration in front of the backend must meet these requirements:
+No production reverse-proxy configuration exists yet. Any future configuration in front of the backend must meet these requirements:
 
+* **Routes to the backend:** `/v1/**` (REST API including `POST /v1/login` and `POST /v1/logout`), `/oauth2/authorization/**` (start of a social login) and `/login/oauth2/code/**` (provider callback). Everything else, including the SPA route `/login`, is served by the frontend.
 * **Client IP:** The proxy must *overwrite* `X-Forwarded-For` with the IP of the connecting client instead of appending to a value sent by the client.
 The backend trusts this header (`server.forward-headers-strategy: framework`) and keys its rate limits by it (RATE1 in xref:08_concepts.adoc[Chapter 8]); an appended header would let a client choose its own IP and bypass every IP-keyed limit.
+* **Host and scheme:** The same applies to `X-Forwarded-Host`, `X-Forwarded-Proto` and `X-Forwarded-Port`: the proxy sets them from the actual request instead of passing on client values, since the backend builds absolute URLs such as redirects from them.
+
+[[section-social-login-provider-requirements]]
+=== Social Login Provider Requirements
+
+Social login is optional. Providers are configured with Spring Boot's standard `spring.security.oauth2.client.registration.*` and `...provider.*` properties (xref:../adrs/adr-016.adoc[ADR 016]). Each registration must meet these requirements. The scope rules are checked at startup (`SocialLoginRegistrationCheck`), and the application refuses to start if one is violated; the others are the operator's responsibility:
+
+* **Scopes:** an OIDC registration (issuer set) requests `openid`, and a registration that requests `openid` has an issuer. Every registration requests the e-mail address: `email` for OIDC providers, `user:email` for GitHub. Spring Boot's defaults are not sufficient for every provider: Google's built-in defaults are `openid,profile,email`, GitHub's only `read:user`, and a provider configured via issuer discovery gets no scopes at all.
+* **Redirect URI:** an absolute `redirect-uri` (`https://<public host>/login/oauth2/code/<registrationId>`), registered exactly like that at the provider. The `{baseUrl}` placeholder is meant for local development and tests only.
+* **Immutable subject:** `user-name-attribute` must name an attribute that never changes for an account (`sub` for OIDC, `id` for GitHub), because the local account is linked to it (xref:../adrs/adr-018.adoc[ADR 018]). An e-mail address or a login name is not suitable.
+* **PKCE:** the provider must accept PKCE for confidential clients. PKCE is always sent and cannot be switched off; providers that reject it are not supported. Google, GitHub and Dex support it.
 
 === Deployment Mapping
 

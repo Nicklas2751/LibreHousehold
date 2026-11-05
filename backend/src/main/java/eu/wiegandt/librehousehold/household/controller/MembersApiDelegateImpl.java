@@ -2,6 +2,7 @@ package eu.wiegandt.librehousehold.household.controller;
 
 import eu.wiegandt.librehousehold.api.MembersApiDelegate;
 import eu.wiegandt.librehousehold.household.service.AccountService;
+import eu.wiegandt.librehousehold.household.service.AccountSessionSignIn;
 import eu.wiegandt.librehousehold.household.service.AccountTokenService;
 import eu.wiegandt.librehousehold.household.service.MemberManagementService;
 import eu.wiegandt.librehousehold.model.EmailAvailability;
@@ -25,12 +26,14 @@ public class MembersApiDelegateImpl implements MembersApiDelegate {
     private final MemberManagementService memberManagementService;
     private final AccountService accountService;
     private final AccountTokenService accountTokenService;
+    private final AccountSessionSignIn accountSessionSignIn;
 
     public MembersApiDelegateImpl(MemberManagementService memberManagementService, AccountService accountService,
-                                   AccountTokenService accountTokenService) {
+                                  AccountTokenService accountTokenService, AccountSessionSignIn accountSessionSignIn) {
         this.memberManagementService = memberManagementService;
         this.accountService = accountService;
         this.accountTokenService = accountTokenService;
+        this.accountSessionSignIn = accountSessionSignIn;
     }
 
     @Override
@@ -55,9 +58,12 @@ public class MembersApiDelegateImpl implements MembersApiDelegate {
         return ResponseEntity.ok(memberManagementService.resolveInvite(token));
     }
 
+    // Signs in only after the join transaction committed, so a rollback never leaves a session for
+    // a member that does not exist
     @Override
     public ResponseEntity<Member> joinHousehold(UUID token, MemberRegistration memberRegistration) {
         var member = memberManagementService.joinHousehold(token, memberRegistration);
+        accountSessionSignIn.signIn(member.getId());
         return ResponseEntity.created(URI.create("/household/" + member.getId() + "/members/" + member.getId()))
                 .body(member);
     }

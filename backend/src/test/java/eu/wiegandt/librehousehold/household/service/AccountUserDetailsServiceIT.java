@@ -28,7 +28,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.within;
 import static org.instancio.Select.field;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, properties = {"librehousehold.security.oauth2-client.client-secret=test-client-secret"})
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @Import(TestcontainersConfiguration.class)
 @ExtendWith(InstancioExtension.class)
 class AccountUserDetailsServiceIT {
@@ -96,7 +96,7 @@ class AccountUserDetailsServiceIT {
             var rawPassword = "correct horse battery staple";
             accountService.createAccount(member.getId(), rawPassword);
             var passwordHash = accountRepository.findById(member.getId()).orElseThrow().passwordHash();
-            var expectedPrincipal = new AccountPrincipal(member.email(), passwordHash, false);
+            var expectedPrincipal = new AccountPrincipal(member.getId(), household.id(), passwordHash, false);
 
             // when
             var result = accountUserDetailsService.loadUserByUsername(member.email());

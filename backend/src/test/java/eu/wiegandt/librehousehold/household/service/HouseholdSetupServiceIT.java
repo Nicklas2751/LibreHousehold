@@ -2,7 +2,6 @@ package eu.wiegandt.librehousehold.household.service;
 
 import eu.wiegandt.librehousehold.TestcontainersConfiguration;
 import eu.wiegandt.librehousehold.household.ExternalIdentity;
-import eu.wiegandt.librehousehold.household.MemberQuery;
 import eu.wiegandt.librehousehold.household.PendingSocialRegistrationStore;
 import eu.wiegandt.librehousehold.household.model.AccountEntity;
 import eu.wiegandt.librehousehold.household.exception.HouseholdAlreadyExistsException;
@@ -43,13 +42,11 @@ import static org.awaitility.Awaitility.await;
 import static org.instancio.Select.field;
 
 /**
- * {@code webEnvironment = MOCK} (not {@code NONE}): {@code setupHousehold} now also establishes an
- * authenticated session via {@code AccountSessionAuthenticator}, which needs a real
- * {@code WebApplicationContext} (for {@code AuthenticationConfiguration} autoconfiguration and the
- * {@code request}/{@code response} scopes) plus a thread-bound request (bound per test via
- * {@link #bindRequest()}).
+ * {@code webEnvironment = MOCK} (not {@code NONE}): {@code setupHousehold} looks up a pending social
+ * registration in the HTTP session ({@code PendingSocialRegistrationStore}), which needs a
+ * thread-bound request (bound per test via {@link #bindRequest()}).
  */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK, properties = {"librehousehold.security.oauth2-client.client-secret=test-client-secret"})
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
 @Import(TestcontainersConfiguration.class)
 @ExtendWith(InstancioExtension.class)
 class HouseholdSetupServiceIT {
@@ -90,7 +87,7 @@ class HouseholdSetupServiceIT {
     private PendingSocialRegistrationStore pendingSocialRegistrationStore;
 
     @Autowired
-    private MemberQuery memberQuery;
+    private AccountService accountService;
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
@@ -271,8 +268,8 @@ class HouseholdSetupServiceIT {
         service.setupHousehold(new HouseholdSetup(household, memberWithValidEmail()));
 
         // then
-        assertThat(memberQuery.findEmailByExternalIdentity(identity.registrationId(), identity.subject()))
-                .contains(identity.email());
+        assertThat(accountService.findMemberIdByExternalIdentity(identity.registrationId(), identity.subject()))
+                .contains(memberRepository.findByEmail(identity.email()).orElseThrow().id());
     }
 
     @Test

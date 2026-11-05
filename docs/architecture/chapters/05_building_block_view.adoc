@@ -72,6 +72,12 @@ grows:
   `core` only — it must **not** depend on any other business module. Publishing Domain Events to
   `Tasks`/`Expenses`/`Notifications` does not violate this rule, since `Household` does not depend
   on its listeners; it merely announces facts.
+  Signing a member in (after household setup or invite join, after a social login, and ending
+  sessions on a password reset) does not violate it either: `Household` injects the framework
+  beans `SessionAuthenticationStrategy` and `SessionRegistry` by type, which `config` provides at
+  runtime (`SessionManagementConfig`). These are Spring Security types, not `config` code, so no
+  module dependency arises (see xref:08_concepts.adoc#section-concepts[Chapter 8, Authentication
+  and Authorization]).
 * No fixed rule exists yet for dependencies *among* the remaining business modules (`Tasks`,
   `Expenses`, `Statistics`, `Setup`, `Administration`, `UserSettings`, `Notifications`); the
   guiding principle is to keep dependencies as few as possible, extending them only via Named

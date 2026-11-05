@@ -84,7 +84,7 @@ paths:
                 type: "/problems/local-login-disabled"
                 title: "Local login disabled"
                 status: 403
-                detail: "This instance only allows registering via a social login provider."
+                detail: "This instance only allows logging in and registering via a social login provider."
         "409":
           description: >
             Either the household already exists, or an account already exists for
@@ -1487,7 +1487,7 @@ paths:
                 type: "/problems/local-login-disabled"
                 title: "Local login disabled"
                 status: 403
-                detail: "This instance only allows registering via a social login provider."
+                detail: "This instance only allows logging in and registering via a social login provider."
         "404":
           description: Token not found or expired.
           content:
@@ -1620,12 +1620,108 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
 
+  /login:
+    post:
+      summary: Log in with e-mail and password
+      description: >
+        Local login, handled by Spring Security's form login filter, not by a controller. On
+        success, the session ID is renewed and a fresh XSRF-TOKEN cookie is set; the session
+        cookie is the only credential. Like every state-changing request, it requires the
+        X-XSRF-TOKEN header, so a client without an XSRF-TOKEN cookie first fetches one with
+        any GET request, e.g. GET /auth/discover. Failures are answered with problem details;
+        a locked account and rate limiting tell the client how long to wait via Retry-After.
+      tags:
+        - session
+      operationId: login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: "#/components/schemas/LoginCredentials"
+      responses:
+        "204":
+          description: Logged in. The response sets the renewed session cookie and a fresh XSRF-TOKEN cookie.
+        "401":
+          description: The e-mail address or the password is wrong.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              example:
+                type: "/problems/invalid-credentials"
+                title: "Unauthorized"
+                status: 401
+                detail: "Incorrect email or password."
+        "403":
+          description: >
+            The login is refused although the credentials may be right: the e-mail address is not
+            verified yet (/problems/email-not-verified), this instance only allows social login
+            (/problems/local-login-disabled), or the account is temporarily locked after repeated
+            failed attempts (/problems/account-locked, see AccountLockedProblem and Retry-After).
+          headers:
+            Retry-After:
+              description: Only for /problems/account-locked. Seconds until the lock ends.
+              schema:
+                type: integer
+                example: 900
+          content:
+            application/problem+json:
+              schema:
+                # /problems/account-locked additionally carries lockedUntil, see AccountLockedProblem
+                $ref: '#/components/schemas/Problem'
+              examples:
+                emailNotVerified:
+                  value:
+                    type: "/problems/email-not-verified"
+                    title: "Forbidden"
+                    status: 403
+                    detail: "This action requires a verified email address."
+                localLoginDisabled:
+                  value:
+                    type: "/problems/local-login-disabled"
+                    title: "Local login disabled"
+                    status: 403
+                    detail: "This instance only allows logging in and registering via a social login provider."
+                accountLocked:
+                  value:
+                    type: "/problems/account-locked"
+                    title: "Forbidden"
+                    status: 403
+                    detail: "This account is temporarily locked due to repeated failed login attempts."
+                    lockedUntil: "2026-11-03T18:45:00Z"
+        "429":
+          description: Too many login attempts from this client or for this e-mail address.
+          headers:
+            Retry-After:
+              description: Seconds until the next attempt is allowed.
+              schema:
+                type: integer
+                example: 42
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              example:
+                type: "/problems/too-many-requests"
+                title: "Too Many Requests"
+                status: 429
+                detail: "Too many requests. Please try again later."
+        default:
+          description: An error occurred.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
   /logout:
     post:
       summary: Log out the current session
       description: >
-        Ends the current session. Idempotent - always succeeds, even without
-        an active session.
+        Ends the current session: the server invalidates it, deletes the session cookie and sets
+        a fresh XSRF-TOKEN cookie. Idempotent - always succeeds, even without an active session.
+        Handled by Spring Security's logout filter, not by a controller.
       tags:
         - session
       operationId: logout
@@ -1782,7 +1878,11 @@ paths:
       description: >
         Stores in the session why the following social login redirect
         (/oauth2/authorization/{registrationId}) is started: login, household setup or invite
-        join. The server evaluates it when the provider redirects back.
+        join. The server evaluates it when the provider redirects back: LOGIN signs the linked
+        member in and redirects to /app/dashboard, or to /login?error&reason=social-login-no-account
+        without a linked member; SETUP and INVITE keep the external identity as pending
+        registration and redirect to /setup?social or /invite/{token}?social. Provider tokens do
+        not survive the callback.
       tags:
         - session
       operationId: storeSocialLoginContext
@@ -2957,6 +3057,37 @@ components:
           format: uuid
           description: The email verification token from the verification link.
           example: "f3ce1a6b-aba1-478d-9f01-ec484f23ce60"
+
+    LoginCredentials:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: "max@example.com"
+        password:
+          type: string
+          format: password
+          example: "secureP4ssword!"
+
+    AccountLockedProblem:
+      description: >
+        Problem details for /problems/account-locked: the account is temporarily locked after
+        repeated failed login attempts.
+      allOf:
+        - $ref: '#/components/schemas/Problem'
+        - type: object
+          required:
+            - lockedUntil
+          properties:
+            lockedUntil:
+              type: string
+              format: date-time
+              description: When the lock ends.
+              example: "2026-11-03T18:45:00Z"
 
     PasswordResetRequest:
       type: object

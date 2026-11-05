@@ -5,7 +5,6 @@ import eu.wiegandt.librehousehold.model.Member;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -67,13 +66,4 @@ public interface MemberQuery {
      * @return {@code true} if the member's account has no local password
      */
     boolean isSocialLoginOnly(UUID memberId);
-
-    /**
-     * Returns the e-mail address of the member whose account is linked to the given external identity.
-     *
-     * @param providerId      the client registration ID of the social-login provider
-     * @param externalSubject the provider's stable identifier of the user (e.g. the OIDC {@code sub} claim)
-     * @return the member's e-mail address; empty if no account is linked to this identity
-     */
-    Optional<String> findEmailByExternalIdentity(String providerId, String externalSubject);
 }

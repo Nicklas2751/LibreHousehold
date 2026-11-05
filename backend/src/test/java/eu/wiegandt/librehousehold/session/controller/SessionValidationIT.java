@@ -3,7 +3,6 @@ package eu.wiegandt.librehousehold.session.controller;
 import eu.wiegandt.librehousehold.api.SessionApiController;
 import eu.wiegandt.librehousehold.household.LocalLoginProperties;
 import eu.wiegandt.librehousehold.config.SocialLoginContextStore;
-import eu.wiegandt.librehousehold.config.SocialLoginProperties;
 import eu.wiegandt.librehousehold.household.HouseholdQuery;
 import eu.wiegandt.librehousehold.household.MemberQuery;
 import eu.wiegandt.librehousehold.household.PasswordReset;
@@ -26,7 +25,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(controllers = SessionApiController.class)
 @Import(SessionApiDelegateImpl.class)
 @ImportAutoConfiguration(JacksonAutoConfiguration.class)
-@EnableConfigurationProperties({SocialLoginProperties.class, LocalLoginProperties.class})
+@EnableConfigurationProperties(LocalLoginProperties.class)
 class SessionValidationIT {
 
     @Autowired

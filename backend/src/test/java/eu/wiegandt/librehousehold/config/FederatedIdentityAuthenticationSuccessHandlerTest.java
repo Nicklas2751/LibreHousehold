@@ -1,7 +1,7 @@
 package eu.wiegandt.librehousehold.config;
 
 import eu.wiegandt.librehousehold.household.ExternalIdentity;
-import eu.wiegandt.librehousehold.household.MemberQuery;
+import eu.wiegandt.librehousehold.household.AccountSignIn;
 import eu.wiegandt.librehousehold.household.PendingSocialRegistrationStore;
 import eu.wiegandt.librehousehold.model.SocialLoginContext;
 import eu.wiegandt.librehousehold.model.SocialLoginContext.ContextEnum;
@@ -18,11 +18,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.mock.web.MockHttpSession;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.FactorGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.context.SecurityContextImpl;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
+import org.springframework.security.oauth2.client.web.OAuth2AuthorizedClientRepository;
 import org.springframework.security.oauth2.core.oidc.IdTokenClaimNames;
 import org.springframework.security.oauth2.core.oidc.OidcIdToken;
 import org.springframework.security.oauth2.core.oidc.StandardClaimNames;
@@ -31,7 +30,6 @@ import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
-import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
 
 import java.time.Instant;
 import java.util.List;
@@ -42,6 +40,8 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.params.provider.Arguments.argumentSet;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
@@ -50,18 +50,21 @@ class FederatedIdentityAuthenticationSuccessHandlerTest {
 
     private static final String PROVIDER_ID = "dev-provider";
     private static final String EXTERNAL_SUBJECT = "external-subject";
-    private static final String MEMBER_EMAIL = "member@example.com";
+    private static final UUID MEMBER_ID = UUID.fromString("c9a4b5d6-e7f8-9012-cdef-ab3456789012");
     private static final String PROVIDER_EMAIL = "provider@example.com";
     private static final UUID INVITE_TOKEN = UUID.fromString("33333333-3333-3333-3333-333333333333");
 
     @Mock
-    private MemberQuery memberQuery;
+    private AccountSignIn accountSignIn;
 
     @Mock
     private SocialLoginContextStore socialLoginContextStore;
 
     @Mock
     private PendingSocialRegistrationStore pendingSocialRegistrationStore;
+
+    @Mock
+    private OAuth2AuthorizedClientRepository authorizedClientRepository;
 
     @InjectMocks
     private FederatedIdentityAuthenticationSuccessHandler successHandler;
@@ -75,82 +78,54 @@ class FederatedIdentityAuthenticationSuccessHandlerTest {
     class onAuthenticationSuccess {
 
         @Test
-        void linkedIdentity_redirectsToSpaContinuation() throws Exception {
+        void linkedIdentity_signsInMember() throws Exception {
+            // given
+            doReturn(new SocialLoginContext(ContextEnum.LOGIN)).when(socialLoginContextStore).consume();
+            doReturn(Optional.of(MEMBER_ID)).when(accountSignIn).signInByExternalIdentity(PROVIDER_ID, EXTERNAL_SUBJECT);
+
+            // when
+            successHandler.onAuthenticationSuccess(new MockHttpServletRequest(), new MockHttpServletResponse(),
+                    externalAuthentication());
+
+            // then
+            verify(accountSignIn).signInByExternalIdentity(PROVIDER_ID, EXTERNAL_SUBJECT);
+        }
+
+        @Test
+        void linkedIdentity_redirectsToDashboard() throws Exception {
             // given
             var response = new MockHttpServletResponse();
             doReturn(new SocialLoginContext(ContextEnum.LOGIN)).when(socialLoginContextStore).consume();
-            doReturn(Optional.of(MEMBER_EMAIL)).when(memberQuery).findEmailByExternalIdentity(PROVIDER_ID, EXTERNAL_SUBJECT);
+            doReturn(Optional.of(MEMBER_ID)).when(accountSignIn).signInByExternalIdentity(PROVIDER_ID, EXTERNAL_SUBJECT);
 
             // when
             successHandler.onAuthenticationSuccess(new MockHttpServletRequest(), response, externalAuthentication());
 
             // then
-            assertThat(response.getRedirectedUrl()).isEqualTo("/oauth2/authorization/spa-backend-client");
+            assertThat(response.getRedirectedUrl()).isEqualTo("/app/dashboard");
         }
 
         @Test
-        void linkedIdentity_authenticatesMemberEmailWithAuthorizationCodeFactor() throws Exception {
-            // given
-            doReturn(new SocialLoginContext(ContextEnum.LOGIN)).when(socialLoginContextStore).consume();
-            doReturn(Optional.of(MEMBER_EMAIL)).when(memberQuery).findEmailByExternalIdentity(PROVIDER_ID, EXTERNAL_SUBJECT);
-            var expected = new SessionAuthentication(MEMBER_EMAIL, true, List.of(FactorGrantedAuthority.AUTHORIZATION_CODE_AUTHORITY));
-
-            // when
-            successHandler.onAuthenticationSuccess(new MockHttpServletRequest(), new MockHttpServletResponse(), externalAuthentication());
-
-            // then
-            var authentication = SecurityContextHolder.getContext().getAuthentication();
-            var result = new SessionAuthentication(authentication.getName(), authentication.isAuthenticated(),
-                    authentication.getAuthorities().stream()
-                            .filter(FactorGrantedAuthority.class::isInstance)
-                            .map(GrantedAuthority::getAuthority)
-                            .toList());
-            assertThat(result).isEqualTo(expected);
-        }
-
-        @Test
-        void linkedIdentity_persistsMemberAuthenticationInHttpSession() throws Exception {
+        void noLinkedIdentity_invalidatesSession() throws Exception {
             // given
             var request = new MockHttpServletRequest();
+            request.getSession();
             doReturn(new SocialLoginContext(ContextEnum.LOGIN)).when(socialLoginContextStore).consume();
-            doReturn(Optional.of(MEMBER_EMAIL)).when(memberQuery).findEmailByExternalIdentity(PROVIDER_ID, EXTERNAL_SUBJECT);
+            doReturn(Optional.empty()).when(accountSignIn).signInByExternalIdentity(PROVIDER_ID, EXTERNAL_SUBJECT);
 
             // when
             successHandler.onAuthenticationSuccess(request, new MockHttpServletResponse(), externalAuthentication());
 
             // then
-            var persistedContext = request.getSession()
-                    .getAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY);
-            assertThat(persistedContext).isEqualTo(SecurityContextHolder.getContext());
-        }
-
-        /**
-         * The SPA continuation starts a fresh authorization: an /oauth2/authorize request saved
-         * before the social login is stale and must not be resumed afterwards.
-         */
-        @Test
-        void linkedIdentity_removesStaleSavedRequest() throws Exception {
-            // given
-            var request = new MockHttpServletRequest("GET", "/oauth2/authorize");
-            var response = new MockHttpServletResponse();
-            var requestCache = new HttpSessionRequestCache();
-            requestCache.saveRequest(request, response);
-            doReturn(new SocialLoginContext(ContextEnum.LOGIN)).when(socialLoginContextStore).consume();
-            doReturn(Optional.of(MEMBER_EMAIL)).when(memberQuery).findEmailByExternalIdentity(PROVIDER_ID, EXTERNAL_SUBJECT);
-
-            // when
-            successHandler.onAuthenticationSuccess(request, response, externalAuthentication());
-
-            // then
-            assertThat(requestCache.getRequest(request, response)).isNull();
+            assertThat(request.getSession(false)).isNull();
         }
 
         @Test
-        void noLinkedIdentity_redirectsToLoginWithNoAccountReason() throws Exception {
+        void noLinkedIdentity_redirectsWithNoAccountReason() throws Exception {
             // given
             var response = new MockHttpServletResponse();
             doReturn(new SocialLoginContext(ContextEnum.LOGIN)).when(socialLoginContextStore).consume();
-            doReturn(Optional.empty()).when(memberQuery).findEmailByExternalIdentity(PROVIDER_ID, EXTERNAL_SUBJECT);
+            doReturn(Optional.empty()).when(accountSignIn).signInByExternalIdentity(PROVIDER_ID, EXTERNAL_SUBJECT);
 
             // when
             successHandler.onAuthenticationSuccess(new MockHttpServletRequest(), response, externalAuthentication());
@@ -165,7 +140,7 @@ class FederatedIdentityAuthenticationSuccessHandlerTest {
             var externalAuthentication = externalAuthentication();
             SecurityContextHolder.getContext().setAuthentication(externalAuthentication);
             doReturn(new SocialLoginContext(ContextEnum.LOGIN)).when(socialLoginContextStore).consume();
-            doReturn(Optional.empty()).when(memberQuery).findEmailByExternalIdentity(PROVIDER_ID, EXTERNAL_SUBJECT);
+            doReturn(Optional.empty()).when(accountSignIn).signInByExternalIdentity(PROVIDER_ID, EXTERNAL_SUBJECT);
 
             // when
             successHandler.onAuthenticationSuccess(new MockHttpServletRequest(), new MockHttpServletResponse(), externalAuthentication);
@@ -175,18 +150,58 @@ class FederatedIdentityAuthenticationSuccessHandlerTest {
         }
 
         @Test
-        void noLinkedIdentity_invalidatesSession() throws Exception {
+        void signInThrows_invalidatesSession() throws Exception {
             // given
             var request = new MockHttpServletRequest();
             request.getSession();
             doReturn(new SocialLoginContext(ContextEnum.LOGIN)).when(socialLoginContextStore).consume();
-            doReturn(Optional.empty()).when(memberQuery).findEmailByExternalIdentity(PROVIDER_ID, EXTERNAL_SUBJECT);
+            doThrow(new IllegalStateException("database down")).when(accountSignIn)
+                    .signInByExternalIdentity(PROVIDER_ID, EXTERNAL_SUBJECT);
 
             // when
             successHandler.onAuthenticationSuccess(request, new MockHttpServletResponse(), externalAuthentication());
 
             // then
             assertThat(request.getSession(false)).isNull();
+        }
+
+        @Test
+        void signInThrows_redirectsWithSocialLoginFailedReason() throws Exception {
+            // given
+            var response = new MockHttpServletResponse();
+            doReturn(new SocialLoginContext(ContextEnum.LOGIN)).when(socialLoginContextStore).consume();
+            doThrow(new IllegalStateException("database down")).when(accountSignIn)
+                    .signInByExternalIdentity(PROVIDER_ID, EXTERNAL_SUBJECT);
+
+            // when
+            successHandler.onAuthenticationSuccess(new MockHttpServletRequest(), response, externalAuthentication());
+
+            // then
+            assertThat(response.getRedirectedUrl()).isEqualTo("/login?error&reason=social-login-failed");
+        }
+
+        static List<Arguments> allContexts() {
+            return List.of(
+                    argumentSet("login", new SocialLoginContext(ContextEnum.LOGIN)),
+                    argumentSet("household setup", new SocialLoginContext(ContextEnum.SETUP)),
+                    argumentSet("invite join", new SocialLoginContext(ContextEnum.INVITE).inviteToken(INVITE_TOKEN)));
+        }
+
+        @ParameterizedTest
+        @MethodSource("allContexts")
+        void anyContext_removesAuthorizedClient(SocialLoginContext context) throws Exception {
+            // given
+            var request = new MockHttpServletRequest();
+            var response = new MockHttpServletResponse();
+            var externalAuthentication = externalAuthentication(verifiedOidcUser());
+            doReturn(context).when(socialLoginContextStore).consume();
+            lenient().doReturn(Optional.of(MEMBER_ID)).when(accountSignIn).signInByExternalIdentity(PROVIDER_ID, EXTERNAL_SUBJECT);
+
+            // when
+            successHandler.onAuthenticationSuccess(request, response, externalAuthentication);
+
+            // then
+            verify(authorizedClientRepository).removeAuthorizedClient(PROVIDER_ID, externalAuthentication, request, response);
         }
     }
 
@@ -241,8 +256,7 @@ class FederatedIdentityAuthenticationSuccessHandlerTest {
         }
 
         /**
-         * The embedded Authorization Server must never see an external subject as an authenticated
-         * member: it would issue tokens for it.
+         * An external subject is no member, so it must never stay authenticated in the session.
          */
         @Test
         void verifiedEmail_removesExternalAuthenticationFromSession() throws Exception {
@@ -361,25 +375,6 @@ class FederatedIdentityAuthenticationSuccessHandlerTest {
             assertThat(request.getSession(false)).isNull();
         }
 
-        /**
-         * The registration ends with a fresh SPA authorization as well, see the login case.
-         */
-        @Test
-        void verifiedEmail_removesStaleSavedRequest() throws Exception {
-            // given
-            var request = new MockHttpServletRequest("GET", "/oauth2/authorize");
-            var response = new MockHttpServletResponse();
-            var requestCache = new HttpSessionRequestCache();
-            requestCache.saveRequest(request, response);
-            doReturn(new SocialLoginContext(ContextEnum.SETUP)).when(socialLoginContextStore).consume();
-
-            // when
-            successHandler.onAuthenticationSuccess(request, response, externalAuthentication(verifiedOidcUser()));
-
-            // then
-            assertThat(requestCache.getRequest(request, response)).isNull();
-        }
-
         @Test
         void verifiedEmail_resolvesNoLinkedMember() throws Exception {
             // given
@@ -390,7 +385,7 @@ class FederatedIdentityAuthenticationSuccessHandlerTest {
                     externalAuthentication(verifiedOidcUser()));
 
             // then
-            verifyNoInteractions(memberQuery);
+            verifyNoInteractions(accountSignIn);
         }
     }
 
@@ -410,8 +405,5 @@ class FederatedIdentityAuthenticationSuccessHandlerTest {
 
     private OAuth2AuthenticationToken externalAuthentication(OAuth2User externalUser) {
         return new OAuth2AuthenticationToken(externalUser, List.of(), PROVIDER_ID);
-    }
-
-    private record SessionAuthentication(String name, boolean authenticated, List<String> factorAuthorities) {
     }
 }

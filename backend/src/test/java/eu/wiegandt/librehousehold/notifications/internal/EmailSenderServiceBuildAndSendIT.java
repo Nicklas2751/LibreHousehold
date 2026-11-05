@@ -21,8 +21,7 @@ import static org.awaitility.Awaitility.await;
  * {@code MessageSource}/{@code SpringTemplateEngine} beans (no mocks) and inspects the delivered
  * text and HTML parts via Mailpit. {@link EmailDeliveryIT} covers the public API surface instead.
  */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE,
-        properties = "librehousehold.security.oauth2-client.client-secret=test-client-secret")
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @Import(TestcontainersConfiguration.class)
 class EmailSenderServiceBuildAndSendIT {
 

@@ -1,8 +1,8 @@
 package eu.wiegandt.librehousehold;
 
-import eu.wiegandt.librehousehold.config.SocialLoginProperties.ProviderType;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.PropertySource;
 import org.springframework.test.context.DynamicPropertyRegistrar;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import wf.garnier.testcontainers.dexidp.DexContainer;
@@ -10,10 +10,15 @@ import wf.garnier.testcontainers.dexidp.DexContainer;
 /**
  * Starts Dex as a local OIDC provider and registers it as the social-login provider
  * {@value #REGISTRATION_ID}, so the social-login flow can be exercised without real third-party
- * credentials. Kept separate from {@link TestcontainersConfiguration} because importing it enables
- * social login for the whole application context.
+ * credentials. The static part of the registration lives in {@code dex-dev-provider.properties}:
+ * Spring Boot only creates client registrations if some are configured when it evaluates its
+ * auto-configuration, before {@link DynamicPropertyRegistrar} values exist. Kept separate from
+ * {@link TestcontainersConfiguration} because importing it enables social login for the whole
+ * application context.
  */
 @TestConfiguration(proxyBeanMethods = false)
+// Client ID and secret there must match CLIENT_ID and CLIENT_SECRET
+@PropertySource("classpath:dex-dev-provider.properties")
 public class DexTestcontainersConfiguration {
 
     private static final String REGISTRATION_ID = "dev-provider";
@@ -23,12 +28,12 @@ public class DexTestcontainersConfiguration {
     private static final String USER_EMAIL = "dev@example.com";
     private static final String USER_PASSWORD = "password";
 
-    private static final String DISPLAY_NAME = "Dex (local dev)";
     // DexContainer.Client accepts exactly one redirect URI. It's the Vite dev proxy origin, because
-    // the proxy forwards /oauth2 with X-Forwarded-Host, so the backend builds its redirect URI from
-    // that origin when a developer logs in through the frontend.
+    // the proxy forwards /oauth2 and /login/oauth2 with X-Forwarded-Host, so the backend builds its
+    // redirect URI ({baseUrl}/login/oauth2/code/{registrationId}) from that origin when a developer
+    // logs in through the frontend. Integration tests register their own client per test instead.
     private static final String REDIRECT_URI = "http://localhost:5173/login/oauth2/code/" + REGISTRATION_ID;
-    private static final String PROVIDER_PREFIX = "librehousehold.security.social-login.providers." + REGISTRATION_ID;
+    private static final String PROVIDER_PREFIX = "spring.security.oauth2.client.provider." + REGISTRATION_ID;
 
     @Bean
     DexContainer dexContainer() {
@@ -38,18 +43,13 @@ public class DexTestcontainersConfiguration {
     }
 
     // Injecting the container makes Spring start it before the issuer-uri supplier is first resolved,
-    // which happens when SecurityConfig#clientRegistrationRepository binds SocialLoginProperties.
+    // which happens when Spring Boot builds the client registrations (with issuer discovery).
     @Bean
     DynamicPropertyRegistrar dexPropertyRegistrar(DexContainer dexContainer) {
         return registry -> registerDevProvider(registry, dexContainer);
     }
 
     private static void registerDevProvider(DynamicPropertyRegistry registry, DexContainer dexContainer) {
-        registry.add("librehousehold.security.social-login.enabled", () -> true);
-        registry.add(PROVIDER_PREFIX + ".type", () -> ProviderType.OIDC);
         registry.add(PROVIDER_PREFIX + ".issuer-uri", dexContainer::getIssuerUri);
-        registry.add(PROVIDER_PREFIX + ".client-id", () -> CLIENT_ID);
-        registry.add(PROVIDER_PREFIX + ".client-secret", () -> CLIENT_SECRET);
-        registry.add(PROVIDER_PREFIX + ".display-name", () -> DISPLAY_NAME);
     }
 }
