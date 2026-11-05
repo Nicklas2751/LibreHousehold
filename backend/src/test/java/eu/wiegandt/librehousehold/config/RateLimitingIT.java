@@ -22,6 +22,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureRestTestClient;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -29,6 +30,7 @@ import org.springframework.test.util.TestSocketUtils;
 import org.springframework.test.web.servlet.client.EntityExchangeResult;
 import org.springframework.test.web.servlet.client.RestTestClient;
 import org.springframework.util.LinkedMultiValueMap;
+import tools.jackson.databind.ObjectMapper;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -50,6 +52,8 @@ import static org.instancio.Select.field;
         "librehousehold.security.oauth2-client.client-secret=test-client-secret",
         "librehousehold.security.rate-limit.login.max-attempts=2",
         "librehousehold.security.rate-limit.login.window-duration=1m",
+        "librehousehold.security.rate-limit.login-per-ip.max-attempts=3",
+        "librehousehold.security.rate-limit.login-per-ip.window-duration=1m",
         "librehousehold.security.rate-limit.sensitive-endpoints.max-attempts=2",
         "librehousehold.security.rate-limit.sensitive-endpoints.window-duration=1m"
 })
@@ -64,6 +68,9 @@ class RateLimitingIT {
     private static final String BASE_PATH = "/v1";
     private static final String XSRF_TOKEN_COOKIE_NAME = "XSRF-TOKEN";
     private static final String XSRF_TOKEN_HEADER_NAME = "X-XSRF-TOKEN";
+    private static final String FORWARDED_FOR_HEADER_NAME = "X-Forwarded-For";
+    private static final Problem TOO_MANY_REQUESTS_PROBLEM = new Problem(429, "/problems/too-many-requests",
+            "Too Many Requests", "Too many requests. Please try again later.");
 
     // SecurityConfig builds the internal client's endpoints from the issuer at bean creation, so the
     // issuer must already contain the actual port before the context starts
@@ -87,6 +94,9 @@ class RateLimitingIT {
     @Autowired
     private AccountService accountService;
 
+    @Autowired
+    private ObjectMapper objectMapper;
+
     private HouseholdEntity createdHousehold;
 
     @AfterEach
@@ -101,8 +111,9 @@ class RateLimitingIT {
     class login {
 
         @Test
-        void tooManyFailedAttempts_returns429() {
+        void tooManyFailedAttempts_returns429Problem() {
             // given
+            var clientIp = "192.0.2.1";
             var email = "ratelimit-" + UUID.randomUUID() + "@example.com";
             createMemberWithVerifiedAccount(email, "correct horse battery staple");
             var loginPageRequest = restTestClient.get().uri("/login").exchange().returnResult(String.class);
@@ -110,12 +121,51 @@ class RateLimitingIT {
             var cookies = cookiesFrom(loginPageRequest);
 
             // when — max-attempts is overridden to 2 above, so the 3rd attempt must be rate-limited
-            submitLogin(cookies, csrfToken, email, "wrong-password");
-            submitLogin(cookies, csrfToken, email, "wrong-password");
-            var thirdAttempt = submitLogin(cookies, csrfToken, email, "wrong-password");
+            submitLogin(clientIp, cookies, csrfToken, email, "wrong-password");
+            submitLogin(clientIp, cookies, csrfToken, email, "wrong-password");
+            var thirdAttempt = submitLogin(clientIp, cookies, csrfToken, email, "wrong-password");
 
             // then
-            assertThat(thirdAttempt.getStatus().value()).isEqualTo(429);
+            assertThat(toProblem(thirdAttempt)).isEqualTo(TOO_MANY_REQUESTS_PROBLEM);
+        }
+
+        @Test
+        void tooManyFailedAttempts_setsRetryAfter() {
+            // given
+            var clientIp = "192.0.2.2";
+            var email = "ratelimit-" + UUID.randomUUID() + "@example.com";
+            createMemberWithVerifiedAccount(email, "correct horse battery staple");
+            var loginPageRequest = restTestClient.get().uri("/login").exchange().returnResult(String.class);
+            var csrfToken = extractCsrfToken(loginPageRequest.getResponseBody());
+            var cookies = cookiesFrom(loginPageRequest);
+
+            // when
+            submitLogin(clientIp, cookies, csrfToken, email, "wrong-password");
+            submitLogin(clientIp, cookies, csrfToken, email, "wrong-password");
+            var thirdAttempt = submitLogin(clientIp, cookies, csrfToken, email, "wrong-password");
+
+            // then — the window is 1m, so the wait is at most 60 seconds
+            assertThat(Long.parseLong(thirdAttempt.getResponseHeaders().getFirst(HttpHeaders.RETRY_AFTER)))
+                    .isBetween(1L, 60L);
+        }
+
+        @Test
+        void manyDistinctEmailsSameIp_returns429() {
+            // given
+            var clientIp = "192.0.2.3";
+            var loginPageRequest = restTestClient.get().uri("/login").exchange().returnResult(String.class);
+            var csrfToken = extractCsrfToken(loginPageRequest.getResponseBody());
+            var cookies = cookiesFrom(loginPageRequest);
+
+            // when — login-per-ip.max-attempts is overridden to 3 above, so the 4th attempt from the
+            // same IP must be rate-limited, although no single e-mail reaches its own limit
+            submitLogin(clientIp, cookies, csrfToken, "first-" + UUID.randomUUID() + "@example.com", "wrong-password");
+            submitLogin(clientIp, cookies, csrfToken, "second-" + UUID.randomUUID() + "@example.com", "wrong-password");
+            submitLogin(clientIp, cookies, csrfToken, "third-" + UUID.randomUUID() + "@example.com", "wrong-password");
+            var fourthAttempt = submitLogin(clientIp, cookies, csrfToken, "fourth-" + UUID.randomUUID() + "@example.com", "wrong-password");
+
+            // then
+            assertThat(fourthAttempt.getStatus().value()).isEqualTo(429);
         }
     }
 
@@ -190,16 +240,20 @@ class RateLimitingIT {
         }
     }
 
-    private EntityExchangeResult<Void> submitLogin(Map<String, String> cookies, String csrfToken, String email, String rawPassword) {
+    // server.forward-headers-strategy=framework takes the client IP from X-Forwarded-For, so each test
+    // gets its own per-IP bucket and stays independent of the others
+    private EntityExchangeResult<String> submitLogin(String clientIp, Map<String, String> cookies, String csrfToken, String email, String rawPassword) {
         var form = new LinkedMultiValueMap<String, String>();
         form.add("username", email);
         form.add("password", rawPassword);
         form.add("_csrf", csrfToken);
-        var spec = restTestClient.post().uri("/login").contentType(MediaType.APPLICATION_FORM_URLENCODED);
+        var spec = restTestClient.post().uri("/login")
+                .header(FORWARDED_FOR_HEADER_NAME, clientIp)
+                .contentType(MediaType.APPLICATION_FORM_URLENCODED);
         for (var cookie : cookies.entrySet()) {
             spec = spec.cookie(cookie.getKey(), cookie.getValue());
         }
-        return spec.body(form).exchange().returnResult(Void.class);
+        return spec.body(form).exchange().returnResult(String.class);
     }
 
     private Map<String, String> cookiesFrom(EntityExchangeResult<String> response) {
@@ -226,5 +280,14 @@ class RateLimitingIT {
         var matcher = Pattern.compile("value=\"([^\"]*)\"").matcher(inputTag);
         matcher.find();
         return matcher.group(1);
+    }
+
+    private Problem toProblem(EntityExchangeResult<String> response) {
+        var body = objectMapper.readTree(response.getResponseBody());
+        return new Problem(response.getStatus().value(), body.path("type").asString(), body.path("title").asString(),
+                body.path("detail").asString());
+    }
+
+    private record Problem(int status, String type, String title, String detail) {
     }
 }

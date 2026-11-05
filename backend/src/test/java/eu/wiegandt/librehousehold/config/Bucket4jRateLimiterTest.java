@@ -10,51 +10,53 @@ import static org.assertj.core.api.Assertions.assertThat;
 class Bucket4jRateLimiterTest {
 
     @Nested
-    class isRateLimited {
+    class acquire {
 
         @Test
-        void underThreshold_returnsFalse() {
+        void belowLimit_empty() {
             // given
             var rateLimiter = new Bucket4jRateLimiter(2, Duration.ofMinutes(1));
             var key = "max@example.com|127.0.0.1";
 
             // when
-            rateLimiter.isRateLimited(key);
-            var result = rateLimiter.isRateLimited(key);
+            rateLimiter.acquire(key);
+            var result = rateLimiter.acquire(key);
 
             // then
-            assertThat(result).isFalse();
+            assertThat(result).isEmpty();
         }
 
         @Test
-        void atThreshold_returnsTrue() {
+        void aboveLimit_returnsWaitTime() {
             // given
-            var rateLimiter = new Bucket4jRateLimiter(2, Duration.ofMinutes(1));
+            var windowDuration = Duration.ofMinutes(1);
+            var rateLimiter = new Bucket4jRateLimiter(2, windowDuration);
             var key = "max@example.com|127.0.0.1";
 
             // when
-            rateLimiter.isRateLimited(key);
-            rateLimiter.isRateLimited(key);
-            var result = rateLimiter.isRateLimited(key);
+            rateLimiter.acquire(key);
+            rateLimiter.acquire(key);
+            var result = rateLimiter.acquire(key);
 
             // then
-            assertThat(result).isTrue();
+            assertThat(result).hasValueSatisfying(waitTime ->
+                    assertThat(waitTime).isPositive().isLessThanOrEqualTo(windowDuration));
         }
 
         @Test
-        void afterWindowExpiry_returnsFalseAgain() throws InterruptedException {
+        void afterWindowExpiry_emptyAgain() throws InterruptedException {
             // given
             var windowDuration = Duration.ofMillis(200);
             var rateLimiter = new Bucket4jRateLimiter(1, windowDuration);
             var key = "max@example.com|127.0.0.1";
-            rateLimiter.isRateLimited(key);
+            rateLimiter.acquire(key);
 
             // when
             Thread.sleep(windowDuration.plusMillis(300));
-            var result = rateLimiter.isRateLimited(key);
+            var result = rateLimiter.acquire(key);
 
             // then
-            assertThat(result).isFalse();
+            assertThat(result).isEmpty();
         }
     }
 }

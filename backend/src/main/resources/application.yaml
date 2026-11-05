@@ -124,6 +124,12 @@ librehousehold:
       login:
         max-attempts: 5
         window-duration: 1m
+      # Throttles POST /login per IP across all e-mail addresses, so cycling through many addresses
+      # (credential stuffing, lockout of many accounts) is slowed down too. Higher than the per-
+      # address limit, since several household members may share one IP (NAT).
+      login-per-ip:
+        max-attempts: 20
+        window-duration: 1m
       # Shared by the password-reset and email-verification endpoints (POST /password-reset/request,
       # /password-reset/confirm, /members/verification/confirm, and the per-member
       # /verification/resend), keyed by IP only: several of these endpoints are unauthenticated and

@@ -84,4 +84,10 @@ This chapter collects the technical risks and technical debts that have already 
 |xref:01_introduction_and_goals.adoc#QG2[QG2 - Secure]
 |Medium _(accepted)_
 |No action planned. If weak/breached passwords become an actual problem, consider a static top-N common-password blocklist bundled at build time (no runtime external dependency) before reaching for an online breach-check API.
+
+|R6
+|Lockout denial of service: an attacker who knows a member's e-mail address can keep that account locked by repeating failed logins, because every failed attempt after an expired lock locks the account again (intended lockout policy, see xref:08_concepts.adoc#section-security-controls-authentication[Chapter 8, RATE1]). The per-IP login limit slows this down but does not prevent it from several IPs.
+|xref:01_introduction_and_goals.adoc#QG2[QG2 - Secure]
+|Medium _(accepted)_
+|A password reset lifts the lockout immediately, so the owner of the mailbox can always get back in. No change to the lockout policy planned.
 |===

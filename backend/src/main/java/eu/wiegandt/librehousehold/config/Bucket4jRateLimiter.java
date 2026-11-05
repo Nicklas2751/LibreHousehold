@@ -4,6 +4,7 @@ import io.github.bucket4j.Bucket;
 
 import java.time.Duration;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -25,9 +26,12 @@ class Bucket4jRateLimiter implements RateLimiter {
     }
 
     @Override
-    public boolean isRateLimited(String key) {
-        var bucket = bucketsByKey.computeIfAbsent(key, this::newBucket);
-        return !bucket.tryConsume(1);
+    public Optional<Duration> acquire(String key) {
+        var probe = bucketsByKey.computeIfAbsent(key, this::newBucket).tryConsumeAndReturnRemaining(1);
+        if (probe.isConsumed()) {
+            return Optional.empty();
+        }
+        return Optional.of(Duration.ofNanos(probe.getNanosToWaitForRefill()));
     }
 
     private Bucket newBucket(String key) {

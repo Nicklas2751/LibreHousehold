@@ -157,6 +157,42 @@ class PasswordResetServiceTest {
         }
 
         @Test
+        void validToken_resetsLockout() {
+            // given
+            var token = UUID.randomUUID();
+            var member = Instancio.create(MemberEntity.class);
+            var account = Instancio.of(AccountEntity.class)
+                    .set(field(AccountEntity::memberId), member.getId())
+                    .create();
+            doReturn(member.getId()).when(accountTokenService)
+                    .consumeToken(token, AccountTokenService.PASSWORD_RESET_PURPOSE);
+            doReturn(Optional.of(member)).when(memberRepository).findById(member.getId());
+            doReturn(Optional.of(account)).when(accountRepository).findById(member.getId());
+            doReturn(true).when(accountService).hasPassword(member.getId());
+            doReturn(List.of()).when(sessionRegistry).getAllSessions(any(), anyBoolean());
+
+            // when
+            service.confirmPasswordReset(token, "new correct horse battery staple");
+
+            // then
+            verify(accountRepository).resetFailedLoginAttempts(member.getId());
+        }
+
+        @Test
+        void invalidToken_doesNotResetLockout() {
+            // given
+            var token = UUID.randomUUID();
+            doThrow(AccountTokenInvalidException.class).when(accountTokenService)
+                    .consumeToken(token, AccountTokenService.PASSWORD_RESET_PURPOSE);
+
+            // when
+            catchThrowable(() -> service.confirmPasswordReset(token, "new correct horse battery staple"));
+
+            // then
+            verify(accountRepository, never()).resetFailedLoginAttempts(any());
+        }
+
+        @Test
         void socialLoginOnlyAccount_throwsPasswordResetTokenInvalidException() {
             // given
             var token = UUID.randomUUID();

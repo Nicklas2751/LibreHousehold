@@ -47,6 +47,8 @@ public class AccountLockoutListener {
     private void registerFailedAttempt(UUID memberId) {
         accountRepository.incrementFailedLoginAttempts(memberId);
         var failedAttempts = accountRepository.findById(memberId).map(AccountEntity::failedLoginAttempts).orElse(0);
+        // Intended: the counter survives an expired lock, so every further failure locks again; only
+        // a successful login or a password reset clears it (RATE1 in Arc42 Chapter 8)
         if (failedAttempts >= lockoutProperties.maxAttempts()) {
             accountRepository.lockUntil(memberId, Instant.now().plus(lockoutProperties.lockoutDuration()));
         }
