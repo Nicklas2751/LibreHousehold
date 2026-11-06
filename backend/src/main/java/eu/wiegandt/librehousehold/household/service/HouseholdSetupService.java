@@ -111,7 +111,7 @@ public class HouseholdSetupService {
                 memberMapper.toMemberEntityWithEmail(member, householdId, SETUP_MEMBER_IS_ADMIN, identity.email()));
         accountService.createFederatedAccount(savedMember.getId());
         try {
-            accountService.linkExternalIdentity(savedMember.getId(), identity.registrationId(), identity.subject());
+            accountService.linkExternalIdentity(savedMember.getId(), identity.providerId(), identity.subject());
         } catch (DataIntegrityViolationException _) {
             throw new MemberAlreadyExistsException();
         }

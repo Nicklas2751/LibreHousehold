@@ -7,9 +7,11 @@
 [[adr-018]]
 = ADR 018: No Linking Between Social Login and Password-Protected Accounts
 
+IMPORTANT: This decision was revised on 2026-11-06. The original decision (2026-10-07) identified the provider of a linked identity by its client registration ID; see <<decision-history>> for what changed and why.
+
 == Context
 
-A social login (xref:adr-016.adoc[ADR 016]) that matches no existing account creates a new, purely federated account automatically - no local password is ever set for it. The open question is what happens when the externally authenticated e-mail matches an e-mail that already has an account, in particular one that already has a local password (xref:adr-015.adoc[ADR 015]'s nullable `password_hash`). Letting a social identity attach to a password-protected account would blur which login method governs account-security operations such as changing the password: should a session established purely through an external provider be allowed to change a password that provider never verified?
+A social login (xref:adr-016.adoc[ADR 016]) never creates an account by itself. A purely federated account - one without a local password - only comes about when household setup or invite join is completed via social login; that links the external identity to the new member, and later social logins sign in the member linked to that identity. A social login without a linked identity is rejected. The open question is what happens when the externally authenticated e-mail matches an e-mail that already has an account, in particular one that already has a local password (xref:adr-015.adoc[ADR 015]'s nullable `password_hash`). Letting a social identity attach to a password-protected account would blur which login method governs account-security operations such as changing the password: should a session established purely through an external provider be allowed to change a password that provider never verified?
 
 == Considered Options
 
@@ -17,7 +19,9 @@ Automatically link a social login to an existing account by provider-verified e-
 
 == Decision Outcome
 
-A social login never attaches itself to an account that already has a local password. Registering via social login with an e-mail that already belongs to an existing account fails with an error instead of creating or linking anything. Logging in via social login where the matched account already has a local password also fails; only an account that itself has no local password - one created purely via social login in the first place - is recognized across repeated social logins.
+A social login never attaches itself to an account that already has a local password. Registering via social login with an e-mail that already belongs to an existing account fails with an error instead of creating or linking anything. Logging in via social login resolves the account only via a linked identity, never via the e-mail address, so a social login whose e-mail matches a password-protected account fails as well; only an account that itself has no local password - one registered via social login in the first place - is recognized across repeated social logins.
+
+A linked identity is the pair of provider key and the provider's subject (`account_identity`). The provider key is the issuer (`iss`) for an OIDC provider and the user-info URI without query and fragment for a plain OAuth2 provider, which has no issuer. The client registration ID is no part of it: it is a local name the self-hoster may rename, and two registrations may point to different providers that issue the same subject.
 
 Automatic linking was rejected because attaching a social identity to a password-protected account conflates two independent credentials behind one account: every password-related operation (change password, password reset) would then need an extra check for whether the active session is federated or local, instead of password operations simply only ever existing for local accounts.
 
@@ -44,4 +48,24 @@ Automatic linking was rejected because attaching a social identity to a password
 - Blurs which login method may change account security settings for a given session
 - Every password-related operation needs to check whether the active session is federated or local
 
+|===
+
+[[decision-history]]
+== Decision History
+
+[cols="1,2a,3a"]
+|===
+|Date |Decision |Reason for the change
+
+|2026-10-07
+|No linking to password-protected accounts; a linked identity is keyed by the client registration ID and the provider's subject.
+|Initial decision.
+
+|2026-11-06
+|Unchanged: no linking to password-protected accounts. The provider part of the key becomes the issuer (OIDC) or the user-info URI without query and fragment (plain OAuth2).
+|
+- Renaming a registration orphaned every account linked through it.
+- Two registrations for different providers could resolve the same subject to one account; the issuer identifies the provider itself, as ASVS V6.8.1 requires.
+- Context and outcome now describe how federated accounts come about since social registration moved into household setup and invite join: a social login without a linked identity no longer creates an account. The decision itself is unchanged by this.
+- The change happened before the first release; no stored identities had to be migrated.
 |===

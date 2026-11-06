@@ -221,7 +221,7 @@ class HouseholdSetupServiceTest {
     class setupHouseholdViaSocialLogin {
 
         private static final ExternalIdentity IDENTITY =
-                new ExternalIdentity("google", "external-subject", "verified@example.com", "Provider Name");
+                new ExternalIdentity("https://accounts.google.com", "external-subject", "verified@example.com", "Provider Name");
 
         @Test
         void noPendingRegistration_throwsNoPendingSocialRegistrationException() {
@@ -293,7 +293,7 @@ class HouseholdSetupServiceTest {
             service.setupHousehold(buildSocialSetup());
 
             // then
-            verify(accountService).linkExternalIdentity(savedMember.getId(), IDENTITY.registrationId(), IDENTITY.subject());
+            verify(accountService).linkExternalIdentity(savedMember.getId(), IDENTITY.providerId(), IDENTITY.subject());
         }
 
         @Test
@@ -366,7 +366,7 @@ class HouseholdSetupServiceTest {
             doReturn(Instancio.create(HouseholdEntity.class)).when(householdRepository).save(any(HouseholdEntity.class));
             doReturn(savedMember).when(memberRepository).save(any(MemberEntity.class));
             doThrow(DataIntegrityViolationException.class).when(accountService)
-                    .linkExternalIdentity(savedMember.getId(), IDENTITY.registrationId(), IDENTITY.subject());
+                    .linkExternalIdentity(savedMember.getId(), IDENTITY.providerId(), IDENTITY.subject());
 
             // when / then
             assertThatThrownBy(() -> service.setupHousehold(buildSocialSetup()))
@@ -374,20 +374,18 @@ class HouseholdSetupServiceTest {
         }
 
         @Test
-        void localRegistrationAlongsidePendingRegistration_createsPasswordAccount() {
-            // given — an explicit password in the request wins over a pending social registration
+        void localRegistration_leavesPendingSocialRegistrationUntouched() {
+            // given — an explicit password in the request wins over a pending social registration, which stays in the session
             var savedMember = Instancio.create(MemberEntity.class);
-            lenient().doReturn(Optional.of(IDENTITY)).when(pendingSocialRegistrationStore).find();
             doReturn(Instancio.create(HouseholdEntity.class)).when(householdRepository).save(any(HouseholdEntity.class));
             doReturn(savedMember).when(memberRepository).save(any(MemberEntity.class));
             doReturn(Instancio.create(InviteEntity.class)).when(inviteRepository).save(any(InviteEntity.class));
-            var setup = buildSetup();
 
             // when
-            service.setupHousehold(setup);
+            service.setupHousehold(buildSetup());
 
             // then
-            verify(accountService).createAccount(savedMember.getId(), setup.getLocalRegistration().orElseThrow().getPassword());
+            verifyNoInteractions(pendingSocialRegistrationStore);
         }
     }
 
@@ -414,7 +412,7 @@ class HouseholdSetupServiceTest {
         void pendingSocialRegistration_createsFederatedAccount() {
             // given
             var savedMember = Instancio.create(MemberEntity.class);
-            doReturn(Optional.of(new ExternalIdentity("google", "external-subject", "verified@example.com", null)))
+            doReturn(Optional.of(new ExternalIdentity("https://accounts.google.com", "external-subject", "verified@example.com", null)))
                     .when(pendingSocialRegistrationStore).find();
             doReturn(Instancio.create(HouseholdEntity.class)).when(householdRepository).save(any(HouseholdEntity.class));
             doReturn(savedMember).when(memberRepository).save(any(MemberEntity.class));

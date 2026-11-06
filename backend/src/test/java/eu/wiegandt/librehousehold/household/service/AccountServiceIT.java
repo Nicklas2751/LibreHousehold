@@ -233,13 +233,13 @@ class AccountServiceIT {
                 .create());
         var externalSubject = UUID.randomUUID().toString();
         accountService.createFederatedAccount(member.getId());
-        var expected = new AccountIdentityEntity(null, member.getId(), "dev-provider", externalSubject, null);
+        var expected = new AccountIdentityEntity(null, member.getId(), "https://issuer.example.com", externalSubject, null);
 
         // when
-        accountService.linkExternalIdentity(member.getId(), "dev-provider", externalSubject);
+        accountService.linkExternalIdentity(member.getId(), "https://issuer.example.com", externalSubject);
 
         // then
-        assertThat(accountIdentityRepository.findByProviderIdAndExternalSubject("dev-provider", externalSubject)).get()
+        assertThat(accountIdentityRepository.findByProviderIdAndExternalSubject("https://issuer.example.com", externalSubject)).get()
                 .usingRecursiveComparison().ignoringFields("id", "linkedAt")
                 .isEqualTo(expected);
     }
@@ -256,10 +256,10 @@ class AccountServiceIT {
                 .set(field(MemberEntity::householdId), household.id())
                 .create());
         var externalSubject = UUID.randomUUID().toString();
-        accountService.linkExternalIdentity(linkedMember.getId(), "dev-provider", externalSubject);
+        accountService.linkExternalIdentity(linkedMember.getId(), "https://issuer.example.com", externalSubject);
 
         // when / then
-        assertThatThrownBy(() -> accountService.linkExternalIdentity(otherMember.getId(), "dev-provider", externalSubject))
+        assertThatThrownBy(() -> accountService.linkExternalIdentity(otherMember.getId(), "https://issuer.example.com", externalSubject))
                 .isInstanceOf(DataIntegrityViolationException.class);
     }
 
@@ -272,10 +272,10 @@ class AccountServiceIT {
                 .set(field(MemberEntity::householdId), household.id())
                 .create());
         var externalSubject = UUID.randomUUID().toString();
-        accountService.linkExternalIdentity(member.getId(), "dev-provider", externalSubject);
+        accountService.linkExternalIdentity(member.getId(), "https://issuer.example.com", externalSubject);
 
         // when
-        var result = accountService.findMemberIdByExternalIdentity("dev-provider", externalSubject);
+        var result = accountService.findMemberIdByExternalIdentity("https://issuer.example.com", externalSubject);
 
         // then
         assertThat(result).contains(member.getId());
@@ -284,7 +284,7 @@ class AccountServiceIT {
     @Test
     void findMemberIdByExternalIdentity_unlinkedIdentity_returnsEmpty() {
         // when
-        var result = accountService.findMemberIdByExternalIdentity("dev-provider", UUID.randomUUID().toString());
+        var result = accountService.findMemberIdByExternalIdentity("https://issuer.example.com", UUID.randomUUID().toString());
 
         // then
         assertThat(result).isEmpty();

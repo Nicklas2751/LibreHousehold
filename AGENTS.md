@@ -72,6 +72,8 @@ cd backend
 ./mvnw spring-boot:run
 ```
 
+Until the first release, schema changes go directly into the existing Flyway migrations instead of new ones. An external dev DB therefore has to be dropped and recreated after such a change: Flyway refuses to start on the changed checksum, and stored data may have a different meaning (e.g. `account_identity.provider_id` holds the provider's issuer, no longer the registration ID). The Testcontainers start above always begins with a fresh DB.
+
 ### API Updates
 
 When `api/openapi.yml` changes, regenerate the API clients:

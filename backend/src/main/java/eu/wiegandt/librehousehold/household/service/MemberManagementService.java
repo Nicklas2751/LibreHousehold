@@ -144,7 +144,7 @@ public class MemberManagementService implements MemberQuery {
                 registration, householdId, JOINED_MEMBER_IS_ADMIN, identity.email()));
         accountService.createFederatedAccount(saved.getId());
         try {
-            accountService.linkExternalIdentity(saved.getId(), identity.registrationId(), identity.subject());
+            accountService.linkExternalIdentity(saved.getId(), identity.providerId(), identity.subject());
         } catch (DataIntegrityViolationException _) {
             throw new MemberAlreadyExistsException();
         }
