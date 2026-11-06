@@ -22,7 +22,7 @@
 	}
 
 	function changeLocale(event: Event) {
-		setLanguage((event.target as HTMLSelectElement).value as Language);
+		void setLanguage((event.target as HTMLSelectElement).value as Language);
 	}
 </script>
 

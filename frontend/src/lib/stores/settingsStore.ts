@@ -1,6 +1,6 @@
 import { get, writable } from 'svelte/store';
 import { getLocale, setLocale } from '$lib/paraglide/runtime.js';
-import { UsersettingsApi } from '../../generated-sources/openapi';
+import { type UserPreferences, UsersettingsApi } from '../../generated-sources/openapi';
 import { apiConfiguration } from '$lib/api/httpClient';
 import { householdState } from './householdState.svelte';
 import { userState } from './userState';
@@ -31,12 +31,28 @@ export function initSettings() {
 	language.set(l);
 }
 
-function syncToApi(t: Theme, l: Language) {
+/**
+ * Applies the preferences stored for the signed-in member. Whatever the member has not chosen yet
+ * stays as the browser decided it, so the browser only provides the initial setting.
+ */
+export function applyPreferences(preferences: UserPreferences) {
+	if (preferences.theme) {
+		theme.set(preferences.theme);
+		applyTheme(preferences.theme);
+	}
+	// setLocale reloads the page, so it must only run when the locale actually changes
+	if (preferences.language && preferences.language !== getLocale()) {
+		language.set(preferences.language);
+		setLocale(preferences.language);
+	}
+}
+
+async function syncToApi(t: Theme, l: Language): Promise<void> {
 	const household = get(householdState);
 	const user = get(userState);
 	if (!household?.id || !user?.id) return;
 
-	api
+	await api
 		.updatePreferences({
 			householdId: household.id,
 			memberId: user.id,
@@ -48,11 +64,12 @@ function syncToApi(t: Theme, l: Language) {
 export function setTheme(t: Theme) {
 	theme.set(t);
 	applyTheme(t);
-	syncToApi(t, get(language));
+	void syncToApi(t, get(language));
 }
 
-export function setLanguage(l: Language) {
+export async function setLanguage(l: Language): Promise<void> {
 	language.set(l);
+	// setLocale reloads the page, which could abort a request still in flight
+	await syncToApi(get(theme), l);
 	setLocale(l);
-	syncToApi(get(theme), l);
 }
