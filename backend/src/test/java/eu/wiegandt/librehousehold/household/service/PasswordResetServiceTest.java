@@ -1,23 +1,17 @@
 package eu.wiegandt.librehousehold.household.service;
 
-import eu.wiegandt.librehousehold.household.AccountPrincipal;
 import eu.wiegandt.librehousehold.household.exception.AccountTokenInvalidException;
 import eu.wiegandt.librehousehold.household.exception.PasswordResetTokenInvalidException;
 import eu.wiegandt.librehousehold.household.repository.AccountRepository;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.core.session.SessionInformation;
-import org.springframework.security.core.session.SessionRegistry;
 
-import java.time.Instant;
-import java.util.Date;
-import java.util.List;
 import java.util.UUID;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.mockito.ArgumentMatchers.any;
@@ -45,13 +39,10 @@ class PasswordResetServiceTest {
     private AccountRepository accountRepository;
 
     @Mock
-    private SessionRegistry sessionRegistry;
+    private MemberSessions memberSessions;
 
-    // MemberSessions is a module-internal collaborator, so it runs for real on top of the mocked registry
-    private PasswordResetService newService() {
-        return new PasswordResetService(memberManagementService, accountTokenService, accountService,
-                accountRepository, new MemberSessions(sessionRegistry));
-    }
+    @InjectMocks
+    private PasswordResetService service;
 
     @Nested
     class requestPasswordReset {
@@ -62,7 +53,7 @@ class PasswordResetServiceTest {
             var email = "max@example.com";
 
             // when
-            newService().requestPasswordReset(email);
+            service.requestPasswordReset(email);
 
             // then
             verify(memberManagementService).requestPasswordReset(email);
@@ -77,17 +68,14 @@ class PasswordResetServiceTest {
             // given
             var token = UUID.randomUUID();
             var memberId = UUID.randomUUID();
-            var session = new SessionInformation(AccountPrincipal.identifiedBy(memberId), "session-1",
-                    Date.from(Instant.now()));
             doReturn(memberId).when(accountTokenService).consumeToken(token, AccountTokenService.PASSWORD_RESET_PURPOSE);
             doReturn(true).when(accountService).hasPassword(memberId);
-            doReturn(List.of(session)).when(sessionRegistry).getAllSessions(AccountPrincipal.identifiedBy(memberId), false);
 
             // when
-            newService().confirmPasswordReset(token, NEW_PASSWORD);
+            service.confirmPasswordReset(token, NEW_PASSWORD);
 
             // then
-            assertThat(session.isExpired()).isTrue();
+            verify(memberSessions).expireAll(memberId);
         }
 
         @Test
@@ -99,7 +87,7 @@ class PasswordResetServiceTest {
             doReturn(true).when(accountService).hasPassword(memberId);
 
             // when
-            newService().confirmPasswordReset(token, NEW_PASSWORD);
+            service.confirmPasswordReset(token, NEW_PASSWORD);
 
             // then
             verify(accountService).resetPassword(memberId, NEW_PASSWORD);
@@ -114,7 +102,7 @@ class PasswordResetServiceTest {
             doReturn(true).when(accountService).hasPassword(memberId);
 
             // when
-            newService().confirmPasswordReset(token, NEW_PASSWORD);
+            service.confirmPasswordReset(token, NEW_PASSWORD);
 
             // then
             verify(accountRepository).resetFailedLoginAttempts(memberId);
@@ -128,7 +116,7 @@ class PasswordResetServiceTest {
                     .consumeToken(token, AccountTokenService.PASSWORD_RESET_PURPOSE);
 
             // when / then
-            assertThatThrownBy(() -> newService().confirmPasswordReset(token, NEW_PASSWORD))
+            assertThatThrownBy(() -> service.confirmPasswordReset(token, NEW_PASSWORD))
                     .isInstanceOf(PasswordResetTokenInvalidException.class);
         }
 
@@ -140,10 +128,10 @@ class PasswordResetServiceTest {
                     .consumeToken(token, AccountTokenService.PASSWORD_RESET_PURPOSE);
 
             // when
-            catchThrowable(() -> newService().confirmPasswordReset(token, NEW_PASSWORD));
+            catchThrowable(() -> service.confirmPasswordReset(token, NEW_PASSWORD));
 
             // then
-            verifyNoInteractions(accountService, accountRepository, sessionRegistry);
+            verifyNoInteractions(accountService, accountRepository, memberSessions);
         }
 
         @Test
@@ -155,7 +143,7 @@ class PasswordResetServiceTest {
             doReturn(false).when(accountService).hasPassword(memberId);
 
             // when / then
-            assertThatThrownBy(() -> newService().confirmPasswordReset(token, NEW_PASSWORD))
+            assertThatThrownBy(() -> service.confirmPasswordReset(token, NEW_PASSWORD))
                     .isInstanceOf(PasswordResetTokenInvalidException.class);
         }
 
@@ -168,7 +156,7 @@ class PasswordResetServiceTest {
             doReturn(false).when(accountService).hasPassword(memberId);
 
             // when
-            catchThrowable(() -> newService().confirmPasswordReset(token, NEW_PASSWORD));
+            catchThrowable(() -> service.confirmPasswordReset(token, NEW_PASSWORD));
 
             // then
             verify(accountService, never()).resetPassword(any(), any());
@@ -183,10 +171,10 @@ class PasswordResetServiceTest {
             doReturn(false).when(accountService).hasPassword(memberId);
 
             // when
-            catchThrowable(() -> newService().confirmPasswordReset(token, NEW_PASSWORD));
+            catchThrowable(() -> service.confirmPasswordReset(token, NEW_PASSWORD));
 
             // then
-            verifyNoInteractions(accountRepository, sessionRegistry);
+            verifyNoInteractions(accountRepository, memberSessions);
         }
     }
 }
