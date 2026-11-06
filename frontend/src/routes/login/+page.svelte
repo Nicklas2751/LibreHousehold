@@ -11,6 +11,11 @@
 	import { session } from '$lib/stores/sessionState.svelte';
 	import { loginWithPassword } from '$lib/stores/sessionLogin';
 	import { type LoginProblem, readLoginProblem } from '$lib/api/problemMapping';
+	import { getLocale } from '$lib/paraglide/runtime.js';
+	import { safeReturnTo } from '$lib/safeReturnTo';
+
+	const SESSION_EXPIRED_REASON = 'session-expired';
+	const PROVIDER_NAME_SEPARATOR = ' / ';
 
 	type LoginError =
 		| LoginProblem
@@ -24,6 +29,13 @@
 	// A failed social login comes back as a full page redirect to this page, so its reason is in
 	// the page URL rather than in a fetch response.
 	let loginError = $state<LoginError>(classifyErrorQueryParam(page.url));
+	const sessionExpired = page.url.searchParams.get('reason') === SESSION_EXPIRED_REASON;
+	const returnTo = safeReturnTo(page.url.searchParams.get('returnTo'), page.url.origin);
+	const providerNames = $derived(
+		authDiscovery.socialProviders
+			.map((provider) => provider.displayName)
+			.join(PROVIDER_NAME_SEPARATOR)
+	);
 
 	onMount(() => {
 		loadAuthDiscovery();
@@ -32,9 +44,30 @@
 	// Covers both an already signed-in visitor and the session bootstrapped after a successful login.
 	$effect(() => {
 		if (session.status === 'authenticated') {
-			goto('/app/dashboard', { replaceState: true });
+			goto(returnTo, { replaceState: true });
 		}
 	});
+
+	// Moves screen reader and keyboard focus to every newly shown error, including one from a redirect.
+	function focusOnMount(element: HTMLElement) {
+		element.focus();
+	}
+
+	function formatTime(date: Date): string {
+		return new Intl.DateTimeFormat(getLocale(), { timeStyle: 'short' }).format(date);
+	}
+
+	function alertClass(kind: LoginError['kind']): string {
+		switch (kind) {
+			case 'invalid-credentials':
+			case 'social-login-failed':
+			case 'network':
+			case 'unexpected':
+				return 'alert-error';
+			default:
+				return 'alert-warning';
+		}
+	}
 
 	function classifyErrorQueryParam(url: URL): LoginError {
 		if (!url.searchParams.has('error')) return { kind: 'none' };
@@ -70,49 +103,58 @@
 				<h1 class="text-center text-2xl font-bold text-base-content">LibreHousehold</h1>
 				<p class="mt-2 text-center text-base-content/70">{m['subtitle']()}</p>
 				<h2 class="mt-4 text-xl font-bold text-base-content">{m['login.title']()}</h2>
-				{#if loginError.kind === 'invalid-credentials'}
-					<div class="mt-4 alert alert-error">
-						<span>{m['login.error_invalid_credentials']()}</span>
+				{#if sessionExpired && loginError.kind === 'none'}
+					<div role="status" class="mt-4 alert alert-info">
+						<span>{m['login.info_session_expired']()}</span>
 					</div>
-				{:else if loginError.kind === 'unverified'}
-					<div class="mt-4 alert alert-warning">
-						<span>{m['login.error_unverified']()}</span>
-					</div>
-				{:else if loginError.kind === 'locked'}
-					<div class="mt-4 alert alert-warning">
-						<span>
-							{loginError.lockedUntil
-								? m['login.error_locked']({ time: loginError.lockedUntil.toLocaleTimeString() })
-								: m['login.error_locked_unknown_time']()}
-						</span>
-					</div>
-				{:else if loginError.kind === 'rate-limited'}
-					<div class="mt-4 alert alert-warning">
-						<span>
-							{loginError.retryAfterSeconds === null
-								? m['login.error_rate_limited_unknown']()
-								: m['login.error_rate_limited']({ seconds: loginError.retryAfterSeconds })}
-						</span>
-					</div>
-				{:else if loginError.kind === 'local-login-disabled'}
-					<div class="mt-4 alert alert-warning">
-						<span>{m['login.error_local_login_disabled']()}</span>
-					</div>
-				{:else if loginError.kind === 'social-login-no-account'}
-					<div class="mt-4 alert alert-warning">
-						<span>{m['login.error_social_login_no_account']()}</span>
-					</div>
-				{:else if loginError.kind === 'social-login-failed'}
-					<div class="mt-4 alert alert-error">
-						<span>{m['login.error_social_login_failed']()}</span>
-					</div>
-				{:else if loginError.kind === 'network'}
-					<div class="mt-4 alert alert-error">
-						<span>{m['login.error_network']()}</span>
-					</div>
-				{:else if loginError.kind === 'unexpected'}
-					<div class="mt-4 alert alert-error">
-						<span>{m['login.error_unexpected']()}</span>
+				{/if}
+				{#if loginError.kind !== 'none'}
+					<div
+						{@attach focusOnMount}
+						role="alert"
+						tabindex="-1"
+						class={['mt-4 alert', alertClass(loginError.kind)]}
+					>
+						{#if loginError.kind === 'invalid-credentials'}
+							<span>
+								{providerNames
+									? m['login.error_invalid_credentials_with_social_hint']({
+											provider: providerNames
+										})
+									: m['login.error_invalid_credentials']()}
+							</span>
+						{:else if loginError.kind === 'unverified'}
+							<span>{m['login.error_unverified']()}</span>
+						{:else if loginError.kind === 'locked'}
+							<div class="flex flex-col gap-2">
+								<span>
+									{loginError.lockedUntil
+										? m['login.error_locked']({ time: formatTime(loginError.lockedUntil) })
+										: m['login.error_locked_unknown_time']()}
+								</span>
+								<a href="/forgot-password" class="link">{m['login.locked_reset_link']()}</a>
+							</div>
+						{:else if loginError.kind === 'rate-limited'}
+							<span>
+								{loginError.retryAfterSeconds === null
+									? m['login.error_rate_limited_unknown']()
+									: m['login.error_rate_limited']({ seconds: loginError.retryAfterSeconds })}
+							</span>
+						{:else if loginError.kind === 'local-login-disabled'}
+							<span>{m['login.error_local_login_disabled']()}</span>
+						{:else if loginError.kind === 'social-login-no-account'}
+							<span>
+								{authDiscovery.localEnabled
+									? m['login.error_social_login_no_account']()
+									: m['login.error_social_login_no_account_social_only']()}
+							</span>
+						{:else if loginError.kind === 'social-login-failed'}
+							<span>{m['login.error_social_login_failed']()}</span>
+						{:else if loginError.kind === 'network'}
+							<span>{m['login.error_network']()}</span>
+						{:else}
+							<span>{m['login.error_unexpected']()}</span>
+						{/if}
 					</div>
 				{/if}
 				{#if authDiscovery.localEnabled}

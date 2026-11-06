@@ -1,10 +1,23 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
 	import { requestPasswordReset } from '$lib/stores/passwordReset';
+	import { onMount } from 'svelte';
+	import { authDiscovery, loadAuthDiscovery } from '$lib/stores/authDiscoveryState.svelte';
+
+	const PROVIDER_NAME_SEPARATOR = ' / ';
 
 	let email = $state('');
 	let submitting = $state(false);
 	let submitted = $state(false);
+	const providerNames = $derived(
+		authDiscovery.socialProviders
+			.map((provider) => provider.displayName)
+			.join(PROVIDER_NAME_SEPARATOR)
+	);
+
+	onMount(() => {
+		loadAuthDiscovery();
+	});
 
 	async function handleSubmit(event: SubmitEvent) {
 		event.preventDefault();
@@ -36,6 +49,13 @@
 					<div class="mt-4 alert alert-success">
 						<span>{m['forgot_password.success_message']()}</span>
 					</div>
+					{#if providerNames}
+						<div class="mt-4 alert alert-info">
+							<span>
+								{m['forgot_password.success_message_social_hint']({ provider: providerNames })}
+							</span>
+						</div>
+					{/if}
 				{:else}
 					<form onsubmit={handleSubmit} class="mt-4 flex flex-col gap-3">
 						<fieldset class="fieldset">

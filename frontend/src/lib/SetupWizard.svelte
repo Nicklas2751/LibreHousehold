@@ -57,6 +57,7 @@
 	let householdImage: string = $state('');
 	let serverEmailError: string | null = $state(null);
 	let closingSetup: boolean = $state(false);
+	let submitting: boolean = $state(false);
 	let pendingRegistration: PendingSocialRegistration | null = $state(null);
 	let socialLoginError: string | null = $state(null);
 
@@ -218,6 +219,7 @@
 			: { household, member: adminMember };
 
 		serverEmailError = null;
+		submitting = true;
 		try {
 			const response = await householdApi.setupHousehold({ householdSetup });
 			const baseUrl = `${window.location.protocol}//${window.location.host}`;
@@ -227,6 +229,8 @@
 			nextStep();
 		} catch (err: unknown) {
 			await handleSetupError(err);
+		} finally {
+			submitting = false;
 		}
 	}
 
@@ -337,6 +341,7 @@
 				submitLabel={m['setup.finish_step.finish_button']()}
 				backLabel={m['setup.create_account_step.back_button']()}
 				errorMessage={serverEmailError}
+				{submitting}
 				onformsubmit={finishSocialRegistration}
 				onback={() => goBackToStep(step - 1)}
 			/>
@@ -361,6 +366,7 @@
 					passwordHint={m['setup.create_account_step.password_hint']()}
 					passwordPlaceholder={m['setup.create_account_step.password_placeholder']()}
 					{serverEmailError}
+					{submitting}
 					onClearEmailError={() => {
 						serverEmailError = null;
 					}}

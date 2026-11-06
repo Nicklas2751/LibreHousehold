@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { get } from 'svelte/store';
 import { bootstrapSession } from './sessionBootstrap';
-import { session } from './sessionState.svelte';
+import { session, setAuthenticated } from './sessionState.svelte';
 import { householdState } from './householdState.svelte';
 import { userState } from './userState';
 
@@ -25,7 +25,9 @@ vi.mock('$lib/stores/toastStore', () => ({ addToast: mockAddToast }));
 const currentUser = {
 	member: { id: 'member-id', name: 'Max Mustermann', email: 'max@example.com', isAdmin: true },
 	household: { id: 'household-id', name: 'Die Testfamilie' },
-	preferences: {}
+	preferences: {},
+	emailVerified: true,
+	socialLoginOnly: false
 };
 
 describe('bootstrapSession', () => {
@@ -59,27 +61,33 @@ describe('bootstrapSession', () => {
 		expect(mockAddToast).not.toHaveBeenCalled();
 	});
 
-	it('on an unexpected error — sets session to guest and shows a toast', async () => {
+	it('networkError_keepsStatusAndShowsToast', async () => {
 		// given
+		setAuthenticated(currentUser);
 		mockGetCurrentUser.mockRejectedValue(new Error('network error'));
 
 		// when
 		await bootstrapSession();
 
 		// then
-		expect(session.status).toBe('guest');
-		expect(mockAddToast).toHaveBeenCalled();
+		expect({ status: session.status, toasts: mockAddToast.mock.calls.length }).toEqual({
+			status: 'authenticated',
+			toasts: 1
+		});
 	});
 
-	it('on an unexpected error with silent option — sets session to guest without showing a toast', async () => {
+	it('networkErrorWithSilentOption_keepsStatusWithoutToast', async () => {
 		// given
+		setAuthenticated(currentUser);
 		mockGetCurrentUser.mockRejectedValue(new Error('network error'));
 
 		// when
 		await bootstrapSession({ silent: true });
 
 		// then
-		expect(session.status).toBe('guest');
-		expect(mockAddToast).not.toHaveBeenCalled();
+		expect({ status: session.status, toasts: mockAddToast.mock.calls.length }).toEqual({
+			status: 'authenticated',
+			toasts: 0
+		});
 	});
 });

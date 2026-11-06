@@ -109,6 +109,23 @@ describe('SetupWizard', () => {
 		);
 	});
 
+	it('submitting_disablesSubmit', async () => {
+		// given
+		mockSetupHousehold.mockReturnValue(new Promise(() => {}));
+		await fillAndGoToAccountStep();
+		await page.getByRole('textbox', { name: /Dein Name/i }).fill('Max Mustermann');
+		await page.getByRole('textbox', { name: /Deine E-Mail/i }).fill('max@example.com');
+		await page.getByLabelText(/Passwort/i).fill('supersecret');
+
+		// when
+		await page.getByRole('button', { name: /Einrichtung abschließen/i }).click();
+
+		// then
+		await expect
+			.element(page.getByRole('button', { name: /Einrichtung abschließen/i }))
+			.toBeDisabled();
+	});
+
 	it('closing setup after successful setup — bootstraps the session, then navigates to the dashboard replacing the history entry', async () => {
 		// given
 		mockSetupHousehold.mockResolvedValue({

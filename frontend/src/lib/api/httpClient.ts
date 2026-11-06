@@ -1,6 +1,6 @@
 import { Configuration, type Middleware } from '../../generated-sources/openapi';
 import { getCsrfTokenFromCookieHeader, isStateChangingMethod } from './csrf';
-import { session, setGuest } from '../stores/sessionState.svelte';
+import { session, setSessionExpired } from '../stores/sessionState.svelte';
 import { shouldTreatAsSessionExpiry } from '../stores/sessionGuard';
 
 const HTTP_STATUS_UNAUTHORIZED = 401;
@@ -30,7 +30,7 @@ export const sessionExpiredMiddleware: Middleware = {
 			return;
 		}
 		// The app guard reacts to the guest status and navigates to /login.
-		setGuest();
+		setSessionExpired();
 	}
 };
 
