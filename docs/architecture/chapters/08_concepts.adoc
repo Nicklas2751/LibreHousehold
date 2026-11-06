@@ -73,7 +73,7 @@ Authentication-related security controls are tracked against an https://github.c
 |Decided, see xref:../adrs/adr-014.adoc[ADR 014] and the project's frontend state-management rule
 
 |SES4
-|A new session ID on every successful login, exactly once per login path: local login and the social-login callback renew it through the filter's session authentication strategy, the sign-in after household setup or invite join through the same strategy (`SessionManagementConfig`). The account resolution after the social-login callback only registers the already renewed session for the account, it does not renew it a second time. Every login path registers the session, so that it can be ended later (RESET1).
+|A new session ID on every successful login, exactly once per login path: local login and the social-login callback renew it through the filter's session authentication strategy, the sign-in after household setup or invite join through the same strategy (`SessionManagementConfig`). The account resolution after the social-login callback only registers the already renewed session for the account, it does not renew it a second time. Every login path registers the session, so that it can be ended later (RESET1, SES7).
 |V7.2.4 (L1)
 |Decided, verified by `FormLoginIT`, `PasswordSetupFlowIT` and `SocialLoginFilterChainIT`/`SocialSetupFlowIT` (the old session ID is rejected after login)
 
@@ -86,6 +86,11 @@ Authentication-related security controls are tracked against an https://github.c
 |The application session is independent of the session at the social-login provider: the provider tokens are discarded in the login callback, logging out of LibreHousehold does not log out of the provider, and logging out of the provider does not end the LibreHousehold session. There is no RP-initiated or back-channel logout.
 |V7.1.3 (L2)
 |Decided, see xref:../adrs/adr-016.adoc[ADR 016]
+
+|SES7
+|Removing a member from the household (leaving or being removed) and deleting a household end all existing sessions of the affected members, from every login path (see SES4). This also applies when an unverified account expires, because the expiry job removes the member or deletes the household the same way. The sessions are ended within the deleting transaction, right before the deletion event is published; if that transaction rolls back afterwards, the members only have to log in again. A rejected removal (the household admin) leaves the sessions untouched.
+|V7.4.2 (L1)
+|Decided, verified by `MemberSessionInvalidationIT`
 
 |CORS1
 |Fixed/validated `Access-Control-Allow-Origin`, no wildcard combined with credentials.

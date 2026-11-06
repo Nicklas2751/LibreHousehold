@@ -53,6 +53,7 @@ public class MemberManagementService implements MemberQuery {
     private final AccountService accountService;
     private final PendingSocialRegistrationStore pendingSocialRegistrationStore;
     private final LocalLoginProperties localLoginProperties;
+    private final MemberSessions memberSessions;
 
     public MemberManagementService(MemberRepository memberRepository,
                                    HouseholdRepository householdRepository,
@@ -62,7 +63,8 @@ public class MemberManagementService implements MemberQuery {
                                    ApplicationEventPublisher eventPublisher,
                                    AccountService accountService,
                                    PendingSocialRegistrationStore pendingSocialRegistrationStore,
-                                   LocalLoginProperties localLoginProperties) {
+                                   LocalLoginProperties localLoginProperties,
+                                   MemberSessions memberSessions) {
         this.memberRepository = memberRepository;
         this.householdRepository = householdRepository;
         this.inviteRepository = inviteRepository;
@@ -72,6 +74,7 @@ public class MemberManagementService implements MemberQuery {
         this.accountService = accountService;
         this.pendingSocialRegistrationStore = pendingSocialRegistrationStore;
         this.localLoginProperties = localLoginProperties;
+        this.memberSessions = memberSessions;
     }
 
     public List<Member> getMembers(UUID householdId) {
@@ -198,6 +201,7 @@ public class MemberManagementService implements MemberQuery {
     private void deleteMemberAndPublishEvent(MemberEntity member) {
         memberRepository.deleteById(member.id());
         var householdName = householdRepository.findNameById(member.householdId()).orElse("");
+        memberSessions.expireAll(member.id());
         eventPublisher.publishEvent(new MemberRemoved(member.id(), member.name(), member.email(), householdName));
     }
 

@@ -27,6 +27,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.instancio.Select.field;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -46,6 +47,9 @@ class HouseholdManagementServiceTest {
 
     @Mock
     private ApplicationEventPublisher eventPublisher;
+
+    @Mock
+    private MemberSessions memberSessions;
 
     @InjectMocks
     private HouseholdManagementService service;
@@ -146,6 +150,39 @@ class HouseholdManagementServiceTest {
             // then
             verify(eventPublisher).publishEvent(eventCaptor.capture());
             assertThat(eventCaptor.getValue()).usingRecursiveComparison().isEqualTo(expectedEvent);
+        }
+
+        @Test
+        void existingHousehold_expiresSessionsOfAllMembers() {
+            // given
+            var householdId = UUID.randomUUID();
+            var members = Instancio.ofList(memberEntityModel)
+                    .size(2)
+                    .set(field(MemberEntity::householdId), householdId)
+                    .create();
+            var expectedMemberIds = members.stream().map(MemberEntity::id).toList();
+            doReturn(members).when(memberRepository).findByHouseholdId(householdId);
+            doReturn(1).when(householdRepository).deleteHouseholdById(householdId);
+
+            // when
+            service.deleteHousehold(householdId);
+
+            // then
+            verify(memberSessions).expireAll(expectedMemberIds);
+        }
+
+        @Test
+        void unknownHousehold_doesNotExpireSessions() {
+            // given
+            var householdId = UUID.randomUUID();
+            doReturn(List.of(Instancio.create(memberEntityModel))).when(memberRepository).findByHouseholdId(householdId);
+            doReturn(0).when(householdRepository).deleteHouseholdById(householdId);
+
+            // when
+            catchThrowable(() -> service.deleteHousehold(householdId));
+
+            // then
+            verifyNoInteractions(memberSessions);
         }
     }
 
