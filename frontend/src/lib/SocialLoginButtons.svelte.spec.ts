@@ -95,7 +95,7 @@ describe('SocialLoginButtons', () => {
 		authDiscovery.socialProviders = [];
 
 		// when
-		const { container } = render(SocialLoginButtons, {
+		const { container } = await render(SocialLoginButtons, {
 			socialLoginContext: { context: SocialLoginContextContextEnum.Login }
 		});
 
