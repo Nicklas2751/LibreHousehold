@@ -282,7 +282,7 @@ class MemberManagementServiceIT {
             var household = Instancio.create(Household.class);
             createdHouseholdIds.add(household.getId());
             var token = setupService.setupHousehold(localSetup(household, memberWithValidEmail())).getInviteToken();
-            var identity = new ExternalIdentity("google", "subject-" + UUID.randomUUID(),
+            var identity = new ExternalIdentity("https://accounts.google.com", "subject-" + UUID.randomUUID(),
                     "social-" + UUID.randomUUID() + "@example.com", "Provider Name");
             bindRequest();
             pendingSocialRegistrationStore.store(identity);
@@ -293,7 +293,7 @@ class MemberManagementServiceIT {
                     .create());
 
             // then
-            assertThat(accountService.findMemberIdByExternalIdentity(identity.registrationId(), identity.subject()))
+            assertThat(accountService.findMemberIdByExternalIdentity(identity.providerId(), identity.subject()))
                     .contains(memberRepository.findByEmail(identity.email()).orElseThrow().id());
         }
 
@@ -308,7 +308,7 @@ class MemberManagementServiceIT {
                     .ignore(field(MemberRegistration::getLocalRegistration))
                     .create();
             bindRequest();
-            pendingSocialRegistrationStore.store(new ExternalIdentity("google", "subject-" + UUID.randomUUID(),
+            pendingSocialRegistrationStore.store(new ExternalIdentity("https://accounts.google.com", "subject-" + UUID.randomUUID(),
                     "social-" + UUID.randomUUID() + "@example.com", null));
 
             // when

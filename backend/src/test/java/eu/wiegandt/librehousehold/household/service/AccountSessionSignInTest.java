@@ -33,7 +33,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 @ExtendWith(MockitoExtension.class)
 class AccountSessionSignInTest {
 
-    private static final String PROVIDER_ID = "google";
+    private static final String PROVIDER_ID = "https://accounts.google.com";
     private static final String SUBJECT = "external-subject";
 
     @Mock

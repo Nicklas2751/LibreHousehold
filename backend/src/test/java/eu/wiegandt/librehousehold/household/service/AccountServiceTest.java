@@ -292,10 +292,10 @@ class AccountServiceTest {
             // given
             var memberId = UUID.randomUUID();
             var beforeLinking = Instant.now();
-            var expectedSavedIdentity = new AccountIdentityEntity(null, memberId, "dev-provider", "external-subject", beforeLinking);
+            var expectedSavedIdentity = new AccountIdentityEntity(null, memberId, "https://issuer.example.com", "external-subject", beforeLinking);
 
             // when
-            accountService.linkExternalIdentity(memberId, "dev-provider", "external-subject");
+            accountService.linkExternalIdentity(memberId, "https://issuer.example.com", "external-subject");
             var afterLinking = Instant.now();
 
             // then
@@ -314,12 +314,12 @@ class AccountServiceTest {
         void linkedIdentity_returnsMemberId() {
             // given
             var memberId = UUID.randomUUID();
-            var identity = new AccountIdentityEntity(1L, memberId, "dev-provider", "external-subject", Instant.now());
+            var identity = new AccountIdentityEntity(1L, memberId, "https://issuer.example.com", "external-subject", Instant.now());
             doReturn(Optional.of(identity)).when(accountIdentityRepository)
-                    .findByProviderIdAndExternalSubject("dev-provider", "external-subject");
+                    .findByProviderIdAndExternalSubject("https://issuer.example.com", "external-subject");
 
             // when
-            var result = accountService.findMemberIdByExternalIdentity("dev-provider", "external-subject");
+            var result = accountService.findMemberIdByExternalIdentity("https://issuer.example.com", "external-subject");
 
             // then
             assertThat(result).contains(memberId);
@@ -329,10 +329,10 @@ class AccountServiceTest {
         void unlinkedIdentity_returnsEmpty() {
             // given
             doReturn(Optional.empty()).when(accountIdentityRepository)
-                    .findByProviderIdAndExternalSubject("dev-provider", "external-subject");
+                    .findByProviderIdAndExternalSubject("https://issuer.example.com", "external-subject");
 
             // when
-            var result = accountService.findMemberIdByExternalIdentity("dev-provider", "external-subject");
+            var result = accountService.findMemberIdByExternalIdentity("https://issuer.example.com", "external-subject");
 
             // then
             assertThat(result).isEmpty();

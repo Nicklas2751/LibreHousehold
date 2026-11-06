@@ -19,6 +19,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.client.EntityExchangeResult;
 import org.springframework.test.web.servlet.client.ExchangeResult;
 import org.springframework.test.web.servlet.client.RestTestClient;
@@ -59,11 +60,18 @@ import static org.instancio.Select.field;
 @Import({TestcontainersConfiguration.class, DexTestcontainersConfiguration.class})
 @AutoConfigureRestTestClient
 @ExtendWith(InstancioExtension.class)
+// The same Dex provider under a second registration ID, as if a self-hoster renamed the registration
+@TestPropertySource(properties = {
+        "spring.security.oauth2.client.registration.renamed-provider.provider=dev-provider",
+        "spring.security.oauth2.client.registration.renamed-provider.client-id=" + DexTestcontainersConfiguration.CLIENT_ID,
+        "spring.security.oauth2.client.registration.renamed-provider.client-secret=" + DexTestcontainersConfiguration.CLIENT_SECRET,
+        "spring.security.oauth2.client.registration.renamed-provider.scope=openid,profile,email"})
 class SocialLoginFilterChainIT {
 
-    private static final String PROVIDER_ID = "dev-provider";
-    private static final String CALLBACK_PATH = "/login/oauth2/code/" + PROVIDER_ID;
-    private static final String AUTHORIZATION_PATH = "/oauth2/authorization/" + PROVIDER_ID;
+    private static final String REGISTRATION_ID = "dev-provider";
+    private static final String RENAMED_REGISTRATION_ID = "renamed-provider";
+    private static final String CALLBACK_PATH = "/login/oauth2/code/" + REGISTRATION_ID;
+    private static final String AUTHORIZATION_PATH = "/oauth2/authorization/" + REGISTRATION_ID;
     private static final String DEX_PASSWORD = "dex-password";
     private static final String BASE_PATH = "/v1";
     private static final String SESSION_COOKIE_NAME = "JSESSIONID";
@@ -116,7 +124,7 @@ class SocialLoginFilterChainIT {
             dexContainer.withUser(dexUser);
             var member = createMember(dexUser.email());
             accountService.createFederatedAccount(member.getId());
-            accountService.linkExternalIdentity(member.getId(), PROVIDER_ID, dexSubjectOf(dexUser));
+            accountService.linkExternalIdentity(member.getId(), dexContainer.getIssuerUri(), dexSubjectOf(dexUser));
 
             // when
             var callback = loginViaDex(NO_COOKIES, dexUser);
@@ -134,7 +142,7 @@ class SocialLoginFilterChainIT {
             dexContainer.withUser(dexUser);
             var member = createMember(dexUser.email());
             accountService.createFederatedAccount(member.getId());
-            accountService.linkExternalIdentity(member.getId(), PROVIDER_ID, dexSubjectOf(dexUser));
+            accountService.linkExternalIdentity(member.getId(), dexContainer.getIssuerUri(), dexSubjectOf(dexUser));
             var callback = loginViaDex(NO_COOKIES, dexUser);
 
             // when
@@ -153,7 +161,7 @@ class SocialLoginFilterChainIT {
             dexContainer.withUser(dexUser);
             var member = createMember(dexUser.email());
             accountService.createFederatedAccount(member.getId());
-            accountService.linkExternalIdentity(member.getId(), PROVIDER_ID, dexSubjectOf(dexUser));
+            accountService.linkExternalIdentity(member.getId(), dexContainer.getIssuerUri(), dexSubjectOf(dexUser));
             var anonymousSession = storeSocialLoginContext("{\"context\":\"LOGIN\"}");
             var callback = loginViaDex(anonymousSession, dexUser);
             var oldSessionCookies = new LinkedHashMap<>(callback.cookies());
@@ -206,6 +214,53 @@ class SocialLoginFilterChainIT {
         }
 
         /**
+         * ADR-018: the identity is keyed by the provider's issuer, so another provider issuing the
+         * same subject never reaches the linked account.
+         */
+        @Test
+        void sameSubjectDifferentIssuer_notLinked() throws Exception {
+            // given
+            dexContainer.withClient(new DexContainer.Client(DexTestcontainersConfiguration.CLIENT_ID,
+                    DexTestcontainersConfiguration.CLIENT_SECRET, dexRedirectUri()));
+            var dexUser = new DexContainer.User("dex-" + UUID.randomUUID(), "dex-" + UUID.randomUUID() + "@example.com", DEX_PASSWORD);
+            dexContainer.withUser(dexUser);
+            var member = createMember(dexUser.email());
+            accountService.createFederatedAccount(member.getId());
+            accountService.linkExternalIdentity(member.getId(), "https://other-issuer.example.com", dexSubjectOf(dexUser));
+
+            // when
+            var callback = loginViaDex(NO_COOKIES, dexUser);
+
+            // then
+            assertThat(callback.response().getResponseHeaders().getLocation())
+                    .hasPath("/login").hasQuery("error&reason=social-login-no-account");
+        }
+
+        /**
+         * ADR-018: the registration ID is the self-hoster's choice and no part of the identity, so
+         * renaming the registration keeps the account linked.
+         */
+        @Test
+        void renamedRegistrationId_stillLinked() throws Exception {
+            // given
+            dexContainer.withClient(new DexContainer.Client(DexTestcontainersConfiguration.CLIENT_ID,
+                    DexTestcontainersConfiguration.CLIENT_SECRET, dexRedirectUri()));
+            var dexUser = new DexContainer.User("dex-" + UUID.randomUUID(), "dex-" + UUID.randomUUID() + "@example.com", DEX_PASSWORD);
+            dexContainer.withUser(dexUser);
+            var member = createMember(dexUser.email());
+            accountService.createFederatedAccount(member.getId());
+            accountService.linkExternalIdentity(member.getId(), dexContainer.getIssuerUri(), dexSubjectOf(dexUser));
+            dexContainer.withClient(new DexContainer.Client(DexTestcontainersConfiguration.CLIENT_ID,
+                    DexTestcontainersConfiguration.CLIENT_SECRET, dexRedirectUri(RENAMED_REGISTRATION_ID)));
+
+            // when
+            var callback = loginViaDex(NO_COOKIES, dexUser, RENAMED_REGISTRATION_ID);
+
+            // then
+            assertThat(callback.response().getResponseHeaders().getLocation()).hasPath("/app/dashboard").hasNoQuery();
+        }
+
+        /**
          * The user cancelled at the provider or the provider refused: Dex is not involved, since the
          * provider's error redirect is simulated directly against the backend's callback.
          */
@@ -238,7 +293,7 @@ class SocialLoginFilterChainIT {
             dexContainer.withUser(dexUser);
             var member = createMember(dexUser.email());
             accountService.createFederatedAccount(member.getId());
-            accountService.linkExternalIdentity(member.getId(), PROVIDER_ID, dexSubjectOf(dexUser));
+            accountService.linkExternalIdentity(member.getId(), dexContainer.getIssuerUri(), dexSubjectOf(dexUser));
 
             // when
             var callback = loginViaDex(NO_COOKIES, dexUser);
@@ -286,8 +341,14 @@ class SocialLoginFilterChainIT {
      * Dex's redirect back to the callback, whose cookies carry the resulting session.
      */
     private HttpStep loginViaDex(Map<String, String> cookies, DexContainer.User dexUser) throws IOException, InterruptedException {
-        var authorizationRequest = get(cookies, URI.create(AUTHORIZATION_PATH));
-        var callbackUri = loginAtDex(authorizationRequest.response().getResponseHeaders().getLocation(), dexUser);
+        return loginViaDex(cookies, dexUser, REGISTRATION_ID);
+    }
+
+    private HttpStep loginViaDex(Map<String, String> cookies, DexContainer.User dexUser, String registrationId)
+            throws IOException, InterruptedException {
+        var authorizationRequest = get(cookies, URI.create("/oauth2/authorization/" + registrationId));
+        var callbackUri = loginAtDex(authorizationRequest.response().getResponseHeaders().getLocation(), dexUser,
+                dexRedirectUri(registrationId));
         return get(authorizationRequest.cookies(), URI.create(callbackUri.getRawPath() + "?" + callbackUri.getRawQuery()));
     }
 
@@ -304,7 +365,7 @@ class SocialLoginFilterChainIT {
                 .queryParam("scope", "openid")
                 .queryParam("state", UUID.randomUUID())
                 .build().encode().toUri();
-        var code = UriComponentsBuilder.fromUri(loginAtDex(authorizationUri, dexUser)).build()
+        var code = UriComponentsBuilder.fromUri(loginAtDex(authorizationUri, dexUser, dexRedirectUri())).build()
                 .getQueryParams().getFirst("code");
         var credentials = Base64.getEncoder().encodeToString(
                 (DexTestcontainersConfiguration.CLIENT_ID + ":" + DexTestcontainersConfiguration.CLIENT_SECRET)
@@ -327,9 +388,10 @@ class SocialLoginFilterChainIT {
 
     /**
      * Follows Dex's redirects to its password login form, submits the user's credentials and
-     * follows the redirects until Dex sends the browser back to {@link #dexRedirectUri()}.
+     * follows the redirects until Dex sends the browser back to the given redirect URI.
      */
-    private URI loginAtDex(URI authorizationUri, DexContainer.User dexUser) throws IOException, InterruptedException {
+    private URI loginAtDex(URI authorizationUri, DexContainer.User dexUser, String redirectUri)
+            throws IOException, InterruptedException {
         try (var dexBrowser = HttpClient.newBuilder()
                 .followRedirects(HttpClient.Redirect.NEVER)
                 .cookieHandler(new CookieManager())
@@ -344,7 +406,7 @@ class SocialLoginFilterChainIT {
                     .build();
             var location = dexBrowser.send(loginRequest, HttpResponse.BodyHandlers.ofString()).headers()
                     .firstValue("Location").map(formAction::resolve).orElseThrow();
-            while (!location.toString().startsWith(dexRedirectUri())) {
+            while (!location.toString().startsWith(redirectUri)) {
                 var redirect = dexBrowser.send(HttpRequest.newBuilder(location).build(), HttpResponse.BodyHandlers.ofString());
                 location = location.resolve(redirect.headers().firstValue("Location").orElseThrow());
             }
@@ -396,7 +458,11 @@ class SocialLoginFilterChainIT {
 
     // Boot's default redirect URI {baseUrl}/login/oauth2/code/{registrationId}, as seen from this server
     private String dexRedirectUri() {
-        return "http://localhost:" + port + CALLBACK_PATH;
+        return dexRedirectUri(REGISTRATION_ID);
+    }
+
+    private String dexRedirectUri(String registrationId) {
+        return "http://localhost:" + port + "/login/oauth2/code/" + registrationId;
     }
 
     private Map<String, String> storeSocialLoginContext(String context) {

@@ -6,9 +6,11 @@ import eu.wiegandt.librehousehold.household.PendingSocialRegistrationStore;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.jspecify.annotations.NonNull;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizedClientRepository;
 import org.springframework.security.oauth2.core.oidc.StandardClaimNames;
 import org.springframework.security.oauth2.core.user.OAuth2User;
@@ -27,7 +29,8 @@ import java.util.Optional;
 /**
  * Maps a successful login at an external social-login provider to the member account linked to
  * that provider's subject (see ADR-018: only explicitly linked identities count, never a matching
- * e-mail address). Account lockout deliberately does not apply here: it defends against password
+ * e-mail address). The provider is identified by {@link FederatedProviderKey}, not by the
+ * registration ID. Account lockout deliberately does not apply here: it defends against password
  * guessing, and no password is involved.
  *
  * <p>The provider's tokens are not needed after the callback, so the authorized client is removed
@@ -44,7 +47,8 @@ import java.util.Optional;
  *
  * <p>Any failure invalidates the session, so a half-processed external authentication never
  * survives. The {@link SecurityContextRepository} is instantiated locally for the reason given in
- * {@code AccountSessionSignIn}.
+ * {@code AccountSessionSignIn}. The {@link ClientRegistrationRepository} only exists if social login
+ * is configured, which is also the only case in which this handler is called.
  */
 @Component
 public class FederatedIdentityAuthenticationSuccessHandler implements AuthenticationSuccessHandler {
@@ -61,6 +65,7 @@ public class FederatedIdentityAuthenticationSuccessHandler implements Authentica
     private final SocialLoginContextStore socialLoginContextStore;
     private final PendingSocialRegistrationStore pendingSocialRegistrationStore;
     private final OAuth2AuthorizedClientRepository authorizedClientRepository;
+    private final ObjectProvider<ClientRegistrationRepository> clientRegistrationRepository;
     private final SecurityContextRepository securityContextRepository = new HttpSessionSecurityContextRepository();
     private final LogoutHandler logoutHandler = new SecurityContextLogoutHandler();
     private final RedirectStrategy redirectStrategy = new DefaultRedirectStrategy();
@@ -68,11 +73,13 @@ public class FederatedIdentityAuthenticationSuccessHandler implements Authentica
     public FederatedIdentityAuthenticationSuccessHandler(AccountSignIn accountSignIn,
                                                          SocialLoginContextStore socialLoginContextStore,
                                                          PendingSocialRegistrationStore pendingSocialRegistrationStore,
-                                                         OAuth2AuthorizedClientRepository authorizedClientRepository) {
+                                                         OAuth2AuthorizedClientRepository authorizedClientRepository,
+                                                         ObjectProvider<ClientRegistrationRepository> clientRegistrationRepository) {
         this.accountSignIn = accountSignIn;
         this.socialLoginContextStore = socialLoginContextStore;
         this.pendingSocialRegistrationStore = pendingSocialRegistrationStore;
         this.authorizedClientRepository = authorizedClientRepository;
+        this.clientRegistrationRepository = clientRegistrationRepository;
     }
 
     @Override
@@ -103,8 +110,7 @@ public class FederatedIdentityAuthenticationSuccessHandler implements Authentica
 
     private void login(OAuth2AuthenticationToken authentication, HttpServletRequest request,
                        HttpServletResponse response) throws IOException {
-        var memberId = accountSignIn.signInByExternalIdentity(authentication.getAuthorizedClientRegistrationId(),
-                authentication.getName());
+        var memberId = accountSignIn.signInByExternalIdentity(providerId(authentication), authentication.getName());
         if (memberId.isEmpty()) {
             logoutHandler.logout(request, response, authentication);
             redirectStrategy.sendRedirect(request, response, NO_ACCOUNT_FAILURE_URL);
@@ -122,10 +128,16 @@ public class FederatedIdentityAuthenticationSuccessHandler implements Authentica
             redirectStrategy.sendRedirect(request, response, registrationPage + EMAIL_UNVERIFIED_QUERY);
             return;
         }
-        pendingSocialRegistrationStore.store(new ExternalIdentity(authentication.getAuthorizedClientRegistrationId(),
-                authentication.getName(), verifiedEmail.get(), externalUser.getAttribute(StandardClaimNames.NAME)));
+        pendingSocialRegistrationStore.store(new ExternalIdentity(providerId(authentication), authentication.getName(),
+                verifiedEmail.get(), externalUser.getAttribute(StandardClaimNames.NAME)));
         discardExternalAuthentication(request, response);
         redirectStrategy.sendRedirect(request, response, registrationPage + SOCIAL_REGISTRATION_QUERY);
+    }
+
+    private String providerId(OAuth2AuthenticationToken authentication) {
+        var registration = clientRegistrationRepository.getObject()
+                .findByRegistrationId(authentication.getAuthorizedClientRegistrationId());
+        return FederatedProviderKey.of(registration);
     }
 
     private Optional<String> findVerifiedEmail(OAuth2User externalUser) {

@@ -15,7 +15,8 @@ public interface AccountSignIn {
      * Establishes the member's session in the current request, if an account is linked to the
      * given external identity.
      *
-     * @param providerId      the client registration ID of the social-login provider
+     * @param providerId      the social-login provider: its issuer for OIDC, otherwise its user-info
+     *                        URI without query and fragment (see ADR-018)
      * @param externalSubject the provider's stable identifier of the user (e.g. the OIDC {@code sub} claim)
      * @return the signed-in member's ID; empty, and no session change, if no account is linked
      */

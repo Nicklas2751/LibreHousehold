@@ -258,7 +258,7 @@ class HouseholdSetupServiceIT {
     void setupHousehold_pendingSocialRegistration_persistsMemberWithIdentityEmailLinkedToIdentity() {
         // given
         var household = Instancio.create(Household.class);
-        var identity = new ExternalIdentity("google", "subject-" + UUID.randomUUID(),
+        var identity = new ExternalIdentity("https://accounts.google.com", "subject-" + UUID.randomUUID(),
                 "social-" + UUID.randomUUID() + "@example.com", "Provider Name");
         createdHouseholdId = household.getId();
         bindRequest();
@@ -268,7 +268,7 @@ class HouseholdSetupServiceIT {
         service.setupHousehold(new HouseholdSetup(household, memberWithValidEmail()));
 
         // then
-        assertThat(accountService.findMemberIdByExternalIdentity(identity.registrationId(), identity.subject()))
+        assertThat(accountService.findMemberIdByExternalIdentity(identity.providerId(), identity.subject()))
                 .contains(memberRepository.findByEmail(identity.email()).orElseThrow().id());
     }
 
@@ -279,7 +279,7 @@ class HouseholdSetupServiceIT {
         var member = memberWithValidEmail();
         createdHouseholdId = household.getId();
         bindRequest();
-        pendingSocialRegistrationStore.store(new ExternalIdentity("google", "subject-" + UUID.randomUUID(),
+        pendingSocialRegistrationStore.store(new ExternalIdentity("https://accounts.google.com", "subject-" + UUID.randomUUID(),
                 "social-" + UUID.randomUUID() + "@example.com", null));
 
         // when

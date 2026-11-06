@@ -344,7 +344,7 @@ class MemberManagementServiceTest {
     class joinHouseholdViaSocialLogin {
 
         private static final ExternalIdentity IDENTITY =
-                new ExternalIdentity("google", "external-subject", "verified@example.com", "Provider Name");
+                new ExternalIdentity("https://accounts.google.com", "external-subject", "verified@example.com", "Provider Name");
 
         @Test
         void noPendingRegistration_throwsNoPendingSocialRegistrationException() {
@@ -434,7 +434,7 @@ class MemberManagementServiceTest {
             service.joinHousehold(token, buildSocialRegistration());
 
             // then
-            verify(accountService).linkExternalIdentity(savedEntity.id(), IDENTITY.registrationId(), IDENTITY.subject());
+            verify(accountService).linkExternalIdentity(savedEntity.id(), IDENTITY.providerId(), IDENTITY.subject());
         }
 
         @Test
@@ -505,7 +505,7 @@ class MemberManagementServiceTest {
             doReturn(Optional.of(IDENTITY)).when(pendingSocialRegistrationStore).find();
             doReturn(savedEntity).when(memberRepository).save(any(MemberEntity.class));
             doThrow(DataIntegrityViolationException.class).when(accountService)
-                    .linkExternalIdentity(savedEntity.id(), IDENTITY.registrationId(), IDENTITY.subject());
+                    .linkExternalIdentity(savedEntity.id(), IDENTITY.providerId(), IDENTITY.subject());
 
             // when / then
             assertThatThrownBy(() -> service.joinHousehold(token, buildSocialRegistration()))
@@ -513,8 +513,8 @@ class MemberManagementServiceTest {
         }
 
         @Test
-        void localRegistrationAlongsidePendingRegistration_createsPasswordAccount() {
-            // given — an explicit password in the request wins over a pending social registration
+        void localRegistration_leavesPendingSocialRegistrationUntouched() {
+            // given — an explicit password in the request wins over a pending social registration, which stays in the session
             var token = UUID.randomUUID();
             var invite = Instancio.of(InviteEntity.class)
                     .set(field(InviteEntity::validUntil), LocalDate.now().plusDays(3))
@@ -522,14 +522,13 @@ class MemberManagementServiceTest {
             var savedEntity = Instancio.of(memberEntityModel).create();
             var registration = buildSocialRegistration().localRegistration(new LocalRegistration("correct horse battery staple"));
             doReturn(Optional.of(invite)).when(inviteRepository).findByToken(token);
-            lenient().doReturn(Optional.of(IDENTITY)).when(pendingSocialRegistrationStore).find();
             doReturn(savedEntity).when(memberRepository).save(any(MemberEntity.class));
 
             // when
             service.joinHousehold(token, registration);
 
             // then
-            verify(accountService).createAccount(savedEntity.id(), "correct horse battery staple");
+            verifyNoInteractions(pendingSocialRegistrationStore);
         }
 
         private MemberRegistration buildSocialRegistration() {
@@ -583,7 +582,7 @@ class MemberManagementServiceTest {
                     .create();
             var savedEntity = Instancio.of(memberEntityModel).create();
             doReturn(Optional.of(invite)).when(inviteRepository).findByToken(token);
-            doReturn(Optional.of(new ExternalIdentity("google", "external-subject", "verified@example.com", null)))
+            doReturn(Optional.of(new ExternalIdentity("https://accounts.google.com", "external-subject", "verified@example.com", null)))
                     .when(pendingSocialRegistrationStore).find();
             doReturn(savedEntity).when(memberRepository).save(any(MemberEntity.class));
 

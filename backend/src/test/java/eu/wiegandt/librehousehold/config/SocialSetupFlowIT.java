@@ -2,8 +2,10 @@ package eu.wiegandt.librehousehold.config;
 
 import eu.wiegandt.librehousehold.DexTestcontainersConfiguration;
 import eu.wiegandt.librehousehold.TestcontainersConfiguration;
+import eu.wiegandt.librehousehold.household.model.AccountIdentityEntity;
 import eu.wiegandt.librehousehold.household.model.HouseholdEntity;
 import eu.wiegandt.librehousehold.household.model.InviteEntity;
+import eu.wiegandt.librehousehold.household.repository.AccountIdentityRepository;
 import eu.wiegandt.librehousehold.household.repository.HouseholdRepository;
 import eu.wiegandt.librehousehold.household.repository.InviteRepository;
 import eu.wiegandt.librehousehold.household.repository.MemberRepository;
@@ -57,8 +59,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 @ExtendWith(InstancioExtension.class)
 class SocialSetupFlowIT {
 
-    private static final String PROVIDER_ID = "dev-provider";
-    private static final String CALLBACK_PATH = "/login/oauth2/code/" + PROVIDER_ID;
+    private static final String REGISTRATION_ID = "dev-provider";
+    private static final String CALLBACK_PATH = "/login/oauth2/code/" + REGISTRATION_ID;
     private static final String DEX_PASSWORD = "dex-password";
     private static final String BASE_PATH = "/v1";
     private static final String XSRF_TOKEN_COOKIE_NAME = "XSRF-TOKEN";
@@ -85,6 +87,9 @@ class SocialSetupFlowIT {
 
     @Autowired
     private InviteRepository inviteRepository;
+
+    @Autowired
+    private AccountIdentityRepository accountIdentityRepository;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -245,6 +250,35 @@ class SocialSetupFlowIT {
             assertThat(meResponse.getStatus().value()).isEqualTo(200);
         }
 
+        /**
+         * ADR-018: the identity is linked by the provider's issuer, not by the registration ID.
+         */
+        @Test
+        void setupWithoutLocalRegistration_storesIssuerAsProviderId() throws Exception {
+            // given
+            dexContainer.withClient(new DexContainer.Client(DexTestcontainersConfiguration.CLIENT_ID,
+                    DexTestcontainersConfiguration.CLIENT_SECRET, dexRedirectUri()));
+            var dexUser = new DexContainer.User("dex-" + UUID.randomUUID(), "dex-" + UUID.randomUUID() + "@example.com", DEX_PASSWORD);
+            dexContainer.withUser(dexUser);
+            var householdId = UUID.randomUUID();
+            createdHouseholdIds.add(householdId);
+            var memberId = UUID.randomUUID();
+            var callback = loginViaDex(storeSocialLoginContext("{\"context\":\"SETUP\"}"), dexUser);
+            var setupBody = """
+                    {"household": {"id": "%s", "name": "Social Household"},
+                     "member": {"id": "%s", "name": "Requested Name", "email": "ignored@example.com"}}
+                    """.formatted(householdId, memberId);
+
+            // when
+            post(callback.cookies(), BASE_PATH + "/household/setup", setupBody);
+
+            // then
+            assertThat(accountIdentityRepository.findAll())
+                    .filteredOn(identity -> identity.memberId().equals(memberId))
+                    .extracting(AccountIdentityEntity::providerId)
+                    .containsExactly(dexContainer.getIssuerUri());
+        }
+
         @Test
         void setupWithoutLocalRegistration_oldSessionIdRejected() throws Exception {
             // given
@@ -389,7 +423,7 @@ class SocialSetupFlowIT {
      * Dex's redirect back to the callback, whose cookies carry the resulting session.
      */
     private HttpStep loginViaDex(Map<String, String> cookies, DexContainer.User dexUser) throws IOException, InterruptedException {
-        var authorizationRequest = get(cookies, URI.create("/oauth2/authorization/" + PROVIDER_ID));
+        var authorizationRequest = get(cookies, URI.create("/oauth2/authorization/" + REGISTRATION_ID));
         var callbackUri = loginAtDex(authorizationRequest.response().getResponseHeaders().getLocation(), dexUser);
         return get(authorizationRequest.cookies(), URI.create(callbackUri.getRawPath() + "?" + callbackUri.getRawQuery()));
     }

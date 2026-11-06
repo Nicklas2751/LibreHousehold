@@ -270,10 +270,10 @@ class SessionApiDelegateImplTest {
         static List<Arguments> pendingRegistrations() {
             return List.of(
                     argumentSet("provider reported a name",
-                            new ExternalIdentity("google", "external-subject", "max@example.com", "Max Mustermann"),
+                            new ExternalIdentity("https://accounts.google.com", "external-subject", "max@example.com", "Max Mustermann"),
                             new PendingSocialRegistration("max@example.com").name("Max Mustermann")),
                     argumentSet("provider reported no name",
-                            new ExternalIdentity("google", "external-subject", "max@example.com", null),
+                            new ExternalIdentity("https://accounts.google.com", "external-subject", "max@example.com", null),
                             new PendingSocialRegistration("max@example.com")));
         }
 

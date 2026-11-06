@@ -25,7 +25,7 @@ class PendingSocialRegistrationStoreTest {
         @Test
         void identityStored_returnsStoredIdentity() {
             // given
-            var identity = new ExternalIdentity("google", "external-subject", "max@example.com", "Max Mustermann");
+            var identity = new ExternalIdentity("https://accounts.google.com", "external-subject", "max@example.com", "Max Mustermann");
             bindRequest(new MockHttpServletRequest());
             store.store(identity);
 
@@ -39,7 +39,7 @@ class PendingSocialRegistrationStoreTest {
         @Test
         void identityFoundBefore_returnsIdentityAgain() {
             // given
-            var identity = new ExternalIdentity("google", "external-subject", "max@example.com", null);
+            var identity = new ExternalIdentity("https://accounts.google.com", "external-subject", "max@example.com", null);
             bindRequest(new MockHttpServletRequest());
             store.store(identity);
             store.find();
@@ -82,7 +82,7 @@ class PendingSocialRegistrationStoreTest {
         void identityConsumedBefore_returnsEmpty() {
             // given
             bindRequest(new MockHttpServletRequest());
-            store.store(new ExternalIdentity("google", "external-subject", "max@example.com", null));
+            store.store(new ExternalIdentity("https://accounts.google.com", "external-subject", "max@example.com", null));
             store.consume();
 
             // when
