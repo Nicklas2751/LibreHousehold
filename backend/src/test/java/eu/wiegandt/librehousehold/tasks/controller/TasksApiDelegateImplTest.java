@@ -1,8 +1,5 @@
 package eu.wiegandt.librehousehold.tasks.controller;
 import eu.wiegandt.librehousehold.tasks.exception.*;
-import eu.wiegandt.librehousehold.tasks.mapper.*;
-import eu.wiegandt.librehousehold.tasks.model.*;
-import eu.wiegandt.librehousehold.tasks.repository.*;
 import eu.wiegandt.librehousehold.tasks.service.*;
 
 import eu.wiegandt.librehousehold.household.AccountPrincipal;
@@ -68,8 +65,12 @@ class TasksApiDelegateImplTest {
 
         @Test
         void emptyBody_throwsTaskBodyIsRequiredException() {
+            // given
+            var householdId = UUID.randomUUID();
+            Optional<Task> emptyBody = Optional.empty();
+
             // when / then
-            assertThatThrownBy(() -> tasksApiDelegate.createTask(UUID.randomUUID(), Optional.empty()))
+            assertThatThrownBy(() -> tasksApiDelegate.createTask(householdId, emptyBody))
                     .isInstanceOf(TaskBodyIsRequiredException.class);
         }
 
@@ -96,8 +97,13 @@ class TasksApiDelegateImplTest {
 
         @Test
         void emptyBody_throwsTaskBodyIsRequiredException() {
+            // given
+            var householdId = UUID.randomUUID();
+            var taskId = UUID.randomUUID();
+            Optional<TaskUpdate> emptyBody = Optional.empty();
+
             // when / then
-            assertThatThrownBy(() -> tasksApiDelegate.updateTask(UUID.randomUUID(), UUID.randomUUID(), Optional.empty()))
+            assertThatThrownBy(() -> tasksApiDelegate.updateTask(householdId, taskId, emptyBody))
                     .isInstanceOf(TaskBodyIsRequiredException.class);
         }
 
