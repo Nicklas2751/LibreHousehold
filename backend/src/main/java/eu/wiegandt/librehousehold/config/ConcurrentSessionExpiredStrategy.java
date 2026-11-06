@@ -2,7 +2,6 @@ package eu.wiegandt.librehousehold.config;
 
 import jakarta.servlet.ServletException;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.authentication.DelegatingAuthenticationEntryPoint;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
@@ -10,7 +9,6 @@ import org.springframework.security.web.authentication.LoginUrlAuthenticationEnt
 import org.springframework.security.web.authentication.session.SessionAuthenticationException;
 import org.springframework.security.web.session.SessionInformationExpiredEvent;
 import org.springframework.security.web.session.SessionInformationExpiredStrategy;
-import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
 
 import java.io.IOException;
 
@@ -24,7 +22,7 @@ import java.io.IOException;
 class ConcurrentSessionExpiredStrategy implements SessionInformationExpiredStrategy {
 
     private final AuthenticationEntryPoint entryPoint = DelegatingAuthenticationEntryPoint.builder()
-            .addEntryPointFor(new LoginUrlAuthenticationEntryPoint("/login"), new MediaTypeRequestMatcher(MediaType.TEXT_HTML))
+            .addEntryPointFor(new LoginUrlAuthenticationEntryPoint("/login"), SecurityConfig.browserNavigation())
             .defaultEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
             .build();
 
