@@ -119,6 +119,85 @@ describe('login page', () => {
 		);
 	});
 
+	it('success_navigatesToSafeReturnTo', async () => {
+		// given
+		mockPage.url = new URL('http://localhost:5173/login?returnTo=%2Fapp%2Ftasks%3Ffilter%3Dopen');
+		vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 204 })));
+		mockBootstrapSession.mockImplementation(async () => setAuthenticated(currentUser));
+
+		// when
+		await fillAndSubmit();
+
+		// then
+		await vi.waitFor(() =>
+			expect(mockGoto).toHaveBeenCalledWith('/app/tasks?filter=open', { replaceState: true })
+		);
+	});
+
+	it('successWithUnsafeReturnTo_navigatesToDashboard', async () => {
+		// given
+		mockPage.url = new URL('http://localhost:5173/login?returnTo=%2F%2Fevil.example');
+		vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 204 })));
+		mockBootstrapSession.mockImplementation(async () => setAuthenticated(currentUser));
+
+		// when
+		await fillAndSubmit();
+
+		// then
+		await vi.waitFor(() =>
+			expect(mockGoto).toHaveBeenCalledWith('/app/dashboard', { replaceState: true })
+		);
+	});
+
+	it('sessionExpiredReason_showsInfo', async () => {
+		// given
+		mockPage.url = new URL(
+			'http://localhost:5173/login?returnTo=%2Fapp%2Ftasks&reason=session-expired'
+		);
+
+		// when
+		render(LoginPage);
+
+		// then
+		await expect.element(page.getByText('Deine Sitzung ist abgelaufen')).toBeVisible();
+	});
+
+	it('error_alertFocused', async () => {
+		// given
+		vi.stubGlobal(
+			'fetch',
+			vi.fn().mockResolvedValue(problemResponse(401, { type: '/problems/invalid-credentials' }))
+		);
+
+		// when
+		await fillAndSubmit();
+
+		// then
+		await expect.element(page.getByRole('alert')).toHaveFocus();
+	});
+
+	it('invalidCredentialsWithProviders_showsSocialHintWithProviderNames', async () => {
+		// given
+		authDiscovery.socialProviders = [
+			{ id: 'google', displayName: 'Google' },
+			{ id: 'github', displayName: 'GitHub' }
+		];
+		vi.stubGlobal(
+			'fetch',
+			vi.fn().mockResolvedValue(problemResponse(401, { type: '/problems/invalid-credentials' }))
+		);
+
+		// when
+		await fillAndSubmit();
+
+		// then
+		await expect
+			.element(page.getByRole('alert'))
+			.toHaveTextContent(
+				'Falls du dich über einen Anbieter registriert hast, nutze „Weiter mit Google / GitHub“.'
+			);
+	});
+
 	it('invalidCredentials_doesNotNavigate', async () => {
 		// given
 		vi.stubGlobal(
@@ -165,6 +244,27 @@ describe('login page', () => {
 		await expect.element(page.getByText('nur über einen Anbieter')).toBeVisible();
 	});
 
+	it.each([
+		{ lockedUntil: new Date(Date.now() + 15 * 60 * 1000).toISOString() },
+		{ lockedUntil: undefined }
+	])('locked_showsResetLink (lockedUntil $lockedUntil)', async ({ lockedUntil }) => {
+		// given
+		vi.stubGlobal(
+			'fetch',
+			vi
+				.fn()
+				.mockResolvedValue(problemResponse(403, { type: '/problems/account-locked', lockedUntil }))
+		);
+
+		// when
+		await fillAndSubmit();
+
+		// then
+		await expect
+			.element(page.getByRole('alert').getByRole('link'))
+			.toHaveAttribute('href', '/forgot-password');
+	});
+
 	it('locked_showsFormattedUnlockTime', async () => {
 		// given
 		const lockedUntil = new Date(Date.now() + 15 * 60 * 1000);
@@ -185,7 +285,11 @@ describe('login page', () => {
 		await fillAndSubmit();
 
 		// then
-		await expect.element(page.getByText(lockedUntil.toLocaleTimeString())).toBeVisible();
+		await expect
+			.element(
+				page.getByText(new Intl.DateTimeFormat('de', { timeStyle: 'short' }).format(lockedUntil))
+			)
+			.toBeVisible();
 	});
 
 	it('locked_doesNotNavigate', async () => {
@@ -366,6 +470,22 @@ describe('login page', () => {
 
 		// then
 		await expect.element(page.getByRole('link', { name: 'Zurück' })).toHaveAttribute('href', '/');
+	});
+
+	it('redirected back with reason social-login-no-account and local login disabled — asks for an invitation only', async () => {
+		// given
+		authDiscovery.localEnabled = false;
+		mockPage.url = new URL('http://localhost:5173/login?error&reason=social-login-no-account');
+
+		// when
+		render(LoginPage);
+
+		// then
+		await expect
+			.element(page.getByRole('alert'))
+			.toHaveTextContent(
+				'Für dieses Anbieter-Konto gibt es kein LibreHousehold-Konto. Lass dich in einen Haushalt einladen.'
+			);
 	});
 
 	it.each([

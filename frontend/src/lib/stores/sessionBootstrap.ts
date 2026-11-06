@@ -19,8 +19,12 @@ export async function bootstrapSession(options: { silent?: boolean } = {}): Prom
 		updateHouseholdState(currentUser.household);
 		updateUserState(currentUser.member);
 	} catch (err: unknown) {
-		setGuest();
-		if (!options.silent && extractErrorStatus(err) !== HTTP_STATUS_UNAUTHORIZED) {
+		if (extractErrorStatus(err) === HTTP_STATUS_UNAUTHORIZED) {
+			setGuest();
+			return;
+		}
+		// Any other failure says nothing about the session, so a signed-in user stays signed in.
+		if (!options.silent) {
 			addToast(new Toast(m['session.bootstrap_error'](), 'error'));
 		}
 	}

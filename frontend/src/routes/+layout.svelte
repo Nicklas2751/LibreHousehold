@@ -6,12 +6,10 @@
 	import { browser } from '$app/environment';
 	import { bootstrapSession } from '$lib/stores/sessionBootstrap';
 
-	// Runs on every page load, including public/guest-accessible routes (login, setup, invite) —
-	// an unexpected error here must not surface as a generic error toast there, since being a
-	// guest is the expected default state on those pages, not a failure. Explicit bootstrapSession()
-	// calls right after login/setup/join (see login/+page.svelte, SetupWizard.svelte, JoinWizard.svelte)
-	// stay loud, since a failure right after a successful auth action is worth surfacing.
-	if (browser) bootstrapSession({ silent: true });
+	// Runs on every page load, including public pages. A 401 just means guest and stays silent; any
+	// other failure leaves the session status untouched and must be reported, otherwise a signed-in
+	// user would wait on the app's loading indicator without any hint.
+	if (browser) bootstrapSession();
 
 	let { children } = $props();
 </script>

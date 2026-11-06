@@ -3,11 +3,21 @@ import { render } from 'vitest-browser-svelte';
 import { page } from 'vitest/browser';
 import { createRawSnippet } from 'svelte';
 import AppLayout from './+layout.svelte';
-import { session, setAuthenticated, setGuest } from '$lib/stores/sessionState.svelte';
+import {
+	session,
+	setAuthenticated,
+	setGuest,
+	setSessionExpired
+} from '$lib/stores/sessionState.svelte';
 
-const { mockGoto } = vi.hoisted(() => ({ mockGoto: vi.fn() }));
+const { mockGoto, mockPage } = vi.hoisted(() => ({
+	mockGoto: vi.fn(),
+	mockPage: { url: new URL('http://localhost:5173/app/tasks') }
+}));
 
 vi.mock('$app/navigation', () => ({ goto: mockGoto }));
+
+vi.mock('$app/state', () => ({ page: mockPage }));
 
 const currentUser = {
 	member: { id: 'member-id', name: 'Max Mustermann', email: 'max@example.com', isAdmin: true },
@@ -26,7 +36,7 @@ describe('App layout guard', () => {
 		vi.clearAllMocks();
 	});
 
-	it('guest_navigatesToLoginWithReplaceState', async () => {
+	it('guest_navigatesToLoginWithReturnToAndReplaceState', async () => {
 		// given
 		setGuest();
 
@@ -34,7 +44,27 @@ describe('App layout guard', () => {
 		render(AppLayout, { children: childrenSnippet });
 
 		// then
-		await vi.waitFor(() => expect(mockGoto).toHaveBeenCalledWith('/login', { replaceState: true }));
+		await vi.waitFor(() =>
+			expect(mockGoto).toHaveBeenCalledWith('/login?returnTo=%2Fapp%2Ftasks', {
+				replaceState: true
+			})
+		);
+	});
+
+	it('sessionExpired_navigatesToLoginWithReturnToAndExpiryReason', async () => {
+		// given
+		setSessionExpired();
+
+		// when
+		render(AppLayout, { children: childrenSnippet });
+
+		// then
+		await vi.waitFor(() =>
+			expect(mockGoto).toHaveBeenCalledWith(
+				'/login?returnTo=%2Fapp%2Ftasks&reason=session-expired',
+				{ replaceState: true }
+			)
+		);
 	});
 
 	it('guest_doesNotRenderChildren', async () => {

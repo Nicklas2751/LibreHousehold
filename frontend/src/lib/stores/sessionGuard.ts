@@ -7,3 +7,13 @@ export function shouldRedirectToLogin(status: SessionStatus): boolean {
 export function shouldTreatAsSessionExpiry(status: SessionStatus): boolean {
 	return status === 'authenticated';
 }
+
+const SESSION_EXPIRED_REASON = 'session-expired';
+
+export function loginRedirectTarget(currentUrl: URL, expired: boolean): string {
+	const query = new URLSearchParams({ returnTo: currentUrl.pathname + currentUrl.search });
+	if (expired) {
+		query.set('reason', SESSION_EXPIRED_REASON);
+	}
+	return `/login?${query}`;
+}

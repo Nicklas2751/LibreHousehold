@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { session, setAuthenticated, setGuest } from './sessionState.svelte';
+import { session, setAuthenticated, setGuest, setSessionExpired } from './sessionState.svelte';
 import type { CurrentUser } from '../../generated-sources/openapi';
 
 describe('sessionState', () => {
@@ -26,12 +26,22 @@ describe('sessionState', () => {
 		expect(session.currentUser).toEqual(user);
 	});
 
-	it('setGuest sets status to guest and currentUser to null', () => {
+	it('setGuest sets status to guest, currentUser to null and clears the expiry', () => {
+		// given
+		setSessionExpired();
+
 		// when
 		setGuest();
 
 		// then
-		expect(session.status).toBe('guest');
-		expect(session.currentUser).toBeNull();
+		expect({ ...session }).toEqual({ status: 'guest', currentUser: null, expired: false });
+	});
+
+	it('setSessionExpired sets status to guest, currentUser to null and marks the session as expired', () => {
+		// when
+		setSessionExpired();
+
+		// then
+		expect({ ...session }).toEqual({ status: 'guest', currentUser: null, expired: true });
 	});
 });

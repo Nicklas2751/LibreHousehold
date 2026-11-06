@@ -98,7 +98,7 @@ describe('apiConfiguration', () => {
 });
 
 describe('sessionExpiredMiddleware', () => {
-	it('on 401 with status authenticated — only sets the session to guest', async () => {
+	it('on 401 with status authenticated — marks the session as expired', async () => {
 		// given
 		setAuthenticated(currentUser);
 
@@ -111,7 +111,10 @@ describe('sessionExpiredMiddleware', () => {
 		});
 
 		// then
-		expect(session.status).toBe('guest');
+		expect({ status: session.status, expired: session.expired }).toEqual({
+			status: 'guest',
+			expired: true
+		});
 	});
 
 	it('on 401 with status guest — does not change the session', async () => {

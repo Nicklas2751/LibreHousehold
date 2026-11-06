@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { shouldRedirectToLogin, shouldTreatAsSessionExpiry } from './sessionGuard';
+import {
+	loginRedirectTarget,
+	shouldRedirectToLogin,
+	shouldTreatAsSessionExpiry
+} from './sessionGuard';
 import type { SessionStatus } from './sessionState.svelte';
 
 describe('shouldRedirectToLogin', () => {
@@ -38,5 +42,27 @@ describe('shouldTreatAsSessionExpiry', () => {
 
 		// then
 		expect(result).toBe(false);
+	});
+});
+
+describe('loginRedirectTarget', () => {
+	it.each([
+		{
+			expired: false,
+			expected: '/login?returnTo=%2Fapp%2Ftasks%3Ffilter%3Dopen'
+		},
+		{
+			expired: true,
+			expected: '/login?returnTo=%2Fapp%2Ftasks%3Ffilter%3Dopen&reason=session-expired'
+		}
+	])('expired $expired — returns $expected', ({ expired, expected }) => {
+		// when
+		const result = loginRedirectTarget(
+			new URL('http://localhost:5173/app/tasks?filter=open'),
+			expired
+		);
+
+		// then
+		expect(result).toBe(expected);
 	});
 });

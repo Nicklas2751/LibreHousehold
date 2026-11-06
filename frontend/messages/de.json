@@ -293,20 +293,25 @@
 		"error_network": "Keine Verbindung zum Server. Bitte prüfe deine Internetverbindung und versuche es erneut.",
 		"error_unexpected": "Etwas ist schiefgelaufen. Bitte versuche es später erneut.",
 		"error_unverified": "Bitte bestätige zuerst deine E-Mail-Adresse. Wir haben dir dazu einen Link per E-Mail geschickt.",
-		"error_locked": "Dieses Konto ist wegen zu vieler fehlgeschlagener Anmeldeversuche vorübergehend gesperrt. Bitte versuche es nach {time} erneut.",
-		"error_locked_unknown_time": "Dieses Konto ist wegen zu vieler fehlgeschlagener Anmeldeversuche vorübergehend gesperrt. Bitte versuche es später erneut.",
+		"error_locked": "Dieses Konto ist wegen zu vieler fehlgeschlagener Anmeldeversuche vorübergehend gesperrt. Bitte versuche es nach {time} erneut. Achtung: Auch danach sperrt schon ein weiterer falscher Versuch das Konto erneut. Setze dein Passwort zurück, um es sofort zu entsperren.",
+		"error_locked_unknown_time": "Dieses Konto ist wegen zu vieler fehlgeschlagener Anmeldeversuche vorübergehend gesperrt. Bitte versuche es später erneut. Achtung: Auch danach sperrt schon ein weiterer falscher Versuch das Konto erneut. Setze dein Passwort zurück, um es sofort zu entsperren.",
 		"forgot_password_link": "Passwort vergessen?",
 		"back_button": "Zurück",
 		"error_social_login_no_account": "Zu diesem Anbieter-Konto gibt es kein Konto in LibreHousehold. Melde dich mit E-Mail und Passwort an oder lass dich in einen Haushalt einladen.",
 		"error_social_login_failed": "Die Anmeldung über den Anbieter ist fehlgeschlagen. Bitte versuche es erneut.",
-		"error_local_login_disabled": "Auf dieser Instanz ist die Anmeldung nur über einen Anbieter möglich."
+		"error_local_login_disabled": "Auf dieser Instanz ist die Anmeldung nur über einen Anbieter möglich.",
+		"error_invalid_credentials_with_social_hint": "E-Mail oder Passwort ist falsch. Falls du dich über einen Anbieter registriert hast, nutze „Weiter mit {provider}“.",
+		"locked_reset_link": "Passwort zurücksetzen",
+		"error_social_login_no_account_social_only": "Für dieses Anbieter-Konto gibt es kein LibreHousehold-Konto. Lass dich in einen Haushalt einladen.",
+		"info_session_expired": "Deine Sitzung ist abgelaufen. Bitte melde dich erneut an."
 	},
 	"forgot_password": {
 		"title": "Passwort vergessen",
 		"email_label": "E-Mail",
 		"submit_button": "Link anfordern",
 		"success_message": "Falls ein Konto mit dieser E-Mail-Adresse existiert, wurde eine E-Mail zum Zurücksetzen des Passworts verschickt.",
-		"back_to_login_link": "Zurück zum Login"
+		"back_to_login_link": "Zurück zum Login",
+		"success_message_social_hint": "Hast du dich über einen Anbieter registriert, hast du kein Passwort. Melde dich auf der Anmeldeseite mit „Weiter mit {provider}“ an."
 	},
 	"reset_password": {
 		"title": "Neues Passwort vergeben",
@@ -318,7 +323,7 @@
 		"back_to_forgot_password_link": "Neuen Link anfordern"
 	},
 	"session": {
-		"bootstrap_error": "Sitzung konnte nicht geladen werden. Bitte melde dich erneut an."
+		"bootstrap_error": "Es gab einen technischen Fehler. Bitte versuche es erneut."
 	},
 	"verification": {
 		"banner_text": "Bitte bestätige deine E-Mail-Adresse, um dein Konto vollständig zu nutzen.",

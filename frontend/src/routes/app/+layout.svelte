@@ -3,8 +3,9 @@
 	import { browser } from '$app/environment';
 	import { initSettings } from '$lib/stores/settingsStore';
 	import { session } from '$lib/stores/sessionState.svelte';
-	import { shouldRedirectToLogin } from '$lib/stores/sessionGuard';
+	import { loginRedirectTarget, shouldRedirectToLogin } from '$lib/stores/sessionGuard';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
 	import { resendVerificationEmail } from '$lib/stores/memberStore';
 	import {
 		dismissVerificationBanner,
@@ -18,7 +19,7 @@
 
 	$effect(() => {
 		if (shouldRedirectToLogin(session.status)) {
-			goto('/login', { replaceState: true });
+			goto(loginRedirectTarget(page.url, session.expired), { replaceState: true });
 		}
 	});
 
