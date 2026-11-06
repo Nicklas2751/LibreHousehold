@@ -41,8 +41,8 @@ import java.util.List;
  * logout under {@code POST {basePath}/logout}. The HTTP session is the only credential; the
  * session building blocks shared by every sign-in path live in {@link SessionManagementConfig}.
  *
- * <p>Lives in {@code config}, not in {@code household}: Spring Security wires the
- * {@code household}-provided {@code UserDetailsService} into its {@code DaoAuthenticationProvider}
+ * <p>Lives in {@code config}, not in {@code household}: {@link AuthenticationProviderConfig} wires
+ * the {@code household}-provided {@code UserDetailsService} into the {@code DaoAuthenticationProvider}
  * by type, so this class has no compile-time dependency on {@code household}'s internals (verified
  * by {@code ApplicationModules.verify()}, see {@code ApplicationTests}).
  *

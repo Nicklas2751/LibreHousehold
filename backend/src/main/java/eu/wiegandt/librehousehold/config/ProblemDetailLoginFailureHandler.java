@@ -20,9 +20,10 @@ import org.springframework.web.servlet.HandlerExceptionResolver;
 /**
  * Answers a failed form login with an RFC 9457 problem, written through the MVC
  * {@link HandlerExceptionResolver} like every other API error (see {@link RateLimitingFilter}).
- * An unverified and a locked account are told apart from wrong credentials, so the SPA can show a
- * specific hint - a documented ENUM1 trade-off (Arc42 Chapter 8). The exception's message never
- * reaches the response.
+ * Every failure that could reveal an existing account gets the same invalid-credentials problem
+ * (ENUM1 in Arc42 Chapter 8). Only an unverified account with the correct password (see
+ * {@link AuthenticationProviderConfig}) and a locked account are told apart, so the SPA can show a
+ * specific hint. The exception's message never reaches the response.
  *
  * <p>{@code AccountLockedException} is thrown from {@code AccountUserDetailsService}, which
  * {@code DaoAuthenticationProvider} wraps into an {@code InternalAuthenticationServiceException},

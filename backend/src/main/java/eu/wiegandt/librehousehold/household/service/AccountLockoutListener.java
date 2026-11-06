@@ -34,9 +34,14 @@ public class AccountLockoutListener {
         this.lockoutProperties = lockoutProperties;
     }
 
+    // Only a password can be guessed; a failure for an account without one is a login with an unknown e-mail address
     @EventListener
     public void onAuthenticationFailure(AuthenticationFailureBadCredentialsEvent event) {
-        findMemberId(event).ifPresent(this::registerFailedAttempt);
+        findMemberId(event)
+                .flatMap(accountRepository::findById)
+                .filter(AccountLockoutListener::hasPassword)
+                .map(AccountEntity::memberId)
+                .ifPresent(this::registerFailedAttempt);
     }
 
     @EventListener
@@ -54,6 +59,10 @@ public class AccountLockoutListener {
         if (failedAttempts >= lockoutProperties.maxAttempts()) {
             accountRepository.lockUntil(memberId, Instant.now().plus(lockoutProperties.lockoutDuration()));
         }
+    }
+
+    private static boolean hasPassword(AccountEntity account) {
+        return account.passwordHash() != null;
     }
 
     // A failed attempt carries only the e-mail address the user typed in
