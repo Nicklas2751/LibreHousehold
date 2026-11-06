@@ -146,10 +146,12 @@ class TaskServiceIT {
             var otherHouseholdId = UUID.randomUUID();
             var taskId = UUID.randomUUID();
             doReturn(true).when(householdQuery).householdExists(otherHouseholdId);
+            var actingMemberId = UUID.randomUUID();
+            var update = new TaskUpdate().done(LocalDate.of(2024, 7, 5));
             taskService.createTask(otherHouseholdId, new Task(taskId, "Clean", LocalDate.of(2024, 7, 1)));
 
             // when / then
-            assertThatThrownBy(() -> taskService.updateTask(ownHouseholdId, taskId, new TaskUpdate().done(LocalDate.of(2024, 7, 5)), UUID.randomUUID()))
+            assertThatThrownBy(() -> taskService.updateTask(ownHouseholdId, taskId, update, actingMemberId))
                     .isInstanceOf(TaskNotFoundException.class);
             assertThat(taskCompletionRepository.findFirstByTaskIdOrderByDoneDateDesc(taskId)).isEmpty();
         }
