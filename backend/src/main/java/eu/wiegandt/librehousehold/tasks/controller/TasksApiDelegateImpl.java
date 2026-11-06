@@ -1,6 +1,7 @@
 package eu.wiegandt.librehousehold.tasks.controller;
 
 import eu.wiegandt.librehousehold.api.TasksApiDelegate;
+import eu.wiegandt.librehousehold.household.AccountPrincipal;
 import eu.wiegandt.librehousehold.tasks.exception.TaskBodyIsRequiredException;
 import eu.wiegandt.librehousehold.tasks.service.TaskService;
 import eu.wiegandt.librehousehold.model.Task;
@@ -8,9 +9,11 @@ import eu.wiegandt.librehousehold.model.TaskEdit;
 import eu.wiegandt.librehousehold.model.TaskUpdate;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -40,7 +43,7 @@ public class TasksApiDelegateImpl implements TasksApiDelegate {
     @PreAuthorize("@householdAccessGuard.isMember(#householdId, authentication)")
     public ResponseEntity<Task> updateTask(UUID householdId, UUID taskId, Optional<TaskUpdate> taskUpdate) {
         var update = taskUpdate.orElseThrow(TaskBodyIsRequiredException::new);
-        return ResponseEntity.ok(taskService.updateTask(householdId, taskId, update));
+        return ResponseEntity.ok(taskService.updateTask(householdId, taskId, update, currentMemberId()));
     }
 
     @Override
@@ -54,5 +57,12 @@ public class TasksApiDelegateImpl implements TasksApiDelegate {
     public ResponseEntity<Void> deleteTask(UUID householdId, UUID taskId) {
         taskService.deleteTask(householdId, taskId);
         return ResponseEntity.noContent().build();
+    }
+
+    // @PreAuthorize has already checked membership, so the session principal is always an AccountPrincipal here
+    private static UUID currentMemberId() {
+        var authentication = Objects.requireNonNull(SecurityContextHolder.getContext().getAuthentication());
+        var principal = (AccountPrincipal) authentication.getPrincipal();
+        return principal.memberId();
     }
 }
