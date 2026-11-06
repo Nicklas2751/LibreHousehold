@@ -91,10 +91,11 @@ class TaskServiceTest {
         void unknownHousehold_throwsHouseholdNotFoundException() {
             // given
             var householdId = UUID.randomUUID();
+            var task = new Task(UUID.randomUUID(), "T", LocalDate.now());
             doReturn(false).when(householdQuery).householdExists(householdId);
 
             // when / then
-            assertThatThrownBy(() -> taskService.createTask(householdId, new Task(UUID.randomUUID(), "T", LocalDate.now())))
+            assertThatThrownBy(() -> taskService.createTask(householdId, task))
                     .isInstanceOf(HouseholdNotFoundException.class);
         }
 
@@ -350,10 +351,13 @@ class TaskServiceTest {
         @Test
         void unknownTaskId_throwsTaskNotFoundException() {
             // given
+            var householdId = UUID.randomUUID();
+            var taskId = UUID.randomUUID();
+            var edit = new TaskEdit("Title", LocalDate.now());
             doReturn(Optional.empty()).when(taskRepository).findByIdAndHouseholdId(any(), any());
 
             // when / then
-            assertThatThrownBy(() -> taskService.editTask(UUID.randomUUID(), UUID.randomUUID(), new TaskEdit("Title", LocalDate.now())))
+            assertThatThrownBy(() -> taskService.editTask(householdId, taskId, edit))
                     .isInstanceOf(TaskNotFoundException.class);
         }
 
@@ -362,10 +366,11 @@ class TaskServiceTest {
             // given
             var householdId = UUID.randomUUID();
             var taskId = UUID.randomUUID();
+            var edit = new TaskEdit("Title", LocalDate.now());
             doReturn(Optional.empty()).when(taskRepository).findByIdAndHouseholdId(taskId, householdId);
 
             // when / then
-            assertThatThrownBy(() -> taskService.editTask(householdId, taskId, new TaskEdit("Title", LocalDate.now())))
+            assertThatThrownBy(() -> taskService.editTask(householdId, taskId, edit))
                     .isInstanceOf(TaskNotFoundException.class);
         }
 
@@ -415,10 +420,12 @@ class TaskServiceTest {
         @Test
         void unknownTaskId_throwsTaskNotFoundException() {
             // given
+            var householdId = UUID.randomUUID();
+            var taskId = UUID.randomUUID();
             doReturn(Optional.empty()).when(taskRepository).findByIdAndHouseholdId(any(), any());
 
             // when / then
-            assertThatThrownBy(() -> taskService.deleteTask(UUID.randomUUID(), UUID.randomUUID()))
+            assertThatThrownBy(() -> taskService.deleteTask(householdId, taskId))
                     .isInstanceOf(TaskNotFoundException.class);
         }
 
