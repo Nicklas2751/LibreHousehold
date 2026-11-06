@@ -352,14 +352,14 @@
 		{#if !isShowForm && $financialSummary}
 			<div class="mb-3 flex flex-wrap gap-2">
 				{#if $financialSummary.youOwe > 0.001}
-					<div class="badge badge-error badge-lg gap-1 font-medium">
+					<div class="badge gap-1 badge-lg font-medium badge-error">
 						{m['expenses.balance_summary.you_owe']({
 							amount: $financialSummary.youOwe.toFixed(2) + ' €'
 						})}
 					</div>
 				{/if}
 				{#if $financialSummary.owedToYou > 0.001}
-					<div class="badge badge-success badge-lg gap-1 font-medium">
+					<div class="badge gap-1 badge-lg font-medium badge-success">
 						{m['expenses.balance_summary.owed_to_you']({
 							amount: $financialSummary.owedToYou.toFixed(2) + ' €'
 						})}
@@ -430,7 +430,7 @@
 		>
 			{#snippet itemContent(expense)}
 				<div
-					class="flex flex-col cursor-pointer"
+					class="flex cursor-pointer flex-col"
 					class:opacity-50={!isExpenseMutable(expense) || !isUserInvolved(expense)}
 					role="button"
 					tabindex="0"
@@ -492,7 +492,7 @@
 				<div class="flex items-center justify-between">
 					<span class="opacity-60">{m['expenses.new.amount_label']()}</span>
 					<span
-						class="font-bold text-base"
+						class="text-base font-bold"
 						class:text-success={isOwnExpense(detailExpense)}
 						class:text-error={!isOwnExpense(detailExpense)}
 					>
@@ -569,7 +569,7 @@
 					<EditIcon />{m['expenses.edit.title']()}
 				</button>
 				<button
-					class="btn btn-error btn-outline btn-sm"
+					class="btn btn-outline btn-error btn-sm"
 					onclick={() => {
 						expenseToDelete = detailExpense;
 						detailModal?.close();

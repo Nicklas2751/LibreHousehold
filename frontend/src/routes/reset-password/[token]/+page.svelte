@@ -49,7 +49,7 @@
 					<div class="mt-4 alert alert-error">
 						<span>{m['reset_password.invalid_token_error']()}</span>
 					</div>
-					<a href="/forgot-password" class="mt-3 text-center text-sm link link-hover">
+					<a href="/forgot-password" class="mt-3 link text-center text-sm link-hover">
 						{m['reset_password.back_to_forgot_password_link']()}
 					</a>
 				{:else}

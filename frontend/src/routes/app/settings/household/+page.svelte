@@ -296,7 +296,7 @@
 			</fieldset>
 			<div class="mt-3 card-actions justify-end">
 				<button
-					class="btn btn-sm btn-primary"
+					class="btn btn-primary btn-sm"
 					onclick={saveName}
 					disabled={nameSaving ||
 						householdName.trim().length < 3 ||
@@ -330,7 +330,7 @@
 						{/if}
 						{#if member.id !== $userState?.id}
 							<button
-								class="btn text-error btn-ghost btn-xs"
+								class="btn btn-ghost text-error btn-xs"
 								onclick={() => openRemoveMemberModal(member.id)}
 								aria-label={m['settings.household.members.remove_aria']()}
 							>
@@ -382,7 +382,7 @@
 				{m['settings.household.danger.description']()}
 			</p>
 			<div class="mt-3 card-actions justify-end">
-				<button class="btn btn-outline btn-sm btn-error" onclick={() => (deleteModalOpen = true)}>
+				<button class="btn btn-outline btn-error btn-sm" onclick={() => (deleteModalOpen = true)}>
 					{m['settings.household.danger.delete_button']()}
 				</button>
 			</div>
@@ -392,7 +392,7 @@
 
 <!-- Remove member modal -->
 {#if memberToRemove}
-	<div class="modal-open modal">
+	<div class="modal modal-open">
 		<div class="modal-box">
 			<h3 class="text-lg font-bold">{m['settings.household.members.remove_modal.title']()}</h3>
 			<p class="mt-3 text-sm">
@@ -407,7 +407,7 @@
 					{m['settings.household.members.remove_modal.cancel']()}
 				</button>
 				<button
-					class="btn btn-sm btn-error"
+					class="btn btn-error btn-sm"
 					onclick={confirmRemoveMember}
 					disabled={removeSubmitting}
 				>
@@ -429,7 +429,7 @@
 <!-- Transfer ownership modal -->
 {#if transferModalOpen}
 	{@const newOwner = $members.find((mb) => mb.id === transferToId)}
-	<div class="modal-open modal">
+	<div class="modal modal-open">
 		<div class="modal-box">
 			<h3 class="text-lg font-bold">{m['settings.household.transfer.modal.title']()}</h3>
 			<p class="mt-3 text-sm">
@@ -468,7 +468,7 @@
 
 <!-- Delete household modal -->
 {#if deleteModalOpen}
-	<div class="modal-open modal">
+	<div class="modal modal-open">
 		<div class="modal-box">
 			<h3 class="text-lg font-bold text-error">{m['settings.household.danger.modal.title']()}</h3>
 			<p class="mt-3 text-sm">{m['settings.household.danger.modal.text']()}</p>
@@ -498,7 +498,7 @@
 					{m['settings.household.danger.modal.cancel']()}
 				</button>
 				<button
-					class="btn btn-sm btn-error"
+					class="btn btn-error btn-sm"
 					onclick={confirmDeleteHousehold}
 					disabled={!deleteNameMatches || deleteSubmitting}
 				>

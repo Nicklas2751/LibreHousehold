@@ -184,7 +184,7 @@
 							{m['login.submit_button']()}
 						</button>
 					</form>
-					<a href="/forgot-password" class="mt-3 text-center text-sm link link-hover">
+					<a href="/forgot-password" class="mt-3 link text-center text-sm link-hover">
 						{m['login.forgot_password_link']()}
 					</a>
 				{/if}

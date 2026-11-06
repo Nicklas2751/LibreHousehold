@@ -125,14 +125,14 @@
 								</div>
 								<span class="min-w-0 flex-1 truncate text-sm font-medium">{category.name}</span>
 								<button
-									class="btn text-base-content/60 btn-ghost btn-xs"
+									class="btn btn-ghost text-base-content/60 btn-xs"
 									onclick={() => openEditModal(category.id, category.name, category.icon)}
 									aria-label={m['settings.categories.edit_modal.title']()}
 								>
 									<EditPencilIcon class="h-4 w-4" />
 								</button>
 								<button
-									class="btn text-error btn-ghost btn-xs"
+									class="btn btn-ghost text-error btn-xs"
 									onclick={() => openDeleteModal(category.id, category.name)}
 									aria-label={m['settings.categories.delete_modal.title']()}
 									disabled={deleting}
@@ -182,7 +182,7 @@
 					</div>
 					<button
 						type="submit"
-						class="btn self-end btn-sm btn-primary"
+						class="btn self-end btn-primary btn-sm"
 						disabled={creating || newName.trim().length < 2}
 					>
 						{#if creating}
@@ -237,7 +237,7 @@
 				<button class="btn btn-ghost btn-sm">{m['settings.categories.edit_modal.cancel']()}</button>
 			</form>
 			<button
-				class="btn btn-sm btn-primary"
+				class="btn btn-primary btn-sm"
 				onclick={handleSave}
 				disabled={saving || editName.trim().length < 2}
 			>
@@ -266,7 +266,7 @@
 					>{m['settings.categories.delete_modal.cancel']()}</button
 				>
 			</form>
-			<button class="btn btn-sm btn-error" onclick={handleDelete}>
+			<button class="btn btn-error btn-sm" onclick={handleDelete}>
 				{m['settings.categories.delete_modal.confirm']()}
 			</button>
 		</div>

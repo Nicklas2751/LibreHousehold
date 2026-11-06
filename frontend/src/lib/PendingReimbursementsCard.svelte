@@ -85,7 +85,7 @@
 							{/await}
 						</div>
 						<div class="flex justify-end gap-2">
-							<button class="btn btn-outline btn-sm btn-error" onclick={() => handleReject(item)}>
+							<button class="btn btn-outline btn-error btn-sm" onclick={() => handleReject(item)}>
 								{m['dashboard.pending_reimbursements_card.reject_button']()}
 							</button>
 							<button class="btn btn-sm btn-success" onclick={() => handleConfirm(item)}>

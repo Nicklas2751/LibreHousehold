@@ -60,14 +60,14 @@
 		<div class="w-full md:h-full md:max-w-[1200px] md:min-w-[1200px]">
 			{#if session.status === 'authenticated'}
 				{#if showVerificationBanner}
-					<div role="alert" class="alert alert-warning m-2 flex items-center justify-between">
+					<div role="alert" class="m-2 alert flex items-center justify-between alert-warning">
 						<span>{m['verification.banner_text']()}</span>
 						<div class="flex gap-2">
 							<button class="btn btn-sm" disabled={resendPending} onclick={resend}>
 								{m['verification.resend_button']()}
 							</button>
 							<button
-								class="btn btn-sm btn-ghost"
+								class="btn btn-ghost btn-sm"
 								aria-label={m['verification.close_button']()}
 								onclick={closeVerificationBanner}
 							>

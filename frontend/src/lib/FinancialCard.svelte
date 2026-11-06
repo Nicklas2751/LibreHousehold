@@ -113,12 +113,12 @@
 									{/if}
 									{#if balance.balance < -0.001}
 										{#if pendingSettlementExists}
-											<span class="badge badge-warning badge-sm">
+											<span class="badge badge-sm badge-warning">
 												{m['dashboard.financials.pending_settlement_badge']()}
 											</span>
 										{:else}
 											<button
-												class="btn btn-outline btn-xs btn-error"
+												class="btn btn-outline btn-error btn-xs"
 												onclick={() => handleSettleClick(balance)}
 											>
 												{m['dashboard.financials.settle_button']()}

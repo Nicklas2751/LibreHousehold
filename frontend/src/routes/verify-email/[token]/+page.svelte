@@ -26,9 +26,9 @@
 <div class="hero min-h-screen bg-base-200">
 	<div class="hero-content">
 		<div class="md:card md:w-96 md:bg-base-100 md:shadow-sm">
-			<div class="md:card-body text-center">
+			<div class="text-center md:card-body">
 				{#if status === 'loading'}
-					<span class="loading loading-lg loading-spinner mx-auto"></span>
+					<span class="loading mx-auto loading-lg loading-spinner"></span>
 					<p class="mt-4">{m['verification.confirm_page.loading']()}</p>
 				{:else if status === 'success'}
 					<h1 class="text-xl font-bold text-base-content">

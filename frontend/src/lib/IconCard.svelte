@@ -14,7 +14,7 @@
 			<svelte:component this={icon} class="text-primary" />
 		</div>
 	</figure>
-	<div class="ml-2 card-body">
+	<div class="card-body ml-2">
 		<h2 class="card-title">{title}</h2>
 		<p class="text-start">{description}</p>
 	</div>
