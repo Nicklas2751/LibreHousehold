@@ -44,6 +44,10 @@ public class EmailTemplatingConfig {
         var overrideMessageSource = new ReloadableResourceBundleMessageSource();
         overrideMessageSource.setBasename("file:" + overrideDir + OVERRIDE_MESSAGES_SUBDIR);
         overrideMessageSource.setDefaultEncoding(StandardCharsets.UTF_8.name());
+        // A locale without its own override file must reach the bundled parent; falling back to the
+        // server's system locale would instead return that locale's override (e.g. English
+        // overrides in German mails on an English-language host).
+        overrideMessageSource.setFallbackToSystemLocale(false);
         overrideMessageSource.setParentMessageSource(bundledMessageSource);
         return overrideMessageSource;
     }
