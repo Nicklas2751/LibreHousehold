@@ -44,7 +44,7 @@
 		{#if items.length === 0}
 			<p class="text-center text-base-content/50">{emptyMessage}</p>
 			<div class="card-actions justify-center">
-				<button class="btn btn-sm btn-primary" onclick={buttonOnClick}>
+				<button class="btn btn-primary btn-sm" onclick={buttonOnClick}>
 					{buttonLabel}
 				</button>
 			</div>

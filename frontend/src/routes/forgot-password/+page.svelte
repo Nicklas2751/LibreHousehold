@@ -76,7 +76,7 @@
 						</button>
 					</form>
 				{/if}
-				<a href="/login" class="mt-3 text-center text-sm link link-hover">
+				<a href="/login" class="mt-3 link text-center text-sm link-hover">
 					{m['forgot_password.back_to_login_link']()}
 				</a>
 			</div>

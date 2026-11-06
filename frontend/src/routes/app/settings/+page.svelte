@@ -45,9 +45,9 @@
 				>
 					<input type="checkbox" checked={$theme === 'dark'} onchange={toggleTheme} />
 					<!-- sun: shown when NOT dark -->
-					<BrightnessIcon class="swap-off h-6 w-6" />
+					<BrightnessIcon class="h-6 w-6 swap-off" />
 					<!-- moon: shown when dark -->
-					<HalfMoonIcon class="swap-on h-6 w-6" />
+					<HalfMoonIcon class="h-6 w-6 swap-on" />
 				</label>
 			</div>
 		</div>

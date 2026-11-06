@@ -179,7 +179,7 @@
 			</fieldset>
 			<div class="mt-3 card-actions justify-end">
 				<button
-					class="btn btn-sm btn-primary"
+					class="btn btn-primary btn-sm"
 					onclick={saveProfile}
 					disabled={profileSaving || !displayName || !email}
 				>
@@ -244,7 +244,7 @@
 				</fieldset>
 				<div class="mt-3 card-actions justify-end">
 					<button
-						class="btn btn-sm btn-primary"
+						class="btn btn-primary btn-sm"
 						onclick={savePassword}
 						disabled={!emailVerified ||
 							passwordSaving ||
@@ -272,7 +272,7 @@
 			</h3>
 			<p class="mt-1 text-sm text-base-content/60">{m['settings.user.danger.description']()}</p>
 			<div class="mt-3 card-actions justify-end">
-				<button class="btn btn-outline btn-sm btn-error" onclick={openDeleteModal}>
+				<button class="btn btn-outline btn-error btn-sm" onclick={openDeleteModal}>
 					{m['settings.user.danger.delete_button']()}
 				</button>
 			</div>
@@ -282,7 +282,7 @@
 
 <!-- Delete account modal -->
 {#if deleteModalOpen}
-	<div class="modal-open modal">
+	<div class="modal modal-open">
 		<div class="modal-box">
 			<h3 class="text-lg font-bold text-error">{m['settings.user.delete_modal.title']()}</h3>
 
@@ -344,7 +344,7 @@
 					{m['settings.user.delete_modal.cancel']()}
 				</button>
 				<button
-					class="btn btn-sm btn-error"
+					class="btn btn-error btn-sm"
 					onclick={confirmDelete}
 					disabled={deleteSubmitting || (isOwner && !deleteHousehold && !transferMemberId)}
 				>

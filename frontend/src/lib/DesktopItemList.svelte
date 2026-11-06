@@ -36,7 +36,7 @@
 					<ul class="list rounded-box bg-base-100 shadow-md">
 						{#each items as item (item.id)}
 							<li class="list-row items-center">
-								<div class="list-col-grow flex items-center justify-between gap-4">
+								<div class="flex items-center justify-between gap-4 list-col-grow">
 									{@render itemContent(item)}
 								</div>
 								{#if itemActions}{@render itemActions(item)}{/if}
