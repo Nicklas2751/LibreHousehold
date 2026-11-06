@@ -34,6 +34,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * Composition root of the single Spring Security filter chain (see ADR-013, ADR-014): form login
@@ -200,9 +201,16 @@ public class SecurityConfig {
         http.exceptionHandling(exceptions -> exceptions
                 .defaultAuthenticationEntryPointFor(
                         new LoginUrlAuthenticationEntryPoint(LOGIN_PAGE),
-                        new MediaTypeRequestMatcher(MediaType.TEXT_HTML))
+                        browserNavigation())
                 .defaultAuthenticationEntryPointFor(
                         new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED),
                         AnyRequestMatcher.INSTANCE));
+    }
+
+    // fetch() sends Accept: */* by default, which would otherwise match text/html and redirect the SPA's API calls
+    static MediaTypeRequestMatcher browserNavigation() {
+        var matcher = new MediaTypeRequestMatcher(MediaType.TEXT_HTML);
+        matcher.setIgnoredMediaTypes(Set.of(MediaType.ALL));
+        return matcher;
     }
 }

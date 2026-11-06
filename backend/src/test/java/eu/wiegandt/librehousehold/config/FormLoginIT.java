@@ -418,6 +418,32 @@ class FormLoginIT {
         assertThat(response.getStatus().value()).isEqualTo(401);
     }
 
+    // The SPA's fetch sends */* by default; only an explicit browser navigation may be redirected
+    @ParameterizedTest
+    @ValueSource(strings = {MediaType.ALL_VALUE, MediaType.APPLICATION_JSON_VALUE})
+    void me_noSessionWithNonHtmlAccept_returns401(String accept) {
+        // when
+        var response = restTestClient.get().uri(BASE_PATH + "/me")
+                .header(HttpHeaders.ACCEPT, accept)
+                .exchange()
+                .returnResult(String.class);
+
+        // then
+        assertThat(response.getStatus().value()).isEqualTo(401);
+    }
+
+    @Test
+    void me_noSessionWithHtmlAccept_redirectsToLogin() {
+        // when
+        var response = restTestClient.get().uri(BASE_PATH + "/me")
+                .accept(MediaType.TEXT_HTML)
+                .exchange()
+                .returnResult(String.class);
+
+        // then
+        assertThat(response.getResponseHeaders().getLocation()).hasPath("/login");
+    }
+
     /**
      * Guards against a permitAll() entry without the base-path prefix, which never matches a real request.
      */
