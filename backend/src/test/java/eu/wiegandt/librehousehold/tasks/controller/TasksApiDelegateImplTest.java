@@ -5,10 +5,12 @@ import eu.wiegandt.librehousehold.tasks.model.*;
 import eu.wiegandt.librehousehold.tasks.repository.*;
 import eu.wiegandt.librehousehold.tasks.service.*;
 
+import eu.wiegandt.librehousehold.household.AccountPrincipal;
 import eu.wiegandt.librehousehold.model.Task;
 import eu.wiegandt.librehousehold.model.TaskUpdate;
 import org.instancio.Instancio;
 import org.instancio.junit.InstancioExtension;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -16,6 +18,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.List;
 import java.util.Optional;
@@ -34,6 +38,11 @@ class TasksApiDelegateImplTest {
 
     @InjectMocks
     private TasksApiDelegateImpl tasksApiDelegate;
+
+    @AfterEach
+    void clearSecurityContext() {
+        SecurityContextHolder.clearContext();
+    }
 
     @Nested
     class getTasks {
@@ -97,15 +106,18 @@ class TasksApiDelegateImplTest {
             // given
             var householdId = UUID.randomUUID();
             var taskId = UUID.randomUUID();
+            var actingMemberId = UUID.randomUUID();
             var update = Instancio.create(TaskUpdate.class);
             var updated = Instancio.create(Task.class);
-            doReturn(updated).when(taskService).updateTask(householdId, taskId, update);
+            SecurityContextHolder.getContext().setAuthentication(UsernamePasswordAuthenticationToken.authenticated(
+                    new AccountPrincipal(actingMemberId, householdId, null, true), null, List.of()));
+            doReturn(updated).when(taskService).updateTask(householdId, taskId, update, actingMemberId);
 
             // when
             var result = tasksApiDelegate.updateTask(householdId, taskId, Optional.of(update));
 
             // then
-            verify(taskService).updateTask(householdId, taskId, update);
+            verify(taskService).updateTask(householdId, taskId, update, actingMemberId);
             assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
             assertThat(result.getBody()).isEqualTo(updated);
         }

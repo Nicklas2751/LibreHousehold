@@ -72,7 +72,12 @@ public class TaskService implements TaskStatisticsProvider {
         return taskMapper.toTask(saved);
     }
 
-    public Task updateTask(UUID householdId, UUID taskId, TaskUpdate update) {
+    /**
+     * Sets or clears the done date of a task. A completion is attributed to the assignee; an
+     * unassigned task is attributed to the member who completed it, so its completion is recorded
+     * as well and the task does not show up as open again right after it was checked off.
+     */
+    public Task updateTask(UUID householdId, UUID taskId, TaskUpdate update, UUID actingMemberId) {
         var entity = taskRepository.findByIdAndHouseholdId(taskId, householdId)
                 .orElseThrow(TaskNotFoundException::new);
 
@@ -84,12 +89,9 @@ public class TaskService implements TaskStatisticsProvider {
                 entity.setDueDate(newDueDate);
                 taskRepository.updateDueDate(taskId, newDueDate);
             }
-            LocalDate responseDone = null;
-            if (entity.getAssignedTo() != null) {
-                taskCompletionRepository.save(new TaskCompletionEntity(UUID.randomUUID(), taskId, entity.getAssignedTo(), doneDate));
-                responseDone = doneDate;
-            }
-            return taskMapper.toTask(entity).done(responseDone);
+            var doneBy = entity.getAssignedTo() != null ? entity.getAssignedTo() : actingMemberId;
+            taskCompletionRepository.save(new TaskCompletionEntity(UUID.randomUUID(), taskId, doneBy, doneDate));
+            return taskMapper.toTask(entity).done(doneDate);
         } else {
             taskCompletionRepository.findFirstByTaskIdOrderByDoneDateDesc(taskId)
                     .ifPresent(c -> taskCompletionRepository.deleteById(c.id()));

@@ -446,10 +446,9 @@ describe('taskDueCalculator', () => {
 		});
 
 		describe('recurring task', () => {
-			// dueDate is the ADVANCED next occurrence (post-backend state):
-			//   backend sets dueDate = oldDueDate + interval when task is marked done
-			//   so previousDueDate = dueDate - interval
-			// Task is done while today <= previousDueDate
+			// The backend advances dueDate by one interval when the task is marked done, so the
+			// completed occurrence is dueDate - interval. The task counts as done on the day it was
+			// done and while today is closer to the completed occurrence than to the next one.
 			// today (mocked) = 2025-11-22
 
 			it('no_recurrenceUnit_returns_false', () => {
@@ -483,51 +482,70 @@ describe('taskDueCalculator', () => {
 			});
 
 			it.each([
-				// [description, dueDate (advanced), unit, interval, done, expected]
-				// A: täglich, heute erledigt → dueDate=morgen, prev=heute → erledigt
+				// dueDate is the advanced next occurrence, the completed occurrence is dueDate - interval
 				{
-					desc: 'täglich_heute_erledigt_returns_true',
+					desc: 'daily_doneToday_returns_true',
 					dueDate: '2025-11-23',
 					unit: 'days',
 					interval: 1,
 					done: '2025-11-22',
 					expected: true
 				},
-				// B: täglich, gestern erledigt → dueDate=heute, prev=gestern → nicht erledigt
 				{
-					desc: 'täglich_gestern_erledigt_returns_false',
+					desc: 'daily_doneYesterdayAndNextDueToday_returns_false',
 					dueDate: '2025-11-22',
 					unit: 'days',
 					interval: 1,
 					done: '2025-11-21',
 					expected: false
 				},
-				// C: wöchentlich, heute erledigt → dueDate=+7, prev=heute → erledigt
 				{
-					desc: 'wöchentlich_heute_erledigt_returns_true',
+					desc: 'weekly_doneToday_returns_true',
 					dueDate: '2025-11-29',
 					unit: 'weeks',
 					interval: 1,
 					done: '2025-11-22',
 					expected: true
 				},
-				// D: monatlich, 4 Tage früh erledigt → prev=26.11, today=22.11 → erledigt
 				{
-					desc: 'monatlich_frühzeitig_erledigt_returns_true',
+					desc: 'monthly_doneBeforeCompletedDueDate_returns_true',
 					dueDate: '2025-12-26',
 					unit: 'months',
 					interval: 1,
-					done: '2025-11-22',
+					done: '2025-11-20',
 					expected: true
 				},
-				// E: monatlich, prev=20.11 bereits überschritten → nicht erledigt
 				{
-					desc: 'monatlich_previousDueDate_überschritten_returns_false',
-					dueDate: '2025-12-20',
-					unit: 'months',
+					desc: 'weekly_todayCloserToCompletedThanToNextDueDate_returns_true',
+					dueDate: '2025-11-27',
+					unit: 'weeks',
+					interval: 1,
+					done: '2025-11-20',
+					expected: true
+				},
+				{
+					desc: 'weekly_todayCloserToNextThanToCompletedDueDate_returns_false',
+					dueDate: '2025-11-24',
+					unit: 'weeks',
+					interval: 1,
+					done: '2025-11-17',
+					expected: false
+				},
+				{
+					desc: 'everyTwoDays_todayHalfwayBetweenDueDates_returns_false',
+					dueDate: '2025-11-23',
+					unit: 'days',
+					interval: 2,
+					done: '2025-11-21',
+					expected: false
+				},
+				{
+					desc: 'weekly_overdueAndDoneToday_returns_true',
+					dueDate: '2025-11-17',
+					unit: 'weeks',
 					interval: 1,
 					done: '2025-11-22',
-					expected: false
+					expected: true
 				}
 			])('$desc', ({ dueDate, unit, interval, done, expected }) => {
 				// given

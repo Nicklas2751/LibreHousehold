@@ -125,7 +125,7 @@ class TaskServiceTest {
             doReturn(Optional.empty()).when(taskRepository).findByIdAndHouseholdId(any(), any());
 
             // when / then
-            assertThatThrownBy(() -> taskService.updateTask(UUID.randomUUID(), UUID.randomUUID(), new TaskUpdate()))
+            assertThatThrownBy(() -> taskService.updateTask(UUID.randomUUID(), UUID.randomUUID(), new TaskUpdate(), UUID.randomUUID()))
                     .isInstanceOf(TaskNotFoundException.class);
         }
 
@@ -137,7 +137,7 @@ class TaskServiceTest {
             doReturn(Optional.empty()).when(taskRepository).findByIdAndHouseholdId(taskId, householdId);
 
             // when / then
-            assertThatThrownBy(() -> taskService.updateTask(householdId, taskId, new TaskUpdate()))
+            assertThatThrownBy(() -> taskService.updateTask(householdId, taskId, new TaskUpdate(), UUID.randomUUID()))
                     .isInstanceOf(TaskNotFoundException.class);
         }
 
@@ -153,7 +153,7 @@ class TaskServiceTest {
             var expected = new Task(taskId, "T", LocalDate.of(2024, 7, 1)).assignedTo(memberId).recurring(false).done(doneDate);
 
             // when
-            var result = taskService.updateTask(householdId, taskId, new TaskUpdate().done(doneDate));
+            var result = taskService.updateTask(householdId, taskId, new TaskUpdate().done(doneDate), UUID.randomUUID());
 
             // then
             verify(taskRepository, never()).updateDueDate(any(), any());
@@ -175,7 +175,7 @@ class TaskServiceTest {
             var expected = new Task(taskId, "T", LocalDate.of(2024, 7, 1)).assignedTo(memberId).recurring(false).done(null);
 
             // when
-            var result = taskService.updateTask(householdId, taskId, new TaskUpdate());
+            var result = taskService.updateTask(householdId, taskId, new TaskUpdate(), UUID.randomUUID());
 
             // then
             verify(taskCompletionRepository).deleteById(completionId);
@@ -201,7 +201,7 @@ class TaskServiceTest {
                     .done(doneDate);
 
             // when
-            var result = taskService.updateTask(householdId, taskId, new TaskUpdate().done(doneDate));
+            var result = taskService.updateTask(householdId, taskId, new TaskUpdate().done(doneDate), UUID.randomUUID());
 
             // then
             verify(taskRepository).updateDueDate(taskId, expectedNewDueDate);
@@ -229,7 +229,7 @@ class TaskServiceTest {
                     .done(null);
 
             // when
-            var result = taskService.updateTask(householdId, taskId, new TaskUpdate());
+            var result = taskService.updateTask(householdId, taskId, new TaskUpdate(), UUID.randomUUID());
 
             // then
             verify(taskRepository, never()).updateDueDate(any(), any());
@@ -248,7 +248,7 @@ class TaskServiceTest {
             doReturn(Optional.of(entity)).when(taskRepository).findByIdAndHouseholdId(taskId, householdId);
 
             // when
-            taskService.updateTask(householdId, taskId, new TaskUpdate().done(doneDate));
+            taskService.updateTask(householdId, taskId, new TaskUpdate().done(doneDate), UUID.randomUUID());
 
             // then
             verify(taskCompletionRepository).save(argThat(c ->
@@ -272,25 +272,69 @@ class TaskServiceTest {
                     .when(taskCompletionRepository).findFirstByTaskIdOrderByDoneDateDesc(taskId);
 
             // when
-            taskService.updateTask(householdId, taskId, new TaskUpdate());
+            taskService.updateTask(householdId, taskId, new TaskUpdate(), UUID.randomUUID());
 
             // then
             verify(taskCompletionRepository).deleteById(completionId);
         }
 
         @Test
-        void unassignedTask_setsDone_noCompletionSaved() {
+        void unassignedTask_setsDone_savesCompletionByActingMember() {
             // given
             var householdId = UUID.randomUUID();
             var taskId = UUID.randomUUID();
+            var actingMemberId = UUID.randomUUID();
+            var doneDate = LocalDate.of(2024, 7, 5);
             var entity = new TaskEntity(taskId, householdId, null, "T", null, LocalDate.of(2024, 7, 1), false, null, null);
             doReturn(Optional.of(entity)).when(taskRepository).findByIdAndHouseholdId(taskId, householdId);
 
             // when
-            taskService.updateTask(householdId, taskId, new TaskUpdate().done(LocalDate.of(2024, 7, 5)));
+            taskService.updateTask(householdId, taskId, new TaskUpdate().done(doneDate), actingMemberId);
 
             // then
-            verify(taskCompletionRepository, never()).save(any());
+            verify(taskCompletionRepository).save(argThat(c ->
+                    c.taskId().equals(taskId) &&
+                    c.doneBy().equals(actingMemberId) &&
+                    c.doneDate().equals(doneDate)
+            ));
+        }
+
+        @Test
+        void unassignedNonRecurringTask_setsDone_returnsDoneDate() {
+            // given
+            var householdId = UUID.randomUUID();
+            var taskId = UUID.randomUUID();
+            var doneDate = LocalDate.of(2024, 7, 5);
+            var entity = new TaskEntity(taskId, householdId, null, "T", null, LocalDate.of(2024, 7, 1), false, null, null);
+            doReturn(Optional.of(entity)).when(taskRepository).findByIdAndHouseholdId(taskId, householdId);
+            var expected = new Task(taskId, "T", LocalDate.of(2024, 7, 1)).recurring(false).done(doneDate);
+
+            // when
+            var result = taskService.updateTask(householdId, taskId, new TaskUpdate().done(doneDate), UUID.randomUUID());
+
+            // then
+            assertThat(result).usingRecursiveComparison().isEqualTo(expected);
+        }
+
+        @Test
+        void unassignedRecurringTask_setsDone_returnsDoneDateAndAdvancedDueDate() {
+            // given
+            var householdId = UUID.randomUUID();
+            var taskId = UUID.randomUUID();
+            var doneDate = LocalDate.of(2024, 7, 1);
+            var entity = new TaskEntity(taskId, householdId, null, "T", null, LocalDate.of(2024, 7, 1), true, "WEEKS", 1);
+            doReturn(Optional.of(entity)).when(taskRepository).findByIdAndHouseholdId(taskId, householdId);
+            var expected = new Task(taskId, "T", LocalDate.of(2024, 7, 8))
+                    .recurring(true)
+                    .recurrenceUnit(Task.RecurrenceUnitEnum.WEEKS)
+                    .recurrenceInterval(1)
+                    .done(doneDate);
+
+            // when
+            var result = taskService.updateTask(householdId, taskId, new TaskUpdate().done(doneDate), UUID.randomUUID());
+
+            // then
+            assertThat(result).usingRecursiveComparison().isEqualTo(expected);
         }
     }
 

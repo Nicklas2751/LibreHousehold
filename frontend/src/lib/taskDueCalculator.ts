@@ -108,12 +108,19 @@ export function getDisplayDueDate(task: Task): Date | undefined {
 	return new Date(task.dueDate);
 }
 
+function startOfUtcDay(date: Date): Date {
+	const day = new Date(date);
+	day.setUTCHours(0, 0, 0, 0);
+	return day;
+}
+
 /**
  * Checks if a task is considered done.
  *
- * For recurring tasks the backend advances dueDate by one interval when done is set,
- * so the previous due date is dueDate - interval. The task counts as done while today
- * is still on or before that previous due date.
+ * For recurring tasks the backend advances dueDate by one interval when done is set, so the
+ * completed occurrence is dueDate - interval. The task stays done on the day it was done and as
+ * long as today is closer to the completed occurrence than to the next one; only then does it
+ * count as open again. This way a completed task does not look open right after checking it off.
  *
  * @param task The task to check.
  * @returns True if the task is done, false otherwise.
@@ -124,15 +131,13 @@ export function checkIsDone(task: Task): boolean {
 
 	if (!task.recurrenceUnit || !task.recurrenceInterval || !task.dueDate) return false;
 
-	const previousDueDate = addInterval(
-		new Date(task.dueDate),
-		task.recurrenceUnit as string,
-		-task.recurrenceInterval
-	);
-	previousDueDate.setUTCHours(0, 0, 0, 0);
+	const today = startOfUtcDay(new Date());
+	if (startOfUtcDay(task.done).getTime() === today.getTime()) return true;
 
-	const today = new Date();
-	today.setUTCHours(0, 0, 0, 0);
+	const nextDueDate = startOfUtcDay(task.dueDate);
+	const completedDueDate = addInterval(nextDueDate, task.recurrenceUnit, -task.recurrenceInterval);
 
-	return today <= previousDueDate;
+	const sinceCompletedDueDate = today.getTime() - completedDueDate.getTime();
+	const untilNextDueDate = nextDueDate.getTime() - today.getTime();
+	return sinceCompletedDueDate < untilNextDueDate;
 }

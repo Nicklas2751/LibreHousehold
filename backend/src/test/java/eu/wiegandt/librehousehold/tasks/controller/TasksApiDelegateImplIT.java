@@ -6,9 +6,11 @@ import eu.wiegandt.librehousehold.tasks.repository.*;
 import eu.wiegandt.librehousehold.tasks.service.*;
 
 import eu.wiegandt.librehousehold.api.TasksApiController;
+import eu.wiegandt.librehousehold.household.AccountPrincipal;
 import eu.wiegandt.librehousehold.model.Task;
 import eu.wiegandt.librehousehold.model.TaskEdit;
 import eu.wiegandt.librehousehold.model.TaskUpdate;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +19,8 @@ import org.springframework.boot.jackson.autoconfigure.JacksonAutoConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.databind.ObjectMapper;
@@ -47,6 +51,11 @@ class TasksApiDelegateImplIT {
 
     @MockitoBean
     private TaskService taskService;
+
+    @AfterEach
+    void clearSecurityContext() {
+        SecurityContextHolder.clearContext();
+    }
 
     @Nested
     class getTasks {
@@ -183,7 +192,10 @@ class TasksApiDelegateImplIT {
             var doneDate = LocalDate.of(2024, 7, 5);
             var updated = new Task(taskId, "Clean", LocalDate.of(2024, 7, 1)).done(doneDate);
             var householdId = UUID.randomUUID();
-            doReturn(updated).when(taskService).updateTask(eq(householdId), eq(taskId), any(TaskUpdate.class));
+            var actingMemberId = UUID.randomUUID();
+            SecurityContextHolder.getContext().setAuthentication(UsernamePasswordAuthenticationToken.authenticated(
+                    new AccountPrincipal(actingMemberId, householdId, null, true), null, List.of()));
+            doReturn(updated).when(taskService).updateTask(eq(householdId), eq(taskId), any(TaskUpdate.class), eq(actingMemberId));
 
             // when / then
             mockMvc.perform(patch("/v1/household/{householdId}/tasks/{taskId}", householdId, taskId)
