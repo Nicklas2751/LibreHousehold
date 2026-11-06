@@ -5,9 +5,10 @@ import { session, setAuthenticated } from './sessionState.svelte';
 import { householdState } from './householdState.svelte';
 import { userState } from './userState';
 
-const { mockGetCurrentUser, mockAddToast } = vi.hoisted(() => ({
+const { mockGetCurrentUser, mockAddToast, mockApplyPreferences } = vi.hoisted(() => ({
 	mockGetCurrentUser: vi.fn(),
-	mockAddToast: vi.fn()
+	mockAddToast: vi.fn(),
+	mockApplyPreferences: vi.fn()
 }));
 
 vi.mock('../../generated-sources/openapi', async (importOriginal) => {
@@ -21,6 +22,7 @@ vi.mock('../../generated-sources/openapi', async (importOriginal) => {
 });
 
 vi.mock('$lib/stores/toastStore', () => ({ addToast: mockAddToast }));
+vi.mock('./settingsStore', () => ({ applyPreferences: mockApplyPreferences }));
 
 const currentUser = {
 	member: { id: 'member-id', name: 'Max Mustermann', email: 'max@example.com', isAdmin: true },
@@ -47,6 +49,18 @@ describe('bootstrapSession', () => {
 		expect(session.currentUser).toEqual(currentUser);
 		expect(get(householdState)).toEqual(currentUser.household);
 		expect(get(userState)).toEqual(currentUser.member);
+	});
+
+	it('on200_appliesStoredPreferences', async () => {
+		// given
+		const preferences = { theme: 'dark', language: 'de' };
+		mockGetCurrentUser.mockResolvedValue({ ...currentUser, preferences });
+
+		// when
+		await bootstrapSession();
+
+		// then
+		expect(mockApplyPreferences).toHaveBeenCalledWith(preferences);
 	});
 
 	it('on 401 — sets session to guest, without showing a toast', async () => {

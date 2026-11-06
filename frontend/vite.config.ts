@@ -15,7 +15,9 @@ export default defineConfig({
 		paraglideVitePlugin({
 			project: './project.inlang',
 			outdir: './src/lib/paraglide',
-			strategy: ['url', 'preferredLanguage', 'baseLocale'] //"localStorage",
+			// The cookie keeps the chosen language across navigations and reloads; the browser
+			// language only decides until a language has been chosen.
+			strategy: ['cookie', 'preferredLanguage', 'baseLocale']
 		})
 	],
 	server: {
@@ -48,7 +50,8 @@ export default defineConfig({
 					name: 'client',
 					browser: {
 						enabled: true,
-						provider: playwright(),
+						// Fixed locale so specs see the base language regardless of the machine's language
+						provider: playwright({ contextOptions: { locale: 'en-US' } }),
 						instances: [{ browser: 'chromium' }]
 					},
 					include: ['src/**/*.svelte.{test,spec}.{js,ts}'],

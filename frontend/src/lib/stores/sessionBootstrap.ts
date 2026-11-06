@@ -7,6 +7,7 @@ import { SessionApi } from '../../generated-sources/openapi';
 import { setAuthenticated, setGuest } from './sessionState.svelte';
 import { updateHouseholdState } from './householdState.svelte';
 import { updateUserState } from './userState';
+import { applyPreferences } from './settingsStore';
 
 const HTTP_STATUS_UNAUTHORIZED = 401;
 
@@ -18,6 +19,7 @@ export async function bootstrapSession(options: { silent?: boolean } = {}): Prom
 		setAuthenticated(currentUser);
 		updateHouseholdState(currentUser.household);
 		updateUserState(currentUser.member);
+		applyPreferences(currentUser.preferences);
 	} catch (err: unknown) {
 		if (extractErrorStatus(err) === HTTP_STATUS_UNAUTHORIZED) {
 			setGuest();
