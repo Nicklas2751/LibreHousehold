@@ -380,8 +380,8 @@ Regeln für alle Schritte:
 - Kein `@BeforeEach` in ITs.
 - Jeder Commit ist grün: `./mvnw verify` (inkl. `ApplicationModules.verify()`) sowie
   `npm run test && npm run check && npm run lint`.
-- In Service-Unit-Tests wird `MemberSessions` (modulintern) nicht gemockt. Es wird echt über einer gemockten
-  `SessionRegistry` (Framework-Typ) erzeugt, analog zur `@Spy`-Regel für Mapper.
+- In Service-Unit-Tests ist `MemberSessions` out of scope und wird per `@Mock` gemockt; der Service entsteht weiter per
+  `@InjectMocks` (Owner-Feedback Phase F). Das Verhalten von `MemberSessions` selbst prüft `MemberSessionsTest`.
 
 ### Phase A – Rate-Limit und Lockout
 
@@ -691,9 +691,8 @@ Commit: `docs(auth): Update ADRs, security controls and agent notes for session-
         - `@Nested removeMember { anyMember_expiresMemberSessions, householdAdmin_doesNotExpireSessions }`
     -
   `HouseholdManagementServiceTest @Nested deleteHousehold { existingHousehold_expiresSessionsOfAllMembers, unknownHousehold_doesNotExpireSessions }`
-    - In beiden Service-Tests wird `MemberSessions` im `// given`-Block per Konstruktor gebaut
-      (`new MemberSessions(sessionRegistry)` über der gemockten `SessionRegistry`) und an den Service übergeben; kein
-      `@Spy`-Feldinitializer, weil der vor der Mock-Injektion läuft und `sessionRegistry` dann `null` wäre.
+    - In beiden Service-Tests ist `MemberSessions` ein `@Mock`, der Service kommt per `@InjectMocks`; geprüft wird
+      `verify(memberSessions).expireAll(...)` bzw. `verifyNoInteractions(memberSessions)`.
     - `MemberSessionInvalidationIT` (RANDOM_PORT):
         - `leaveHousehold_existingSession_rejected`
         - `removeMember_existingSession_rejected`

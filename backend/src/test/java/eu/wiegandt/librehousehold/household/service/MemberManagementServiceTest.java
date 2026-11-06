@@ -77,6 +77,9 @@ class MemberManagementServiceTest {
     @Spy
     private LocalLoginProperties localLoginProperties = new LocalLoginProperties(true);
 
+    @Mock
+    private MemberSessions memberSessions;
+
     @InjectMocks
     private MemberManagementService service;
 
@@ -595,7 +598,7 @@ class MemberManagementServiceTest {
         private MemberManagementService serviceWithLocalLoginDisabled() {
             return new MemberManagementService(memberRepository, householdRepository, inviteRepository, memberMapper,
                     memberRegistrationMapper, eventPublisher, accountService,
-                    pendingSocialRegistrationStore, new LocalLoginProperties(false));
+                    pendingSocialRegistrationStore, new LocalLoginProperties(false), memberSessions);
         }
     }
 
@@ -990,6 +993,36 @@ class MemberManagementServiceTest {
             verify(eventPublisher).publishEvent(eventCaptor.capture());
             assertThat(eventCaptor.getValue()).usingRecursiveComparison().isEqualTo(expectedEvent);
         }
+
+        @Test
+        void anyMember_expiresMemberSessions() {
+            // given
+            var entity = Instancio.of(memberEntityModel)
+                    .set(field(MemberEntity::isAdmin), false)
+                    .create();
+            doReturn(Optional.of(entity)).when(memberRepository).findById(entity.id());
+
+            // when
+            service.leaveHousehold(entity.id());
+
+            // then
+            verify(memberSessions).expireAll(entity.id());
+        }
+
+        @Test
+        void householdAdmin_doesNotExpireSessions() {
+            // given
+            var entity = Instancio.of(memberEntityModel)
+                    .set(field(MemberEntity::isAdmin), true)
+                    .create();
+            doReturn(Optional.of(entity)).when(memberRepository).findById(entity.id());
+
+            // when
+            catchThrowable(() -> service.leaveHousehold(entity.id()));
+
+            // then
+            verifyNoInteractions(memberSessions);
+        }
     }
 
     @Nested
@@ -1061,6 +1094,40 @@ class MemberManagementServiceTest {
             // then
             verify(eventPublisher).publishEvent(eventCaptor.capture());
             assertThat(eventCaptor.getValue()).usingRecursiveComparison().isEqualTo(expectedEvent);
+        }
+
+        @Test
+        void anyMember_expiresMemberSessions() {
+            // given
+            var householdId = UUID.randomUUID();
+            var entity = Instancio.of(memberEntityModel)
+                    .set(field(MemberEntity::householdId), householdId)
+                    .set(field(MemberEntity::isAdmin), false)
+                    .create();
+            doReturn(Optional.of(entity)).when(memberRepository).findByIdAndHouseholdId(entity.id(), householdId);
+
+            // when
+            service.removeMember(householdId, entity.id());
+
+            // then
+            verify(memberSessions).expireAll(entity.id());
+        }
+
+        @Test
+        void householdAdmin_doesNotExpireSessions() {
+            // given
+            var householdId = UUID.randomUUID();
+            var entity = Instancio.of(memberEntityModel)
+                    .set(field(MemberEntity::householdId), householdId)
+                    .set(field(MemberEntity::isAdmin), true)
+                    .create();
+            doReturn(Optional.of(entity)).when(memberRepository).findByIdAndHouseholdId(entity.id(), householdId);
+
+            // when
+            catchThrowable(() -> service.removeMember(householdId, entity.id()));
+
+            // then
+            verifyNoInteractions(memberSessions);
         }
     }
 

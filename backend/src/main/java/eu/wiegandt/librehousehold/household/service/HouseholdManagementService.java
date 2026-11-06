@@ -26,15 +26,18 @@ public class HouseholdManagementService {
     private final MemberRepository memberRepository;
     private final InviteRepository inviteRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final MemberSessions memberSessions;
 
     public HouseholdManagementService(HouseholdRepository householdRepository,
                                MemberRepository memberRepository,
                                InviteRepository inviteRepository,
-                               ApplicationEventPublisher eventPublisher) {
+                               ApplicationEventPublisher eventPublisher,
+                               MemberSessions memberSessions) {
         this.householdRepository = householdRepository;
         this.memberRepository = memberRepository;
         this.inviteRepository = inviteRepository;
         this.eventPublisher = eventPublisher;
+        this.memberSessions = memberSessions;
     }
 
     @Transactional
@@ -57,6 +60,7 @@ public class HouseholdManagementService {
         if (deletedRows == 0) {
             throw new HouseholdNotFoundException();
         }
+        memberSessions.expireAll(deletedMembers.stream().map(HouseholdDeleted.DeletedMember::memberId).toList());
         eventPublisher.publishEvent(new HouseholdDeleted(householdId, householdName, deletedMembers));
     }
 
