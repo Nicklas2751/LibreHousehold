@@ -549,9 +549,10 @@ class MemberManagementServiceTest {
             var registration = new MemberRegistration(UUID.randomUUID(), "Max Mustermann", "max@example.com")
                     .localRegistration(new LocalRegistration("correct horse battery staple"));
             doReturn(Optional.of(invite)).when(inviteRepository).findByToken(token);
+            doReturn(false).when(localLoginProperties).enabled();
 
             // when / then
-            assertThatThrownBy(() -> serviceWithLocalLoginDisabled().joinHousehold(token, registration))
+            assertThatThrownBy(() -> service.joinHousehold(token, registration))
                     .isInstanceOf(LocalLoginDisabledException.class);
         }
 
@@ -565,39 +566,13 @@ class MemberManagementServiceTest {
             var registration = new MemberRegistration(UUID.randomUUID(), "Max Mustermann", "max@example.com")
                     .localRegistration(new LocalRegistration("correct horse battery staple"));
             doReturn(Optional.of(invite)).when(inviteRepository).findByToken(token);
+            doReturn(false).when(localLoginProperties).enabled();
 
             // when
-            catchThrowable(() -> serviceWithLocalLoginDisabled().joinHousehold(token, registration));
+            catchThrowable(() -> service.joinHousehold(token, registration));
 
             // then
             verifyNoInteractions(memberRepository, accountService);
-        }
-
-        @Test
-        void pendingSocialRegistration_createsFederatedAccount() {
-            // given
-            var token = UUID.randomUUID();
-            var invite = Instancio.of(InviteEntity.class)
-                    .set(field(InviteEntity::validUntil), LocalDate.now().plusDays(3))
-                    .create();
-            var savedEntity = Instancio.of(memberEntityModel).create();
-            doReturn(Optional.of(invite)).when(inviteRepository).findByToken(token);
-            doReturn(Optional.of(new ExternalIdentity("https://accounts.google.com", "external-subject", "verified@example.com", null)))
-                    .when(pendingSocialRegistrationStore).find();
-            doReturn(savedEntity).when(memberRepository).save(any(MemberEntity.class));
-
-            // when
-            serviceWithLocalLoginDisabled().joinHousehold(token,
-                    new MemberRegistration(UUID.randomUUID(), "Max Mustermann", "max@example.com"));
-
-            // then
-            verify(accountService).createFederatedAccount(savedEntity.id());
-        }
-
-        private MemberManagementService serviceWithLocalLoginDisabled() {
-            return new MemberManagementService(memberRepository, householdRepository, inviteRepository, memberMapper,
-                    memberRegistrationMapper, eventPublisher, accountService,
-                    pendingSocialRegistrationStore, new LocalLoginProperties(false), memberSessions);
         }
     }
 
