@@ -34,6 +34,7 @@ public class AccountUserDetailsService implements UserDetailsService {
         var member = memberRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("No member for this e-mail address"));
         var account = findAccount(member);
+        requirePassword(account);
         requireNotLocked(account);
         return toPrincipal(member, account);
     }
@@ -56,6 +57,18 @@ public class AccountUserDetailsService implements UserDetailsService {
 
     private AccountPrincipal toPrincipal(MemberEntity member, AccountEntity account) {
         return new AccountPrincipal(member.id(), member.householdId(), account.passwordHash(), account.emailVerified());
+    }
+
+    /**
+     * An account without a password (social login only) cannot log in with a password, so it is
+     * treated like an unknown e-mail address: the {@code DaoAuthenticationProvider} then compares a
+     * dummy hash, so neither the response nor its timing tells it apart (ENUM1 in Arc42 Chapter 8).
+     * Checked before the lockout for the same reason.
+     */
+    private void requirePassword(AccountEntity account) {
+        if (account.passwordHash() == null) {
+            throw new UsernameNotFoundException("No password for this account");
+        }
     }
 
     /**

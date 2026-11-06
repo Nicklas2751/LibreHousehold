@@ -13,6 +13,7 @@ import org.instancio.Instancio;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureRestTestClient;
@@ -174,20 +175,6 @@ class FormLoginIT {
         }
 
         @Test
-        void wrongPassword_returns401InvalidCredentials() {
-            // given
-            var email = uniqueEmail();
-            createVerifiedMember(email);
-            var expected = new Problem("/problems/invalid-credentials", 401);
-
-            // when
-            var response = login(xsrfCookies(), email, "wrong password");
-
-            // then
-            assertThat(problemOf(response)).isEqualTo(expected);
-        }
-
-        @Test
         void unknownEmail_returns401InvalidCredentials() {
             // given
             var expected = new Problem("/problems/invalid-credentials", 401);
@@ -197,6 +184,24 @@ class FormLoginIT {
 
             // then
             assertThat(problemOf(response)).isEqualTo(expected);
+        }
+
+        /**
+         * Neither the body nor the status may tell an unknown e-mail address apart from an existing
+         * account (ENUM1 in Arc42 Chapter 8). Compared byte by byte with the response to another
+         * unknown e-mail address.
+         */
+        @ParameterizedTest
+        @EnumSource(LoginFailure.class)
+        void indistinguishableFailures_sameProblemBody(LoginFailure failure) {
+            // given
+            var expected = login(xsrfCookies(), uniqueEmail(), RAW_PASSWORD).getResponseBody();
+
+            // when
+            var response = attemptLogin(failure);
+
+            // then
+            assertThat(response.getResponseBody()).isEqualTo(expected);
         }
 
         @Test
@@ -518,6 +523,19 @@ class FormLoginIT {
         return jsonMapper.readValue(response.getResponseBody(), type);
     }
 
+    private EntityExchangeResult<String> attemptLogin(LoginFailure failure) {
+        if (failure == LoginFailure.UNKNOWN_EMAIL) {
+            return login(xsrfCookies(), uniqueEmail(), RAW_PASSWORD);
+        }
+        var email = uniqueEmail();
+        switch (failure) {
+            case WRONG_PASSWORD -> createVerifiedMember(email);
+            case FEDERATED_WITHOUT_PASSWORD -> createFederatedMember(email);
+            case UNVERIFIED_WRONG_PASSWORD -> createMember(email);
+        }
+        return login(xsrfCookies(), email, "wrong password");
+    }
+
     private MemberEntity createVerifiedMember(String email) {
         var member = createMember(email);
         accountRepository.markEmailVerified(member.getId());
@@ -525,17 +543,29 @@ class FormLoginIT {
     }
 
     private MemberEntity createMember(String email) {
-        var household = householdRepository.save(Instancio.create(HouseholdEntity.class));
-        var member = memberRepository.save(Instancio.of(MemberEntity.class)
-                .set(field(MemberEntity::householdId), household.id())
-                .set(field(MemberEntity::email), email)
-                .create());
+        var member = saveMember(email);
         accountService.createAccount(member.getId(), RAW_PASSWORD);
         return member;
     }
 
+    private void createFederatedMember(String email) {
+        accountService.createFederatedAccount(saveMember(email).getId());
+    }
+
+    private MemberEntity saveMember(String email) {
+        var household = householdRepository.save(Instancio.create(HouseholdEntity.class));
+        return memberRepository.save(Instancio.of(MemberEntity.class)
+                .set(field(MemberEntity::householdId), household.id())
+                .set(field(MemberEntity::email), email)
+                .create());
+    }
+
     private static String uniqueEmail() {
         return "formlogin-" + UUID.randomUUID() + "@example.com";
+    }
+
+    private enum LoginFailure {
+        WRONG_PASSWORD, UNKNOWN_EMAIL, FEDERATED_WITHOUT_PASSWORD, UNVERIFIED_WRONG_PASSWORD
     }
 
     private record Problem(String type, int status) {

@@ -88,6 +88,24 @@ class AccountLockoutListenerTest {
             verify(accountRepository).incrementFailedLoginAttempts(memberId);
             verify(accountRepository, never()).lockUntil(eq(memberId), any());
         }
+
+        @Test
+        void accountWithoutPassword_noIncrement() {
+            // given
+            var email = "max@example.com";
+            var memberId = UUID.randomUUID();
+            var event = new AuthenticationFailureBadCredentialsEvent(
+                    new TestingAuthenticationToken(email, "any-password"), new BadCredentialsException("bad credentials"));
+            doReturn(Optional.of(memberId)).when(memberManagementService).findMemberIdByEmail(email);
+            doReturn(Optional.of(new AccountEntity(memberId, null, true, Instant.now(), null, 0, null)))
+                    .when(accountRepository).findById(memberId);
+
+            // when
+            newListener().onAuthenticationFailure(event);
+
+            // then
+            verify(accountRepository, never()).incrementFailedLoginAttempts(memberId);
+        }
     }
 
     @Nested

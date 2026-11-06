@@ -98,7 +98,7 @@ class AccountUserDetailsServiceTest {
         }
 
         @Test
-        void lockedUntilInFuture_throwsAccountLockedExceptionCarryingLockedUntil() {
+        void lockedAccount_throwsAccountLocked() {
             // given
             var email = "max@example.com";
             var memberId = UUID.randomUUID();
@@ -111,6 +111,35 @@ class AccountUserDetailsServiceTest {
             assertThatThrownBy(() -> accountUserDetailsService.loadUserByUsername(email))
                     .isInstanceOfSatisfying(AccountLockedException.class,
                             ex -> assertThat(ex.getLockedUntil()).isEqualTo(lockedUntil));
+        }
+
+        @Test
+        void federatedAccount_throwsUsernameNotFound() {
+            // given
+            var email = "max@example.com";
+            var memberId = UUID.randomUUID();
+            doReturn(Optional.of(member(memberId, email))).when(memberRepository).findByEmail(email);
+            doReturn(Optional.of(new AccountEntity(memberId, null, true, Instant.now(), null, 0, null)))
+                    .when(accountRepository).findById(memberId);
+
+            // when / then
+            assertThatThrownBy(() -> accountUserDetailsService.loadUserByUsername(email))
+                    .isInstanceOf(UsernameNotFoundException.class);
+        }
+
+        @Test
+        void lockedFederatedAccount_throwsUsernameNotFound() {
+            // given
+            var email = "max@example.com";
+            var memberId = UUID.randomUUID();
+            var lockedUntil = Instant.now().plusSeconds(600);
+            doReturn(Optional.of(member(memberId, email))).when(memberRepository).findByEmail(email);
+            doReturn(Optional.of(new AccountEntity(memberId, null, true, Instant.now(), null, 10, lockedUntil)))
+                    .when(accountRepository).findById(memberId);
+
+            // when / then
+            assertThatThrownBy(() -> accountUserDetailsService.loadUserByUsername(email))
+                    .isInstanceOf(UsernameNotFoundException.class);
         }
 
         @Test
