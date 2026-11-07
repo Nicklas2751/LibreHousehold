@@ -33,9 +33,20 @@ jobs:
           cache: maven
           cache-dependency-path: backend/pom.xml
 
-      - name: Run tests
+      - name: Run tests and generate coverage report
         run: ./mvnw verify
 
+      # The Sonar job scans these instead of running the whole test suite a second time.
+      - name: Upload Sonar inputs
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: backend-sonar-inputs
+          path: |
+            backend/target/classes
+            backend/target/site/jacoco/jacoco.xml
+          retention-days: 1
+
+  # A job of its own because the "SonarCloud Analysis" check is required by the main branch ruleset.
   sonarcloud:
     name: SonarCloud Analysis
     runs-on: ubuntu-latest
@@ -47,16 +58,11 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup Java
-        uses: actions/setup-java@v5.3.0
+      - name: Download Sonar inputs
+        uses: actions/download-artifact@v8.0.2
         with:
-          java-version: '25'
-          distribution: temurin
-          cache: maven
-          cache-dependency-path: backend/pom.xml
-
-      - name: Build and generate coverage report
-        run: ./mvnw verify
+          name: backend-sonar-inputs
+          path: backend/target
 
       - name: SonarCloud Scan
         uses: SonarSource/sonarqube-scan-action@v8.2.0
