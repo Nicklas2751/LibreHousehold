@@ -20,7 +20,8 @@ Explizit **nicht** Teil dieses Plans:
   entfernten Mitglieds.
 - Frontend, mokapi, Reverse-Proxy-Doku und Arc42 (R3, R4).
 
-Status: Entwurf, noch nicht umgesetzt. Die Rückfragen aus Abschnitt 6 sind entschieden (2026-11-07).
+Status: Umgesetzt (2026-11-07, Commits `7f9269a` bis `f228107`). Die Rückfragen aus Abschnitt 6 sind
+entschieden. Offene Punkte und Findings stehen im Meta-Plan unter R1.6 und R4.3.
 
 ---
 
