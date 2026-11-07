@@ -48,7 +48,12 @@ export default defineConfig({
 			// lcov feeds SonarCloud (sonar.javascript.lcov.reportPaths); text gives a quick local summary.
 			reporter: ['lcov', 'text-summary'],
 			include: ['src/**/*.{ts,svelte}'],
-			exclude: ['src/**/*.{test,spec}.{js,ts}', 'src/generated-sources/**', 'src/lib/paraglide/**']
+			exclude: [
+				'src/**/*.{test,spec}.{js,ts}',
+				'src/**/*.d.ts',
+				'src/generated-sources/**',
+				'src/lib/paraglide/**'
+			]
 		},
 		projects: [
 			{
