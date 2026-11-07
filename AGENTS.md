@@ -198,6 +198,11 @@ LibreHousehold/
   `>=1.0.0`. When an Antora update brings `@asciidoctor/core` 4 (`npm ls @asciidoctor/core`), remove
   the ignore rule and update `asciidoctor-kroki` together with Antora.
 - `personas/` and `domain-stories/` lie outside `modules/` and are deliberately not published.
+- UI customizations of the Antora default UI live in `docs/supplemental-ui/`. Own CSS and JS
+  (`css/librehousehold.css`, `js/image-zoom.js`) are included via `partials/head-meta.hbs`, which
+  the default UI renders after `site.css`, so its rules win without specificity tricks. Kroki writes
+  the height of inline SVGs (`opts=inline`) into their `style` attribute; only `!important`
+  overrides it, otherwise scaled-down SVGs are distorted.
 
 **Cross-references between modules.** Antora resolves `xref:` relative to the module's `pages/`
 directory, not to the current file. Within a module, `xref:adr-016.adoc` is enough; across modules,
