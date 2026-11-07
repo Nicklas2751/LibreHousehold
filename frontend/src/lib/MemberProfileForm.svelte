@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { readFileAsDataURL } from '$lib/setupWizardLogic';
-	import { isValidPassword } from '$lib/passwordValidation';
-	import PasswordField from '$lib/PasswordField.svelte';
+	import { readFileAsDataURL } from '#lib/setupWizardLogic.ts';
+	import { isValidPassword } from '#lib/passwordValidation.ts';
+	import PasswordField from '#lib/PasswordField.svelte';
 
 	interface Props {
 		contextHint: string;

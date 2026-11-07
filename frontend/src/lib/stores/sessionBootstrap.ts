@@ -1,8 +1,8 @@
-import { m } from '$lib/paraglide/messages.js';
-import { Toast } from '$lib/toast';
-import { addToast } from '$lib/stores/toastStore';
-import { apiConfiguration } from '$lib/api/httpClient';
-import { extractErrorStatus } from '$lib/api/errorStatus';
+import { m } from '#lib/paraglide/messages.js';
+import { Toast } from '#lib/toast.ts';
+import { addToast } from '#lib/stores/toastStore.ts';
+import { apiConfiguration } from '#lib/api/httpClient.ts';
+import { extractErrorStatus } from '#lib/api/errorStatus.ts';
 import { SessionApi } from '../../generated-sources/openapi';
 import { setAuthenticated, setGuest } from './sessionState.svelte';
 import { updateHouseholdState } from './householdState.svelte';

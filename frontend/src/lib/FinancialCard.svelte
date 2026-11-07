@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import { findMember, members } from '$lib/stores/memberStore';
-	import { householdState } from '$lib/stores/householdState.svelte';
-	import { userState } from '$lib/stores/userState';
+	import { m } from '#lib/paraglide/messages.js';
+	import { findMember, members } from '#lib/stores/memberStore.ts';
+	import { householdState } from '#lib/stores/householdState.svelte.ts';
+	import { userState } from '#lib/stores/userState.ts';
 	import type {
 		FinancialSummary,
 		Member,

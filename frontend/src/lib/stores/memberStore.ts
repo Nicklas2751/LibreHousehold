@@ -1,6 +1,6 @@
 import { type Writable, writable } from 'svelte/store';
 import { type Member, MembersApi } from '../../generated-sources/openapi';
-import { apiConfiguration } from '$lib/api/httpClient';
+import { apiConfiguration } from '#lib/api/httpClient.ts';
 
 export const members: Writable<Member[]> = writable([]);
 

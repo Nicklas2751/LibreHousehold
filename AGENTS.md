@@ -151,7 +151,7 @@ LibreHousehold/
 - **Language:** TypeScript
 - **Framework:** SvelteKit 5
 - **State Management:** Svelte stores plus Svelte 5 Runes
-- **i18n:** Paraglide (`$lib/paraglide/messages.js`)
+- **i18n:** Paraglide (`#lib/paraglide/messages.js`)
 - **Styling:** DaisyUI 5 + Tailwind CSS 4
 - **OpenAPI Client:** Generated TypeScript client under `src/generated-sources/openapi`
 
@@ -167,7 +167,7 @@ LibreHousehold/
 - **Internationalization:** Uses Paraglide JS. Text should be keyed in `messages/` and imported.
 - **Project Structure:**
   - `src/routes`: SvelteKit pages and layouts
-  - `src/lib`: Shared components, utilities, and stores
+  - `src/lib`: Shared components, utilities, and stores. Imported via the `#lib` subpath import from `package.json` (SvelteKit 3 no longer generates `$lib`); imports need the file extension, e.g. `#lib/stores/taskStore.ts`.
   - `src/lib/stores`: State management
   - `src/generated-sources`: **Do not edit manually**; generated API clients
 
@@ -195,7 +195,7 @@ export const functionName = async (
 
 ## Integration Points
 
-- **API Client:** Imported from `$lib/api` or generated sources
+- **API Client:** Imported from `#lib/api/…` or generated sources
 - **Mock Server:** Configured in `api/mokapi.js`. **`api/mokapi.js` is off-limits — do not modify it unless the user explicitly asks you to.**
 
 ## State Management Rules

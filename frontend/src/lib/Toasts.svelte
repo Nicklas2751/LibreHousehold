@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { toasts } from '$lib/stores/toastStore';
+	import { toasts } from '#lib/stores/toastStore.ts';
 	import { fade } from 'svelte/transition';
-	import type { Toast } from '$lib/toast';
+	import type { Toast } from '#lib/toast.ts';
 
 	function createAlertClassForToast(toast: Toast): string {
 		switch (toast.type) {

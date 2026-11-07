@@ -7,13 +7,13 @@
 	import { LanguageIcon } from '@indaco/svelte-iconoir/language';
 	import { NavArrowRightIcon } from '@indaco/svelte-iconoir/nav-arrow-right';
 	import { LogOutIcon } from '@indaco/svelte-iconoir/log-out';
-	import { m } from '$lib/paraglide/messages.js';
-	import { locales } from '$lib/paraglide/runtime.js';
-	import { userState } from '$lib/stores/userState';
-	import { theme, language, setTheme, setLanguage } from '$lib/stores/settingsStore';
-	import type { Language } from '$lib/stores/settingsStore';
-	import { logout } from '$lib/stores/sessionLogout';
-	import PageTitle from '$lib/PageTitle.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import { locales } from '#lib/paraglide/runtime.js';
+	import { userState } from '#lib/stores/userState.ts';
+	import { theme, language, setTheme, setLanguage } from '#lib/stores/settingsStore.ts';
+	import type { Language } from '#lib/stores/settingsStore.ts';
+	import { logout } from '#lib/stores/sessionLogout.ts';
+	import PageTitle from '#lib/PageTitle.svelte';
 
 	const isOwner = $derived($userState?.isAdmin === true);
 

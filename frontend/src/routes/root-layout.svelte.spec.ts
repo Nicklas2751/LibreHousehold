@@ -5,7 +5,7 @@ import RootLayout from './+layout.svelte';
 
 const { mockBootstrapSession } = vi.hoisted(() => ({ mockBootstrapSession: vi.fn() }));
 
-vi.mock('$lib/stores/sessionBootstrap', () => ({ bootstrapSession: mockBootstrapSession }));
+vi.mock('#lib/stores/sessionBootstrap.ts', () => ({ bootstrapSession: mockBootstrapSession }));
 
 vi.mock('$app/state', () => ({ page: { url: new URL('http://localhost:5173/app/dashboard') } }));
 

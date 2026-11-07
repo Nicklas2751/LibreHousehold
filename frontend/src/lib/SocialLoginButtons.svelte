@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import { authDiscovery } from '$lib/stores/authDiscoveryState.svelte';
-	import { startSocialLogin } from '$lib/socialLogin';
+	import { m } from '#lib/paraglide/messages.js';
+	import { authDiscovery } from '#lib/stores/authDiscoveryState.svelte.ts';
+	import { startSocialLogin } from '#lib/socialLogin.ts';
 	import type { SocialLoginContext } from '../generated-sources/openapi';
 
 	interface Props {

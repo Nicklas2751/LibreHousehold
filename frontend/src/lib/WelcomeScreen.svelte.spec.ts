@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import { page } from 'vitest/browser';
 import WelcomeScreen from './WelcomeScreen.svelte';
-import { setAuthenticated, setGuest } from '$lib/stores/sessionState.svelte';
+import { setAuthenticated, setGuest } from '#lib/stores/sessionState.svelte.ts';
 
 const { mockGoto } = vi.hoisted(() => ({
 	mockGoto: vi.fn()

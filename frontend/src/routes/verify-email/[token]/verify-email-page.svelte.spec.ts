@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import { page } from 'vitest/browser';
 import VerifyEmailPage from './+page.svelte';
-import { setAuthenticated, setGuest } from '$lib/stores/sessionState.svelte';
+import { setAuthenticated, setGuest } from '#lib/stores/sessionState.svelte.ts';
 import type { CurrentUser } from '../../../generated-sources/openapi';
 
 const { mockConfirmEmailVerification, mockBootstrapSession } = vi.hoisted(() => ({
@@ -10,23 +10,16 @@ const { mockConfirmEmailVerification, mockBootstrapSession } = vi.hoisted(() => 
 	mockBootstrapSession: vi.fn()
 }));
 
-vi.mock('$lib/stores/memberStore', () => ({
+vi.mock('#lib/stores/memberStore.ts', () => ({
 	confirmEmailVerification: mockConfirmEmailVerification
 }));
 
-vi.mock('$lib/stores/sessionBootstrap', () => ({ bootstrapSession: mockBootstrapSession }));
+vi.mock('#lib/stores/sessionBootstrap.ts', () => ({ bootstrapSession: mockBootstrapSession }));
 
-vi.mock('$app/stores', () => ({
-	page: {
-		subscribe: (run: (value: { params: { token: string } }) => void) => {
-			run({ params: { token: 'test-token' } });
-			return () => {};
-		}
-	}
-}));
+vi.mock('$app/state', () => ({ page: { params: { token: 'test-token' } } }));
 
-vi.mock('$lib/paraglide/runtime.js', async (importOriginal) => {
-	const original = await importOriginal<typeof import('$lib/paraglide/runtime.js')>();
+vi.mock('#lib/paraglide/runtime.js', async (importOriginal) => {
+	const original = await importOriginal<typeof import('#lib/paraglide/runtime.js')>();
 	return { ...original, getLocale: () => 'de' as const, setLocale: vi.fn() };
 });
 

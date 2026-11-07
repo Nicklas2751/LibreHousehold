@@ -1,7 +1,7 @@
-import { m } from '$lib/paraglide/messages.js';
-import { Toast } from '$lib/toast';
-import { addToast } from '$lib/stores/toastStore';
-import { apiConfiguration } from '$lib/api/httpClient';
+import { m } from '#lib/paraglide/messages.js';
+import { Toast } from '#lib/toast.ts';
+import { addToast } from '#lib/stores/toastStore.ts';
+import { apiConfiguration } from '#lib/api/httpClient.ts';
 import { type SocialLoginContext, SessionApi } from '../generated-sources/openapi';
 
 const OAUTH2_AUTHORIZATION_PATH = '/oauth2/authorization/';

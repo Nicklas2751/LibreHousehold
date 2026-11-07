@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import { m } from '$lib/paraglide/messages.js';
-	import PasswordField from '$lib/PasswordField.svelte';
-	import { confirmPasswordReset } from '$lib/stores/passwordReset';
-	import { extractErrorStatus } from '$lib/api/errorStatus';
-	import { addToast } from '$lib/stores/toastStore';
-	import { Toast } from '$lib/toast';
+	import { m } from '#lib/paraglide/messages.js';
+	import PasswordField from '#lib/PasswordField.svelte';
+	import { confirmPasswordReset } from '#lib/stores/passwordReset.ts';
+	import { extractErrorStatus } from '#lib/api/errorStatus.ts';
+	import { addToast } from '#lib/stores/toastStore.ts';
+	import { Toast } from '#lib/toast.ts';
 
 	const HTTP_STATUS_CONFLICT = 409;
 
@@ -19,7 +19,7 @@
 		tokenInvalid = false;
 		submitting = true;
 		try {
-			await confirmPasswordReset($page.params.token ?? '', newPassword);
+			await confirmPasswordReset(page.params.token ?? '', newPassword);
 			addToast(new Toast(m['reset_password.success_toast'](), 'success'));
 			await goto('/login');
 		} catch (err: unknown) {

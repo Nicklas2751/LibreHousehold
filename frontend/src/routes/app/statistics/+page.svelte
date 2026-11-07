@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import PageTitle from '$lib/PageTitle.svelte';
-	import { householdState } from '$lib/stores/householdState.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import PageTitle from '#lib/PageTitle.svelte';
+	import { householdState } from '#lib/stores/householdState.svelte.ts';
 	import {
 		loadStatistics,
 		statistics,
@@ -9,7 +9,7 @@
 		statisticsError,
 		GetStatisticsPeriodEnum,
 		type StatisticsPeriod
-	} from '$lib/stores/statisticsStore';
+	} from '#lib/stores/statisticsStore.ts';
 
 	const periods: { key: StatisticsPeriod; label: string }[] = [
 		{ key: GetStatisticsPeriodEnum.Last7Days, label: m['statistics.periods.last_7_days']() },

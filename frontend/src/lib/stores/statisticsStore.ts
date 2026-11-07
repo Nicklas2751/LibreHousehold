@@ -4,7 +4,7 @@ import {
 	StatisticsApi,
 	type StatisticsResponse
 } from '../../generated-sources/openapi';
-import { apiConfiguration } from '$lib/api/httpClient';
+import { apiConfiguration } from '#lib/api/httpClient.ts';
 
 export { GetStatisticsPeriodEnum } from '../../generated-sources/openapi';
 export type StatisticsPeriod =

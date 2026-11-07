@@ -23,8 +23,8 @@
 		"@eslint/js": "^10.0.0",
 		"@inlang/paraglide-js": "^2.29.3",
 		"@openapitools/openapi-generator-cli": "^2.42.0",
-		"@sveltejs/adapter-auto": "^7.0.0",
-		"@sveltejs/kit": "^2.70.3",
+		"@sveltejs/adapter-auto": "^8.0.0",
+		"@sveltejs/kit": "^3.1.1",
 		"@sveltejs/vite-plugin-svelte": "^7.3.1",
 		"@tailwindcss/vite": "^4.3.3",
 		"@types/node": "^26",
@@ -52,5 +52,9 @@
 	"dependencies": {
 		"@indaco/svelte-iconoir": "^7.11.1",
 		"uuid": "^14.0.3"
+	},
+	"imports": {
+		"#lib": "./src/lib/index.js",
+		"#lib/*": "./src/lib/*"
 	}
 }

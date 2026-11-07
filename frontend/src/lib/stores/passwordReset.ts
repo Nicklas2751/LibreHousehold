@@ -1,5 +1,5 @@
 import { SessionApi } from '../../generated-sources/openapi';
-import { apiConfiguration } from '$lib/api/httpClient';
+import { apiConfiguration } from '#lib/api/httpClient.ts';
 
 const api = new SessionApi(apiConfiguration);
 

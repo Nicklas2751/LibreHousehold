@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import { requestPasswordReset } from '$lib/stores/passwordReset';
+	import { m } from '#lib/paraglide/messages.js';
+	import { requestPasswordReset } from '#lib/stores/passwordReset.ts';
 	import { onMount } from 'svelte';
-	import { authDiscovery, loadAuthDiscovery } from '$lib/stores/authDiscoveryState.svelte';
+	import { authDiscovery, loadAuthDiscovery } from '#lib/stores/authDiscoveryState.svelte.ts';
 
 	const PROVIDER_NAME_SEPARATOR = ' / ';
 

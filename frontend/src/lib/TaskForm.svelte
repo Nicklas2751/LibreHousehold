@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import { loadMembers, members } from '$lib/stores/memberStore';
-	import { addInterval } from '$lib/taskDueCalculator';
+	import { m } from '#lib/paraglide/messages.js';
+	import { loadMembers, members } from '#lib/stores/memberStore.ts';
+	import { addInterval } from '#lib/taskDueCalculator.ts';
 	import { untrack } from 'svelte';
 	import {
 		TaskEditRecurrenceUnitEnum,

@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import IconCard from '$lib/IconCard.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import IconCard from '#lib/IconCard.svelte';
 	import { TaskListIcon } from '@indaco/svelte-iconoir/task-list';
 	import { EuroIcon } from '@indaco/svelte-iconoir/euro';
 	import { StatsReportIcon } from '@indaco/svelte-iconoir/stats-report';
 	import { goto } from '$app/navigation';
-	import { session } from '$lib/stores/sessionState.svelte';
+	import { session } from '#lib/stores/sessionState.svelte.ts';
 
 	// A finished social login redirects the browser back to the app root, already signed in.
 	$effect(() => {
