@@ -16,19 +16,23 @@ The quality tree above shows how the LibreHousehold quality goals map to the ISO
 
 == Quality Requirements Overview
 
+[[QG1]]
 === xref:01_introduction_and_goals.adoc#QG1[QG1 - Easy to learn]
 
 Modern mobile apps must be easy to learn and intuitive to use. No user wants to read a manual or watch a tutorial before using the app.
 So to be successful and be adopted by many users, LibeHousehold must be easy to learn.
 
+[[QG2]]
 === xref:01_introduction_and_goals.adoc#QG2[QG2 - Secure]
 
 Expenses are, like money in general, a sensitive topic. To be accepted the users must be sure that their data is safe and secure. No unauthorized person must be able to access the data. As well as other users should not be able to modify or delete data they are not allowed to.
 
+[[QG3]]
 === xref:01_introduction_and_goals.adoc#QG3[QG3 - Easy to host]
 
 Many people, especially in the open-source community, want to host their own instance of LibreHousehold. This also keeps the costs low and gives the users full control over their data. Additionally, it enables users to easily use a modified version of LibreHousehold. It's unacceptable that these users must follow hour long, complex tutorials to get LibreHousehold up and running.
 
+[[QG4]]
 === xref:01_introduction_and_goals.adoc#QG4[QG4 - Maintainable]
 
 LibreHousehold is a non-commercial hobby project. To keep the project alive and reduce the workload for the maintainer, it must be easy for new developers to understand the code and contribute. Additionally, the code must be easy to maintain and extend. This also the reason why the project is open-source.
