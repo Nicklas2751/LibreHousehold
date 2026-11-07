@@ -1,9 +1,3 @@
-:jbake-title: ADR 013: Session-Based Authentication with Spring Security (no embedded Authorization Server)
-:jbake-type: page_toc
-:jbake-status: published
-:jbake-menu: adrs
-:jbake-order: 13
-
 [[adr-013]]
 = ADR 013: Session-Based Authentication with Spring Security (no embedded Authorization Server)
 
@@ -32,7 +26,7 @@ There is one principal type, identified by the immutable member ID.
 Towards external providers, Spring Security applies PKCE, `state`, and for OIDC registrations (scope `openid`) `nonce` and ID-token validation.
 
 Option 1 is rejected because no token consumer exists.
-Option 3 contradicts xref:../chapters/01_introduction_and_goals.adoc#QG3[QG3] and xref:../chapters/01_introduction_and_goals.adoc#QG4[QG4].
+Option 3 contradicts xref:arc42:01_introduction_and_goals.adoc#QG3[QG3] and xref:arc42:01_introduction_and_goals.adoc#QG4[QG4].
 Option 4 forces a third-party account on every user.
 
 == Pros and Cons of the Options
@@ -76,7 +70,7 @@ Option 4 forces a third-party account on every user.
 
 **Positive:** standard Spring Security building blocks only; every login path renews the session ID and registers the session, so password resets end all sessions; e-mail changes do not orphan sessions.
 
-**Negative:** no token-based access for other clients; provider scopes must be configured explicitly (xref:../chapters/07_deployment_view.adoc#section-social-login-provider-requirements[Chapter 7]); session lifetime is the container default (30 min idle) and sessions do not survive restarts (tracked in xref:../chapters/11_technical_risks.adoc[Chapter 11]).
+**Negative:** no token-based access for other clients; provider scopes must be configured explicitly (xref:arc42:07_deployment_view.adoc#section-social-login-provider-requirements[Chapter 7]); session lifetime is the container default (30 min idle) and sessions do not survive restarts (tracked in xref:arc42:11_technical_risks.adoc[Chapter 11]).
 
 == Conditions for Reintroducing an Authorization Server
 

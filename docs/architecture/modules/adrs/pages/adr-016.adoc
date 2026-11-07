@@ -1,9 +1,3 @@
-:jbake-title: ADR 016: Backend-Side (BFF) Social Login Federation
-:jbake-type: page_toc
-:jbake-status: published
-:jbake-menu: adrs
-:jbake-order: 16
-
 [[adr-016]]
 = ADR 016: Backend-Side (BFF) Social Login Federation
 
@@ -22,10 +16,10 @@ A successful external login has to end in the same kind of session as a local pa
 
 == Decision Outcome
 
-Option 1. The SPA starts a social login with a top-level navigation to `/oauth2/authorization/{registrationId}`; the provider redirects back to the backend's callback `/login/oauth2/code/{registrationId}`.
+Option 1. The SPA starts a social login with a top-level navigation to `/oauth2/authorization/\{registrationId}`; the provider redirects back to the backend's callback `/login/oauth2/code/\{registrationId}`.
 Spring Security handles the Authorization Code flow with PKCE, `state` and, for OIDC registrations, `nonce` and ID-token validation.
 The callback resolves the external identity to the local account (xref:adr-018.adoc[ADR 018]) and replaces the external authentication with the same session principal a local login yields; the provider tokens are discarded in the callback.
-Providers are configured with Spring Boot's standard `spring.security.oauth2.client.*` properties; a startup check rejects registrations that would not deliver a usable identity (see xref:../chapters/07_deployment_view.adoc#section-social-login-provider-requirements[Chapter 7]).
+Providers are configured with Spring Boot's standard `spring.security.oauth2.client.*` properties; a startup check rejects registrations that would not deliver a usable identity (see xref:arc42:07_deployment_view.adoc#section-social-login-provider-requirements[Chapter 7]).
 
 Option 2 was rejected because it would let external provider tokens reach the browser - exactly the exposure xref:adr-014.adoc[ADR 014]'s BFF/cookie model was adopted to avoid - and would scatter trust across multiple issuers and sessions instead of the one session the BFF model relies on.
 

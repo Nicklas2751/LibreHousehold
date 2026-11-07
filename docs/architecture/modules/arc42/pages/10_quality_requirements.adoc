@@ -1,20 +1,12 @@
-:jbake-title: Quality Requirements
-:jbake-type: page_toc
-:jbake-status: published
-:jbake-menu: arc42
-:jbake-order: 10
-:filename: /chapters/10_quality_requirements.adoc
-:imagesdir: ../images
-
-:toc:
+= Quality Requirements
 
 [[section-quality-scenarios]]
 == Quality Requirements
 
 .Quality Tree based on ISO 25010-2023
-[plantuml, svg-type=inline, svg]
+[plantuml,quality_tree,svg,opts=inline]
 ....
-include::../images/quality_tree.puml[]
+include::arc42:partial$quality_tree.puml[]
 ....
 
 The quality tree above shows how the LibreHousehold quality goals map to the ISO 25010-2023 quality characteristics:

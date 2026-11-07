@@ -1,12 +1,4 @@
-:jbake-title: Glossary
-:jbake-type: page_toc
-:jbake-status: published
-:jbake-menu: arc42
-:jbake-order: 12
-:filename: /chapters/12_glossary.adoc
-:imagesdir: ../images
-
-:toc:
+= Glossary
 
 [[section-glossary]]
 == Glossary

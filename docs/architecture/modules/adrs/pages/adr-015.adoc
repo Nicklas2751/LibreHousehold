@@ -1,9 +1,3 @@
-:jbake-title: ADR 015: Credential Storage in a dedicated `account` table
-:jbake-type: page_toc
-:jbake-status: published
-:jbake-menu: adrs
-:jbake-order: 15
-
 [[adr-015]]
 = ADR 015: Credential Storage in a dedicated `account` table
 
@@ -19,6 +13,6 @@ Credential fields as additional columns directly on `member`; a dedicated `accou
 
 Credentials are stored in a dedicated `account` table, related 1:1 to `member`.
 
-`member` models the household-membership domain; `account` models the login identity, a security concern rather than household business. Adding password/verification columns directly to `member` would mix these two concerns and bloat the household-membership aggregate with fields that have nothing to do with household business. A separate `account` table keeps that separation without introducing a new module - it stays inside the `household` schema, alongside `member`, since xref:../chapters/08_concepts.adoc[Chapter 8] already establishes that authentication is a cross-cutting concern handled within `household`, not a bounded context of its own.
+`member` models the household-membership domain; `account` models the login identity, a security concern rather than household business. Adding password/verification columns directly to `member` would mix these two concerns and bloat the household-membership aggregate with fields that have nothing to do with household business. A separate `account` table keeps that separation without introducing a new module - it stays inside the `household` schema, alongside `member`, since xref:arc42:08_concepts.adoc[Chapter 8] already establishes that authentication is a cross-cutting concern handled within `household`, not a bounded context of its own.
 
 The 1:1 relation is also optional by nature: since not every `member` has - or ever will have - a login identity, and since a future account may be entirely federated (no password hash at all), a nullable set of authentication columns directly on `member` would be a worse fit than a separate row that simply does not exist for members without an account.

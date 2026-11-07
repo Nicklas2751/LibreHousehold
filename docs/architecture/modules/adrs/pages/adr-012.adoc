@@ -1,9 +1,3 @@
-:jbake-title: ADR 012: Account-Household cardinality (1:1)
-:jbake-type: page_toc
-:jbake-status: published
-:jbake-menu: adrs
-:jbake-order: 12
-
 [[adr-012]]
 = ADR 012: Account-Household cardinality (1:1)
 
@@ -24,7 +18,7 @@ Option A: 1 Account : 1 Household; Option B: 1 Account : N Households
 
 Option A is chosen: an account is scoped to exactly one household. There is no cross-household login; a person who is active in two households needs two separate accounts.
 
-This keeps `AccountRegistration` where it already is — inside the `household` module, as part of the membership lifecycle — instead of introducing a separate Account/Identity module purely to support a scenario the product does not need yet xref:../chapters/01_introduction_and_goals.adoc#QG4[(QG4 - Maintainable)]. It follows the same KISS/YAGNI reasoning already applied in xref:adr-011.adoc[ADR 011]: build for the multi-household case when it is actually required, not speculatively.
+This keeps `AccountRegistration` where it already is — inside the `household` module, as part of the membership lifecycle — instead of introducing a separate Account/Identity module purely to support a scenario the product does not need yet xref:arc42:01_introduction_and_goals.adoc#QG4[(QG4 - Maintainable)]. It follows the same KISS/YAGNI reasoning already applied in xref:adr-011.adoc[ADR 011]: build for the multi-household case when it is actually required, not speculatively.
 
 == Pros and Cons of the Options
 
