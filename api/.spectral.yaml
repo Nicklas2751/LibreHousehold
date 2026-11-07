@@ -1,1 +1,3 @@
+# Spectral ruleset for openapi.yml (npm run lint:openapi). The built-in OpenAPI rules; warnings fail
+# the build as well, so the spec stays free of findings.
 extends: ["spectral:oas"]

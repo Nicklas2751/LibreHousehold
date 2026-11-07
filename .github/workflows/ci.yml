@@ -18,6 +18,7 @@ jobs:
       backend: ${{ steps.filter.outputs.backend }}
       frontend: ${{ steps.filter.outputs.frontend }}
       docs: ${{ steps.filter.outputs.docs }}
+      api: ${{ steps.filter.outputs.api }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7.0.1
@@ -50,6 +51,7 @@ jobs:
           echo "backend=$(matches '^(backend/|api/openapi\.yml$|\.github/workflows/(ci|backend-ci)\.yml$)')" >> "$GITHUB_OUTPUT"
           echo "frontend=$(matches '^(frontend/|api/openapi\.yml$|\.github/workflows/(ci|frontend-ci)\.yml$)')" >> "$GITHUB_OUTPUT"
           echo "docs=$(matches '^(docs/|\.github/workflows/(ci|docs-ci)\.yml$)')" >> "$GITHUB_OUTPUT"
+          echo "api=$(matches '^(api/(openapi\.yml|asyncapi\.yml|\.spectral\.yaml|asyncapi-analytics\.json|package(-lock)?\.json)$|\.github/workflows/(ci|api-ci)\.yml$)')" >> "$GITHUB_OUTPUT"
 
   backend:
     name: Backend
@@ -71,12 +73,18 @@ jobs:
     if: needs.changes.outputs.docs == 'true'
     uses: ./.github/workflows/docs-ci.yml
 
+  api:
+    name: API
+    needs: [changes]
+    if: needs.changes.outputs.api == 'true'
+    uses: ./.github/workflows/api-ci.yml
+
   # The only check required by the main branch ruleset. Every job that must pass before a merge has
   # to be listed in "needs"; skipped jobs count as passed, failed or cancelled ones block the merge.
   ci-result:
     name: CI result
     runs-on: ubuntu-latest
-    needs: [changes, backend, frontend, docs]
+    needs: [changes, backend, frontend, docs, api]
     if: always()
     steps:
       - name: Check job results

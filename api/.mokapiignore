@@ -1,0 +1,10 @@
+# mokapi loads every file in api/ (see frontend/README.md); it must only see openapi.yml and mokapi.js.
+# Tooling for validating and linting the specs (see AGENTS.md, "API Updates")
+node_modules/
+package.json
+package-lock.json
+asyncapi-analytics.json
+.spectral.yaml
+# mokapi would start the AsyncAPI servers as Kafka brokers, one of them on its own HTTP port 8080.
+# The realtime stream is mocked separately (R3.4 of the realtime meta-plan).
+asyncapi.yml

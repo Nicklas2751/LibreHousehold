@@ -10,18 +10,22 @@
         <option name="mapstruct.unmappedTargetPolicy" value="ERROR" />
         <processorPath useClasspath="false">
           <entry name="$MAVEN_REPOSITORY$/org/mapstruct/mapstruct-processor/1.6.3/mapstruct-processor-1.6.3.jar" />
-          <entry name="$MAVEN_REPOSITORY$/org/springframework/boot/spring-boot-configuration-processor/4.1.0/spring-boot-configuration-processor-4.1.0.jar" />
+          <entry name="$MAVEN_REPOSITORY$/org/springframework/boot/spring-boot-configuration-processor/4.1.2/spring-boot-configuration-processor-4.1.2.jar" />
         </processorPath>
         <module name="librehousehold.main" />
         <module name="librehousehold.test" />
       </profile>
     </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="librehousehold" target="25" />
+      <module name="librehousehold.main" target="25" />
+    </bytecodeTargetLevel>
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
       <module name="librehousehold" options="-parameters -Amapstruct.defaultComponentModel=spring -Amapstruct.unmappedTargetPolicy=ERROR -Amapstruct.unmappedSourcePolicy=WARN" />
       <module name="librehousehold.main" options="-parameters -Amapstruct.defaultComponentModel=spring -Amapstruct.unmappedTargetPolicy=ERROR -Amapstruct.unmappedSourcePolicy=WARN" />
-      <module name="librehousehold.test" options="-parameters" />
+      <module name="librehousehold.test" options="-parameters -Amapstruct.defaultComponentModel=spring -Amapstruct.unmappedTargetPolicy=ERROR -Amapstruct.unmappedSourcePolicy=WARN" />
     </option>
   </component>
 </project>

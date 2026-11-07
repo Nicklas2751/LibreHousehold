@@ -19,4 +19,5 @@
 == xref:adrs:adr-016.adoc[ADR 016: Backend-Side (BFF) Social Login Federation]
 == xref:adrs:adr-017.adoc[ADR 017: Pre-Redirect Session Endpoint for Social Login Context]
 == xref:adrs:adr-018.adoc[ADR 018: No Linking Between Social Login and Password-Protected Accounts]
+== xref:adrs:adr-019.adoc[ADR 019: Realtime Updates via Server-Sent Events (Notify, then Refetch)]
 // end::adr-list[]

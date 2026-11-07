@@ -1,0 +1,14 @@
+{
+  "name": "librehousehold-api",
+  "private": true,
+  "description": "Validation of the LibreHousehold API specifications (OpenAPI lint, AsyncAPI validation)",
+  "scripts": {
+    "validate": "npm run lint:openapi && npm run validate:asyncapi",
+    "lint:openapi": "spectral lint openapi.yml --fail-severity=warn",
+    "validate:asyncapi": "ASYNCAPI_METRICS_CONFIG_PATH=asyncapi-analytics.json asyncapi validate asyncapi.yml --fail-severity=info"
+  },
+  "devDependencies": {
+    "@asyncapi/cli": "6.2.3",
+    "@stoplight/spectral-cli": "6.17.0"
+  }
+}
