@@ -1,0 +1,57 @@
+/* Kroki writes the height of inline SVGs into the style attribute; only !important overrides it,
+   otherwise a scaled-down SVG keeps its full height and is distorted. */
+.doc .imageblock svg {
+  height: auto !important;
+}
+
+/* Long identifiers in table cells (e.g. test names in code) must break, otherwise their width
+   pushes the table out of the content column and over the page TOC. The default UI only sets
+   this for AsciiDoc cells (td > .content), not for plain cells (td > p.tableblock). */
+.doc td.tableblock {
+  overflow-wrap: anywhere;
+}
+
+.doc table.tableblock {
+  max-width: 100%;
+}
+
+/* On wide screens, diagrams and tables use the free space up to the page TOC, while running text
+   keeps the readable width of the default UI (46rem minus the 1rem side padding of .doc). */
+@media screen and (min-width: 1024px) {
+  .doc {
+    --text-width: 44rem;
+
+    max-width: 76rem;
+  }
+
+  .doc > h1.page,
+  .doc
+    :is(
+      h3,
+      h4,
+      h5,
+      h6,
+      .paragraph,
+      .ulist,
+      .olist,
+      .dlist,
+      .colist,
+      .hdlist,
+      .admonitionblock,
+      .listingblock,
+      .literalblock,
+      .exampleblock,
+      .quoteblock,
+      .verseblock,
+      .sidebarblock,
+      details,
+      hr
+    ) {
+    max-width: var(--text-width);
+  }
+
+  /* h2 extends 1rem into the side padding on both sides */
+  .doc h2 {
+    max-width: calc(var(--text-width) + 2rem);
+  }
+}
