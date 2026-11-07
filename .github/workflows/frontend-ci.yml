@@ -95,7 +95,7 @@ jobs:
           path: frontend/coverage
 
       - name: SonarCloud Scan
-        uses: SonarSource/sonarqube-scan-action@v8.2.0
+        uses: SonarSource/sonarqube-scan-action@v8.4.0
         with:
           projectBaseDir: frontend
           # Without waiting, the scan only uploads the analysis and the job stays green on a failed quality gate
