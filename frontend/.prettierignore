@@ -12,3 +12,6 @@ bun.lockb
 src/lib/paraglide/
 src/generated-sources/
 project.inlang/
+
+# Test coverage reports
+/coverage/

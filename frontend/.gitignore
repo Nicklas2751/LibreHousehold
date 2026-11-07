@@ -31,3 +31,5 @@ src/lib/paraglide
 # Test
 test-results/
 playwright-report/
+# Test coverage reports
+/coverage
