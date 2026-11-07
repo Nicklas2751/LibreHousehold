@@ -304,6 +304,12 @@ Integration tests for login, logout, session and CSRF behaviour run the real ser
 
 `@ApplicationModuleListener` is an async `@TransactionalEventListener(AFTER_COMMIT)`. If `publishEvent` runs without an active transaction, Spring silently skips the listener, while Spring Modulith still records the publication in `event_publication`. Nothing fails; the mail is just never sent. This bug hit twice (`UnverifiedAccountExpiryJob` deletion warning, `resendVerificationEmail`). Every method that publishes such an event must therefore run inside a transaction: `@Transactional` called through the Spring proxy, or `TransactionOperations` for loops in non-transactional jobs. Its test must check the real effect, e.g. the mail arriving in Mailpit; a test of a timestamp or a recorded event does not catch the bug. Failed publications are resubmitted by `EventPublicationMaintenanceJob` (see Arc42 chapter 8, "Event Delivery and Resubmission").
 
+### CI: `CI result` is the only required check
+
+`.github/workflows/ci.yml` runs for every pull request and push to `main` without path filters. A `changes` job diffs the commit range and calls `backend-ci.yml` / `frontend-ci.yml` (reusable, `workflow_call` only) when their area changed, including changes to the workflow files themselves. The `ci-result` job ("CI result") is the only check required by the `main` ruleset: it fails if any job in its `needs` failed or was cancelled, and passes if they were skipped.
+
+Do not put path filters on a workflow whose check is required: a workflow that never starts leaves its check pending forever and blocks the merge (this blocked every GitHub Actions bump). A new workflow that has to pass before a merge must be called from `ci.yml` and added to `ci-result.needs`; otherwise it does not block a merge or Dependabot's auto-merge.
+
 ### `./mvnw test` runs without integration tests — use `./mvnw verify`
 
 `backend/pom.xml` binds `maven-failsafe-plugin` with the `integration-test`+`verify` goals without

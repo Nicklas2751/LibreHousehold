@@ -1,17 +1,8 @@
 name: Frontend CI
 
+# Called by ci.yml, which decides whether the frontend changed.
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'frontend/**'
-      - 'api/openapi.yml'
-  pull_request:
-    types: [ opened, synchronize, reopened ]
-    paths:
-      - 'frontend/**'
-      - 'api/openapi.yml'
+  workflow_call:
 
 defaults:
   run:
