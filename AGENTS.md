@@ -306,7 +306,7 @@ Integration tests for login, logout, session and CSRF behaviour run the real ser
 
 ### CI: `CI result` is the only required check
 
-`.github/workflows/ci.yml` runs for every pull request and push to `main` without path filters. A `changes` job diffs the commit range and calls `backend-ci.yml` / `frontend-ci.yml` (reusable, `workflow_call` only) when their area changed, including changes to the workflow files themselves. The `ci-result` job ("CI result") is the only check required by the `main` ruleset: it fails if any job in its `needs` failed or was cancelled, and passes if they were skipped.
+`.github/workflows/ci.yml` runs for every pull request and every push to any branch, without path filters. A `changes` job diffs the commit range (pull request: against its base; `main`: against the previous push; other branches: against the merge base with `main`) and calls `backend-ci.yml` / `frontend-ci.yml` (reusable, `workflow_call` only) when their area changed, including changes to the workflow files themselves. The `ci-result` job ("CI result") is the only check required by the `main` ruleset: it fails if any job in its `needs` failed or was cancelled, and passes if they were skipped.
 
 Do not put path filters on a workflow whose check is required: a workflow that never starts leaves its check pending forever and blocks the merge (this blocked every GitHub Actions bump). A new workflow that has to pass before a merge must be called from `ci.yml` and added to `ci-result.needs`; otherwise it does not block a merge or Dependabot's auto-merge.
 
