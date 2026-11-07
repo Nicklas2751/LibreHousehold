@@ -83,6 +83,17 @@ public final class SseTestClient implements AutoCloseable {
     }
 
     /**
+     * Takes every block received so far that {@link #awaitEvent} has not returned yet. After
+     * {@link #awaitClosed} returned {@code true}, these are all blocks the server sent before it ended
+     * the stream.
+     */
+    public List<SseEvent> takeReceivedEvents() {
+        var received = new ArrayList<SseEvent>();
+        events.drainTo(received);
+        return received;
+    }
+
+    /**
      * Whether the server ended the stream within the timeout.
      */
     public boolean awaitClosed(Duration timeout) throws InterruptedException {

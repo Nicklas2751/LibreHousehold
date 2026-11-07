@@ -14,6 +14,10 @@ public enum CloseReason {
     SESSION_ENDED,
     /** The session was expired, e.g. by a password reset; its next request would be rejected. */
     SESSION_EXPIRED,
+    /** The member was removed from the household; the stream got {@code session.terminated} first. */
+    MEMBER_REMOVED,
+    /** The household was deleted; the stream got {@code household.deleted} and {@code session.terminated} first. */
+    HOUSEHOLD_DELETED,
     /** Writing a signal to the connection failed. */
     SEND_FAILED,
     /** The application shuts down. */

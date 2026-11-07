@@ -5,6 +5,11 @@ spring:
     runtime:
       flyway-enabled: true
     events:
+      # Only @ApplicationModuleListener methods get an entry in event_publication. Without this,
+      # Spring Modulith records one for every AFTER_COMMIT @TransactionalEventListener, including the
+      # synchronous realtime listeners: their change signals need no redelivery, since every client
+      # resyncs on reconnect, and replaying one after a restart reaches no client (ADR-019).
+      registry-trigger-annotation: org.springframework.modulith.events.ApplicationModuleListener
       # Publications stuck in a non-final state (e.g. after a crash mid-delivery) are marked FAILED
       # after this time, so EventPublicationMaintenanceJob can resubmit them; it only picks up FAILED
       # ones. Spring Modulith measures all three against the original publication date. 15 minutes
