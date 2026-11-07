@@ -31,6 +31,7 @@ import org.springframework.boot.tomcat.TomcatWebServer;
 import org.springframework.boot.web.server.context.WebServerApplicationContext;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.session.SessionRegistry;
 import org.springframework.test.web.servlet.client.ExchangeResult;
 import org.springframework.test.web.servlet.client.RestTestClient;
@@ -81,6 +82,13 @@ class HouseholdEventStreamIT {
     private static final String COMMITTED_RESPONSE_FAILURE = "response is already committed";
     private static final String ACCESS_DENIED_FAILURE = "AccessDeniedException";
     private static final String AUTHORIZATION_DENIED_FAILURE = "AuthorizationDeniedException";
+    private static final String DISPATCH_FAILURE = "Servlet.service()";
+    // How long a stream that should stay open is watched; well below the 25-second heartbeat interval
+    private static final Duration OPEN_STREAM_OBSERVATION = Duration.ofSeconds(1);
+    private static final String FIND_LISTENER_IDS_OF_EVENT_SQL =
+            "SELECT listener_id FROM event_publication WHERE serialized_event LIKE ?";
+    private static final String NOTIFICATIONS_LISTENER = "HouseholdDeletedListener";
+    private static final String REALTIME_LISTENER = "StreamLifecycleListener";
 
     @LocalServerPort
     private int port;
@@ -111,6 +119,9 @@ class HouseholdEventStreamIT {
 
     @Autowired
     private WebServerApplicationContext webServerContext;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     @Test
     void openStream_member_streamingResponseHead() throws Exception {
@@ -191,17 +202,16 @@ class HouseholdEventStreamIT {
         }
 
         @Test
-        void openStream_logoutThenServerEndsStream_streamClosed() throws Exception {
+        void openStream_logout_streamClosed() throws Exception {
             // given
             var member = createVerifiedMember(createHousehold());
             var cookies = loggedInCookies(member);
 
             try (var stream = SseTestClient.open(streamUri(member.householdId()), cookies)) {
                 stream.awaitEvent(EVENT_TIMEOUT);
-                logout(cookies);
 
                 // when
-                endStreams(member.householdId());
+                logout(cookies);
 
                 // then
                 assertThat(stream.awaitClosed(CLOSE_TIMEOUT)).isTrue();
@@ -209,17 +219,16 @@ class HouseholdEventStreamIT {
         }
 
         @Test
-        void openStream_logoutThenServerEndsStream_noAuthorizationFailureLogged(CapturedOutput output) throws Exception {
+        void openStream_logout_noAuthorizationFailureLogged(CapturedOutput output) throws Exception {
             // given
             var member = createVerifiedMember(createHousehold());
             var cookies = loggedInCookies(member);
 
             try (var stream = SseTestClient.open(streamUri(member.householdId()), cookies)) {
                 stream.awaitEvent(EVENT_TIMEOUT);
-                logout(cookies);
 
                 // when
-                endStreams(member.householdId());
+                logout(cookies);
                 stream.awaitClosed(CLOSE_TIMEOUT);
 
                 // then
@@ -272,6 +281,123 @@ class HouseholdEventStreamIT {
         }
     }
 
+    @Nested
+    @ExtendWith(OutputCaptureExtension.class)
+    class lifecycle {
+
+        @Test
+        void removeMember_streamOfRemovedMember_sessionTerminatedThenClosed() throws Exception {
+            // given
+            var householdId = createHousehold();
+            var adminCookies = loggedInCookies(createVerifiedMember(householdId, true));
+            var member = createVerifiedMember(householdId, false);
+            var expected = new Ending(List.of(SignalType.SESSION_TERMINATED.wireName()), true);
+
+            try (var stream = SseTestClient.open(streamUri(householdId), loggedInCookies(member))) {
+                stream.awaitEvent(EVENT_TIMEOUT);
+
+                // when
+                delete(adminCookies, memberUri(member));
+
+                // then
+                assertThat(awaitEnding(stream)).isEqualTo(expected);
+            }
+        }
+
+        @Test
+        void removeMember_streamOfOtherMember_staysOpen() throws Exception {
+            // given
+            var householdId = createHousehold();
+            var adminCookies = loggedInCookies(createVerifiedMember(householdId, true));
+            var member = createVerifiedMember(householdId, false);
+
+            try (var adminStream = SseTestClient.open(streamUri(householdId), adminCookies);
+                 var memberStream = SseTestClient.open(streamUri(householdId), loggedInCookies(member))) {
+                adminStream.awaitEvent(EVENT_TIMEOUT);
+                memberStream.awaitEvent(EVENT_TIMEOUT);
+
+                // when
+                delete(adminCookies, memberUri(member));
+                memberStream.awaitClosed(CLOSE_TIMEOUT);
+
+                // then
+                assertThat(adminStream.awaitClosed(OPEN_STREAM_OBSERVATION)).isFalse();
+            }
+        }
+
+        @Test
+        void removeMember_streamOfRemovedMember_noDispatchFailureLogged(CapturedOutput output) throws Exception {
+            // given
+            var householdId = createHousehold();
+            var adminCookies = loggedInCookies(createVerifiedMember(householdId, true));
+            var member = createVerifiedMember(householdId, false);
+
+            try (var stream = SseTestClient.open(streamUri(householdId), loggedInCookies(member))) {
+                stream.awaitEvent(EVENT_TIMEOUT);
+
+                // when
+                delete(adminCookies, memberUri(member));
+                stream.awaitClosed(CLOSE_TIMEOUT);
+
+                // then
+                await().during(LOG_QUIET_PERIOD).atMost(LOG_QUIET_PERIOD.multipliedBy(2))
+                        .untilAsserted(() -> assertThat(output.getAll())
+                                .doesNotContain(COMMITTED_RESPONSE_FAILURE, ACCESS_DENIED_FAILURE,
+                                        AUTHORIZATION_DENIED_FAILURE, DISPATCH_FAILURE));
+            }
+        }
+
+        @Test
+        void deleteHousehold_streamsOfAllMembers_householdDeletedThenSessionTerminatedThenClosed() throws Exception {
+            // given
+            var householdId = createHousehold();
+            var adminCookies = loggedInCookies(createVerifiedMember(householdId, true));
+            var memberCookies = loggedInCookies(createVerifiedMember(householdId, false));
+            var expected = new Ending(List.of(SignalType.HOUSEHOLD_DELETED.wireName(),
+                    SignalType.SESSION_TERMINATED.wireName()), true);
+
+            try (var adminStream = SseTestClient.open(streamUri(householdId), adminCookies);
+                 var memberStream = SseTestClient.open(streamUri(householdId), memberCookies)) {
+                adminStream.awaitEvent(EVENT_TIMEOUT);
+                memberStream.awaitEvent(EVENT_TIMEOUT);
+
+                // when
+                delete(adminCookies, BASE_PATH + "/household/" + householdId);
+
+                // then
+                assertThat(List.of(awaitEnding(adminStream), awaitEnding(memberStream)))
+                        .containsExactly(expected, expected);
+            }
+        }
+
+        @Test
+        void deleteHousehold_openStream_publicationRecordedOnlyForRegistryListeners() throws Exception {
+            // given
+            var householdId = createHousehold();
+            var adminCookies = loggedInCookies(createVerifiedMember(householdId, true));
+
+            try (var stream = SseTestClient.open(streamUri(householdId), adminCookies)) {
+                stream.awaitEvent(EVENT_TIMEOUT);
+
+                // when
+                delete(adminCookies, BASE_PATH + "/household/" + householdId);
+                stream.awaitClosed(CLOSE_TIMEOUT);
+
+                // then
+                assertThat(jdbcTemplate.queryForList(FIND_LISTENER_IDS_OF_EVENT_SQL, String.class,
+                        "%" + householdId + "%"))
+                        .anyMatch(listenerId -> listenerId.contains(NOTIFICATIONS_LISTENER))
+                        .noneMatch(listenerId -> listenerId.contains(REALTIME_LISTENER));
+            }
+        }
+    }
+
+    /**
+     * How a stream ended: the names of the events it received before, and whether the server ended it.
+     */
+    private record Ending(List<@Nullable String> eventNames, boolean closed) {
+    }
+
     private record Rejection(int status, @Nullable String location, int openStreams) {
 
         static Rejection of(SseTestClient stream, int openStreams) {
@@ -300,6 +426,22 @@ class HouseholdEventStreamIT {
         streams.connectionsOf(householdId).stream().map(StreamConnection::emitter).forEach(SseEmitter::complete);
     }
 
+    private Ending awaitEnding(SseTestClient stream) throws InterruptedException {
+        var closed = stream.awaitClosed(CLOSE_TIMEOUT);
+        return new Ending(stream.takeReceivedEvents().stream().map(SseEvent::name).toList(), closed);
+    }
+
+    private static String memberUri(MemberEntity member) {
+        return BASE_PATH + "/household/" + member.householdId() + "/members/" + member.getId();
+    }
+
+    private void delete(Map<String, String> cookies, String uri) {
+        withCookies(restTestClient.delete().uri(uri), cookies)
+                .header(XSRF_HEADER, cookies.get(XSRF_COOKIE))
+                .exchange()
+                .expectStatus().isNoContent();
+    }
+
     private void logout(Map<String, String> cookies) {
         withCookies(restTestClient.post().uri(BASE_PATH + "/logout"), cookies)
                 .header(XSRF_HEADER, cookies.get(XSRF_COOKIE))
@@ -322,10 +464,14 @@ class HouseholdEventStreamIT {
     }
 
     private MemberEntity createVerifiedMember(UUID householdId) {
+        return createVerifiedMember(householdId, false);
+    }
+
+    private MemberEntity createVerifiedMember(UUID householdId, boolean isAdmin) {
         var member = memberRepository.save(Instancio.of(MemberEntity.class)
                 .set(field(MemberEntity::householdId), householdId)
                 .set(field(MemberEntity::email), "event-stream-" + UUID.randomUUID() + "@example.com")
-                .set(field(MemberEntity::isAdmin), false)
+                .set(field(MemberEntity::isAdmin), isAdmin)
                 .create());
         accountService.createAccount(member.getId(), RAW_PASSWORD);
         accountRepository.markEmailVerified(member.getId());
