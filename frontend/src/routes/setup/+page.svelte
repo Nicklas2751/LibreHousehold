@@ -1,5 +1,5 @@
 <script lang="ts">
-	import SetupWizard from '$lib/SetupWizard.svelte';
+	import SetupWizard from '#lib/SetupWizard.svelte';
 </script>
 
 <div class="hero min-h-screen bg-base-200">

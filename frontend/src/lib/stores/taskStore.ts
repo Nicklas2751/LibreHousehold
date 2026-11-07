@@ -5,9 +5,9 @@ import {
 	TasksApi,
 	type TaskUpdate
 } from '../../generated-sources/openapi';
-import { apiConfiguration } from '$lib/api/httpClient';
+import { apiConfiguration } from '#lib/api/httpClient.ts';
 import { addToast } from './toastStore';
-import { Toast } from '$lib/toast';
+import { Toast } from '#lib/toast.ts';
 
 export const tasks: Writable<Task[]> = writable([]);
 

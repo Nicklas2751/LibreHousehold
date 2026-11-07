@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import { reimbursements, updateReimbursement } from '$lib/stores/reimbursementStore';
-	import { findMember, members } from '$lib/stores/memberStore';
-	import { householdState } from '$lib/stores/householdState.svelte';
-	import { userState } from '$lib/stores/userState';
+	import { m } from '#lib/paraglide/messages.js';
+	import { reimbursements, updateReimbursement } from '#lib/stores/reimbursementStore.ts';
+	import { findMember, members } from '#lib/stores/memberStore.ts';
+	import { householdState } from '#lib/stores/householdState.svelte.ts';
+	import { userState } from '#lib/stores/userState.ts';
 	import { fade } from 'svelte/transition';
 	import type { Member, Reimbursement } from '../generated-sources/openapi';
-	import { loadFinancialSummary, loadMemberBalances } from '$lib/stores/financialStore';
+	import { loadFinancialSummary, loadMemberBalances } from '#lib/stores/financialStore.ts';
 
 	// Eingehende Zahlungen: ich bin Creditor, jemand anderes muss zahlen
 	const pendingReimbursements = $derived(

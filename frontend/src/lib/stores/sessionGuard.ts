@@ -10,7 +10,10 @@ export function shouldTreatAsSessionExpiry(status: SessionStatus): boolean {
 
 const SESSION_EXPIRED_REASON = 'session-expired';
 
-export function loginRedirectTarget(currentUrl: URL, expired: boolean): string {
+export function loginRedirectTarget(
+	currentUrl: Pick<URL, 'pathname' | 'search'>,
+	expired: boolean
+): string {
 	const query = new URLSearchParams({ returnTo: currentUrl.pathname + currentUrl.search });
 	if (expired) {
 		query.set('reason', SESSION_EXPIRED_REASON);

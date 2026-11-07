@@ -1,18 +1,18 @@
 <script lang="ts">
 	import { EditPencilIcon } from '@indaco/svelte-iconoir/edit-pencil';
 	import { BinIcon } from '@indaco/svelte-iconoir/bin';
-	import { m } from '$lib/paraglide/messages.js';
-	import { householdState } from '$lib/stores/householdState.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import { householdState } from '#lib/stores/householdState.svelte.ts';
 	import {
 		categories,
 		loadCategories,
 		addCategory,
 		updateCategory,
 		deleteCategory
-	} from '$lib/stores/categoryStore';
-	import { addToast } from '$lib/stores/toastStore';
-	import { Toast } from '$lib/toast';
-	import PageTitle from '$lib/PageTitle.svelte';
+	} from '#lib/stores/categoryStore.ts';
+	import { addToast } from '#lib/stores/toastStore.ts';
+	import { Toast } from '#lib/toast.ts';
+	import PageTitle from '#lib/PageTitle.svelte';
 
 	const householdId = $derived($householdState?.id ?? '');
 

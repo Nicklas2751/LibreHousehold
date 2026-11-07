@@ -7,19 +7,19 @@
 	import { CrownIcon } from '@indaco/svelte-iconoir/crown';
 	import { WarningTriangleIcon } from '@indaco/svelte-iconoir/warning-triangle';
 	import { UserCircleIcon } from '@indaco/svelte-iconoir/user-circle';
-	import { m } from '$lib/paraglide/messages.js';
-	import { householdState } from '$lib/stores/householdState.svelte';
-	import { userState } from '$lib/stores/userState';
-	import { members, loadMembers } from '$lib/stores/memberStore';
-	import { addToast } from '$lib/stores/toastStore';
-	import { Toast } from '$lib/toast';
+	import { m } from '#lib/paraglide/messages.js';
+	import { householdState } from '#lib/stores/householdState.svelte.ts';
+	import { userState } from '#lib/stores/userState.ts';
+	import { members, loadMembers } from '#lib/stores/memberStore.ts';
+	import { addToast } from '#lib/stores/toastStore.ts';
+	import { Toast } from '#lib/toast.ts';
 	import { HouseholdApi, MembersApi } from '../../../../generated-sources/openapi';
-	import { apiConfiguration } from '$lib/api/httpClient';
+	import { apiConfiguration } from '#lib/api/httpClient.ts';
 	import {
 		generateInviteUrl,
 		createInviteLinkShareData,
 		checkCanBrowserShareInviteLink
-	} from '$lib/setupWizardLogic';
+	} from '#lib/setupWizardLogic.ts';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 

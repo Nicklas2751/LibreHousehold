@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { afterNavigate, goto } from '$app/navigation';
-	import PageTitleActionBar from '$lib/PageTitleActionBar.svelte';
+	import PageTitleActionBar from '#lib/PageTitleActionBar.svelte';
 	import {
 		addExpense,
 		deleteExpense,
@@ -10,19 +10,19 @@
 		findExpense,
 		loadExpenses,
 		updateExpense
-	} from '$lib/stores/expenseStore';
+	} from '#lib/stores/expenseStore.ts';
 	import { v4 as uuidv4 } from 'uuid';
-	import { findMember, loadMembers, members } from '$lib/stores/memberStore';
-	import { householdState } from '$lib/stores/householdState.svelte';
-	import { userState } from '$lib/stores/userState';
-	import { categories, loadCategories } from '$lib/stores/categoryStore';
-	import { financialSummary, loadFinancialSummary } from '$lib/stores/financialStore';
+	import { findMember, loadMembers, members } from '#lib/stores/memberStore.ts';
+	import { householdState } from '#lib/stores/householdState.svelte.ts';
+	import { userState } from '#lib/stores/userState.ts';
+	import { categories, loadCategories } from '#lib/stores/categoryStore.ts';
+	import { financialSummary, loadFinancialSummary } from '#lib/stores/financialStore.ts';
 	import type { Expense, Member } from '../../../../generated-sources/openapi';
 	import { EditIcon } from '@indaco/svelte-iconoir/edit';
 	import { BinIcon } from '@indaco/svelte-iconoir/bin';
-	import { isExpenseMutable } from '$lib/expenseLogic';
-	import MobileItemList from '$lib/MobileItemList.svelte';
-	import DesktopItemList from '$lib/DesktopItemList.svelte';
+	import { isExpenseMutable } from '#lib/expenseLogic.ts';
+	import MobileItemList from '#lib/MobileItemList.svelte';
+	import DesktopItemList from '#lib/DesktopItemList.svelte';
 
 	const today = new Date().toISOString().split('T')[0];
 	let date: string = $state(today);
@@ -50,7 +50,9 @@
 		handleNavigation();
 	});
 
-	afterNavigate(() => {
+	afterNavigate(({ shallow, type }) => {
+		if (shallow && type === 'goto') return;
+
 		handleNavigation();
 	});
 

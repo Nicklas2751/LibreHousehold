@@ -1,17 +1,17 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { page } from '$app/stores';
-	import { m } from '$lib/paraglide/messages.js';
-	import { confirmEmailVerification } from '$lib/stores/memberStore';
-	import { bootstrapSession } from '$lib/stores/sessionBootstrap';
-	import { session } from '$lib/stores/sessionState.svelte';
+	import { page } from '$app/state';
+	import { m } from '#lib/paraglide/messages.js';
+	import { confirmEmailVerification } from '#lib/stores/memberStore.ts';
+	import { bootstrapSession } from '#lib/stores/sessionBootstrap.ts';
+	import { session } from '#lib/stores/sessionState.svelte.ts';
 
 	let status: 'loading' | 'success' | 'error' = $state('loading');
 	const isAuthenticated = $derived(session.status === 'authenticated');
 
 	onMount(async () => {
 		try {
-			await confirmEmailVerification($page.params.token ?? '');
+			await confirmEmailVerification(page.params.token ?? '');
 			status = 'success';
 			// Refreshes session.currentUser.emailVerified in place so the verification banner
 			// disappears immediately if this browser tab still holds an authenticated session

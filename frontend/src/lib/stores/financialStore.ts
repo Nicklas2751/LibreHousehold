@@ -4,7 +4,7 @@ import {
 	type FinancialSummary,
 	type MemberBalance
 } from '../../generated-sources/openapi';
-import { apiConfiguration } from '$lib/api/httpClient';
+import { apiConfiguration } from '#lib/api/httpClient.ts';
 
 export const financialSummary = writable<FinancialSummary | null>(null);
 export const memberBalances = writable<MemberBalance[]>([]);

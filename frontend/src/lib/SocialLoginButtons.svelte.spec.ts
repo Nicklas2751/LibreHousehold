@@ -2,14 +2,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import { page } from 'vitest/browser';
 import SocialLoginButtons from './SocialLoginButtons.svelte';
-import { authDiscovery } from '$lib/stores/authDiscoveryState.svelte';
+import { authDiscovery } from '#lib/stores/authDiscoveryState.svelte.ts';
 import { SocialLoginContextContextEnum } from '../generated-sources/openapi';
 
 const { mockStartSocialLogin } = vi.hoisted(() => ({
 	mockStartSocialLogin: vi.fn()
 }));
 
-vi.mock('$lib/socialLogin', () => ({ startSocialLogin: mockStartSocialLogin }));
+vi.mock('#lib/socialLogin.ts', () => ({ startSocialLogin: mockStartSocialLogin }));
 
 vi.mock('./paraglide/runtime.js', async (importOriginal) => {
 	const original = await importOriginal<typeof import('./paraglide/runtime.js')>();

@@ -21,7 +21,7 @@ vi.mock('../../generated-sources/openapi', async (importOriginal) => {
 });
 
 // setLocale reloads the page, which would abort the test run
-vi.mock('$lib/paraglide/runtime.js', () => ({
+vi.mock('#lib/paraglide/runtime.js', () => ({
 	getLocale: mockGetLocale,
 	setLocale: mockSetLocale
 }));

@@ -2,8 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import { page } from 'vitest/browser';
 import SetupWizard from './SetupWizard.svelte';
-import { authDiscovery } from '$lib/stores/authDiscoveryState.svelte';
-import { saveSetupDraft } from '$lib/setupDraft';
+import { authDiscovery } from '#lib/stores/authDiscoveryState.svelte.ts';
+import { saveSetupDraft } from '#lib/setupDraft.ts';
 
 const {
 	mockSetupHousehold,
@@ -47,16 +47,17 @@ vi.mock('$app/state', () => ({ page: mockPage }));
 
 vi.mock('$app/navigation', () => ({ goto: mockGoto }));
 
-vi.mock('$lib/stores/toastStore', () => ({ addToast: mockAddToast }));
+vi.mock('#lib/stores/toastStore.ts', () => ({ addToast: mockAddToast }));
 
-vi.mock('$lib/stores/sessionBootstrap', () => ({ bootstrapSession: mockBootstrapSession }));
+vi.mock('#lib/stores/sessionBootstrap.ts', () => ({ bootstrapSession: mockBootstrapSession }));
 
-vi.mock('$lib/stores/authDiscoveryState.svelte', async (importOriginal) => {
-	const original = await importOriginal<typeof import('$lib/stores/authDiscoveryState.svelte')>();
+vi.mock('#lib/stores/authDiscoveryState.svelte.ts', async (importOriginal) => {
+	const original =
+		await importOriginal<typeof import('#lib/stores/authDiscoveryState.svelte.ts')>();
 	return { ...original, loadAuthDiscovery: mockLoadAuthDiscovery };
 });
 
-vi.mock('$lib/socialLogin', () => ({ startSocialLogin: mockStartSocialLogin }));
+vi.mock('#lib/socialLogin.ts', () => ({ startSocialLogin: mockStartSocialLogin }));
 
 vi.mock('./paraglide/runtime.js', async (importOriginal) => {
 	const original = await importOriginal<typeof import('./paraglide/runtime.js')>();
@@ -144,7 +145,7 @@ describe('SetupWizard', () => {
 
 		// then
 		await vi.waitFor(() =>
-			expect(mockGoto).toHaveBeenCalledWith('/app/dashboard', { replaceState: true })
+			expect(mockGoto).toHaveBeenCalledWith('/app/dashboard', { replace: true })
 		);
 		expect(mockBootstrapSession.mock.invocationCallOrder[0]).toBeLessThan(
 			mockGoto.mock.invocationCallOrder[0]

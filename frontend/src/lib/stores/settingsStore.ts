@@ -1,7 +1,7 @@
 import { get, writable } from 'svelte/store';
-import { getLocale, setLocale } from '$lib/paraglide/runtime.js';
+import { getLocale, setLocale } from '#lib/paraglide/runtime.js';
 import { type UserPreferences, UsersettingsApi } from '../../generated-sources/openapi';
-import { apiConfiguration } from '$lib/api/httpClient';
+import { apiConfiguration } from '#lib/api/httpClient.ts';
 import { householdState } from './householdState.svelte';
 import { userState } from './userState';
 

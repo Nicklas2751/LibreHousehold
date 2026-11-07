@@ -1,5 +1,5 @@
-import { apiConfiguration } from '$lib/api/httpClient';
-import { getCsrfTokenFromCookieHeader } from '$lib/api/csrf';
+import { apiConfiguration } from '#lib/api/httpClient.ts';
+import { getCsrfTokenFromCookieHeader } from '#lib/api/csrf.ts';
 import { SessionApi } from '../../generated-sources/openapi';
 
 const sessionApi = new SessionApi(apiConfiguration);

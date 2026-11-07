@@ -9,25 +9,18 @@ const { mockConfirmPasswordReset, mockGoto, mockAddToast } = vi.hoisted(() => ({
 	mockAddToast: vi.fn()
 }));
 
-vi.mock('$lib/stores/passwordReset', () => ({
+vi.mock('#lib/stores/passwordReset.ts', () => ({
 	confirmPasswordReset: mockConfirmPasswordReset
 }));
 
 vi.mock('$app/navigation', () => ({ goto: mockGoto }));
 
-vi.mock('$lib/stores/toastStore', () => ({ addToast: mockAddToast }));
+vi.mock('#lib/stores/toastStore.ts', () => ({ addToast: mockAddToast }));
 
-vi.mock('$app/stores', () => ({
-	page: {
-		subscribe: (run: (value: { params: { token: string } }) => void) => {
-			run({ params: { token: 'test-token' } });
-			return () => {};
-		}
-	}
-}));
+vi.mock('$app/state', () => ({ page: { params: { token: 'test-token' } } }));
 
-vi.mock('$lib/paraglide/runtime.js', async (importOriginal) => {
-	const original = await importOriginal<typeof import('$lib/paraglide/runtime.js')>();
+vi.mock('#lib/paraglide/runtime.js', async (importOriginal) => {
+	const original = await importOriginal<typeof import('#lib/paraglide/runtime.js')>();
 	return { ...original, getLocale: () => 'de' as const, setLocale: vi.fn() };
 });
 

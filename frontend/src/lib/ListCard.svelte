@@ -1,5 +1,5 @@
 <script lang="ts" generics="T extends { id: string }">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 
 	interface DisplayItem {
 		id: string;

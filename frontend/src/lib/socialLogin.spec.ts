@@ -20,7 +20,7 @@ vi.mock('../generated-sources/openapi', async (importOriginal) => {
 	};
 });
 
-vi.mock('$lib/stores/toastStore', () => ({ addToast: mockAddToast }));
+vi.mock('#lib/stores/toastStore.ts', () => ({ addToast: mockAddToast }));
 
 describe('startSocialLogin', () => {
 	beforeEach(() => {

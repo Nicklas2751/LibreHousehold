@@ -5,9 +5,9 @@ import {
 	ReimbursementsApi,
 	type ReimbursementUpdate
 } from '../../generated-sources/openapi';
-import { apiConfiguration } from '$lib/api/httpClient';
-import { addToast } from '$lib/stores/toastStore';
-import { Toast } from '$lib/toast';
+import { apiConfiguration } from '#lib/api/httpClient.ts';
+import { addToast } from '#lib/stores/toastStore.ts';
+import { Toast } from '#lib/toast.ts';
 
 export const reimbursements = writable<Reimbursement[]>([]);
 
