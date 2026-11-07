@@ -1,9 +1,7 @@
+[[section-building-block-view]]
 = Building Block View
 
-[[section-building-block-view]]
-== Building Block View
-
-=== Whitebox Overall System
+== Whitebox Overall System
 
 .Building Block View, Level 1
 plantuml::arc42:partial$building_block_level1.puml[format=svg,alt="Building Block View, Level 1"]
@@ -32,18 +30,18 @@ These modules don't share any code but communicate via the defined ports.
 See <<section-subdomain-classification>> below for what these types mean and why they were assigned this way.
 
 [[section-subdomain-classification]]
-=== Subdomain Classification
+== Subdomain Classification
 
 * **Core Domain** — what makes LibreHousehold what it is. `Household` (forming and maintaining a household community), `Tasks`, and `Expenses` (including reimbursement/debt settlement) each encapsulate a genuine business process with its own ubiquitous language and invariants.
 These modules deserve careful tactical DDD (aggregates, invariants, language).
-* **Supporting Subdomain** — necessary and specific to this product, but not its differentiator. `Administration` (planned) encapsulates a real process (instance administration) tied to a distinct actor (the Administrator, see xref:03_context_and_scope.adoc#section-context-and-scope[Chapter 3 - Context and Scope]), but they are not what users come to LibreHousehold for. `Statistics` is supporting in a different sense: it is a pure read-model/aggregation over Core modules with no business rules of its own.
+* **Supporting Subdomain** — necessary and specific to this product, but not its differentiator. `Administration` (planned) encapsulates a real process (instance administration) tied to a distinct actor (the Administrator, see xref:03_context_and_scope.adoc[Chapter 3 - Context and Scope]), but they are not what users come to LibreHousehold for. `Statistics` is supporting in a different sense: it is a pure read-model/aggregation over Core modules with no business rules of its own.
 * **Generic Subdomain** — a standard problem with a standard solution; it could be replaced by a third-party library or service without losing competitive advantage. `User Settings` (preferences) and `Notifications` (delivery channels and rules) fall here.
 A simple, pragmatic implementation is fine for these — they do not need the same modelling depth as the Core Domain.
 
-**Authentication and Authorization are intentionally not listed as a module or bounded context.** They have no ubiquitous language relevant to household members ("login", "session", "token" are technical, not domain terms) and are treated as a cross-cutting concern instead — see xref:08_concepts.adoc#section-concepts[Chapter 8, Cross-cutting Concepts].
+**Authentication and Authorization are intentionally not listed as a module or bounded context.** They have no ubiquitous language relevant to household members ("login", "session", "token" are technical, not domain terms) and are treated as a cross-cutting concern instead — see xref:08_concepts.adoc[Chapter 8, Cross-cutting Concepts].
 The one genuine domain operation, registering an account, lives inside `Household` as part of the membership process (see xref:adrs:adr-012.adoc[ADR 012]) rather than in a separate module built around the "Account" entity.
 
-=== Bounded Context Map
+== Bounded Context Map
 
 The following diagram shows the backend modules from the table above as bounded contexts, coloured by subdomain type, together with how they actually depend on each other per xref:adrs:adr-011.adoc[ADR 011] (Named Interfaces for synchronous queries, Domain Events for reactive lifecycle notifications).
 Modules marked "(planned)" exist only as an empty package scaffold today and are not yet implemented.
@@ -56,7 +54,7 @@ This fan-in is not treated as a bottleneck as long as the inbound interface stay
 It would become a problem only if the interface grew wide and bespoke per consumer, which would be the signal to redesign the interface, not to split `Household` itself.
 
 [[section-module-dependency-direction]]
-=== Module Dependency Direction
+== Module Dependency Direction
 
 On top of the query/event distinction from xref:adrs:adr-011.adoc[ADR 011], an explicit rule governs the *direction* of allowed dependencies, to keep the module graph acyclic as the system grows:
 
@@ -68,7 +66,7 @@ Any module may depend on `core`.
 Publishing Domain Events to
 `Tasks`/`Expenses`/`Notifications` does not violate this rule, since `Household` does not depend on its listeners; it merely announces facts.
 Signing a member in (after household setup or invite join, after a social login, and ending sessions on a password reset) does not violate it either: `Household` injects the framework beans `SessionAuthenticationStrategy` and `SessionRegistry` by type, which `config` provides at runtime (`SessionManagementConfig`).
-These are Spring Security types, not `config` code, so no module dependency arises (see xref:08_concepts.adoc#section-concepts[Chapter 8, Authentication
+These are Spring Security types, not `config` code, so no module dependency arises (see xref:08_concepts.adoc[Chapter 8, Authentication
  and Authorization]).
 * No fixed rule exists yet for dependencies *among* the remaining business modules (`Tasks`,
 `Expenses`, `Statistics`, `Administration`, `UserSettings`, `Notifications`); the guiding principle is to keep dependencies as few as possible, extending them only via Named Interfaces (ADR 011) when a genuine cross-module query is needed.

@@ -1,7 +1,5 @@
-= Architecture Constraints
-
 [[section-architecture-constraints]]
-== Architecture Constraints
+= Architecture Constraints
 
 
 [options="header",cols="1,3"]

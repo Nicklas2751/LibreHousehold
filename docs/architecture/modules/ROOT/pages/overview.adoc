@@ -4,16 +4,16 @@
 
 include::arc42:page$01_introduction_and_goals.adoc[tag=mission-statement]
 
-Find more information about the goals in xref:arc42:01_introduction_and_goals.adoc#section-introduction-and-goals[Chapter 1 - Introduction and Goals].
+Find more information about the goals in xref:arc42:01_introduction_and_goals.adoc[Chapter 1 - Introduction and Goals].
 
-=== xref:arc42:03_context_and_scope.adoc#section-context-and-scope[Context]
+=== xref:arc42:03_context_and_scope.adoc[Context]
 
 include::arc42:page$03_context_and_scope.adoc[tag=system-context-diagram]
 
-=== xref:arc42:01_introduction_and_goals.adoc#section-introduction-and-goals[Quality Goals]
+=== xref:arc42:01_introduction_and_goals.adoc[Quality Goals]
 
 include::arc42:page$01_introduction_and_goals.adoc[tag=quality-goals]
 
-=== xref:arc42:04_solution_strategy.adoc#section-solution-strategy[Solution Strategy]
+=== xref:arc42:04_solution_strategy.adoc[Solution Strategy]
 
 include::arc42:page$04_solution_strategy.adoc[tag=solution-strategy-mapping]

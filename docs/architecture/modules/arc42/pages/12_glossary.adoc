@@ -1,4 +1,2 @@
-= Glossary
-
 [[section-glossary]]
-== Glossary
+= Glossary

@@ -1,9 +1,7 @@
+[[section-deployment-view]]
 = Deployment View
 
-[[section-deployment-view]]
-== Deployment View
-
-=== Infrastructure Level 1
+== Infrastructure Level 1
 
 [plantuml,deployment_view,svg]
 ....
@@ -12,9 +10,9 @@ include::arc42:partial$deployment_view.puml[]
 
 The LibreHousehold system is deployed using a simple container-based architecture that provides both flexibility and easy maintenance.
 
-==== Server Infrastructure
+=== Server Infrastructure
 
-===== Nginx Container (Frontend)
+==== Nginx Container (Frontend)
 
 **Technology:** Nginx Web Server in Docker Container
 
@@ -24,7 +22,7 @@ The LibreHousehold system is deployed using a simple container-based architectur
 **Quality attributes:**
 - Fast delivery of static content - Simple configuration and deployment - Low resource requirements
 
-===== Backend Container
+==== Backend Container
 
 **Technology:** Java Spring Boot Application in Docker Container
 
@@ -34,16 +32,16 @@ The LibreHousehold system is deployed using a simple container-based architectur
 **Quality attributes:**
 - Scalability through container replication - Easy deployments through container updates - Application isolation
 
-==== Client Devices
+=== Client Devices
 
-===== Desktop Browser
+==== Desktop Browser
 
 **Technology:** Standard Web Browser (Chrome, Firefox, Safari)
 
 **Responsibilities:**
 - Execution of the Progressive Web App - Local data storage for offline functionality - Service Worker for background synchronization
 
-===== Mobile Browser/PWA
+==== Mobile Browser/PWA
 
 **Technology:** Embedded Browser (WebView) or PWA installation
 
@@ -53,16 +51,16 @@ The LibreHousehold system is deployed using a simple container-based architectur
 **Quality attributes:**
 - Cross-platform compatibility - No app store dependencies - Automatic updates via browser
 
-==== External Services
+=== External Services
 
-===== E-Mail Server
+==== E-Mail Server
 
 **Technology:** SMTP-compatible email service
 
 **Responsibilities:**
 - Sending household invitations - Notifications about important events - Password reset emails
 
-===== Database
+==== Database
 
 Can be either a (cloud) hosted database service or a containerized database instance.
 
@@ -72,7 +70,7 @@ Can be either a (cloud) hosted database service or a containerized database inst
 - Persistent storage of user data, household data, and application state - Data integrity and consistency
 
 [[section-reverse-proxy-requirements]]
-=== Reverse Proxy Requirements
+== Reverse Proxy Requirements
 
 No production reverse-proxy configuration exists yet. Any future configuration in front of the backend must meet these requirements:
 
@@ -82,7 +80,7 @@ The backend trusts this header (`server.forward-headers-strategy: framework`) an
 * **Host and scheme:** The same applies to `X-Forwarded-Host`, `X-Forwarded-Proto` and `X-Forwarded-Port`: the proxy sets them from the actual request instead of passing on client values, since the backend builds absolute URLs such as redirects from them.
 
 [[section-social-login-provider-requirements]]
-=== Social Login Provider Requirements
+== Social Login Provider Requirements
 
 Social login is optional. Providers are configured with Spring Boot's standard `spring.security.oauth2.client.registration.*` and `...provider.*` properties (xref:adrs:adr-016.adoc[ADR 016]). Each registration must meet these requirements. The scope rules are checked at startup (`SocialLoginRegistrationCheck`), and the application refuses to start if one is violated; the others are the operator's responsibility:
 
@@ -91,7 +89,7 @@ Social login is optional. Providers are configured with Spring Boot's standard `
 * **Immutable subject:** `user-name-attribute` must name an attribute that never changes for an account (`sub` for OIDC, `id` for GitHub), because the local account is linked to it (xref:adrs:adr-018.adoc[ADR 018]). An e-mail address or a login name is not suitable.
 * **PKCE:** the provider must accept PKCE for confidential clients. PKCE is always sent and cannot be switched off; providers that reject it are not supported. Google, GitHub and Dex support it.
 
-=== Deployment Mapping
+== Deployment Mapping
 
 |===
 |Software Module |Infrastructure Element |Deployment Artifact

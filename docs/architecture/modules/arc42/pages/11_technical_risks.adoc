@@ -1,14 +1,12 @@
-= Risks and Technical Debts
-
 [[section-technical-risks]]
-== Risks and Technical Debts
+= Risks and Technical Debts
 
 This chapter collects the technical risks and technical debts that have already surfaced elsewhere in this documentation (ADRs, Chapter 5) and in the project's implementation notes, so they are visible in one place instead of scattered across individual decision records. Each entry is ordered by priority within its table and links back to where it was originally identified.
 
 * A **Technical Debt** is a known, already-accepted shortcut or gap in the current implementation.
 * A **Risk** is something that has not happened yet but could, if the architecture is not watched.
 
-=== Technical Debt
+== Technical Debt
 
 [cols="1,4,2,1,3", options="header"]
 |===
@@ -39,7 +37,7 @@ This chapter collects the technical risks and technical debts that have already 
 |No action needed now. Keep the interfaces narrow (see xref:05_building_block_view.adoc#section-subdomain-classification[Chapter 5, Bounded Context Map]) so extraction to microservices stays cheap if that is ever needed.
 |===
 
-=== Risks
+== Risks
 
 [cols="1,4,2,1,3", options="header"]
 |===
