@@ -5,7 +5,7 @@ This document is the canonical AI-assistant reference for LibreHousehold and sho
 ## Project Overview
 
 See [README.adoc](README.adoc) for the project description, goals, and feature list.
-See [Arc42 Chapter 1](docs/architecture/chapters/01_introduction_and_goals.adoc) for the quality goals (QG1–QG4).
+See [Arc42 Chapter 1](docs/architecture/modules/arc42/pages/01_introduction_and_goals.adoc) for the quality goals (QG1–QG4).
 
 ## Architecture Big Picture
 
@@ -14,11 +14,11 @@ LibreHousehold is a **Modular Monolith** designed for household management. It e
 - **Frontend:** SvelteKit 5 application (SPA/PWA)
 - **API:** Defined in `api/openapi.yml`
 - **Backend:** Java-based modular monolith (currently still WIP / mostly empty)
-- **Documentation:** Arc42/AsciiDoc architecture documentation handled by `docToolchain`
+- **Documentation:** Arc42/AsciiDoc architecture documentation published as an Antora site (see [Documentation](#documentation))
 - **External System:** E-Mail server for notifications
 
-Architecture decisions are documented in [`docs/architecture/adrs/`](docs/architecture/adrs/).
-System actors and module responsibilities are documented in [Arc42 Chapter 3](docs/architecture/chapters/03_context_and_scope.adoc) and [Arc42 Chapter 5](docs/architecture/chapters/05_building_block_view.adoc).
+Architecture decisions are documented in [`docs/architecture/modules/adrs/pages/`](docs/architecture/modules/adrs/pages/).
+System actors and module responsibilities are documented in [Arc42 Chapter 3](docs/architecture/modules/arc42/pages/03_context_and_scope.adoc) and [Arc42 Chapter 5](docs/architecture/modules/arc42/pages/05_building_block_view.adoc).
 
 ### Data & State Flow
 
@@ -119,10 +119,14 @@ LibreHousehold/
 ├── backend/           # Java backend (modular monolith, Spring Boot)
 ├── frontend/          # TypeScript PWA
 ├── docs/
-│   └── architecture/  # Arc42 architecture documentation
-│       ├── adrs/      # Architecture Decision Records
-│       └── chapters/  # Arc42 chapters
-├── build/             # Build artifacts
+│   ├── antora-playbook.yml  # Antora site configuration
+│   ├── supplemental-ui/     # Antora UI overrides
+│   └── architecture/        # Antora component "architecture"
+│       └── modules/
+│           ├── ROOT/        # Architecture overview (site start page)
+│           ├── arc42/       # Arc42 chapters
+│           └── adrs/        # Architecture Decision Records
+├── build/             # Build artifacts (e.g. the documentation site in build/site)
 └── README.adoc        # Project README
 ```
 
@@ -175,6 +179,40 @@ LibreHousehold/
 
 - Architecture documentation lives in `docs/architecture/`
 - Use AsciiDoc (`.adoc`) for architecture/project documentation
+- The site is built with [Antora](https://antora.org) and deployed to GitHub Pages
+  (`librehousehold.wiegandt.eu`) on every push to `main`. `docs-ci.yml` builds it in pull requests,
+  so broken xrefs, includes and diagrams fail there.
+- Build locally from `docs/` (output in `build/site`):
+  ```bash
+  cd docs
+  npm ci
+  npm run build:strict   # fails on every warning, like the CI
+  ```
+  PlantUML diagrams are rendered by Kroki. Locally the playbook uses `kroki.io`; with
+  `docker run -p 8000:8000 yuzutech/kroki` and
+  `npm run build:strict -- --attribute kroki-server-url=http://localhost:8000` the build runs
+  offline, as in the CI.
+- `personas/` and `domain-stories/` lie outside `modules/` and are deliberately not published.
+
+**Cross-references between modules.** Antora resolves `xref:` relative to the module's `pages/`
+directory, not to the current file. Within a module, `xref:adr-016.adoc` is enough; across modules,
+qualify the module: `xref:adrs:adr-011.adoc`, `xref:arc42:01_introduction_and_goals.adoc#QG2`.
+Includes and diagrams use resource IDs: `include::arc42:page$03_context_and_scope.adoc[tag=…]`,
+`plantuml::arc42:partial$system_context.puml[…]`.
+
+**Content that is included into another module must be fully module-qualified.** Xrefs and resource
+IDs in included content are resolved relative to the *including* page. The overview (module `ROOT`)
+includes tagged regions of arc42 chapters 1, 3 and 4, and chapter 9 includes the ADR list from
+`adrs/pages/index.adoc`; xrefs, includes and diagrams inside these regions therefore always carry
+the module (`xref:arc42:…`, `xref:adrs:…`, `arc42:partial$…`).
+
+**A new ADR has to be added in two places:** the list in `adrs/pages/index.adoc` (between the
+`adr-list` tags, which chapter 9 includes) and the navigation `adrs/nav.adoc`. The template is
+`adrs/partials/template.adoc`.
+
+Curly braces in text are attribute references in AsciiDoc; escape literal placeholders such as
+`` `/oauth2/authorization/\{registrationId}` ``, otherwise the strict build fails with "skipping
+reference to missing attribute".
 
 ### Store Pattern
 
@@ -219,8 +257,8 @@ export const functionName = async (
 - `frontend/`: Main web application
 - `api/`: OpenAPI specifications and mock server data
 - `backend/`: Java 25 backend
-- `docs/`: Architecture documentation (AsciiDoc)
-- `build/`: Build artifacts (for example the microsite)
+- `docs/`: Architecture documentation (AsciiDoc, Antora)
+- `build/`: Build artifacts (for example the documentation site in `build/site`)
 
 ## Important Notes for AI Assistants
 
@@ -339,7 +377,7 @@ For class-based entities the recommended update pattern is via MapStruct `@Mappi
 
 ### Account & Email Model
 
-**Account–Household relationship: resolved as 1 Account : 1 Household** (see [ADR-012](docs/architecture/adrs/adr-012.adoc)). An account is scoped to exactly one household; there is no cross-household login. Consequences:
+**Account–Household relationship: resolved as 1 Account : 1 Household** (see [ADR-012](docs/architecture/modules/adrs/pages/adr-012.adoc)). An account is scoped to exactly one household; there is no cross-household login. Consequences:
 
 - **Email uniqueness scope**: `member.email` staying globally unique (system-wide UNIQUE constraint) is the correct, natural fit for the 1:1 model — one e-mail identifies exactly one account/household. No per-household uniqueness needed.
 - **Existing accounts**: Resolved by the 1:1 model — an account can never join or set up a second household. The setup wizard and registration flow must reject an e-mail that already has an account with a clear error, not a generic 409.
@@ -359,7 +397,7 @@ The `Task` schema has a `done` field (date format) that either contains a date o
 
 ### Cross-Module Communication (ADR-011)
 
-Entschieden in [ADR-011](docs/architecture/adrs/adr-011.adoc). Kurzfassung:
+Entschieden in [ADR-011](docs/architecture/modules/adrs/pages/adr-011.adoc). Kurzfassung:
 
 | Szenario | Muster |
 |---|---|
@@ -414,7 +452,7 @@ Two rules keep this credential-less sign-in safe:
 
 ### Pending Backend Implementations
 
-See [Chapter 11 - Risks and Technical Debts](docs/architecture/chapters/11_technical_risks.adoc) for the full, prioritized list (TD1-TD4). Summary of the two still-open items:
+See [Chapter 11 - Risks and Technical Debts](docs/architecture/modules/arc42/pages/11_technical_risks.adoc) for the full, prioritized list (TD1-TD4). Summary of the two still-open items:
 
 - **Maximale Bildgröße** (TD2): `server.tomcat.max-http-post-size` ist bewusst auf unbegrenzt gesetzt (Tomcat-Standard war 2 MB und führte zu stiller Trunkierung großer Base64-Bilder). Eine serverseitige Validierung der maximalen Bildgröße (empfohlen: 5 MB) fehlt noch — per Bean-Validation oder Filter.
 - **Bildtyp-Beschränkung** (TD3): Es wird noch nicht geprüft, ob ein hochgeladenes Bild ein valides JPEG/PNG/WebP ist. Magic-Bytes-Prüfung oder MIME-Detection fehlt.

@@ -1,3 +1,5 @@
+// Copy this file to ../pages/adr-0xx.adoc and add the new ADR to the list in ../pages/index.adoc
+// (between the adr-list tags) and to ../nav.adoc.
 [[adr-000]]
 = ADR 000: A template for Architecture Decision Records
 
