@@ -1,14 +1,4 @@
-:jbake-title: Architecture Constraints
-:jbake-type: page_toc
-:jbake-status: published
-:jbake-menu: arc42
-:jbake-order: 2
-:filename: /chapters/02_architecture_constraints.adoc
-:imagesdir: ../images
-
-:toc:
-
-
+= Architecture Constraints
 
 [[section-architecture-constraints]]
 == Architecture Constraints

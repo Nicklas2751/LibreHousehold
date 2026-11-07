@@ -1,9 +1,3 @@
-:jbake-title: ADR 017: Pre-Redirect Session Endpoint for Social Login Context
-:jbake-type: page_toc
-:jbake-status: published
-:jbake-menu: adrs
-:jbake-order: 17
-
 [[adr-017]]
 = ADR 017: Pre-Redirect Session Endpoint for Social Login Context
 

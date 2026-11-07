@@ -1,15 +1,9 @@
-:jbake-title: ADR 003: Modular division based on subject
-:jbake-type: page_toc
-:jbake-status: published
-:jbake-menu: adrs
-:jbake-order: 3
-
 [[adr-003]]
 = ADR 003: Modular division based on subject
 
 == Context
 
-The codebase need to be simple structured and easy to understand for new contributors to archive the maintainability quality goal xref:../chapters/01_introduction_and_goals.adoc#QG4[QG4].
+The codebase need to be simple structured and easy to understand for new contributors to archive the maintainability quality goal xref:arc42:01_introduction_and_goals.adoc#QG4[QG4].
 
 == Decision Outcome
 

@@ -1,14 +1,4 @@
-:jbake-title: Risks and Technical Debts
-:jbake-type: page_toc
-:jbake-status: published
-:jbake-menu: arc42
-:jbake-order: 11
-:filename: /chapters/11_technical_risks.adoc
-:imagesdir: ../images
-
-:toc:
-
-
+= Risks and Technical Debts
 
 [[section-technical-risks]]
 == Risks and Technical Debts
@@ -25,7 +15,7 @@ This chapter collects the technical risks and technical debts that have already 
 |ID |Description |Affects |Priority |Mitigation / Next Step
 
 |TD1
-|Module boundaries are only partially technically enforced: `ApplicationTests.writeDocumentationSnippets` already calls `ApplicationModules.verify()` on every build, which catches structural cycles between modules (it has already caught a real cycle during the P2.2 implementation). However, no `package-info.java` with `@ApplicationModule(allowedDependencies = ...)` exists in the backend yet, even though xref:../adrs/adr-011.adoc[ADR 011] mandates explicit, declared dependencies between modules. Without that declaration, `verify()` has no explicit allow-list to check a module's dependencies against beyond cycle detection, so nothing but code review discipline stops a module from importing another module's internals as long as no cycle results. Authentication adds cross-module wiring of this kind: `config` signs federated accounts in through `household`'s `AccountSignIn` Named Interface, and `session` depends on `config` only through the `config`-owned `SocialLoginContextStore`.
+|Module boundaries are only partially technically enforced: `ApplicationTests.writeDocumentationSnippets` already calls `ApplicationModules.verify()` on every build, which catches structural cycles between modules (it has already caught a real cycle during the P2.2 implementation). However, no `package-info.java` with `@ApplicationModule(allowedDependencies = ...)` exists in the backend yet, even though xref:adrs:adr-011.adoc[ADR 011] mandates explicit, declared dependencies between modules. Without that declaration, `verify()` has no explicit allow-list to check a module's dependencies against beyond cycle detection, so nothing but code review discipline stops a module from importing another module's internals as long as no cycle results. Authentication adds cross-module wiring of this kind: `config` signs federated accounts in through `household`'s `AccountSignIn` Named Interface, and `session` depends on `config` only through the `config`-owned `SocialLoginContextStore`.
 |xref:01_introduction_and_goals.adoc#QG4[QG4 - Maintainable]
 |High
 |Add `package-info.java` per module declaring `allowedDependencies`, as already specified in ADR 011 — the existing `ApplicationModules.verify()` test will then also enforce it.
@@ -43,7 +33,7 @@ This chapter collects the technical risks and technical debts that have already 
 |Add magic-byte or MIME-type detection before persisting an uploaded image.
 
 |TD4
-|`tasks` and `expenses` have a compile-time dependency on `household`'s public interfaces (Named Interfaces). This is an intentional, accepted trade-off (see xref:../adrs/adr-011.adoc[ADR 011]), not an oversight.
+|`tasks` and `expenses` have a compile-time dependency on `household`'s public interfaces (Named Interfaces). This is an intentional, accepted trade-off (see xref:adrs:adr-011.adoc[ADR 011]), not an oversight.
 |xref:01_introduction_and_goals.adoc#QG4[QG4 - Maintainable]
 |Low _(accepted)_
 |No action needed now. Keep the interfaces narrow (see xref:05_building_block_view.adoc#section-subdomain-classification[Chapter 5, Bounded Context Map]) so extraction to microservices stays cheap if that is ever needed.
@@ -62,19 +52,19 @@ This chapter collects the technical risks and technical debts that have already 
 |Review new Named Interface methods for genuine reuse before adding them; if the interface grows wide, redesign it rather than splitting `Household`.
 
 |R2
-|The eventual-consistency window between a producing transaction's commit and the asynchronous `@ApplicationModuleListener` execution (xref:../adrs/adr-011.adoc[ADR 011]) could silently be relied upon somewhere that actually needs immediate consistency.
+|The eventual-consistency window between a producing transaction's commit and the asynchronous `@ApplicationModuleListener` execution (xref:adrs:adr-011.adoc[ADR 011]) could silently be relied upon somewhere that actually needs immediate consistency.
 |xref:01_introduction_and_goals.adoc#QG2[QG2 - Secure], xref:01_introduction_and_goals.adoc#QG4[QG4 - Maintainable]
 |Medium
 |Enforce in code review: Domain Events are for reactive cleanup/notifications only, never for logic that needs read-your-write consistency within the same request.
 
 |R3
-|The 1 Account : 1 Household model (xref:../adrs/adr-012.adoc[ADR 012]) is a deliberate scope decision. If multi-household usage under a single login is ever required, this becomes a breaking model change (extracting `Account` out of `household`).
+|The 1 Account : 1 Household model (xref:adrs:adr-012.adoc[ADR 012]) is a deliberate scope decision. If multi-household usage under a single login is ever required, this becomes a breaking model change (extracting `Account` out of `household`).
 |xref:01_introduction_and_goals.adoc#QG4[QG4 - Maintainable]
 |Low
 |No action needed now; revisit only if this product requirement actually materializes.
 
 |R4
-|Java is more verbose than modern alternatives such as Kotlin (accepted trade-off in xref:../adrs/adr-002.adoc[ADR 002]), which can increase boilerplate and slow down new contributors.
+|Java is more verbose than modern alternatives such as Kotlin (accepted trade-off in xref:adrs:adr-002.adoc[ADR 002]), which can increase boilerplate and slow down new contributors.
 |xref:01_introduction_and_goals.adoc#QG4[QG4 - Maintainable]
 |Low
 |Favor idiomatic modern Java (records, `var`, pattern matching) to keep boilerplate low; no framework change planned.
@@ -92,7 +82,7 @@ This chapter collects the technical risks and technical debts that have already 
 |A password reset lifts the lockout immediately, so the owner of the mailbox can always get back in. No change to the lockout policy planned.
 
 |R7
-|No token-based API: the HTTP session is the only credential (xref:../adrs/adr-013.adoc[ADR 013]). Native apps, other non-browser clients or third-party integrations cannot access the API with tokens.
+|No token-based API: the HTTP session is the only credential (xref:adrs:adr-013.adoc[ADR 013]). Native apps, other non-browser clients or third-party integrations cannot access the API with tokens.
 |xref:01_introduction_and_goals.adoc#QG4[QG4 - Maintainable]
 |Low _(accepted)_
 |No action needed now. ADR 013 names the conditions under which an Authorization Server returns and how (`oauth2ResourceServer()` for the affected APIs, the SPA stays on the session).

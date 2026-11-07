@@ -1,12 +1,4 @@
-:jbake-title: Deployment View
-:jbake-type: page_toc
-:jbake-status: published
-:jbake-menu: arc42
-:jbake-order: 7
-:filename: /chapters/07_deployment_view.adoc
-:imagesdir: ../images
-
-:toc:
+= Deployment View
 
 [[section-deployment-view]]
 == Deployment View
@@ -15,7 +7,7 @@
 
 [plantuml,deployment_view,svg]
 ....
-include::../images/deployment_view.puml[]
+include::arc42:partial$deployment_view.puml[]
 ....
 
 The LibreHousehold system is deployed using a simple container-based architecture that provides both flexibility and easy maintenance.
@@ -92,11 +84,11 @@ The backend trusts this header (`server.forward-headers-strategy: framework`) an
 [[section-social-login-provider-requirements]]
 === Social Login Provider Requirements
 
-Social login is optional. Providers are configured with Spring Boot's standard `spring.security.oauth2.client.registration.*` and `...provider.*` properties (xref:../adrs/adr-016.adoc[ADR 016]). Each registration must meet these requirements. The scope rules are checked at startup (`SocialLoginRegistrationCheck`), and the application refuses to start if one is violated; the others are the operator's responsibility:
+Social login is optional. Providers are configured with Spring Boot's standard `spring.security.oauth2.client.registration.*` and `...provider.*` properties (xref:adrs:adr-016.adoc[ADR 016]). Each registration must meet these requirements. The scope rules are checked at startup (`SocialLoginRegistrationCheck`), and the application refuses to start if one is violated; the others are the operator's responsibility:
 
 * **Scopes:** an OIDC registration (issuer set) requests `openid`, and a registration that requests `openid` has an issuer. Every registration requests the e-mail address: `email` for OIDC providers, `user:email` for GitHub. Spring Boot's defaults are not sufficient for every provider: Google's built-in defaults are `openid,profile,email`, GitHub's only `read:user`, and a provider configured via issuer discovery gets no scopes at all.
-* **Redirect URI:** an absolute `redirect-uri` (`https://<public host>/login/oauth2/code/<registrationId>`), registered exactly like that at the provider. The `{baseUrl}` placeholder is meant for local development and tests only.
-* **Immutable subject:** `user-name-attribute` must name an attribute that never changes for an account (`sub` for OIDC, `id` for GitHub), because the local account is linked to it (xref:../adrs/adr-018.adoc[ADR 018]). An e-mail address or a login name is not suitable.
+* **Redirect URI:** an absolute `redirect-uri` (`https://<public host>/login/oauth2/code/<registrationId>`), registered exactly like that at the provider. The `\{baseUrl}` placeholder is meant for local development and tests only.
+* **Immutable subject:** `user-name-attribute` must name an attribute that never changes for an account (`sub` for OIDC, `id` for GitHub), because the local account is linked to it (xref:adrs:adr-018.adoc[ADR 018]). An e-mail address or a login name is not suitable.
 * **PKCE:** the provider must accept PKCE for confidential clients. PKCE is always sent and cannot be switched off; providers that reject it are not supported. Google, GitHub and Dex support it.
 
 === Deployment Mapping

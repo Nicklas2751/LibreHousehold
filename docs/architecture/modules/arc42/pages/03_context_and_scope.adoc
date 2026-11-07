@@ -1,21 +1,11 @@
-:jbake-title: Context and Scope
-:jbake-type: page_toc
-:jbake-status: published
-:jbake-menu: arc42
-:jbake-order: 3
-:filename: /chapters/03_context_and_scope.adoc
-:imagesdir: ../images
-
-:toc:
-
-
+= Context and Scope
 
 [[section-context-and-scope]]
 == Context and Scope
 
 // tag::system-context-diagram[]
 .High Level System Context Diagram
-plantuml::{imagesdir}/system_context.puml[format=svg,alt="High Level System Context Diagram"]
+plantuml::arc42:partial$system_context.puml[format=svg,alt="High Level System Context Diagram"]
 // end::system-context-diagram[]
 
 === User (Actor)
