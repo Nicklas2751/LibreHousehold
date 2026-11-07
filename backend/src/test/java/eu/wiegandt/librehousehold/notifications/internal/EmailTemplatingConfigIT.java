@@ -62,4 +62,45 @@ class EmailTemplatingConfigIT {
         // then
         assertThat(renderedHtml).contains(verificationLink);
     }
+
+    @ParameterizedTest
+    @CsvSource({
+            "verification, en",
+            "verification, de",
+            "password-reset, de",
+            "verification-deletion-warning, de",
+            "household-deleted, de",
+            "member-removed, de"
+    })
+    void templateEngine_mailTemplate_declaresMailLanguage(String templateName, String languageTag) {
+        // given
+        var context = new Context(Locale.forLanguageTag(languageTag));
+
+        // when
+        var renderedHtml = templateEngine.process(templateName, context);
+
+        // then
+        assertThat(renderedHtml).contains("<html lang=\"" + languageTag + "\">");
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "verification, en, Verify your email address",
+            "verification, de, Bestätige deine E-Mail-Adresse",
+            "password-reset, de, Setze dein Passwort zurück",
+            "verification-deletion-warning, de, Dein Konto wird bald gelöscht",
+            "household-deleted, de, Dein Haushalt wurde gelöscht",
+            "member-removed, de, Du wurdest aus einem Haushalt entfernt"
+    })
+    void templateEngine_mailTemplate_usesLocalizedSubjectAsTitle(String templateName, String languageTag,
+            String expectedTitle) {
+        // given
+        var context = new Context(Locale.forLanguageTag(languageTag));
+
+        // when
+        var renderedHtml = templateEngine.process(templateName, context);
+
+        // then
+        assertThat(renderedHtml).contains("<title>" + expectedTitle + "</title>");
+    }
 }

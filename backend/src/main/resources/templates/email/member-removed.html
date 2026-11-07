@@ -1,5 +1,9 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org" lang="en" th:lang="${#locale.language}">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="#{member-removed.subject}">You have been removed from a household</title>
+</head>
 <body>
 <div th:replace="~{layout/email-frame :: frame(~{::.email-body})}">
     <div class="email-body">
