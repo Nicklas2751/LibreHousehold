@@ -12,6 +12,7 @@ import eu.wiegandt.librehousehold.realtime.SseTestClient;
 import eu.wiegandt.librehousehold.realtime.SseTestClient.SseEvent;
 import eu.wiegandt.librehousehold.realtime.service.HouseholdEventStreams;
 import org.instancio.Instancio;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,14 +39,17 @@ import static org.awaitility.Awaitility.await;
 import static org.instancio.Select.field;
 
 /**
- * How long a stream lives: until its emitter timeout, or until the heartbeat finds its session ended
- * (ADR-019, RT3). A separate class, since the short timeout and heartbeat interval need their own
- * application context; the other stream tests keep the defaults.
+ * How long a stream lives and whether it may open at all: until its emitter timeout, until the
+ * heartbeat finds its session ended (ADR-019, RT3), or not beyond the stream limit (RT5). A separate
+ * class, since the short timeout, heartbeat interval and stream limit need their own application
+ * context; the other stream tests share theirs with other ITs and keep the defaults.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
         // Long enough to tell a stream ended by the heartbeat from one ended by the timeout
         "librehousehold.realtime.emitter-timeout=3s",
         "librehousehold.realtime.heartbeat-interval=200ms",
+        // Every other test opens one stream per session
+        "librehousehold.realtime.max-streams-per-session=1",
         // The login limits themselves are covered by RateLimitingIT
         "librehousehold.security.rate-limit.login-per-ip.max-attempts=10000",
         "librehousehold.security.rate-limit.login.max-attempts=10000"
@@ -72,6 +76,8 @@ class HouseholdEventStreamLifetimeIT {
     private static final String ACCESS_DENIED_FAILURE = "AccessDeniedException";
     private static final String AUTHORIZATION_DENIED_FAILURE = "AuthorizationDeniedException";
     private static final String DISPATCH_FAILURE = "Servlet.service()";
+    private static final String ERROR_LEVEL = " ERROR ";
+    private static final String STACK_TRACE_LINE = "\tat ";
 
     @LocalServerPort
     private int port;
@@ -160,6 +166,52 @@ class HouseholdEventStreamLifetimeIT {
                     .untilAsserted(() -> assertThat(output.getAll())
                             .doesNotContain(COMMITTED_RESPONSE_FAILURE, ACCESS_DENIED_FAILURE,
                                     AUTHORIZATION_DENIED_FAILURE, DISPATCH_FAILURE));
+        }
+    }
+
+    @Test
+    void openStream_secondStreamOfSession_tooManyRequestsWithRetryAfter() throws Exception {
+        // given
+        var member = createVerifiedMember(createHousehold());
+        var cookies = loggedInCookies(member);
+        var expected = new Rejection(429, "30");
+
+        try (var firstStream = SseTestClient.open(streamUri(member.householdId()), cookies)) {
+            firstStream.awaitEvent(EVENT_TIMEOUT);
+
+            // when
+            try (var secondStream = SseTestClient.open(streamUri(member.householdId()), cookies)) {
+
+                // then
+                assertThat(Rejection.of(secondStream)).isEqualTo(expected);
+            }
+        }
+    }
+
+    @Test
+    void openStream_secondStreamOfSession_noErrorLogged(CapturedOutput output) throws Exception {
+        // given
+        var member = createVerifiedMember(createHousehold());
+        var cookies = loggedInCookies(member);
+
+        try (var firstStream = SseTestClient.open(streamUri(member.householdId()), cookies)) {
+            firstStream.awaitEvent(EVENT_TIMEOUT);
+
+            // when
+            try (var _ = SseTestClient.open(streamUri(member.householdId()), cookies)) {
+
+                // then
+                await().during(LOG_QUIET_PERIOD).atMost(LOG_QUIET_PERIOD.multipliedBy(2))
+                        .untilAsserted(() -> assertThat(output.getAll())
+                                .doesNotContain(ERROR_LEVEL, STACK_TRACE_LINE, DISPATCH_FAILURE));
+            }
+        }
+    }
+
+    private record Rejection(int status, @Nullable String retryAfter) {
+
+        static Rejection of(SseTestClient stream) {
+            return new Rejection(stream.status(), stream.headers().firstValue("Retry-After").orElse(null));
         }
     }
 

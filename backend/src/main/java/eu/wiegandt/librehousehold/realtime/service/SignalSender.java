@@ -32,14 +32,17 @@ public class SignalSender {
 
     private final TaskExecutor executor;
     private final HouseholdEventStreams streams;
+    private final StreamMetrics metrics;
 
-    SignalSender(@Qualifier(APPLICATION_TASK_EXECUTOR) TaskExecutor executor, HouseholdEventStreams streams) {
+    SignalSender(@Qualifier(APPLICATION_TASK_EXECUTOR) TaskExecutor executor, HouseholdEventStreams streams,
+                 StreamMetrics metrics) {
         this.executor = executor;
         this.streams = streams;
+        this.metrics = metrics;
     }
 
     public void send(SignalType type, Signal signal, Collection<StreamConnection> connections) {
-        connections.forEach(connection -> executor.execute(() -> sendTo(connection, () -> signalEvent(type, signal))));
+        connections.forEach(connection -> executor.execute(() -> sendSignal(connection, type, signal)));
     }
 
     /**
@@ -68,11 +71,20 @@ public class SignalSender {
     // A failed send already completed the emitter with the error, so the remaining messages are dropped
     private void sendAllThenComplete(StreamConnection connection, List<SignalMessage> messages) {
         for (var message : messages) {
-            if (!sendTo(connection, () -> signalEvent(message.type(), message.payload()))) {
+            if (!sendSignal(connection, message.type(), message.payload())) {
                 return;
             }
         }
         connection.emitter().complete();
+    }
+
+    // Counts only signals that reached the connection; heartbeats are comments, not signals of the contract
+    private boolean sendSignal(StreamConnection connection, SignalType type, Signal signal) {
+        var sent = sendTo(connection, () -> signalEvent(type, signal));
+        if (sent) {
+            metrics.signalSent(type);
+        }
+        return sent;
     }
 
     // One builder per connection: SseEventBuilder is stateful and consumed by send

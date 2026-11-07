@@ -83,6 +83,7 @@ class HouseholdEventStreamIT {
     private static final String ACCESS_DENIED_FAILURE = "AccessDeniedException";
     private static final String AUTHORIZATION_DENIED_FAILURE = "AuthorizationDeniedException";
     private static final String DISPATCH_FAILURE = "Servlet.service()";
+    private static final String WARN_LEVEL = " WARN ";
     // How long a stream that should stay open is watched; well below the 25-second heartbeat interval
     private static final Duration OPEN_STREAM_OBSERVATION = Duration.ofSeconds(1);
     private static final String FIND_LISTENER_IDS_OF_EVENT_SQL =
@@ -182,6 +183,38 @@ class HouseholdEventStreamIT {
                 // then
                 assertThat(Rejection.of(stream, streams.connectionsOf(foreignHouseholdId).size())).isEqualTo(expected);
             }
+        }
+
+        @Test
+        void openStream_foreignHousehold_denialLoggedAsWarning(CapturedOutput output) throws Exception {
+            // given
+            var foreignHouseholdId = createHousehold();
+            var member = createVerifiedMember(createHousehold());
+            var denial = "Event stream of member " + member.getId() + " in household " + foreignHouseholdId
+                    + " denied: 403";
+
+            // when
+            try (var _ = SseTestClient.open(streamUri(foreignHouseholdId), loggedInCookies(member))) {
+
+                // then
+                assertThat(output.getAll().lines()).anyMatch(line -> line.contains(WARN_LEVEL) && line.contains(denial));
+            }
+        }
+
+        @Test
+        void getTasks_foreignHousehold_noStreamDenialLogged(CapturedOutput output) {
+            // given
+            var foreignHouseholdId = createHousehold();
+            var cookies = loggedInCookies(createVerifiedMember(createHousehold()));
+
+            // when
+            withCookies(restTestClient.get().uri(BASE_PATH + "/household/" + foreignHouseholdId + "/tasks"), cookies)
+                    .accept(MediaType.APPLICATION_JSON)
+                    .exchange()
+                    .returnResult(String.class);
+
+            // then
+            assertThat(output.getAll()).doesNotContain("in household " + foreignHouseholdId + " denied");
         }
 
         @Test

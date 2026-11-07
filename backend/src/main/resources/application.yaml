@@ -202,6 +202,17 @@ librehousehold:
     # the proxy never closes an idle stream; also the longest time a stream outlives a session ended
     # by expireNow() (e.g. password reset), which no event reports.
     heartbeat-interval: 25s
+    # Limits for streams open at the same time (RT5): every stream holds a connection and a slot in
+    # the registry, so without them a single session could exhaust the server. A stream beyond a
+    # limit is rejected with 429 and Retry-After. 5 per session covers a member with several tabs;
+    # 10 per member allows a second device; 500 per instance is far above what a self-hosted
+    # instance with a few households needs, while still bounding memory and connections.
+    max-streams-per-session: 5
+    max-streams-per-member: 10
+    max-streams: 500
+    # Sent as Retry-After with a rejected stream. Long enough that a client does not hammer the
+    # server while its other tabs are still open.
+    retry-after: 30s
 
   notifications:
     templates:

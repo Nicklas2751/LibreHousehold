@@ -4,6 +4,8 @@ import eu.wiegandt.librehousehold.household.AccountPrincipal;
 import eu.wiegandt.librehousehold.realtime.config.RealtimeProperties;
 import eu.wiegandt.librehousehold.realtime.model.StreamConnection;
 import eu.wiegandt.librehousehold.realtime.service.HouseholdEventStreams;
+import eu.wiegandt.librehousehold.realtime.service.StreamMetrics;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpSession;
@@ -20,9 +22,10 @@ class HouseholdEventStreamControllerTest {
     @Test
     void openStream_member_returnedEmitterRegisteredWithMemberAndSession() throws IOException {
         // given
-        var streams = new HouseholdEventStreams();
+        var streams = newStreams();
         var controller = new HouseholdEventStreamController(streams,
-                new RealtimeProperties(Duration.ofSeconds(5), Duration.ofMinutes(25)));
+                new RealtimeProperties(Duration.ofSeconds(5), Duration.ofMinutes(25), 5, 10, 500,
+                        Duration.ofSeconds(30)));
         var householdId = UUID.randomUUID();
         var memberId = UUID.randomUUID();
         var request = new MockHttpServletRequest();
@@ -41,8 +44,8 @@ class HouseholdEventStreamControllerTest {
     void openStream_configuredEmitterTimeout_emitterUsesTheTimeout() throws IOException {
         // given
         var emitterTimeout = Duration.ofMinutes(10);
-        var controller = new HouseholdEventStreamController(new HouseholdEventStreams(),
-                new RealtimeProperties(Duration.ofSeconds(5), emitterTimeout));
+        var controller = new HouseholdEventStreamController(newStreams(),
+                new RealtimeProperties(Duration.ofSeconds(5), emitterTimeout, 5, 10, 500, Duration.ofSeconds(30)));
         var request = new MockHttpServletRequest();
         request.setSession(new MockHttpSession());
 
@@ -52,5 +55,11 @@ class HouseholdEventStreamControllerTest {
 
         // then
         assertThat(response.getBody().getTimeout()).isEqualTo(emitterTimeout.toMillis());
+    }
+
+    // The defaults of application.yaml; only the limit tests of HouseholdEventStreamsTest need others
+    private HouseholdEventStreams newStreams() {
+        return new HouseholdEventStreams(new RealtimeProperties(Duration.ofSeconds(5), Duration.ofMinutes(25), 5, 10,
+                500, Duration.ofSeconds(30)), new StreamMetrics(new SimpleMeterRegistry()));
     }
 }
