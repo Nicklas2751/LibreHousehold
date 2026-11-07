@@ -1,17 +1,15 @@
+[[section-concepts]]
 = Cross-cutting Concepts
 
-[[section-concepts]]
-== Cross-cutting Concepts
-
-=== Architecture Decision Records (ADRs)
+== Architecture Decision Records (ADRs)
 
 Architecture Decision Records (ADRs) are a way to document important architectural decisions in a structured manner. They help in maintaining a record of the rationale behind decisions, alternatives considered, and the implications of those decisions. For more information see https://adr.github.io[adr.github.io].
 
-=== Modular Monolith (Modulith)
+== Modular Monolith (Modulith)
 
 A modular monolith, or "modulith", is an architectural style where the application is structured into distinct modules within a single deployable unit. Each module encapsulates specific functionality and can interact with other modules through well-defined interfaces. This approach combines the benefits of modularity with the simplicity of a monolithic deployment. For more information see the https://spring.io/blog/2022/10/21/introducing-spring-modulith[Spring Modulith blog post] or https://entwickler.de/software-architektur/microservices-oder-monolithen-beides[this german Entwickler.de article about moduliths].
 
-=== Authentication and Authorization
+== Authentication and Authorization
 
 Authentication and authorization are treated as a cross-cutting concern rather than a bounded context in xref:05_building_block_view.adoc[Chapter 5]: they have no ubiquitous language relevant to household members and exist purely to support every other module, not to model household business. The overall authentication architecture - session-based Spring Security in a single filter chain, with `formLogin()` under `POST /v1/login` for local accounts and `oauth2Login()` for external providers, no embedded Authorization Server - is decided in xref:adrs:adr-013.adoc[ADR 013]; the session strategy towards the SPA (BFF pattern with httpOnly cookies, CSRF protection, server-side session invalidation on logout) is decided in xref:adrs:adr-014.adoc[ADR 014], social login federation in xref:adrs:adr-016.adoc[ADR 016]. Every login path ends in the same session principal, `AccountPrincipal`, identified by the member ID; requests authenticated in any other way are rejected (`AccountPrincipalAuthorizationManager`). Concretely, this has two consequences for how the code is structured:
 
@@ -21,7 +19,7 @@ Authentication and authorization are treated as a cross-cutting concern rather t
 The one genuine domain operation in this area, registering an account as part of a household membership, is therefore not part of an "auth module" at all — it lives in `Household`, where the 1:1 account-household relationship was decided in xref:adrs:adr-012.adoc[ADR 012]. Credentials themselves are stored in a dedicated `account` table, separate from `member`, as decided in xref:adrs:adr-015.adoc[ADR 015].
 
 [[section-security-controls-authentication]]
-=== Security Controls (Authentication)
+== Security Controls (Authentication)
 
 Authentication-related security controls are tracked against an https://github.com/OWASP/ASVS[OWASP ASVS] 5.0 Level 2 baseline (the recommended baseline for applications handling sensitive data, matching xref:01_introduction_and_goals.adoc#QG2[QG2 - Secure]). This table doubles as the threat model for authentication: each entry maps a concrete threat directly to the ASVS requirement that mitigates it, instead of a separate abstract diagram. A few requirements are deliberately verified above the L2 baseline (see ENUM1). Controls already covered by an architectural decision reference the corresponding ADR; controls deliberately not implemented are tracked as a risk in xref:11_technical_risks.adoc[Chapter 11]; everything else is still open.
 
@@ -163,7 +161,7 @@ All three paths renew the session ID, register the session (SES4), issue a new `
 |Open
 |===
 [[section-event-delivery-and-resubmission]]
-=== Event Delivery and Resubmission
+== Event Delivery and Resubmission
 
 Modules react to each other's Domain Events (xref:adrs:adr-011.adoc[ADR 011]) through `@ApplicationModuleListener`, which runs asynchronously after the publishing transaction has committed. Spring Modulith records one row per event and listener in `event_publication` before the commit, so a delivery that fails (e.g. an unreachable mail server) is not lost, only left unfinished. Three rules follow from this:
 

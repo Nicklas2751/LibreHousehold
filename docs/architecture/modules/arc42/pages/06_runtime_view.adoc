@@ -1,4 +1,2 @@
-= Runtime View
-
 [[section-runtime-view]]
-== Runtime View
+= Runtime View

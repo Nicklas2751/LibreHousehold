@@ -1,6 +1,4 @@
+[[section-design-decisions]]
 = Architecture Decisions
 
-[[section-design-decisions]]
-== Architecture Decisions
-
-include::adrs:page$index.adoc[tag=adr-list,leveloffset=+1]
+include::adrs:page$index.adoc[tag=adr-list]

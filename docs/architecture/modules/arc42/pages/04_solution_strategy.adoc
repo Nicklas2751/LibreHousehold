@@ -1,7 +1,5 @@
-= Solution Strategy
-
 [[section-solution-strategy]]
-== Solution Strategy
+= Solution Strategy
 
 // tag::solution-strategy-mapping[]
 .Quality goals to solution strategy mapping
