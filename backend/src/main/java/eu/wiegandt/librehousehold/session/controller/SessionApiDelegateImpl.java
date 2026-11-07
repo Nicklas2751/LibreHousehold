@@ -23,6 +23,7 @@ import eu.wiegandt.librehousehold.session.exception.NoAuthenticatedSessionExcept
 import eu.wiegandt.librehousehold.session.exception.PendingSocialRegistrationNotFoundException;
 import eu.wiegandt.librehousehold.usersettings.PreferencesQuery;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -30,6 +31,7 @@ import org.springframework.security.oauth2.client.registration.ClientRegistratio
 import org.springframework.security.oauth2.client.registration.InMemoryClientRegistrationRepository;
 import org.springframework.stereotype.Component;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.stream.StreamSupport;
 
@@ -39,6 +41,10 @@ import java.util.stream.StreamSupport;
  * Security's form login and logout filters (see {@code SecurityConfig}), which intercept the
  * request before it reaches this controller. {@code login} is therefore only reached when this
  * instance turned local login off, and rejects the request.
+ *
+ * <p>{@code GET /me} also reports {@code server.servlet.session.timeout}: every reconnect of the event
+ * stream is a request that keeps the session alive, so the client needs the timeout to close its
+ * stream once the user has been idle for nearly that long (ADR-019).
  *
  * <p>The password-reset endpoints share the OpenAPI {@code session} tag (and therefore this single
  * generated delegate) even though their business logic belongs to {@code household}. Delegated to
@@ -66,13 +72,15 @@ public class SessionApiDelegateImpl implements SessionApiDelegate {
     private final ObjectProvider<InMemoryClientRegistrationRepository> clientRegistrationRepository;
     private final LocalLoginProperties localLoginProperties;
     private final PendingSocialRegistrationStore pendingSocialRegistrationStore;
+    private final Duration sessionTimeout;
 
     public SessionApiDelegateImpl(MemberQuery memberQuery, HouseholdQuery householdQuery,
                                    PreferencesQuery preferencesQuery, PasswordReset passwordReset,
                                    SocialLoginContextStore socialLoginContextStore,
                                    ObjectProvider<InMemoryClientRegistrationRepository> clientRegistrationRepository,
                                    LocalLoginProperties localLoginProperties,
-                                   PendingSocialRegistrationStore pendingSocialRegistrationStore) {
+                                   PendingSocialRegistrationStore pendingSocialRegistrationStore,
+                                   @Value("${server.servlet.session.timeout}") Duration sessionTimeout) {
         this.memberQuery = memberQuery;
         this.householdQuery = householdQuery;
         this.preferencesQuery = preferencesQuery;
@@ -81,6 +89,7 @@ public class SessionApiDelegateImpl implements SessionApiDelegate {
         this.clientRegistrationRepository = clientRegistrationRepository;
         this.localLoginProperties = localLoginProperties;
         this.pendingSocialRegistrationStore = pendingSocialRegistrationStore;
+        this.sessionTimeout = sessionTimeout;
     }
 
     @Override
@@ -94,7 +103,8 @@ public class SessionApiDelegateImpl implements SessionApiDelegate {
         var preferences = preferencesQuery.getPreferencesOrDefault(principal.memberId());
         var emailVerified = memberQuery.isEmailVerified(principal.memberId());
         var socialLoginOnly = memberQuery.isSocialLoginOnly(principal.memberId());
-        return ResponseEntity.ok(new CurrentUser(member, household, preferences, emailVerified, socialLoginOnly));
+        return ResponseEntity.ok(new CurrentUser(member, household, preferences, emailVerified, socialLoginOnly,
+                Math.toIntExact(sessionTimeout.toSeconds())));
     }
 
     @Override

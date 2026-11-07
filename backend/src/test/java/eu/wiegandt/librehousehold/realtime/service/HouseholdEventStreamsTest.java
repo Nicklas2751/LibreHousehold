@@ -141,6 +141,41 @@ class HouseholdEventStreamsTest {
     }
 
     @Nested
+    class connections {
+
+        @Test
+        void connectionsOfSeveralHouseholds_allConnections() {
+            // given
+            var streams = new HouseholdEventStreams();
+            var firstHousehold = new StreamConnection(UUID.randomUUID(), UUID.randomUUID(), "session-a", new SseEmitter());
+            var secondHousehold = new StreamConnection(UUID.randomUUID(), UUID.randomUUID(), "session-b", new SseEmitter());
+            streams.register(firstHousehold);
+            streams.register(secondHousehold);
+
+            // when
+            var connections = streams.connections();
+
+            // then
+            assertThat(connections).containsExactlyInAnyOrder(firstHousehold, secondHousehold);
+        }
+
+        @Test
+        void removedConnection_notListed() {
+            // given
+            var streams = new HouseholdEventStreams();
+            var connection = new StreamConnection(UUID.randomUUID(), UUID.randomUUID(), "session", new SseEmitter());
+            streams.register(connection);
+            streams.remove(connection, CloseReason.COMPLETED);
+
+            // when
+            var connections = streams.connections();
+
+            // then
+            assertThat(connections).isEmpty();
+        }
+    }
+
+    @Nested
     class connectionsOf {
 
         @Test

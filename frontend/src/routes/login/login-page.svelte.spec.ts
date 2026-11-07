@@ -47,7 +47,8 @@ const currentUser = {
 	household: { id: 'household-id', name: 'Die Testfamilie' },
 	preferences: {},
 	emailVerified: true,
-	socialLoginOnly: false
+	socialLoginOnly: false,
+	sessionTimeoutSeconds: 1800
 };
 
 function problemResponse(status: number, body: object, headers: Record<string, string> = {}) {

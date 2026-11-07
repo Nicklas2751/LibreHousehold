@@ -46,6 +46,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -106,10 +107,14 @@ class SessionApiDelegateImplTest {
             doReturn(preferences).when(preferencesQuery).getPreferencesOrDefault(member.getId());
             doReturn(false).when(memberQuery).isEmailVerified(member.getId());
             doReturn(true).when(memberQuery).isSocialLoginOnly(member.getId());
-            var expected = new CurrentUser(member, household, preferences, false, true);
+            var delegateWithSessionTimeout = new SessionApiDelegateImpl(memberQuery, householdQuery, preferencesQuery,
+                    passwordReset, socialLoginContextStore,
+                    new StaticListableBeanFactory().getBeanProvider(InMemoryClientRegistrationRepository.class),
+                    new LocalLoginProperties(true), pendingSocialRegistrationStore, Duration.ofMinutes(30));
+            var expected = new CurrentUser(member, household, preferences, false, true, 1800);
 
             // when
-            var result = delegate.getCurrentUser();
+            var result = delegateWithSessionTimeout.getCurrentUser();
 
             // then
             assertThat(result.getBody()).usingRecursiveComparison().isEqualTo(expected);
@@ -260,7 +265,7 @@ class SessionApiDelegateImplTest {
             }
             return new SessionApiDelegateImpl(memberQuery, householdQuery, preferencesQuery, passwordReset,
                     socialLoginContextStore, beanFactory.getBeanProvider(InMemoryClientRegistrationRepository.class),
-                    localLoginProperties, pendingSocialRegistrationStore);
+                    localLoginProperties, pendingSocialRegistrationStore, Duration.ofMinutes(30));
         }
     }
 

@@ -376,6 +376,28 @@ Service. Das WebSocket Security Cheat Sheet dient nur zur Abgrenzung (Option C).
     - Das Session-Timeout wird explizit konfiguriert (`server.servlet.session.timeout`) und an das
       Frontend kommuniziert (z. B. per `/auth/discover` oder `/me`, in der OpenAPI zu ergänzen),
       damit der Client seine Leerlauf-Grenze daran ausrichtet.
+
+  **Ergebnis des Spikes (2026-11-07, Wegwerf-IT mit `RANDOM_PORT`, Tomcat 11, Defaults
+  `LAST_ACCESS_AT_START=false`, `ACTIVITY_CHECK=false`; Zeitstempel direkt am `StandardSession`
+  über den Tomcat-`Manager` gelesen):**
+    - Das Öffnen des Streams setzt `thisAccessedTime` auf den Request-Beginn. Gesendete Signale und
+      die Dauer des offenen Streams ändern daran nichts.
+    - Das Ende des Requests setzt `lastAccessedTime` und `thisAccessedTime` auf den Endzeitpunkt,
+      und zwar beim Emitter-Timeout ebenso wie bei einem server-seitigen `complete()`. Jeder
+      Reconnect setzt `thisAccessedTime` erneut. **Folge:** Ein offener Tab hält die Session über
+      den Zyklus Emitter-Timeout (25 min) → Reconnect beliebig lange am Leben. Das Emitter-Timeout
+      unter dem Session-Timeout verhindert das nicht. RT4 hängt damit allein am clientseitigen
+      Trennen bei Leerlauf (R3.2).
+    - Die Session läuft während eines offenen Streams ab: Mit `setMaxInactiveInterval(1)` und
+      `ManagerBase.processExpires()` verschwindet sie, ein `HttpSessionDestroyedEvent` kommt an, und
+      `SessionRegistry.getSessionInformation` liefert `null`. Der Stream bleibt aber offen und
+      liefert weiter Signale aus. Ihn schließen erst der Heartbeat (`SESSION_ENDED`) bzw. der
+      Listener aus R1.4.
+    - Schließt der Client die Verbindung hart, bleibt der Stream registriert, bis der Server das
+      nächste Mal schreibt. Das Request-Ende (und damit der Session-Zugriff) fällt dann auf diesen
+      Zeitpunkt. Der Heartbeat räumt solche Verbindungen spätestens nach einem Tick ab.
+    - Tomcat übernimmt `server.servlet.session.timeout` nur in Minuten. Kürzere Werte für Tests
+      gehen nur über `Session.setMaxInactiveInterval` am Tomcat-`Manager`.
 - **R1.4 Lifecycle-Kopplung.** Listener auf `MemberRemoved` und `HouseholdDeleted` schließen
   Emitter sofort (vorher `session.terminated` senden). Logout schließt die Emitter der Session. Für
   alle übrigen Fälle (Passwort-Reset, Session-Timeout, künftige `expireNow()`-Pfade) greift der

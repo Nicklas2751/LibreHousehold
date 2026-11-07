@@ -50,6 +50,11 @@ server:
     max-http-post-size: -1
   servlet:
     session:
+      # Set explicitly instead of relying on Tomcat's default of the same value: the event stream and
+      # the client align with it (ADR-019). librehousehold.realtime.emitter-timeout must stay below it
+      # (checked at startup), and GET /me hands it to the client as sessionTimeoutSeconds, so the
+      # client can close its stream before an idle session times out. Tomcat only applies whole minutes.
+      timeout: 30m
       cookie:
         http-only: true
         secure: true
@@ -187,6 +192,11 @@ librehousehold:
     # Below the 30-minute session timeout on purpose: a stream must never outlive its session, and
     # every reconnect runs the full authentication and membership check again.
     emitter-timeout: 25m
+    # How often every open stream gets an SSE comment (": heartbeat") and its session is checked
+    # against the SessionRegistry (RT3). Below the 60-second default proxy_read_timeout of Nginx, so
+    # the proxy never closes an idle stream; also the longest time a stream outlives a session ended
+    # by expireNow() (e.g. password reset), which no event reports.
+    heartbeat-interval: 25s
 
   notifications:
     templates:

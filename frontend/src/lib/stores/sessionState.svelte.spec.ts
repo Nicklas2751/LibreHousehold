@@ -15,7 +15,8 @@ describe('sessionState', () => {
 			household: { id: 'household-id', name: 'Die Testfamilie' },
 			preferences: {},
 			emailVerified: true,
-			socialLoginOnly: false
+			socialLoginOnly: false,
+			sessionTimeoutSeconds: 1800
 		};
 
 		// when

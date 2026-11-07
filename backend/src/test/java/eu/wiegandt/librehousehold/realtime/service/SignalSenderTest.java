@@ -4,6 +4,7 @@ import eu.wiegandt.librehousehold.realtime.model.InvalidationSignal;
 import eu.wiegandt.librehousehold.realtime.model.SignalEntity;
 import eu.wiegandt.librehousehold.realtime.model.SignalType;
 import eu.wiegandt.librehousehold.realtime.model.StreamConnection;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -31,124 +32,187 @@ import static org.mockito.Mockito.verifyNoInteractions;
 
 class SignalSenderTest {
 
-    @Test
-    void send_twoConnections_bothReceiveThePayload() throws IOException {
-        // given
-        var streams = new HouseholdEventStreams();
-        var sender = new SignalSender(new SyncTaskExecutor(), streams);
-        var householdId = UUID.randomUUID();
-        var firstEmitter = mock(SseEmitter.class);
-        var secondEmitter = mock(SseEmitter.class);
-        var signal = new InvalidationSignal(SignalEntity.TASK, UUID.randomUUID(), Instant.now());
+    @Nested
+    class send {
 
-        // when
-        sender.send(SignalType.TASK_CREATED, signal, List.of(
-                new StreamConnection(householdId, UUID.randomUUID(), "session-a", firstEmitter),
-                new StreamConnection(householdId, UUID.randomUUID(), "session-b", secondEmitter)));
+        static Stream<Exception> sendFailures() {
+            return Stream.of(new IOException("Broken pipe"), new IllegalStateException("Emitter already completed"));
+        }
 
-        // then
-        var events = ArgumentCaptor.forClass(SseEventBuilder.class);
-        verify(firstEmitter).send(events.capture());
-        verify(secondEmitter).send(events.capture());
-        assertThat(events.getAllValues()).extracting(this::payload).containsExactly(signal, signal);
+
+        @Test
+        void twoConnections_bothReceiveThePayload() throws IOException {
+            // given
+            var streams = new HouseholdEventStreams();
+            var sender = new SignalSender(new SyncTaskExecutor(), streams);
+            var householdId = UUID.randomUUID();
+            var firstEmitter = mock(SseEmitter.class);
+            var secondEmitter = mock(SseEmitter.class);
+            var signal = new InvalidationSignal(SignalEntity.TASK, UUID.randomUUID(), Instant.now());
+
+            // when
+            sender.send(SignalType.TASK_CREATED, signal, List.of(
+                    new StreamConnection(householdId, UUID.randomUUID(), "session-a", firstEmitter),
+                    new StreamConnection(householdId, UUID.randomUUID(), "session-b", secondEmitter)));
+
+            // then
+            var events = ArgumentCaptor.forClass(SseEventBuilder.class);
+            verify(firstEmitter).send(events.capture());
+            verify(secondEmitter).send(events.capture());
+            assertThat(events.getAllValues()).extracting(SignalSenderTest.this::payload).containsExactly(signal, signal);
+        }
+
+        @Test
+        void signalType_eventNamedAfterWireName() throws IOException {
+            // given
+            var sender = new SignalSender(new SyncTaskExecutor(), new HouseholdEventStreams());
+            var emitter = mock(SseEmitter.class);
+
+            // when
+            sender.send(SignalType.TASK_CREATED,
+                    new InvalidationSignal(SignalEntity.TASK, UUID.randomUUID(), Instant.now()),
+                    List.of(new StreamConnection(UUID.randomUUID(), UUID.randomUUID(), "session", emitter)));
+
+            // then
+            var event = ArgumentCaptor.forClass(SseEventBuilder.class);
+            verify(emitter).send(event.capture());
+            assertThat(text(event.getValue())).contains("event:task.created\n");
+        }
+
+        @ParameterizedTest
+        @MethodSource("sendFailures")
+        void oneConnectionFails_otherConnectionStillReceivesThePayload(Exception failure) throws IOException {
+            // given
+            var sender = new SignalSender(new SyncTaskExecutor(), new HouseholdEventStreams());
+            var householdId = UUID.randomUUID();
+            var failingEmitter = mock(SseEmitter.class);
+            var healthyEmitter = mock(SseEmitter.class);
+            doThrow(failure).when(failingEmitter).send(any(SseEventBuilder.class));
+            var signal = new InvalidationSignal(SignalEntity.TASK, UUID.randomUUID(), Instant.now());
+
+            // when
+            sender.send(SignalType.TASK_CREATED, signal, List.of(
+                    new StreamConnection(householdId, UUID.randomUUID(), "session-a", failingEmitter),
+                    new StreamConnection(householdId, UUID.randomUUID(), "session-b", healthyEmitter)));
+
+            // then
+            var event = ArgumentCaptor.forClass(SseEventBuilder.class);
+            verify(healthyEmitter).send(event.capture());
+            assertThat(payload(event.getValue())).isEqualTo(signal);
+        }
+
+        @ParameterizedTest
+        @MethodSource("sendFailures")
+        void connectionFails_failedConnectionRemovedFromRegistry(Exception failure) throws IOException {
+            // given
+            var streams = new HouseholdEventStreams();
+            var sender = new SignalSender(new SyncTaskExecutor(), streams);
+            var householdId = UUID.randomUUID();
+            var failingEmitter = mock(SseEmitter.class);
+            doThrow(failure).when(failingEmitter).send(any(SseEventBuilder.class));
+            var failing = new StreamConnection(householdId, UUID.randomUUID(), "session-a", failingEmitter);
+            var healthy = new StreamConnection(householdId, UUID.randomUUID(), "session-b", mock(SseEmitter.class));
+            streams.register(failing);
+            streams.register(healthy);
+
+            // when
+            sender.send(SignalType.TASK_CREATED,
+                    new InvalidationSignal(SignalEntity.TASK, UUID.randomUUID(), Instant.now()), List.of(failing, healthy));
+
+            // then
+            assertThat(streams.connectionsOf(householdId)).containsExactly(healthy);
+        }
+
+        @ParameterizedTest
+        @MethodSource("sendFailures")
+        void connectionFails_failedEmitterCompletedWithError(Exception failure) throws IOException {
+            // given
+            var sender = new SignalSender(new SyncTaskExecutor(), new HouseholdEventStreams());
+            var failingEmitter = mock(SseEmitter.class);
+            doThrow(failure).when(failingEmitter).send(any(SseEventBuilder.class));
+
+            // when
+            sender.send(SignalType.TASK_CREATED,
+                    new InvalidationSignal(SignalEntity.TASK, UUID.randomUUID(), Instant.now()),
+                    List.of(new StreamConnection(UUID.randomUUID(), UUID.randomUUID(), "session", failingEmitter)));
+
+            // then
+            verify(failingEmitter).completeWithError(failure);
+        }
+
+        @Test
+        void executorHasNotRunTheTaskYet_nothingSentInTheCallingThread() {
+            // given
+            var pendingTasks = new ArrayList<Runnable>();
+            var sender = new SignalSender(pendingTasks::add, new HouseholdEventStreams());
+            var emitter = mock(SseEmitter.class);
+
+            // when
+            sender.send(SignalType.TASK_CREATED,
+                    new InvalidationSignal(SignalEntity.TASK, UUID.randomUUID(), Instant.now()),
+                    List.of(new StreamConnection(UUID.randomUUID(), UUID.randomUUID(), "session", emitter)));
+
+            // then
+            verifyNoInteractions(emitter);
+        }
     }
 
-    @Test
-    void send_signalType_eventNamedAfterWireName() throws IOException {
-        // given
-        var sender = new SignalSender(new SyncTaskExecutor(), new HouseholdEventStreams());
-        var emitter = mock(SseEmitter.class);
+    @Nested
+    class sendHeartbeat {
 
-        // when
-        sender.send(SignalType.TASK_CREATED,
-                new InvalidationSignal(SignalEntity.TASK, UUID.randomUUID(), Instant.now()),
-                List.of(new StreamConnection(UUID.randomUUID(), UUID.randomUUID(), "session", emitter)));
+        static Stream<Exception> sendFailures() {
+            return Stream.of(new IOException("Broken pipe"), new IllegalStateException("Emitter already completed"));
+        }
 
-        // then
-        var event = ArgumentCaptor.forClass(SseEventBuilder.class);
-        verify(emitter).send(event.capture());
-        assertThat(text(event.getValue())).contains("event:task.created\n");
-    }
+        @Test
+        void connection_heartbeatCommentFromContract() throws IOException {
+            // given
+            var sender = new SignalSender(new SyncTaskExecutor(), new HouseholdEventStreams());
+            var emitter = mock(SseEmitter.class);
 
-    @ParameterizedTest
-    @MethodSource("sendFailures")
-    void send_oneConnectionFails_otherConnectionStillReceivesThePayload(Exception failure) throws IOException {
-        // given
-        var sender = new SignalSender(new SyncTaskExecutor(), new HouseholdEventStreams());
-        var householdId = UUID.randomUUID();
-        var failingEmitter = mock(SseEmitter.class);
-        var healthyEmitter = mock(SseEmitter.class);
-        doThrow(failure).when(failingEmitter).send(any(SseEventBuilder.class));
-        var signal = new InvalidationSignal(SignalEntity.TASK, UUID.randomUUID(), Instant.now());
+            // when
+            sender.sendHeartbeat(List.of(new StreamConnection(UUID.randomUUID(), UUID.randomUUID(), "session", emitter)));
 
-        // when
-        sender.send(SignalType.TASK_CREATED, signal, List.of(
-                new StreamConnection(householdId, UUID.randomUUID(), "session-a", failingEmitter),
-                new StreamConnection(householdId, UUID.randomUUID(), "session-b", healthyEmitter)));
+            // then
+            var event = ArgumentCaptor.forClass(SseEventBuilder.class);
+            verify(emitter).send(event.capture());
+            assertThat(text(event.getValue())).isEqualTo(": heartbeat\n\n");
+        }
 
-        // then
-        var event = ArgumentCaptor.forClass(SseEventBuilder.class);
-        verify(healthyEmitter).send(event.capture());
-        assertThat(payload(event.getValue())).isEqualTo(signal);
-    }
+        @ParameterizedTest
+        @MethodSource("sendFailures")
+        void connectionFails_failedConnectionRemovedFromRegistry(Exception failure) throws IOException {
+            // given
+            var streams = new HouseholdEventStreams();
+            var sender = new SignalSender(new SyncTaskExecutor(), streams);
+            var householdId = UUID.randomUUID();
+            var failingEmitter = mock(SseEmitter.class);
+            doThrow(failure).when(failingEmitter).send(any(SseEventBuilder.class));
+            var failing = new StreamConnection(householdId, UUID.randomUUID(), "session-a", failingEmitter);
+            var healthy = new StreamConnection(householdId, UUID.randomUUID(), "session-b", mock(SseEmitter.class));
+            streams.register(failing);
+            streams.register(healthy);
 
-    @ParameterizedTest
-    @MethodSource("sendFailures")
-    void send_connectionFails_failedConnectionRemovedFromRegistry(Exception failure) throws IOException {
-        // given
-        var streams = new HouseholdEventStreams();
-        var sender = new SignalSender(new SyncTaskExecutor(), streams);
-        var householdId = UUID.randomUUID();
-        var failingEmitter = mock(SseEmitter.class);
-        doThrow(failure).when(failingEmitter).send(any(SseEventBuilder.class));
-        var failing = new StreamConnection(householdId, UUID.randomUUID(), "session-a", failingEmitter);
-        var healthy = new StreamConnection(householdId, UUID.randomUUID(), "session-b", mock(SseEmitter.class));
-        streams.register(failing);
-        streams.register(healthy);
+            // when
+            sender.sendHeartbeat(List.of(failing, healthy));
 
-        // when
-        sender.send(SignalType.TASK_CREATED,
-                new InvalidationSignal(SignalEntity.TASK, UUID.randomUUID(), Instant.now()), List.of(failing, healthy));
+            // then
+            assertThat(streams.connectionsOf(householdId)).containsExactly(healthy);
+        }
 
-        // then
-        assertThat(streams.connectionsOf(householdId)).containsExactly(healthy);
-    }
+        @Test
+        void executorHasNotRunTheTaskYet_nothingSentInTheCallingThread() {
+            // given
+            var pendingTasks = new ArrayList<Runnable>();
+            var sender = new SignalSender(pendingTasks::add, new HouseholdEventStreams());
+            var emitter = mock(SseEmitter.class);
 
-    @ParameterizedTest
-    @MethodSource("sendFailures")
-    void send_connectionFails_failedEmitterCompletedWithError(Exception failure) throws IOException {
-        // given
-        var sender = new SignalSender(new SyncTaskExecutor(), new HouseholdEventStreams());
-        var failingEmitter = mock(SseEmitter.class);
-        doThrow(failure).when(failingEmitter).send(any(SseEventBuilder.class));
+            // when
+            sender.sendHeartbeat(List.of(new StreamConnection(UUID.randomUUID(), UUID.randomUUID(), "session", emitter)));
 
-        // when
-        sender.send(SignalType.TASK_CREATED,
-                new InvalidationSignal(SignalEntity.TASK, UUID.randomUUID(), Instant.now()),
-                List.of(new StreamConnection(UUID.randomUUID(), UUID.randomUUID(), "session", failingEmitter)));
-
-        // then
-        verify(failingEmitter).completeWithError(failure);
-    }
-
-    @Test
-    void send_executorHasNotRunTheTaskYet_nothingSentInTheCallingThread() {
-        // given
-        var pendingTasks = new ArrayList<Runnable>();
-        var sender = new SignalSender(pendingTasks::add, new HouseholdEventStreams());
-        var emitter = mock(SseEmitter.class);
-
-        // when
-        sender.send(SignalType.TASK_CREATED,
-                new InvalidationSignal(SignalEntity.TASK, UUID.randomUUID(), Instant.now()),
-                List.of(new StreamConnection(UUID.randomUUID(), UUID.randomUUID(), "session", emitter)));
-
-        // then
-        verifyNoInteractions(emitter);
-    }
-
-    private static Stream<Exception> sendFailures() {
-        return Stream.of(new IOException("Broken pipe"), new IllegalStateException("Emitter already completed"));
+            // then
+            verifyNoInteractions(emitter);
+        }
     }
 
     private Object payload(SseEventBuilder event) {
