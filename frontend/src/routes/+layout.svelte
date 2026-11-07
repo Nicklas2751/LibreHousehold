@@ -1,10 +1,10 @@
 <script lang="ts">
 	import '../app.css';
-	import favicon from '$lib/assets/favicon.svg';
-	import Toasts from '$lib/Toasts.svelte';
+	import favicon from '#lib/assets/favicon.svg';
+	import Toasts from '#lib/Toasts.svelte';
 	import { page } from '$app/state';
-	import { browser } from '$app/environment';
-	import { bootstrapSession } from '$lib/stores/sessionBootstrap';
+	import { browser } from '$app/env';
+	import { bootstrapSession } from '#lib/stores/sessionBootstrap.ts';
 
 	// Runs on every page load, including public pages. A 401 just means guest and stays silent; any
 	// other failure leaves the session status untouched and must be reported, otherwise a signed-in

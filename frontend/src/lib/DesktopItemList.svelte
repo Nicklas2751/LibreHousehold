@@ -1,5 +1,5 @@
 <script lang="ts" generics="T extends { id: string }">
-	import { householdState } from '$lib/stores/householdState.svelte';
+	import { householdState } from '#lib/stores/householdState.svelte.ts';
 	import type { Snippet } from 'svelte';
 
 	interface Props {

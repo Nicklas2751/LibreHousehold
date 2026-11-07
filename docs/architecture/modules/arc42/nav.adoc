@@ -1,0 +1,13 @@
+.arc42
+* xref:01_introduction_and_goals.adoc[]
+* xref:02_architecture_constraints.adoc[]
+* xref:03_context_and_scope.adoc[]
+* xref:04_solution_strategy.adoc[]
+* xref:05_building_block_view.adoc[]
+* xref:06_runtime_view.adoc[]
+* xref:07_deployment_view.adoc[]
+* xref:08_concepts.adoc[]
+* xref:09_architecture_decisions.adoc[]
+* xref:10_quality_requirements.adoc[]
+* xref:11_technical_risks.adoc[]
+* xref:12_glossary.adoc[]

@@ -2,24 +2,25 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import { page } from 'vitest/browser';
 import ForgotPasswordPage from './+page.svelte';
-import { authDiscovery } from '$lib/stores/authDiscoveryState.svelte';
+import { authDiscovery } from '#lib/stores/authDiscoveryState.svelte.ts';
 
 const { mockRequestPasswordReset, mockLoadAuthDiscovery } = vi.hoisted(() => ({
 	mockRequestPasswordReset: vi.fn(),
 	mockLoadAuthDiscovery: vi.fn()
 }));
 
-vi.mock('$lib/stores/authDiscoveryState.svelte', async (importOriginal) => {
-	const original = await importOriginal<typeof import('$lib/stores/authDiscoveryState.svelte')>();
+vi.mock('#lib/stores/authDiscoveryState.svelte.ts', async (importOriginal) => {
+	const original =
+		await importOriginal<typeof import('#lib/stores/authDiscoveryState.svelte.ts')>();
 	return { ...original, loadAuthDiscovery: mockLoadAuthDiscovery };
 });
 
-vi.mock('$lib/stores/passwordReset', () => ({
+vi.mock('#lib/stores/passwordReset.ts', () => ({
 	requestPasswordReset: mockRequestPasswordReset
 }));
 
-vi.mock('$lib/paraglide/runtime.js', async (importOriginal) => {
-	const original = await importOriginal<typeof import('$lib/paraglide/runtime.js')>();
+vi.mock('#lib/paraglide/runtime.js', async (importOriginal) => {
+	const original = await importOriginal<typeof import('#lib/paraglide/runtime.js')>();
 	return { ...original, getLocale: () => 'de' as const, setLocale: vi.fn() };
 });
 
@@ -59,7 +60,7 @@ describe('forgot-password page', () => {
 		// then
 		await expect
 			.element(page.getByText('Hast du dich über einen Anbieter registriert'))
-			.toHaveTextContent('„Weiter mit Google / GitHub“');
+			.toMatchTextContent('„Weiter mit Google / GitHub“');
 	});
 
 	it('success without providers — shows no social hint', async () => {

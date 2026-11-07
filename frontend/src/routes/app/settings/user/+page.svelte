@@ -1,15 +1,15 @@
 <script lang="ts">
 	import { UserCircleIcon } from '@indaco/svelte-iconoir/user-circle';
 	import { WarningTriangleIcon } from '@indaco/svelte-iconoir/warning-triangle';
-	import { m } from '$lib/paraglide/messages.js';
-	import { userState } from '$lib/stores/userState';
-	import { householdState } from '$lib/stores/householdState.svelte';
-	import { session } from '$lib/stores/sessionState.svelte';
-	import { loadMembers, members } from '$lib/stores/memberStore';
-	import { addToast } from '$lib/stores/toastStore';
-	import { Toast } from '$lib/toast';
+	import { m } from '#lib/paraglide/messages.js';
+	import { userState } from '#lib/stores/userState.ts';
+	import { householdState } from '#lib/stores/householdState.svelte.ts';
+	import { session } from '#lib/stores/sessionState.svelte.ts';
+	import { loadMembers, members } from '#lib/stores/memberStore.ts';
+	import { addToast } from '#lib/stores/toastStore.ts';
+	import { Toast } from '#lib/toast.ts';
 	import { HouseholdApi, MembersApi } from '../../../../generated-sources/openapi';
-	import { apiConfiguration } from '$lib/api/httpClient';
+	import { apiConfiguration } from '#lib/api/httpClient.ts';
 	import { goto } from '$app/navigation';
 
 	const householdApi = new HouseholdApi(apiConfiguration);

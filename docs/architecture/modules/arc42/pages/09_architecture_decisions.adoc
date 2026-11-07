@@ -1,0 +1,4 @@
+[[section-design-decisions]]
+= Architecture Decisions
+
+include::adrs:page$index.adoc[tag=adr-list]

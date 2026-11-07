@@ -33,7 +33,7 @@ vi.mock('../../../../generated-sources/openapi', async (importOriginal) => {
 	};
 });
 
-vi.mock('$lib/stores/householdState.svelte', () => ({
+vi.mock('#lib/stores/householdState.svelte.ts', () => ({
 	householdState: {
 		subscribe(run: (value: { id: string; name: string }) => void) {
 			run({ id: HOUSEHOLD_ID, name: 'Test' });
@@ -42,9 +42,9 @@ vi.mock('$lib/stores/householdState.svelte', () => ({
 	}
 }));
 
-vi.mock('$lib/stores/toastStore', () => ({ addToast: mockAddToast }));
+vi.mock('#lib/stores/toastStore.ts', () => ({ addToast: mockAddToast }));
 
-import { categories } from '$lib/stores/categoryStore';
+import { categories } from '#lib/stores/categoryStore.ts';
 import Page from './+page.svelte';
 
 describe('categories page', () => {

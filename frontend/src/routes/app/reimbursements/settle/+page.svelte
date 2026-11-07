@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { goto } from '$app/navigation';
-	import PageTitleActionBar from '$lib/PageTitleActionBar.svelte';
-	import { householdState } from '$lib/stores/householdState.svelte';
-	import { userState } from '$lib/stores/userState';
-	import { createReimbursement } from '$lib/stores/reimbursementStore';
-	import { findMember, loadMembers, members } from '$lib/stores/memberStore';
-	import { loadDebtorExpenses } from '$lib/stores/expenseStore';
+	import PageTitleActionBar from '#lib/PageTitleActionBar.svelte';
+	import { householdState } from '#lib/stores/householdState.svelte.ts';
+	import { userState } from '#lib/stores/userState.ts';
+	import { createReimbursement } from '#lib/stores/reimbursementStore.ts';
+	import { findMember, loadMembers, members } from '#lib/stores/memberStore.ts';
+	import { loadDebtorExpenses } from '#lib/stores/expenseStore.ts';
 	import type { Expense } from '../../../../generated-sources/openapi';
 
 	let creditorId = $state('');

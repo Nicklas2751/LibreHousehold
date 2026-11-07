@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { NavArrowLeftIcon } from '@indaco/svelte-iconoir/nav-arrow-left';
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 
 	let { children } = $props();
 

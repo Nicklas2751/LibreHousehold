@@ -1,25 +1,25 @@
 <script lang="ts">
-	import AppMenu from '$lib/AppMenu.svelte';
-	import { browser } from '$app/environment';
-	import { initSettings } from '$lib/stores/settingsStore';
-	import { session } from '$lib/stores/sessionState.svelte';
-	import { loginRedirectTarget, shouldRedirectToLogin } from '$lib/stores/sessionGuard';
+	import AppMenu from '#lib/AppMenu.svelte';
+	import { browser } from '$app/env';
+	import { initSettings } from '#lib/stores/settingsStore.ts';
+	import { session } from '#lib/stores/sessionState.svelte.ts';
+	import { loginRedirectTarget, shouldRedirectToLogin } from '#lib/stores/sessionGuard.ts';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import { resendVerificationEmail } from '$lib/stores/memberStore';
+	import { resendVerificationEmail } from '#lib/stores/memberStore.ts';
 	import {
 		dismissVerificationBanner,
 		isVerificationBannerDismissed
-	} from '$lib/verificationBannerDismissal';
-	import { addToast } from '$lib/stores/toastStore';
-	import { Toast } from '$lib/toast';
-	import { m } from '$lib/paraglide/messages.js';
+	} from '#lib/verificationBannerDismissal.ts';
+	import { addToast } from '#lib/stores/toastStore.ts';
+	import { Toast } from '#lib/toast.ts';
+	import { m } from '#lib/paraglide/messages.js';
 
 	if (browser) initSettings();
 
 	$effect(() => {
 		if (shouldRedirectToLogin(session.status)) {
-			goto(loginRedirectTarget(page.url, session.expired), { replaceState: true });
+			goto(loginRedirectTarget(page.url, session.expired), { replace: true });
 		}
 	});
 
@@ -63,9 +63,10 @@
 					<div role="alert" class="m-2 alert flex items-center justify-between alert-warning">
 						<span>{m['verification.banner_text']()}</span>
 						<div class="flex gap-2">
-							<button class="btn btn-sm" disabled={resendPending} onclick={resend}>
-								{m['verification.resend_button']()}
-							</button>
+							<button class="btn btn-sm" disabled={resendPending} onclick={resend}
+								>{m['verification.resend_button']()}</button
+							>
+
 							<button
 								class="btn btn-ghost btn-sm"
 								aria-label={m['verification.close_button']()}

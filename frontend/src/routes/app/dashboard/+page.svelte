@@ -1,24 +1,24 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import StatCard from '$lib/StatCard.svelte';
-	import ListCard from '$lib/ListCard.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import StatCard from '#lib/StatCard.svelte';
+	import ListCard from '#lib/ListCard.svelte';
 	import { goto } from '$app/navigation';
-	import PageTitle from '$lib/PageTitle.svelte';
-	import { loadTasks, tasks } from '$lib/stores/taskStore';
-	import { expenses, loadExpenses } from '$lib/stores/expenseStore';
-	import { householdState } from '$lib/stores/householdState.svelte';
-	import { filterTasks, TaskFilterType } from '$lib/taskFilter';
+	import PageTitle from '#lib/PageTitle.svelte';
+	import { loadTasks, tasks } from '#lib/stores/taskStore.ts';
+	import { expenses, loadExpenses } from '#lib/stores/expenseStore.ts';
+	import { householdState } from '#lib/stores/householdState.svelte.ts';
+	import { filterTasks, TaskFilterType } from '#lib/taskFilter.ts';
 	import {
 		financialSummary,
 		loadFinancialSummary,
 		loadMemberBalances,
 		memberBalances
-	} from '$lib/stores/financialStore';
-	import { loadReimbursements, reimbursements } from '$lib/stores/reimbursementStore';
-	import { loadMembers, members } from '$lib/stores/memberStore';
-	import { userState } from '$lib/stores/userState';
-	import FinancialCard from '$lib/FinancialCard.svelte';
-	import PendingReimbursementsCard from '$lib/PendingReimbursementsCard.svelte';
+	} from '#lib/stores/financialStore.ts';
+	import { loadReimbursements, reimbursements } from '#lib/stores/reimbursementStore.ts';
+	import { loadMembers, members } from '#lib/stores/memberStore.ts';
+	import { userState } from '#lib/stores/userState.ts';
+	import FinancialCard from '#lib/FinancialCard.svelte';
+	import PendingReimbursementsCard from '#lib/PendingReimbursementsCard.svelte';
 	import type { Expense, Task } from '../../../generated-sources/openapi';
 
 	interface DisplayItem {

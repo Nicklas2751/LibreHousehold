@@ -1,0 +1,29 @@
+[[adr-002]]
+= ADR 002: Java as backend language
+
+== Context
+
+We need to choose a programming language for our backend services. Since the app will be open source we need to choose a language that is widely used and has good community support xref:arc42:01_introduction_and_goals.adoc#QG4[(QG4)]. We also want to choose a language that is easy to learn and has good tooling support. As xref:arc42:01_introduction_and_goals.adoc#QG3[QG3] describes, we want to make it easy for users to host the app themselves. Therefore, we need to choose a language that is easy to deploy and has good support for containerization.
+
+== Considered Options
+
+Java; Kotlin; Python; JavaScript (Node.js)
+
+== Decision Outcome
+
+Java is the chosen programming language for our backend services. It has a concise syntax and a good tooling support. Java is also easy to learn for developers who are familiar with C-style languages. Its resource consumption is comparable to Kotlin, and way better than Python or JavaScript (Node.js). Java can be easily deployed in Docker containers, which makes it easy for users to host the app themselves. Java is used more widely than Kotlin.
+
+== Consequences
+
+**Negative:**
+
+- Java is often considered more verbose than modern alternatives like Kotlin, which can lead to more boilerplate code.
+
+**Positive:**
+
+- Java is extremely widely used, making it much easier to find developers who are familiar with the language.
+- The vast ecosystem, mature tooling, and strong community support provide reliable solutions for almost any problem.
+
+== Changes
+
+In the initial version of this document, Kotlin was chosen because the author wanted to gain experience with it. However, after using Kotlin in another project and experiencing its syntax differences, the author (who will also be the lead developer) decided to switch to Java. Specifically, features like Kotlin's handling of generics felt less intuitive, and its inherent benefits could not be fully leveraged in combination with the Spring framework.

@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import { m } from '$lib/paraglide/messages.js';
-	import PageTitleActionBar from '$lib/PageTitleActionBar.svelte';
-	import { tasks, loadTasks, editTask, deleteTask } from '$lib/stores/taskStore';
-	import { householdState } from '$lib/stores/householdState.svelte';
-	import TaskForm from '$lib/TaskForm.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import PageTitleActionBar from '#lib/PageTitleActionBar.svelte';
+	import { tasks, loadTasks, editTask, deleteTask } from '#lib/stores/taskStore.ts';
+	import { householdState } from '#lib/stores/householdState.svelte.ts';
+	import TaskForm from '#lib/TaskForm.svelte';
 	import type { TaskEdit } from '../../../../../generated-sources/openapi';
 
 	const taskId = page.params.taskId!;

@@ -1,18 +1,18 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { onMount } from 'svelte';
-	import SocialLoginButtons from '$lib/SocialLoginButtons.svelte';
-	import { authDiscovery, loadAuthDiscovery } from '$lib/stores/authDiscoveryState.svelte';
+	import SocialLoginButtons from '#lib/SocialLoginButtons.svelte';
+	import { authDiscovery, loadAuthDiscovery } from '#lib/stores/authDiscoveryState.svelte.ts';
 	import { SocialLoginContextContextEnum } from '../../generated-sources/openapi';
-	import PasswordField from '$lib/PasswordField.svelte';
-	import { bootstrapSession } from '$lib/stores/sessionBootstrap';
-	import { session } from '$lib/stores/sessionState.svelte';
-	import { loginWithPassword } from '$lib/stores/sessionLogin';
-	import { type LoginProblem, readLoginProblem } from '$lib/api/problemMapping';
-	import { getLocale } from '$lib/paraglide/runtime.js';
-	import { safeReturnTo } from '$lib/safeReturnTo';
+	import PasswordField from '#lib/PasswordField.svelte';
+	import { bootstrapSession } from '#lib/stores/sessionBootstrap.ts';
+	import { session } from '#lib/stores/sessionState.svelte.ts';
+	import { loginWithPassword } from '#lib/stores/sessionLogin.ts';
+	import { type LoginProblem, readLoginProblem } from '#lib/api/problemMapping.ts';
+	import { getLocale } from '#lib/paraglide/runtime.js';
+	import { safeReturnTo } from '#lib/safeReturnTo.ts';
 
 	const SESSION_EXPIRED_REASON = 'session-expired';
 	const PROVIDER_NAME_SEPARATOR = ' / ';
@@ -28,7 +28,7 @@
 	let submitting = $state(false);
 	// A failed social login comes back as a full page redirect to this page, so its reason is in
 	// the page URL rather than in a fetch response.
-	let loginError = $state<LoginError>(classifyErrorQueryParam(page.url));
+	let loginError = $state<LoginError>(classifyErrorQueryParam(page.url.searchParams));
 	const sessionExpired = page.url.searchParams.get('reason') === SESSION_EXPIRED_REASON;
 	const returnTo = safeReturnTo(page.url.searchParams.get('returnTo'), page.url.origin);
 	const providerNames = $derived(
@@ -44,7 +44,7 @@
 	// Covers both an already signed-in visitor and the session bootstrapped after a successful login.
 	$effect(() => {
 		if (session.status === 'authenticated') {
-			goto(returnTo, { replaceState: true });
+			goto(returnTo, { replace: true });
 		}
 	});
 
@@ -69,9 +69,9 @@
 		}
 	}
 
-	function classifyErrorQueryParam(url: URL): LoginError {
-		if (!url.searchParams.has('error')) return { kind: 'none' };
-		const reason = url.searchParams.get('reason');
+	function classifyErrorQueryParam(searchParams: Pick<URLSearchParams, 'has' | 'get'>): LoginError {
+		if (!searchParams.has('error')) return { kind: 'none' };
+		const reason = searchParams.get('reason');
 		if (reason === 'social-login-no-account') return { kind: 'social-login-no-account' };
 		if (reason === 'social-login-failed') return { kind: 'social-login-failed' };
 		return { kind: 'unexpected' };

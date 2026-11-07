@@ -8,7 +8,7 @@ import {
 	setAuthenticated,
 	setGuest,
 	setSessionExpired
-} from '$lib/stores/sessionState.svelte';
+} from '#lib/stores/sessionState.svelte.ts';
 
 const { mockGoto, mockPage } = vi.hoisted(() => ({
 	mockGoto: vi.fn(),
@@ -46,7 +46,7 @@ describe('App layout guard', () => {
 		// then
 		await vi.waitFor(() =>
 			expect(mockGoto).toHaveBeenCalledWith('/login?returnTo=%2Fapp%2Ftasks', {
-				replaceState: true
+				replace: true
 			})
 		);
 	});
@@ -62,7 +62,7 @@ describe('App layout guard', () => {
 		await vi.waitFor(() =>
 			expect(mockGoto).toHaveBeenCalledWith(
 				'/login?returnTo=%2Fapp%2Ftasks&reason=session-expired',
-				{ replaceState: true }
+				{ replace: true }
 			)
 		);
 	});

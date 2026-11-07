@@ -1,0 +1,172 @@
+[[section-concepts]]
+= Cross-cutting Concepts
+
+== Architecture Decision Records (ADRs)
+
+Architecture Decision Records (ADRs) are a way to document important architectural decisions in a structured manner. They help in maintaining a record of the rationale behind decisions, alternatives considered, and the implications of those decisions. For more information see https://adr.github.io[adr.github.io].
+
+== Modular Monolith (Modulith)
+
+A modular monolith, or "modulith", is an architectural style where the application is structured into distinct modules within a single deployable unit. Each module encapsulates specific functionality and can interact with other modules through well-defined interfaces. This approach combines the benefits of modularity with the simplicity of a monolithic deployment. For more information see the https://spring.io/blog/2022/10/21/introducing-spring-modulith[Spring Modulith blog post] or https://entwickler.de/software-architektur/microservices-oder-monolithen-beides[this german Entwickler.de article about moduliths].
+
+== Authentication and Authorization
+
+Authentication and authorization are treated as a cross-cutting concern rather than a bounded context in xref:05_building_block_view.adoc[Chapter 5]: they have no ubiquitous language relevant to household members and exist purely to support every other module, not to model household business. The overall authentication architecture - session-based Spring Security in a single filter chain, with `formLogin()` under `POST /v1/login` for local accounts and `oauth2Login()` for external providers, no embedded Authorization Server - is decided in xref:adrs:adr-013.adoc[ADR 013]; the session strategy towards the SPA (BFF pattern with httpOnly cookies, CSRF protection, server-side session invalidation on logout) is decided in xref:adrs:adr-014.adoc[ADR 014], social login federation in xref:adrs:adr-016.adoc[ADR 016]. Every login path ends in the same session principal, `AccountPrincipal`, identified by the member ID; requests authenticated in any other way are rejected (`AccountPrincipalAuthorizationManager`). Concretely, this has two consequences for how the code is structured:
+
+* **No dedicated "Authentication" module in the building block view.** Framework-level building blocks (password hashing, session/token issuance, security filters) are infrastructure, documented here rather than listed as a fachliches module alongside `Tasks` or `Expenses`.
+* **Framework/utility types are injected directly, not wrapped in a Named Interface.** A generic Spring bean type such as `PasswordEncoder` is not a module-owned construct, so any module may inject it directly — the same way `ApplicationEventPublisher` is already used directly across modules. Introducing a `core` Named Interface (e.g. a `PasswordEncoding` abstraction) purely to let another module reuse a framework type would add an `ApplicationModule` dependency (verified by Spring Modulith) for no domain benefit and is deliberately avoided. Named Interfaces (xref:adrs:adr-011.adoc[ADR 011]) are reserved for genuine domain operations of a module — such as `AccountSignIn` in `Household` — not for technical helpers.
+
+The one genuine domain operation in this area, registering an account as part of a household membership, is therefore not part of an "auth module" at all — it lives in `Household`, where the 1:1 account-household relationship was decided in xref:adrs:adr-012.adoc[ADR 012]. Credentials themselves are stored in a dedicated `account` table, separate from `member`, as decided in xref:adrs:adr-015.adoc[ADR 015].
+
+[[section-security-controls-authentication]]
+== Security Controls (Authentication)
+
+Authentication-related security controls are tracked against an https://github.com/OWASP/ASVS[OWASP ASVS] 5.0 Level 2 baseline (the recommended baseline for applications handling sensitive data, matching xref:01_introduction_and_goals.adoc#QG2[QG2 - Secure]). This table doubles as the threat model for authentication: each entry maps a concrete threat directly to the ASVS requirement that mitigates it, instead of a separate abstract diagram. A few requirements are deliberately verified above the L2 baseline (see ENUM1). Controls already covered by an architectural decision reference the corresponding ADR; controls deliberately not implemented are tracked as a risk in xref:11_technical_risks.adoc[Chapter 11]; everything else is still open.
+
+[cols="1,4,3,3", options="header"]
+|===
+|ID |Control |ASVS 5.0 Reference |Status
+
+|PW1
+|Password minimum length, no forced complexity rules, checked exactly as entered (no truncation or case transformation), at least 64 characters accepted.
+|V6.2.1 (L1), V6.2.5 (L1), V6.2.8 (L1), V6.2.9 (L2)
+|Decided (NIST-style policy)
+
+|PW2
+|No forced periodic password rotation.
+|V6.2.10 (L2)
+|Decided (NIST-style policy)
+
+|PW3
+|Check new passwords against a list of known or breached passwords.
+|V6.2.4 (L1), V6.2.12 (L2)
+|Deliberately not implemented, to avoid an external dependency or a wordlist to maintain. Tracked as xref:11_technical_risks.adoc[Risk R5].
+
+|PW4
+|Masked password field with an optional reveal toggle; paste and password-manager input allowed.
+|V6.2.6 (L1), V6.2.7 (L1)
+|Open
+
+|SES1
+|Secure cookie attributes (`Secure`, `HttpOnly`, `SameSite`, `__Host-` prefix).
+|V3.3.1 (L1), V3.3.2 (L2), V3.3.3 (L2), V3.3.4 (L2)
+|Partially met, see xref:adrs:adr-014.adoc[ADR 014]. The session cookie is `Secure`, `HttpOnly` and `SameSite=Lax` (V3.3.2, V3.3.4). V3.3.1 and V3.3.3 are not met: the session cookie is named `JSESSIONID`, without the `__Secure-` or `__Host-` prefix.
+
+|SES2
+|CSRF protection for cookie-based requests.
+|V3.5.1 (L1)
+|Decided, see xref:adrs:adr-014.adoc[ADR 014] (Spring Security cookie-based CSRF). Every login path and the logout issue a new `XSRF-TOKEN`.
+
+|SES3
+|No sensitive data or session tokens in `localStorage`/`sessionStorage`.
+|V14.3.3 (L2)
+|Decided, see xref:adrs:adr-014.adoc[ADR 014] and the project's frontend state-management rule
+
+|SES4
+|A new session ID on every successful login, exactly once per login path: local login and the social-login callback renew it through the filter's session authentication strategy, the sign-in after household setup or invite join through the same strategy (`SessionManagementConfig`). The account resolution after the social-login callback only registers the already renewed session for the account, it does not renew it a second time. Every login path registers the session, so that it can be ended later (RESET1, SES7).
+|V7.2.4 (L1)
+|Decided, verified by `FormLoginIT`, `PasswordSetupFlowIT` and `SocialLoginFilterChainIT`/`SocialSetupFlowIT` (the old session ID is rejected after login)
+
+|SES5
+|Logout (`POST /v1/logout`) invalidates the session on the server and deletes the session cookie; the old session ID is rejected afterwards.
+|V7.4.1 (L1)
+|Decided, see xref:adrs:adr-014.adoc[ADR 014]; verified by `FormLoginIT`
+
+|SES6
+|The application session is independent of the session at the social-login provider: the provider tokens are discarded in the login callback, logging out of LibreHousehold does not log out of the provider, and logging out of the provider does not end the LibreHousehold session. There is no RP-initiated or back-channel logout.
+|V7.1.3 (L2)
+|Decided, see xref:adrs:adr-016.adoc[ADR 016]
+
+|SES7
+|Removing a member from the household (leaving or being removed) and deleting a household end all existing sessions of the affected members, from every login path (see SES4). This also applies when an unverified account expires, because the expiry job removes the member or deletes the household the same way. The sessions are ended within the deleting transaction, right before the deletion event is published; if that transaction rolls back afterwards, the members only have to log in again. A rejected removal (the household admin) leaves the sessions untouched.
+|V7.4.2 (L1)
+|Decided, verified by `MemberSessionInvalidationIT`
+
+|CORS1
+|Fixed/validated `Access-Control-Allow-Origin`, no wildcard combined with credentials.
+|V3.4.2 (L1), V3.5.1 (L1), V3.5.2 (L1)
+|Largely moot due to the deployment topology (Nginx reverse proxy, same origin, see xref:07_deployment_view.adoc[Chapter 7]); backend CORS is still restricted explicitly to known origin(s) as defense in depth
+
+|RED1
+|OAuth `redirect_uri` exact allow-list matching.
+|V10.4.1 (L1): not applicable
+|LibreHousehold has no Authorization Server of its own (xref:adrs:adr-013.adoc[ADR 013]), so V10.4.1 applies to the social-login providers, not to LibreHousehold. As their client, the backend uses an absolute redirect URI fixed server-side per `ClientRegistration`, never influenced by the client, and registered at the provider, which checks it exactly (see xref:07_deployment_view.adoc#section-social-login-provider-requirements[Chapter 7]).
+
+|RED2
+|No automatic redirect to untrusted hosts (invite links).
+|V3.7.2 (L2)
+|Open. The social-login context (`POST /auth/social-context`, xref:adrs:adr-017.adoc[ADR 017]) adds a further input that carries an invite token through the provider redirect; it is stored server-side only, as a UUID, and only forms the relative redirect path back to `/invite/\{token}`; the subsequent join validates it like any other invite token.
+
+|ENUM1
+|No inference of existing accounts from login, registration, or password-reset responses (error messages, status codes, timing). A wrong password, an unknown e-mail address, an account without a local password (social login only) and an unverified account with a wrong password all get the same `401 /problems/invalid-credentials` body: the e-mail verification is only checked after the password matched (`AuthenticationProviderConfig`), and an account without a password is treated as unknown, so a dummy hash is compared and the response time does not tell it apart either (`AccountUserDetailsService`); failed attempts on such an account do not count towards the lockout. `403 /problems/email-not-verified` (VERIFY1) therefore requires the correct password. Remaining signals, accepted: a locked account (`403 /problems/account-locked`, see RATE1) is recognizable without knowing the password, because the lock is checked before the password so no password is compared during a lock; and `GET /members/availability` reveals whether an e-mail address has an account.
+|V6.3.8 (**L3**, deliberately raised above the L2 baseline)
+|Deliberately not met because of the remaining signals; the indistinguishable login failures are proven by `FormLoginIT.login.indistinguishableFailures_sameProblemBody`
+
+|VERIFY1
+|Email verification tokens are single-use, time-limited, and stored only as a random value (UUID), never logged in plain text.
+|V6.4.1 (L1)
+|Decided, implemented in `AccountTokenService`
+
+|RESET1
+|Password reset tokens are single-use and short-lived. A successful reset ends all of the account's existing sessions, from every login path (see SES4), and lifts an account lockout immediately (see RATE1).
+|V6.4.1 (L1), V7.4.3 (L2)
+|Decided, implemented in `PasswordResetService`/`AccountTokenService`; the sessions are ended via the session registry (`MemberSessions`)
+
+|ERR1
+|Generic error message on unexpected or security-sensitive errors, no stack traces or internal details exposed.
+|V16.5.1 (L2)
+|Open
+
+|RATE1
+|Rate limiting / anti-automation against credential stuffing and brute force.
+|V6.1.1 (L1, partially met), V6.3.1 (L1, depends on the deployment)
+a|Decided, implemented via two complementary mechanisms:
+
+* A local, in-memory Bucket4j token bucket (`RateLimitingFilter`/`RateLimitingConfig`) throttles the *rate* of requests: `POST /v1/login` per submitted e-mail+IP and, across all e-mail addresses, per IP; the password-reset/email-verification endpoints per IP, since several of them are unauthenticated. A rejected request gets `429` with the problem type `/problems/too-many-requests` and a `Retry-After` header (seconds until the next attempt is allowed).
+* A DB-backed account lockout (`AccountLockoutListener`, `AccountUserDetailsService`, `account.locked_until`/`account.failed_login_attempts`) locks an account for a configurable duration after a higher threshold of failed attempts, regardless of how slowly they were made.
+
+The IP-keyed limits only work if the client IP is trustworthy: the backend takes it from `X-Forwarded-For` (`server.forward-headers-strategy: framework`), so the reverse proxy must overwrite that header with the client IP instead of appending to it (see xref:07_deployment_view.adoc#section-reverse-proxy-requirements[Chapter 7]). V6.3.1 is therefore met only with a correctly configured proxy.
+
+Lockout policy, intended as is: after a lock expires, the counter is not reset, so every further failed attempt locks the account again; only a successful login or a password reset resets it. This is the stricter and simpler policy. It lets an attacker who knows an e-mail address keep that account locked, so V6.1.1 is only partially met (accepted deviation, see xref:11_technical_risks.adoc[Chapter 11, R6]). Countermeasure: a password reset lifts the lockout immediately (`PasswordResetService`).
+
+|HASH1
+|Password hashing with a computationally intensive key derivation function.
+|V11.4.2 (L2)
+|Decided, see xref:adrs:adr-009.adoc[ADR 009] (Argon2id)
+
+|PKCE1
+|Authorization Code Flow with PKCE and `state` against code interception and login CSRF towards the social-login providers.
+|V10.2.1 (L2); V10.4.6 (L2): not applicable, no Authorization Server of its own
+|Decided, see xref:adrs:adr-013.adoc[ADR 013]. Spring Security always sends PKCE (S256) and `state`; providers without PKCE support are not supported (see xref:07_deployment_view.adoc#section-social-login-provider-requirements[Chapter 7]).
+
+|AUTH1
+a|All authentication pathways are documented and enforce their controls consistently. There are exactly three ways to obtain a session:
+
+. Local login, `POST /v1/login` (`formLogin()`, only if local login is enabled): password check against the Argon2id hash, account lockout, e-mail verification, rate limiting (RATE1).
+. Social login, `oauth2Login()` callback: `AccountSignIn.signInByExternalIdentity` signs in only an account linked to the provider identity (FED1).
+. Sign-in right after household setup or invite join: `AccountSessionSignIn.signIn`, called only from the setup and join API delegates, after the registration transaction has committed. It deliberately does not check the e-mail verification, because a freshly registered account is always unverified; the member has just set the credential in the same request.
+
+All three paths renew the session ID, register the session (SES4), issue a new `XSRF-TOKEN` and yield the same `AccountPrincipal`.
+|V6.1.3 (L2), V6.3.4 (L2)
+|Decided, see xref:adrs:adr-013.adoc[ADR 013]
+
+|FED1
+|Social login against external OIDC/OAuth2 providers: the backend is the only, confidential client of the provider (BFF), so provider tokens never reach the browser, and they are discarded in the login callback. `state`, PKCE and the OIDC `nonce` bind the callback to the session that started the flow, and the ID Token's issuer and audience are validated; a startup check (`SocialLoginRegistrationCheck`) ensures that every OIDC registration has an issuer and every registration requests the e-mail address. A login resolves the local account only via the stored provider + subject pair (`account_identity`), never via the e-mail claim, and never attaches to an account that has a local password. The provider is identified by its issuer for OIDC and by its user-info URI without query and fragment for plain OAuth2, never by the registration ID (`FederatedProviderKey`): renaming a registration keeps every link, and another provider issuing the same subject never matches (V6.8.1). Against mix-up attacks (V10.2.2), every registration has its own redirect URI (`/login/oauth2/code/\{registrationId}`), so the callback is bound to the provider the flow was started for, and the issuer is validated in the ID Token and part of the stored key. Registering via social login (household setup, invite join) requires an e-mail address the provider verified (OIDC `email_verified`; for GitHub the verified primary address from `/user/emails`); it becomes the member's e-mail, the e-mail in the request is ignored. The callback only keeps the external identity as a pending registration in the session and drops the external authentication. An e-mail that already has an account, or an identity that is already linked, fails with `409` instead of linking anything.
+|V6.8.1 (L2), V10.1.1 (L2), V10.1.2 (L2), V10.2.1 (L2), V10.2.2 (L2), V10.5.1 (L2), V10.5.2 (L2), V10.5.3 (L2), V10.5.4 (L2)
+|Decided, see xref:adrs:adr-016.adoc[ADR 016] and xref:adrs:adr-018.adoc[ADR 018]. `state`/PKCE/`nonce`/ID-Token validation is done by Spring Security's `oauth2Login()`; the account resolution is implemented in `FederatedIdentityAuthenticationSuccessHandler` and `AccountSignIn`, the registration additionally in `HouseholdSetupService`/`MemberManagementService`.
+
+|AC1
+|Object-/field-level access control per household (IDOR protection).
+|V8.2.2 (L1)
+|Open
+|===
+[[section-event-delivery-and-resubmission]]
+== Event Delivery and Resubmission
+
+Modules react to each other's Domain Events (xref:adrs:adr-011.adoc[ADR 011]) through `@ApplicationModuleListener`, which runs asynchronously after the publishing transaction has committed. Spring Modulith records one row per event and listener in `event_publication` before the commit, so a delivery that fails (e.g. an unreachable mail server) is not lost, only left unfinished. Three rules follow from this:
+
+* **Events are published inside a transaction.** Without an active transaction the after-commit listener is never invoked, and the publication stays in `PUBLISHED` without any error. Every service method that publishes an event is therefore `@Transactional`.
+* **Failed deliveries are retried, but not forever.** `EventPublicationMaintenanceJob` (in `config`, as application-wide infrastructure no module depends on) runs every `librehousehold.events.run-interval` and resubmits `FAILED` publications that are older than `resubmit-min-age`, as long as their `completion_attempts` (1 for the first delivery, plus one per resubmission) is below `max-attempts`. A publication that reaches the limit stays `FAILED` for manual inspection; this stops endless retries of events that can never succeed, such as a notification for a member deleted in the meantime. Publications stuck in `PUBLISHED`, `PROCESSING` or `RESUBMITTED` after a crash are marked `FAILED` by Spring Modulith's staleness monitor (`spring.modulith.events.staleness.*`) and thereby become eligible as well.
+* **Completed publications are deleted after a retention period.** The same job removes completed publications older than `completed-retention`, so the table keeps enough history for diagnosis without growing without bound.
+
+Listeners must tolerate being called more than once for the same event: a resubmission repeats the whole listener, e.g. a notification e-mail may arrive twice.

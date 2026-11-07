@@ -1,0 +1,15 @@
+[[adr-004]]
+= ADR 004: Modular Monolith (Modulith) as architecture style
+
+== Context
+
+A base architecture style for the application has to be chosen. The choice of the architecture style has a significant impact on the further development of the application.
+
+== Considered Options
+
+Monolith; Microservices; Modular Monolith (Modulith)
+
+== Decision Outcome
+
+The application will be implemented as a Modular Monolith (Modulith) in the beginning.
+Common Monoliths tend to grow into unmaintainable "big balls of mud" over time. Microservices are a good choice for large and complex applications with many developers, but they also introduce significant complexity and overhead. A Modular Monolith (Modulith) combines the advantages of both monoliths and microservices. It allows for a clear separation of concerns and modularity, while still being easy to develop, test, and deploy. In difference to a Monolith it enforces module boundaries and communication via well-defined interfaces. While planning the application it's not possible to estimate if and when the application will grow to a size that justifies a migration to microservices. Therefore, starting with a Modular Monolith (Modulith) is a good compromise. Thanks to the modular structure, single modules can be extracted to microservices later if necessary.

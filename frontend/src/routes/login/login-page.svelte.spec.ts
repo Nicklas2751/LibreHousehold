@@ -2,8 +2,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import { page } from 'vitest/browser';
 import LoginPage from './+page.svelte';
-import { authDiscovery } from '$lib/stores/authDiscoveryState.svelte';
-import { setAuthenticated, setGuest } from '$lib/stores/sessionState.svelte';
+import { authDiscovery } from '#lib/stores/authDiscoveryState.svelte.ts';
+import { setAuthenticated, setGuest } from '#lib/stores/sessionState.svelte.ts';
 
 const { mockGoto, mockBootstrapSession, mockLoadAuthDiscovery, mockStartSocialLogin, mockPage } =
 	vi.hoisted(() => ({
@@ -18,14 +18,15 @@ vi.mock('$app/navigation', () => ({ goto: mockGoto }));
 
 vi.mock('$app/state', () => ({ page: mockPage }));
 
-vi.mock('$lib/stores/authDiscoveryState.svelte', async (importOriginal) => {
-	const original = await importOriginal<typeof import('$lib/stores/authDiscoveryState.svelte')>();
+vi.mock('#lib/stores/authDiscoveryState.svelte.ts', async (importOriginal) => {
+	const original =
+		await importOriginal<typeof import('#lib/stores/authDiscoveryState.svelte.ts')>();
 	return { ...original, loadAuthDiscovery: mockLoadAuthDiscovery };
 });
 
-vi.mock('$lib/socialLogin', () => ({ startSocialLogin: mockStartSocialLogin }));
+vi.mock('#lib/socialLogin.ts', () => ({ startSocialLogin: mockStartSocialLogin }));
 
-vi.mock('$lib/stores/sessionBootstrap', () => ({ bootstrapSession: mockBootstrapSession }));
+vi.mock('#lib/stores/sessionBootstrap.ts', () => ({ bootstrapSession: mockBootstrapSession }));
 
 vi.mock('../../lib/paraglide/runtime.js', async (importOriginal) => {
 	const original = await importOriginal<typeof import('../../lib/paraglide/runtime.js')>();
@@ -115,7 +116,7 @@ describe('login page', () => {
 
 		// then
 		await vi.waitFor(() =>
-			expect(mockGoto).toHaveBeenCalledWith('/app/dashboard', { replaceState: true })
+			expect(mockGoto).toHaveBeenCalledWith('/app/dashboard', { replace: true })
 		);
 	});
 
@@ -130,7 +131,7 @@ describe('login page', () => {
 
 		// then
 		await vi.waitFor(() =>
-			expect(mockGoto).toHaveBeenCalledWith('/app/tasks?filter=open', { replaceState: true })
+			expect(mockGoto).toHaveBeenCalledWith('/app/tasks?filter=open', { replace: true })
 		);
 	});
 
@@ -145,7 +146,7 @@ describe('login page', () => {
 
 		// then
 		await vi.waitFor(() =>
-			expect(mockGoto).toHaveBeenCalledWith('/app/dashboard', { replaceState: true })
+			expect(mockGoto).toHaveBeenCalledWith('/app/dashboard', { replace: true })
 		);
 	});
 
@@ -193,7 +194,7 @@ describe('login page', () => {
 		// then
 		await expect
 			.element(page.getByRole('alert'))
-			.toHaveTextContent(
+			.toMatchTextContent(
 				'Falls du dich über einen Anbieter registriert hast, nutze „Weiter mit Google / GitHub“.'
 			);
 	});
@@ -428,7 +429,7 @@ describe('login page', () => {
 
 		// then
 		await vi.waitFor(() =>
-			expect(mockGoto).toHaveBeenCalledWith('/app/dashboard', { replaceState: true })
+			expect(mockGoto).toHaveBeenCalledWith('/app/dashboard', { replace: true })
 		);
 	});
 

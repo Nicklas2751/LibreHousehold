@@ -1,8 +1,8 @@
 import { writable } from 'svelte/store';
 import { type Expense, ExpensesApi, type ExpenseUpdate } from '../../generated-sources/openapi';
-import { apiConfiguration } from '$lib/api/httpClient';
-import { addToast } from '$lib/stores/toastStore';
-import { Toast } from '$lib/toast';
+import { apiConfiguration } from '#lib/api/httpClient.ts';
+import { addToast } from '#lib/stores/toastStore.ts';
+import { Toast } from '#lib/toast.ts';
 
 export const expenses = writable<Expense[]>([]);
 

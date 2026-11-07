@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { CopyIcon } from '@indaco/svelte-iconoir/copy';
-	import { addToast } from '$lib/stores/toastStore';
-	import { Toast } from '$lib/toast';
+	import { addToast } from '#lib/stores/toastStore.ts';
+	import { Toast } from '#lib/toast.ts';
 	import { QRCode } from '@castlenine/svelte-qrcode';
 	import { ShareIosIcon } from '@indaco/svelte-iconoir/share-ios';
 	import {
@@ -17,12 +17,12 @@
 		ResponseError,
 		SessionApi
 	} from '../generated-sources/openapi';
-	import { apiConfiguration } from '$lib/api/httpClient';
-	import { extractErrorStatus } from '$lib/api/errorStatus';
-	import { classifyConflictProblem } from '$lib/api/problemMapping';
-	import { createDebouncedAvailabilityChecker } from '$lib/emailAvailability';
+	import { apiConfiguration } from '#lib/api/httpClient.ts';
+	import { extractErrorStatus } from '#lib/api/errorStatus.ts';
+	import { classifyConflictProblem } from '#lib/api/problemMapping.ts';
+	import { createDebouncedAvailabilityChecker } from '#lib/emailAvailability.ts';
 	import { v4 as uuidv4 } from 'uuid';
-	import { updateHouseholdState } from '$lib/stores/householdState.svelte';
+	import { updateHouseholdState } from '#lib/stores/householdState.svelte.ts';
 	import {
 		calculateNextStep,
 		calculateTargetStep,
@@ -32,17 +32,17 @@
 		generateInviteUrl,
 		isValidEmail,
 		readFileAsDataURL
-	} from '$lib/setupWizardLogic';
+	} from '#lib/setupWizardLogic.ts';
 	import { goto } from '$app/navigation';
-	import { updateUserState } from '$lib/stores/userState';
-	import MemberProfileForm from '$lib/MemberProfileForm.svelte';
+	import { updateUserState } from '#lib/stores/userState.ts';
+	import MemberProfileForm from '#lib/MemberProfileForm.svelte';
 	import { onDestroy, onMount } from 'svelte';
-	import { bootstrapSession } from '$lib/stores/sessionBootstrap';
-	import SocialLoginButtons from '$lib/SocialLoginButtons.svelte';
-	import { authDiscovery, loadAuthDiscovery } from '$lib/stores/authDiscoveryState.svelte';
+	import { bootstrapSession } from '#lib/stores/sessionBootstrap.ts';
+	import SocialLoginButtons from '#lib/SocialLoginButtons.svelte';
+	import { authDiscovery, loadAuthDiscovery } from '#lib/stores/authDiscoveryState.svelte.ts';
 	import { SocialLoginContextContextEnum } from '../generated-sources/openapi';
-	import SocialRegistrationForm from '$lib/SocialRegistrationForm.svelte';
-	import { saveSetupDraft, takeSetupDraft } from '$lib/setupDraft';
+	import SocialRegistrationForm from '#lib/SocialRegistrationForm.svelte';
+	import { saveSetupDraft, takeSetupDraft } from '#lib/setupDraft.ts';
 	import { page } from '$app/state';
 
 	const EMAIL_AVAILABILITY_DEBOUNCE_MS = 400;
@@ -261,7 +261,7 @@
 		closingSetup = true;
 		// The backend already signed the new member in when setup/join committed.
 		await bootstrapSession();
-		await goto('/app/dashboard', { replaceState: true });
+		await goto('/app/dashboard', { replace: true });
 	}
 
 	async function readConflictProblem(err: unknown): Promise<Problem | undefined> {

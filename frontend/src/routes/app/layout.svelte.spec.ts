@@ -3,7 +3,7 @@ import { render } from 'vitest-browser-svelte';
 import { page } from 'vitest/browser';
 import { createRawSnippet } from 'svelte';
 import Layout from './+layout.svelte';
-import { session, setAuthenticated, setGuest } from '$lib/stores/sessionState.svelte';
+import { session, setAuthenticated, setGuest } from '#lib/stores/sessionState.svelte.ts';
 import type { CurrentUser } from '../../generated-sources/openapi';
 
 const childrenSnippet = createRawSnippet(() => ({ render: () => `<div></div>` }));
@@ -13,18 +13,18 @@ const { mockResendVerificationEmail, mockAddToast } = vi.hoisted(() => ({
 	mockAddToast: vi.fn()
 }));
 
-vi.mock('$lib/stores/memberStore', () => ({
+vi.mock('#lib/stores/memberStore.ts', () => ({
 	resendVerificationEmail: mockResendVerificationEmail
 }));
 
-vi.mock('$lib/stores/toastStore', () => ({ addToast: mockAddToast }));
+vi.mock('#lib/stores/toastStore.ts', () => ({ addToast: mockAddToast }));
 
-vi.mock('$lib/stores/settingsStore', () => ({ initSettings: vi.fn() }));
+vi.mock('#lib/stores/settingsStore.ts', () => ({ initSettings: vi.fn() }));
 
 vi.mock('$app/navigation', () => ({ goto: vi.fn() }));
 
-vi.mock('$lib/paraglide/runtime.js', async (importOriginal) => {
-	const original = await importOriginal<typeof import('$lib/paraglide/runtime.js')>();
+vi.mock('#lib/paraglide/runtime.js', async (importOriginal) => {
+	const original = await importOriginal<typeof import('#lib/paraglide/runtime.js')>();
 	return { ...original, getLocale: () => 'de' as const, setLocale: vi.fn() };
 });
 

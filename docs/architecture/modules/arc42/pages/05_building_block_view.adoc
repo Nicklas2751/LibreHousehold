@@ -1,0 +1,76 @@
+[[section-building-block-view]]
+= Building Block View
+
+== Whitebox Overall System
+
+.Building Block View, Level 1
+plantuml::arc42:partial$building_block_level1.puml[format=svg,alt="Building Block View, Level 1"]
+
+LibreHousehold breaks down into two subsystems with multiple modules as shown above.
+The arrows indicate logical dependencies between the modules.
+The squared boxes on the membrane of the subsystems indicate ports.
+Modules shown in both subsystems with the same name are responsible for the same topic and can be seen as one module split into two parts.
+These modules don't share any code but communicate via the defined ports.
+
+[cols="1,2,1" options="header"]
+|===
+| **Name** | **Responsibility** | **Subdomain Type**
+|Progressive Web App (PWA) |The PWA is the user interface of LibreHousehold. It is responsible for displaying data to the user and sending user commands to the backend. |
+|Backend |The backend is responsible for processing user commands, managing data, and communicating with external services such as the database, the e-mail server and the social login providers. |
+|Expenses |The Expenses module is responsible for managing household expenses and the debt-settlement (reimbursement) process between household members. |Core
+|Tasks |The Tasks module is responsible for managing household tasks, including recurrence and due-date calculation. |Core
+|Household |The Household module is responsible for forming and maintaining a household community: creating a household, inviting and removing members, and account registration as part of a membership. It is the central reference other modules validate membership and existence against. |Core
+|Statistics |The Statistics module aggregates data from Household, Tasks and Expenses into reporting views; it has no business rules of its own. |Supporting
+|Administration _(planned)_ |The Administration module is responsible for managing the application, including user management and system settings. |Supporting
+|User Settings |The User Settings module is responsible for managing user-specific preferences (e.g. language, theme, notification channels). |Generic
+|App Settings |The App Settings module is a special module only in the frontend for managing frontend (App) specific settings. It has no shared business rules and is not a bounded context. |_(technical, frontend-only)_
+|Notifications |The Notifications module is responsible for sending and showing notifications to the user. It also allows users to configure their notification settings. |Generic
+|===
+
+See <<section-subdomain-classification>> below for what these types mean and why they were assigned this way.
+
+[[section-subdomain-classification]]
+== Subdomain Classification
+
+* **Core Domain** — what makes LibreHousehold what it is. `Household` (forming and maintaining a household community), `Tasks`, and `Expenses` (including reimbursement/debt settlement) each encapsulate a genuine business process with its own ubiquitous language and invariants.
+These modules deserve careful tactical DDD (aggregates, invariants, language).
+* **Supporting Subdomain** — necessary and specific to this product, but not its differentiator. `Administration` (planned) encapsulates a real process (instance administration) tied to a distinct actor (the Administrator, see xref:03_context_and_scope.adoc[Chapter 3 - Context and Scope]), but they are not what users come to LibreHousehold for. `Statistics` is supporting in a different sense: it is a pure read-model/aggregation over Core modules with no business rules of its own.
+* **Generic Subdomain** — a standard problem with a standard solution; it could be replaced by a third-party library or service without losing competitive advantage. `User Settings` (preferences) and `Notifications` (delivery channels and rules) fall here.
+A simple, pragmatic implementation is fine for these — they do not need the same modelling depth as the Core Domain.
+
+**Authentication and Authorization are intentionally not listed as a module or bounded context.** They have no ubiquitous language relevant to household members ("login", "session", "token" are technical, not domain terms) and are treated as a cross-cutting concern instead — see xref:08_concepts.adoc[Chapter 8, Cross-cutting Concepts].
+The one genuine domain operation, registering an account, lives inside `Household` as part of the membership process (see xref:adrs:adr-012.adoc[ADR 012]) rather than in a separate module built around the "Account" entity.
+
+== Bounded Context Map
+
+The following diagram shows the backend modules from the table above as bounded contexts, coloured by subdomain type, together with how they actually depend on each other per xref:adrs:adr-011.adoc[ADR 011] (Named Interfaces for synchronous queries, Domain Events for reactive lifecycle notifications).
+Modules marked "(planned)" exist only as an empty package scaffold today and are not yet implemented.
+
+.Bounded Context Map
+plantuml::arc42:partial$context_map.puml[format=svg,alt="Bounded Context Map"]
+
+The map is deliberately asymmetric: several modules query `Household` (narrow, read-only membership/existence checks), while `Household` itself does not query anyone back and instead publishes events that `Tasks`, `Expenses` and `Notifications` react to.
+This fan-in is not treated as a bottleneck as long as the inbound interface stays narrow (`exists()`, membership checks) — it is the expected shape of a Core module that other contexts depend on.
+It would become a problem only if the interface grew wide and bespoke per consumer, which would be the signal to redesign the interface, not to split `Household` itself.
+
+[[section-module-dependency-direction]]
+== Module Dependency Direction
+
+On top of the query/event distinction from xref:adrs:adr-011.adoc[ADR 011], an explicit rule governs the *direction* of allowed dependencies, to keep the module graph acyclic as the system grows:
+
+* `eu.wiegandt.librehousehold.core` is purely technical (shared helpers such as
+`CoreOptionalMapper`; not a bounded context and therefore not shown as a component in the map above) and must **never depend on any other module**.
+Any module may depend on `core`.
+* `Household`, as the module other modules already query for membership/existence, may depend on
+`core` only — it must **not** depend on any other business module.
+Publishing Domain Events to
+`Tasks`/`Expenses`/`Notifications` does not violate this rule, since `Household` does not depend on its listeners; it merely announces facts.
+Signing a member in (after household setup or invite join, after a social login, and ending sessions on a password reset) does not violate it either: `Household` injects the framework beans `SessionAuthenticationStrategy` and `SessionRegistry` by type, which `config` provides at runtime (`SessionManagementConfig`).
+These are Spring Security types, not `config` code, so no module dependency arises (see xref:08_concepts.adoc[Chapter 8, Authentication
+ and Authorization]).
+* No fixed rule exists yet for dependencies *among* the remaining business modules (`Tasks`,
+`Expenses`, `Statistics`, `Administration`, `UserSettings`, `Notifications`); the guiding principle is to keep dependencies as few as possible, extending them only via Named Interfaces (ADR 011) when a genuine cross-module query is needed.
+
+This rule is currently enforced only by convention and code review, not by an automated check — see xref:11_technical_risks.adoc[Chapter 11, Risk/Technical Debt TD1] for the still-missing
+`ApplicationModules.verify()` test that would make violations fail the build.
+It should be treated as binding regardless of the missing automation.

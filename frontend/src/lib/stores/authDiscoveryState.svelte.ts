@@ -1,4 +1,4 @@
-import { apiConfiguration } from '$lib/api/httpClient';
+import { apiConfiguration } from '#lib/api/httpClient.ts';
 import { type AuthDiscovery, SessionApi } from '../../generated-sources/openapi';
 
 const sessionApi = new SessionApi(apiConfiguration);

@@ -5,10 +5,10 @@
 	import { CashIcon } from '@indaco/svelte-iconoir/cash';
 	import { StatsReportIcon } from '@indaco/svelte-iconoir/stats-report';
 	import { SettingsIcon } from '@indaco/svelte-iconoir/settings';
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { goto } from '$app/navigation';
-	import { filterTasks, TaskFilterType } from '$lib/taskFilter';
-	import { tasks } from '$lib/stores/taskStore';
+	import { filterTasks, TaskFilterType } from '#lib/taskFilter.ts';
+	import { tasks } from '#lib/stores/taskStore.ts';
 
 	const countOfUpcomingTasks: number = $derived(
 		filterTasks($tasks, TaskFilterType.PENDING, undefined).length

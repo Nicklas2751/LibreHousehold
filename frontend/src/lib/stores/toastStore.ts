@@ -1,5 +1,5 @@
 import { type Writable, writable } from 'svelte/store';
-import type { Toast } from '$lib/toast';
+import type { Toast } from '#lib/toast.ts';
 
 export const toasts: Writable<Toast[]> = writable([]);
 

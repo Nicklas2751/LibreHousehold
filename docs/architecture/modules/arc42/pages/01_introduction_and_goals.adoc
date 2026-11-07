@@ -1,0 +1,98 @@
+[[section-introduction-and-goals]]
+= Introduction and Goals
+
+// tag::mission-statement[]
+LibreHousehold is a free and open-source software for managing household expenses and tasks. It is designed to be simple, user-friendly, with a modern UI and without any ads. It can be used on mobile devives as well as on desktop computers.
+// end::mission-statement[]
+
+== Features
+
+- Create households and invite other house-/flatmates
+- Track and share expenses with your mates
+- Create and manage tasks
+- Work offline and sync later
+- Responsive design for mobile and desktop
+
+== Main Goals
+
+// tag::main-goals[]
+- Completely free
+- No ads
+- Modern Look & Feel
+- Easy to use
+- Easy to host yourself
+- Easy to contribute
+// end::main-goals[]
+
+== Requirements Overview
+
+ifdef::arc42help[]
+[role="arc42help"]
+****
+.Contents
+Short description of the functional requirements, driving forces, extract (or abstract)
+of requirements. Link to (hopefully existing) requirements documents
+(with version number and information where to find it).
+
+.Motivation
+From the point of view of the end users a system is created or modified to
+improve support of a business activity and/or improve the quality.
+
+.Form
+Short textual description, probably in tabular use-case format.
+If requirements documents exist this overview should refer to these documents.
+
+Keep these excerpts as short as possible. Balance readability of this document with potential redundancy w.r.t to requirements documents.
+
+
+.Further Information
+
+See https://docs.arc42.org/section-1/[Introduction and Goals] in the arc42 documentation.
+
+****
+endif::arc42help[]
+
+== Quality Goals
+
+// tag::quality-goals[]
+.Main quality goals
+[options="header",cols="1,4,8"]
+|===
+|ID |Quality Goal |Motivation
+|[[QG1,Easy to learn]]QG1 |Easy to learn (Learnability) |Users should be able to use the app without reading a manual or getting training. Nowadays, users expect to be able to use an app intuitively.
+|[[QG2]]QG2 |Secure (Security) |Expenses are a sensitive topic. Users mus be able to trust in the integrity and the confidentiality of their data.
+|[[QG3]]QG3 |Easy to host (Flexibility) | Users with technical background should be able to host the app themselves without much effort.
+|[[QG4]]QG4 |Maintainable (Maintainability) | The code should be easy to understand and to modify. This is important since the app is open-source and contributions by the community are welcome.
+|===
+// end::quality-goals[]
+
+== Stakeholders
+
+ifdef::arc42help[]
+[role="arc42help"]
+****
+.Contents
+Explicit overview of stakeholders of the system, i.e. all person, roles or organizations that
+
+* should know the architecture
+* have to be convinced of the architecture
+* have to work with the architecture or with code
+* need the documentation of the architecture for their work
+* have to come up with decisions about the system or its development
+
+.Motivation
+You should know all parties involved in development of the system or affected by the system.
+Otherwise, you may get nasty surprises later in the development process.
+These stakeholders determine the extent and the level of detail of your work and its results.
+
+.Form
+Table with role names, person names, and their expectations with respect to the architecture and its documentation.
+****
+endif::arc42help[]
+
+[options="header",cols="1,2,2"]
+|===
+|Role/Name|Contact|Expectations
+| _<Role-1>_ | _<Contact-1>_ | _<Expectation-1>_
+| _<Role-2>_ | _<Contact-2>_ | _<Expectation-2>_
+|===

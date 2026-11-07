@@ -1,0 +1,14 @@
+{
+  "name": "librehousehold-docs",
+  "private": true,
+  "description": "Antora site for the LibreHousehold documentation",
+  "scripts": {
+    "build": "antora --fetch antora-playbook.yml",
+    "build:strict": "antora --fetch --log-failure-level=warn antora-playbook.yml"
+  },
+  "devDependencies": {
+    "@antora/lunr-extension": "1.0.0-alpha.13",
+    "antora": "3.2.2",
+    "asciidoctor-kroki": "0.18.1"
+  }
+}

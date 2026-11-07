@@ -1,26 +1,28 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { afterNavigate, goto } from '$app/navigation';
-	import PageTitleActionBar from '$lib/PageTitleActionBar.svelte';
-	import { addTask, loadTasks, tasks, updateTaskDoneStatus } from '$lib/stores/taskStore';
+	import PageTitleActionBar from '#lib/PageTitleActionBar.svelte';
+	import { addTask, loadTasks, tasks, updateTaskDoneStatus } from '#lib/stores/taskStore.ts';
 	import { v4 as uuidv4 } from 'uuid';
-	import { findMember, members } from '$lib/stores/memberStore';
-	import { householdState } from '$lib/stores/householdState.svelte';
-	import { checkIsDone, getDisplayDueDate } from '$lib/taskDueCalculator';
-	import { filterTasks, TaskFilterType } from '$lib/taskFilter';
-	import { userState } from '$lib/stores/userState';
+	import { findMember, members } from '#lib/stores/memberStore.ts';
+	import { householdState } from '#lib/stores/householdState.svelte.ts';
+	import { checkIsDone, getDisplayDueDate } from '#lib/taskDueCalculator.ts';
+	import { filterTasks, TaskFilterType } from '#lib/taskFilter.ts';
+	import { userState } from '#lib/stores/userState.ts';
 	import type { Member, Task, TaskEdit } from '../../../../generated-sources/openapi';
-	import MobileItemList from '$lib/MobileItemList.svelte';
-	import DesktopItemList from '$lib/DesktopItemList.svelte';
-	import TaskForm from '$lib/TaskForm.svelte';
+	import MobileItemList from '#lib/MobileItemList.svelte';
+	import DesktopItemList from '#lib/DesktopItemList.svelte';
+	import TaskForm from '#lib/TaskForm.svelte';
 
 	let isShowNewTaskForm: boolean = $state(page.params.new !== undefined);
 
 	let filter: string = $state(TaskFilterType.ALL);
 	const filteredTasks = $derived(filterTasks($tasks, filter as TaskFilterType, $userState?.id));
 
-	afterNavigate(() => {
+	afterNavigate(({ shallow, type }) => {
+		if (shallow && type === 'goto') return;
+
 		isShowNewTaskForm = page.params.new !== undefined;
 	});
 
