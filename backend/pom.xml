@@ -40,7 +40,7 @@
         <jackson-databind-nullable.version>0.2.11</jackson-databind-nullable.version>
         <jsr305.version>3.0.2</jsr305.version>
         <mapstruct.version>1.6.3</mapstruct.version>
-        <instancio.version>6.1.0</instancio.version>
+        <instancio.version>6.2.0</instancio.version>
         <bouncycastle.version>1.85</bouncycastle.version>
         <bucket4j.version>8.10.1</bucket4j.version>
     </properties>
