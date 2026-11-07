@@ -45,3 +45,21 @@ updates:
       sveltekit:
         patterns:
           - "@sveltejs/*"
+
+  # documentation site generator (Antora) and its extensions
+  - package-ecosystem: "npm"
+    directory: "/docs"
+    schedule:
+      interval: "daily"
+    cooldown:
+      default-days: 5
+    labels:
+      - "dependencies"
+      - "npm"
+    open-pull-requests-limit: 10
+    # The Antora packages pin each other, so a single-package bump fails to install.
+    groups:
+      antora:
+        patterns:
+          - "antora"
+          - "@antora/*"
