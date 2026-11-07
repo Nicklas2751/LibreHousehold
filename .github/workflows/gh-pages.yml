@@ -27,21 +27,34 @@ jobs:
   # Build job
   build:
     runs-on: ubuntu-latest
+    services:
+      # Renders the PlantUML diagrams, so the build does not depend on kroki.io availability and rate limits
+      kroki:
+        image: yuzutech/kroki:0.34.0
+        ports:
+          - 8000:8000
     steps:
       - name: Checkout
         uses: actions/checkout@v7.0.1
-      - name: setup
-        run:
-          chmod +x dtcw
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: docs/package-lock.json
       - name: Setup Pages
         id: pages
         uses: actions/configure-pages@v6
-      - name: generateSite
-        run: ./dtcw generateSite
+      - name: Install dependencies
+        working-directory: docs
+        run: npm ci
+      - name: Build site
+        working-directory: docs
+        run: npm run build:strict -- --attribute kroki-server-url=http://localhost:8000
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v5
         with:
-          path: ./build/microsite/output
+          path: ./build/site
 
   # Deployment job
   deploy:
