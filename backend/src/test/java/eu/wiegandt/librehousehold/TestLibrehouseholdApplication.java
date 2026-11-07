@@ -23,7 +23,8 @@ public class TestLibrehouseholdApplication {
                 .filter(defaultArg -> Arrays.stream(args).noneMatch(arg -> arg.startsWith(defaultArg.split("=")[0] + "=")));
         var argsWithLocalDevDefaults = Stream.concat(Arrays.stream(args), localDevDefaults).toArray(String[]::new);
         SpringApplication.from(LibrehouseholdApplication::main)
-                .with(TestcontainersConfiguration.class, DexTestcontainersConfiguration.class)
+                .with(TestcontainersConfiguration.class, DexTestcontainersConfiguration.class,
+                        LgtmTestcontainersConfiguration.class)
                 .run(argsWithLocalDevDefaults);
     }
 
