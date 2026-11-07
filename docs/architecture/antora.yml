@@ -1,0 +1,7 @@
+name: architecture
+title: Architecture
+version: ~
+nav:
+  - modules/ROOT/nav.adoc
+  - modules/arc42/nav.adoc
+  - modules/adrs/nav.adoc
