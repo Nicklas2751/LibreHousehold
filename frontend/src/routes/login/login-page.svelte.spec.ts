@@ -193,7 +193,7 @@ describe('login page', () => {
 		// then
 		await expect
 			.element(page.getByRole('alert'))
-			.toHaveTextContent(
+			.toMatchTextContent(
 				'Falls du dich über einen Anbieter registriert hast, nutze „Weiter mit Google / GitHub“.'
 			);
 	});
