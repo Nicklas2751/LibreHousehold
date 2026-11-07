@@ -192,6 +192,11 @@ LibreHousehold/
   `docker run -p 8000:8000 yuzutech/kroki` and
   `npm run build:strict -- --attribute kroki-server-url=http://localhost:8000` the build runs
   offline, as in the CI.
+- `asciidoctor-kroki` stays on 0.18.x: 1.x and later require `@asciidoctor/core` 4, but Antora 3.2
+  ships core 2.2. npm installs both side by side without an error, and only the build fails
+  (`parent.applySubs is not a function`). `dependabot.yml` therefore ignores `asciidoctor-kroki`
+  `>=1.0.0`. When an Antora update brings `@asciidoctor/core` 4 (`npm ls @asciidoctor/core`), remove
+  the ignore rule and update `asciidoctor-kroki` together with Antora.
 - `personas/` and `domain-stories/` lie outside `modules/` and are deliberately not published.
 
 **Cross-references between modules.** Antora resolves `xref:` relative to the module's `pages/`
