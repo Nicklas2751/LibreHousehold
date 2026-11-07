@@ -7,6 +7,7 @@ import eu.wiegandt.librehousehold.household.repository.AccountRepository;
 import eu.wiegandt.librehousehold.household.repository.HouseholdRepository;
 import eu.wiegandt.librehousehold.household.repository.MemberRepository;
 import eu.wiegandt.librehousehold.household.service.AccountService;
+import eu.wiegandt.librehousehold.realtime.AsyncApiContract;
 import eu.wiegandt.librehousehold.realtime.SseTestClient;
 import eu.wiegandt.librehousehold.realtime.SseTestClient.SseEvent;
 import eu.wiegandt.librehousehold.realtime.model.InvalidationSignal;
@@ -37,6 +38,8 @@ import org.springframework.test.web.servlet.client.ExchangeResult;
 import org.springframework.test.web.servlet.client.RestTestClient;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.io.IOException;
 import java.net.URI;
@@ -46,6 +49,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -84,12 +88,16 @@ class HouseholdEventStreamIT {
     private static final String AUTHORIZATION_DENIED_FAILURE = "AuthorizationDeniedException";
     private static final String DISPATCH_FAILURE = "Servlet.service()";
     private static final String WARN_LEVEL = " WARN ";
+    private static final String ERROR_LEVEL = " ERROR ";
+    private static final String STACK_TRACE_LINE = "\tat ";
     // How long a stream that should stay open is watched; well below the 25-second heartbeat interval
     private static final Duration OPEN_STREAM_OBSERVATION = Duration.ofSeconds(1);
     private static final String FIND_LISTENER_IDS_OF_EVENT_SQL =
             "SELECT listener_id FROM event_publication WHERE serialized_event LIKE ?";
     private static final String NOTIFICATIONS_LISTENER = "HouseholdDeletedListener";
     private static final String REALTIME_LISTENER = "StreamLifecycleListener";
+    private static final TypeReference<Map<String, Object>> JSON_OBJECT = new TypeReference<>() {
+    };
 
     @LocalServerPort
     private int port;
@@ -123,6 +131,9 @@ class HouseholdEventStreamIT {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private JsonMapper jsonMapper;
 
     @Test
     void openStream_member_streamingResponseHead() throws Exception {
@@ -404,6 +415,50 @@ class HouseholdEventStreamIT {
         }
 
         @Test
+        void deleteHousehold_otherClientDisconnected_householdDeletedThenSessionTerminatedThenClosed()
+                throws Exception {
+            // given
+            var householdId = createHousehold();
+            var adminCookies = loggedInCookies(createVerifiedMember(householdId, true));
+            var memberCookies = loggedInCookies(createVerifiedMember(householdId, false));
+            var expected = new Ending(List.of(SignalType.HOUSEHOLD_DELETED.wireName(),
+                    SignalType.SESSION_TERMINATED.wireName()), true);
+
+            try (var adminStream = SseTestClient.open(streamUri(householdId), adminCookies)) {
+                adminStream.awaitEvent(EVENT_TIMEOUT);
+                disconnect(SseTestClient.open(streamUri(householdId), memberCookies));
+
+                // when
+                delete(adminCookies, BASE_PATH + "/household/" + householdId);
+
+                // then
+                assertThat(awaitEnding(adminStream)).isEqualTo(expected);
+            }
+        }
+
+        @Test
+        void deleteHousehold_otherClientDisconnected_noErrorLogged(CapturedOutput output) throws Exception {
+            // given
+            var householdId = createHousehold();
+            var adminCookies = loggedInCookies(createVerifiedMember(householdId, true));
+            var memberCookies = loggedInCookies(createVerifiedMember(householdId, false));
+
+            try (var adminStream = SseTestClient.open(streamUri(householdId), adminCookies)) {
+                adminStream.awaitEvent(EVENT_TIMEOUT);
+                disconnect(SseTestClient.open(streamUri(householdId), memberCookies));
+
+                // when
+                delete(adminCookies, BASE_PATH + "/household/" + householdId);
+                adminStream.awaitClosed(CLOSE_TIMEOUT);
+
+                // then
+                await().during(LOG_QUIET_PERIOD).atMost(LOG_QUIET_PERIOD.multipliedBy(2))
+                        .untilAsserted(() -> assertThat(output.getAll())
+                                .doesNotContain(ERROR_LEVEL, STACK_TRACE_LINE, DISPATCH_FAILURE));
+            }
+        }
+
+        @Test
         void deleteHousehold_openStream_publicationRecordedOnlyForRegistryListeners() throws Exception {
             // given
             var householdId = createHousehold();
@@ -422,6 +477,70 @@ class HouseholdEventStreamIT {
                         .anyMatch(listenerId -> listenerId.contains(NOTIFICATIONS_LISTENER))
                         .noneMatch(listenerId -> listenerId.contains(REALTIME_LISTENER));
             }
+        }
+    }
+
+    /**
+     * The bytes on the wire against {@code api/asyncapi.yml}: every {@code data:} is one line of JSON
+     * (RT6) with exactly the fields of the payload schema its message names (RT11). Covers the events
+     * R1 sends on its own and a change signal sent through the {@link SignalSender}.
+     */
+    @Nested
+    class contract {
+
+        @Test
+        void openStream_invalidationSignalSent_dataIsOneJsonLineWithContractFields() throws Exception {
+            // given
+            var member = createVerifiedMember(createHousehold());
+            var signal = new InvalidationSignal(SignalEntity.TASK,
+                    UUID.fromString("7c1e2d3f-4a5b-4c6d-8e9f-0a1b2c3d4e5f"), Instant.parse("2026-11-07T18:30:00Z"));
+            var expected = ContractConformance.conforming(SignalType.TASK_CREATED.wireName());
+
+            try (var stream = SseTestClient.open(streamUri(member.householdId()), loggedInCookies(member))) {
+                stream.awaitEvent(EVENT_TIMEOUT);
+
+                // when
+                signalSender.send(SignalType.TASK_CREATED, signal, streams.connectionsOf(member.householdId()));
+
+                // then
+                assertThat(conformanceOf(stream.awaitEvent(EVENT_TIMEOUT))).isEqualTo(expected);
+            }
+        }
+
+        @Test
+        void openStream_householdDeleted_everyDataIsOneJsonLineWithContractFields() throws Exception {
+            // given
+            var householdId = createHousehold();
+            var adminCookies = loggedInCookies(createVerifiedMember(householdId, true));
+            var expected = List.of(ContractConformance.conforming(SignalType.HOUSEHOLD_DELETED.wireName()),
+                    ContractConformance.conforming(SignalType.SESSION_TERMINATED.wireName()));
+
+            try (var stream = SseTestClient.open(streamUri(householdId), adminCookies)) {
+                stream.awaitEvent(EVENT_TIMEOUT);
+
+                // when
+                delete(adminCookies, BASE_PATH + "/household/" + householdId);
+                stream.awaitClosed(CLOSE_TIMEOUT);
+
+                // then
+                assertThat(stream.takeReceivedEvents().stream().map(HouseholdEventStreamIT.this::conformanceOf))
+                        .containsExactlyElementsOf(expected);
+            }
+        }
+    }
+
+    /**
+     * How one received event matches its message in {@code api/asyncapi.yml}.
+     *
+     * @param dataLines        the number of {@code data:} lines of the block
+     * @param missingFields    the {@code required} fields the payload lacks
+     * @param undeclaredFields the payload fields the schema does not allow
+     */
+    private record ContractConformance(@Nullable String eventName, long dataLines, Set<String> missingFields,
+                                       Set<String> undeclaredFields) {
+
+        static ContractConformance conforming(String eventName) {
+            return new ContractConformance(eventName, 1, Set.of(), Set.of());
         }
     }
 
@@ -459,9 +578,35 @@ class HouseholdEventStreamIT {
         streams.connectionsOf(householdId).stream().map(StreamConnection::emitter).forEach(SseEmitter::complete);
     }
 
+    // Waits for the first block, so the stream is registered, then drops the connection like a closed
+    // browser tab. The server only notices on its next write, so the connection is still registered when
+    // a broadcast runs, and writing to it fails with a broken pipe (RT12)
+    private void disconnect(SseTestClient stream) throws InterruptedException {
+        try (stream) {
+            stream.awaitEvent(EVENT_TIMEOUT);
+        }
+    }
+
     private Ending awaitEnding(SseTestClient stream) throws InterruptedException {
         var closed = stream.awaitClosed(CLOSE_TIMEOUT);
         return new Ending(stream.takeReceivedEvents().stream().map(SseEvent::name).toList(), closed);
+    }
+
+    // The parser joins several data: lines with a line feed, so counting lines recovers them
+    private ContractConformance conformanceOf(SseEvent event) {
+        var schema = AsyncApiContract.load().payloadOf(event.name());
+        var fields = jsonMapper.readValue(event.data(), JSON_OBJECT).keySet();
+        var undeclaredFields = schema.additionalProperties()
+                ? Set.<String>of()
+                : difference(fields, schema.properties());
+        return new ContractConformance(event.name(), event.data().lines().count(),
+                difference(schema.required(), fields), undeclaredFields);
+    }
+
+    private static Set<String> difference(Set<String> fields, Set<String> excluded) {
+        return fields.stream()
+                .filter(fieldName -> !excluded.contains(fieldName))
+                .collect(Collectors.toUnmodifiableSet());
     }
 
     private static String memberUri(MemberEntity member) {
