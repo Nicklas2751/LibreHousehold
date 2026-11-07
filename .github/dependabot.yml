@@ -35,3 +35,13 @@ updates:
       - "dependencies"
       - "npm"
     open-pull-requests-limit: 10
+    # These packages pin each other as peers, so a single-package bump fails to install.
+    groups:
+      vitest:
+        patterns:
+          - "vitest"
+          - "vitest-*"
+          - "@vitest/*"
+      sveltekit:
+        patterns:
+          - "@sveltejs/*"
