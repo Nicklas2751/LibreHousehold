@@ -15,7 +15,7 @@
 
 // tag::system-context-diagram[]
 .High Level System Context Diagram
-plantuml::{imagesdir}/system_context.puml[format=svg, alt="High Level System Context Diagram"]
+plantuml::{imagesdir}/system_context.puml[format=svg,alt="High Level System Context Diagram"]
 // end::system-context-diagram[]
 
 === User (Actor)
@@ -29,3 +29,8 @@ An administrator is a person who hosts an instance of the app and manages its co
 === E-Mail Server (External System)
 
 The E-Mail Server is an external system that handles sending e-mails for the app, such as notifications and invitations.
+
+=== Social Login Provider (External System)
+
+A Social Login Provider is an optional external system that authenticates users, so they can log in to the app with an existing account instead of a password.
+Examples are Google, GitHub, Microsoft, authentik or Dex.

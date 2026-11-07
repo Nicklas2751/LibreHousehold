@@ -14,20 +14,22 @@ package "Backend" {
     component "Tasks" <<core>> as tasks
     component "Expenses" <<core>> as expenses
     component "Statistics" <<supporting>> as statistics
-    component "Setup" <<supporting>> as setup
     component "Administration\n(planned)" <<supporting>> as administration
     component "UserSettings" <<generic>> as usersettings
-    component "Notifications\n(planned)" <<generic>> as notifications
+    component "Notifications" <<generic>> as notifications
 }
 
 tasks -> household : Named Interface\n(MemberQuery)
 expenses -> household : Named Interface\n(MemberQuery)
 statistics -> household : Named Interface\n(HouseholdQuery)
 statistics -> expenses : Named Interface\n(financial aggregation)
+statistics -> tasks : Named Interface\n(data aggregation)
 
 household ..> tasks : Domain Event\n(HouseholdDeleted, MemberRemoved)
 household ..> expenses : Domain Event\n(HouseholdDeleted, MemberRemoved)
-household ..> notifications : Domain Event\n(planned)
+household ..> notifications : Domain Event\n(AccountRegistered, VerificationEmailRequested,\nVerificationDeletionWarningRequested, PasswordResetRequested,\nHouseholdDeleted, MemberRemoved)
+notifications -> household : Named Interface\n(AccountTokenIssuer)
+notifications -> usersettings : Named Interface\n(PreferencesQuery)
 
 note bottom of household
   Household is the central reference point for membership.
