@@ -1,17 +1,8 @@
 name: Backend CI
 
+# Called by ci.yml, which decides whether the backend changed.
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'backend/**'
-      - 'api/openapi.yml'
-  pull_request:
-    types: [opened, synchronize, reopened]
-    paths:
-      - 'backend/**'
-      - 'api/openapi.yml'
+  workflow_call:
 
 defaults:
   run:
@@ -46,7 +37,6 @@ jobs:
             backend/target/site/jacoco/jacoco.xml
           retention-days: 1
 
-  # A job of its own because the "SonarCloud Analysis" check is required by the main branch ruleset.
   sonarcloud:
     name: SonarCloud Analysis
     runs-on: ubuntu-latest
