@@ -30,6 +30,8 @@ import java.util.UUID;
 @EnableConfigurationProperties(RealtimeProperties.class)
 class HouseholdEventStreamController {
 
+    static final String STREAM_PATH = "/household/{householdId}/events";
+
     // Keeps Nginx from buffering the stream, which would hold back every event (RT9)
     private static final String ACCEL_BUFFERING_HEADER = "X-Accel-Buffering";
     private static final String ACCEL_BUFFERING_OFF = "no";
@@ -44,10 +46,11 @@ class HouseholdEventStreamController {
 
     /**
      * The membership check runs before the emitter exists, so a non-member never gets a byte of the
-     * stream (RT1). Reads the session ID but writes nothing into the session, so opening a stream
-     * has no side effects (RT4, RT8).
+     * stream (RT1). The stream limits are checked after it and before the first byte, so a non-member
+     * cannot use up capacity, and a rejected stream gets a plain 429 (RT5). Reads the session ID but
+     * writes nothing into the session, so opening a stream has no side effects (RT4, RT8).
      */
-    @GetMapping(path = "/household/{householdId}/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @GetMapping(path = STREAM_PATH, produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     @PreAuthorize("@householdAccessGuard.isMember(#householdId, authentication)")
     ResponseEntity<SseEmitter> openStream(@PathVariable UUID householdId,
                                           @AuthenticationPrincipal AccountPrincipal principal,

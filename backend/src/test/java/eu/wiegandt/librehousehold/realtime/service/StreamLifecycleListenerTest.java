@@ -2,22 +2,26 @@ package eu.wiegandt.librehousehold.realtime.service;
 
 import eu.wiegandt.librehousehold.household.HouseholdDeleted;
 import eu.wiegandt.librehousehold.household.MemberRemoved;
+import eu.wiegandt.librehousehold.realtime.config.RealtimeProperties;
 import eu.wiegandt.librehousehold.realtime.model.CloseReason;
 import eu.wiegandt.librehousehold.realtime.model.InvalidationSignal;
 import eu.wiegandt.librehousehold.realtime.model.SignalEntity;
 import eu.wiegandt.librehousehold.realtime.model.StreamConnection;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.core.task.SyncTaskExecutor;
+import org.springframework.core.task.TaskExecutor;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.web.session.HttpSessionDestroyedEvent;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyEmitter.DataWithMediaType;
-import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter.SseEventBuilder;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -46,12 +50,12 @@ class StreamLifecycleListenerTest {
         @Test
         void connectionOfMember_sessionTerminatedThenCompleted() throws IOException {
             // given
-            var streams = new HouseholdEventStreams();
+            var streams = newStreams();
             var memberId = UUID.randomUUID();
             var emitter = mock(SseEmitter.class);
             var calls = recordCalls(emitter);
             streams.register(new StreamConnection(UUID.randomUUID(), memberId, "session", emitter));
-            var listener = new StreamLifecycleListener(streams, new SignalSender(new SyncTaskExecutor(), streams));
+            var listener = new StreamLifecycleListener(streams, newSender(new SyncTaskExecutor(), streams));
 
             // when
             listener.closeStreamsOfRemovedMember(
@@ -64,11 +68,11 @@ class StreamLifecycleListenerTest {
         @Test
         void connectionOfMember_removedFromRegistryWithReasonMemberRemoved() {
             // given
-            var streams = spy(new HouseholdEventStreams());
+            var streams = spy(newStreams());
             var memberId = UUID.randomUUID();
             var connection = new StreamConnection(UUID.randomUUID(), memberId, "session", mock(SseEmitter.class));
             streams.register(connection);
-            var listener = new StreamLifecycleListener(streams, new SignalSender(new SyncTaskExecutor(), streams));
+            var listener = new StreamLifecycleListener(streams, newSender(new SyncTaskExecutor(), streams));
 
             // when
             listener.closeStreamsOfRemovedMember(
@@ -81,11 +85,11 @@ class StreamLifecycleListenerTest {
         @Test
         void connectionOfOtherMember_untouched() {
             // given
-            var streams = new HouseholdEventStreams();
+            var streams = newStreams();
             var householdId = UUID.randomUUID();
             var otherEmitter = mock(SseEmitter.class);
             streams.register(new StreamConnection(householdId, UUID.randomUUID(), "session-other", otherEmitter));
-            var listener = new StreamLifecycleListener(streams, new SignalSender(new SyncTaskExecutor(), streams));
+            var listener = new StreamLifecycleListener(streams, newSender(new SyncTaskExecutor(), streams));
 
             // when
             listener.closeStreamsOfRemovedMember(
@@ -98,8 +102,8 @@ class StreamLifecycleListenerTest {
         @Test
         void noConnection_noException() {
             // given
-            var streams = new HouseholdEventStreams();
-            var listener = new StreamLifecycleListener(streams, new SignalSender(new SyncTaskExecutor(), streams));
+            var streams = newStreams();
+            var listener = new StreamLifecycleListener(streams, newSender(new SyncTaskExecutor(), streams));
 
             // when / then
             assertThatCode(() -> listener.closeStreamsOfRemovedMember(
@@ -115,13 +119,13 @@ class StreamLifecycleListenerTest {
         void connectionOfHouseholdAndReorderingExecutor_householdDeletedThenSessionTerminatedThenCompleted()
                 throws IOException {
             // given
-            var streams = new HouseholdEventStreams();
+            var streams = newStreams();
             var pendingTasks = new ArrayList<Runnable>();
             var householdId = UUID.randomUUID();
             var emitter = mock(SseEmitter.class);
             var calls = recordCalls(emitter);
             streams.register(new StreamConnection(householdId, UUID.randomUUID(), "session", emitter));
-            var listener = new StreamLifecycleListener(streams, new SignalSender(pendingTasks::add, streams));
+            var listener = new StreamLifecycleListener(streams, newSender(pendingTasks::add, streams));
 
             // when
             listener.closeStreamsOfDeletedHousehold(new HouseholdDeleted(householdId, HOUSEHOLD_NAME, List.of()));
@@ -134,11 +138,11 @@ class StreamLifecycleListenerTest {
         @Test
         void connectionOfHousehold_householdDeletedReferencesTheHousehold() throws IOException {
             // given
-            var streams = new HouseholdEventStreams();
+            var streams = newStreams();
             var householdId = UUID.randomUUID();
             var emitter = mock(SseEmitter.class);
             streams.register(new StreamConnection(householdId, UUID.randomUUID(), "session", emitter));
-            var listener = new StreamLifecycleListener(streams, new SignalSender(new SyncTaskExecutor(), streams));
+            var listener = new StreamLifecycleListener(streams, newSender(new SyncTaskExecutor(), streams));
             var expected = new InvalidationSignal(SignalEntity.HOUSEHOLD, householdId, null);
 
             // when
@@ -154,11 +158,11 @@ class StreamLifecycleListenerTest {
         @Test
         void connectionOfHousehold_removedFromRegistryWithReasonHouseholdDeleted() {
             // given
-            var streams = spy(new HouseholdEventStreams());
+            var streams = spy(newStreams());
             var householdId = UUID.randomUUID();
             var connection = new StreamConnection(householdId, UUID.randomUUID(), "session", mock(SseEmitter.class));
             streams.register(connection);
-            var listener = new StreamLifecycleListener(streams, new SignalSender(new SyncTaskExecutor(), streams));
+            var listener = new StreamLifecycleListener(streams, newSender(new SyncTaskExecutor(), streams));
 
             // when
             listener.closeStreamsOfDeletedHousehold(new HouseholdDeleted(householdId, HOUSEHOLD_NAME, List.of()));
@@ -170,10 +174,10 @@ class StreamLifecycleListenerTest {
         @Test
         void connectionOfOtherHousehold_untouched() {
             // given
-            var streams = new HouseholdEventStreams();
+            var streams = newStreams();
             var otherEmitter = mock(SseEmitter.class);
             streams.register(new StreamConnection(UUID.randomUUID(), UUID.randomUUID(), "session", otherEmitter));
-            var listener = new StreamLifecycleListener(streams, new SignalSender(new SyncTaskExecutor(), streams));
+            var listener = new StreamLifecycleListener(streams, newSender(new SyncTaskExecutor(), streams));
 
             // when
             listener.closeStreamsOfDeletedHousehold(
@@ -186,8 +190,8 @@ class StreamLifecycleListenerTest {
         @Test
         void noConnection_noException() {
             // given
-            var streams = new HouseholdEventStreams();
-            var listener = new StreamLifecycleListener(streams, new SignalSender(new SyncTaskExecutor(), streams));
+            var streams = newStreams();
+            var listener = new StreamLifecycleListener(streams, newSender(new SyncTaskExecutor(), streams));
 
             // when / then
             assertThatCode(() -> listener.closeStreamsOfDeletedHousehold(
@@ -202,10 +206,10 @@ class StreamLifecycleListenerTest {
         @Test
         void connectionOfSession_completedWithoutEvent() {
             // given
-            var streams = new HouseholdEventStreams();
+            var streams = newStreams();
             var emitter = mock(SseEmitter.class);
             streams.register(new StreamConnection(UUID.randomUUID(), UUID.randomUUID(), "session", emitter));
-            var listener = new StreamLifecycleListener(streams, new SignalSender(new SyncTaskExecutor(), streams));
+            var listener = new StreamLifecycleListener(streams, newSender(new SyncTaskExecutor(), streams));
 
             // when
             listener.closeStreamsOfEndedSession(new HttpSessionDestroyedEvent(new MockHttpSession(null, "session")));
@@ -218,11 +222,11 @@ class StreamLifecycleListenerTest {
         @Test
         void connectionOfSession_removedFromRegistryWithReasonSessionEnded() {
             // given
-            var streams = spy(new HouseholdEventStreams());
+            var streams = spy(newStreams());
             var connection = new StreamConnection(UUID.randomUUID(), UUID.randomUUID(), "session",
                     mock(SseEmitter.class));
             streams.register(connection);
-            var listener = new StreamLifecycleListener(streams, new SignalSender(new SyncTaskExecutor(), streams));
+            var listener = new StreamLifecycleListener(streams, newSender(new SyncTaskExecutor(), streams));
 
             // when
             listener.closeStreamsOfEndedSession(new HttpSessionDestroyedEvent(new MockHttpSession(null, "session")));
@@ -234,11 +238,11 @@ class StreamLifecycleListenerTest {
         @Test
         void connectionOfOtherSession_untouched() {
             // given
-            var streams = new HouseholdEventStreams();
+            var streams = newStreams();
             var otherEmitter = mock(SseEmitter.class);
             streams.register(new StreamConnection(UUID.randomUUID(), UUID.randomUUID(), "session-other",
                     otherEmitter));
-            var listener = new StreamLifecycleListener(streams, new SignalSender(new SyncTaskExecutor(), streams));
+            var listener = new StreamLifecycleListener(streams, newSender(new SyncTaskExecutor(), streams));
 
             // when
             listener.closeStreamsOfEndedSession(new HttpSessionDestroyedEvent(new MockHttpSession(null, "session")));
@@ -250,8 +254,8 @@ class StreamLifecycleListenerTest {
         @Test
         void noConnection_noException() {
             // given
-            var streams = new HouseholdEventStreams();
-            var listener = new StreamLifecycleListener(streams, new SignalSender(new SyncTaskExecutor(), streams));
+            var streams = newStreams();
+            var listener = new StreamLifecycleListener(streams, newSender(new SyncTaskExecutor(), streams));
 
             // when / then
             assertThatCode(() -> listener.closeStreamsOfEndedSession(
@@ -287,5 +291,15 @@ class StreamLifecycleListenerTest {
                 .filter(part -> !MediaType.APPLICATION_JSON.equals(part.getMediaType()))
                 .map(part -> String.valueOf(part.getData()))
                 .collect(Collectors.joining());
+    }
+
+    // The defaults of application.yaml; only the limit tests of HouseholdEventStreamsTest need others
+    private HouseholdEventStreams newStreams() {
+        return new HouseholdEventStreams(new RealtimeProperties(Duration.ofSeconds(5), Duration.ofMinutes(25), 5, 10,
+                500, Duration.ofSeconds(30)), new StreamMetrics(new SimpleMeterRegistry()));
+    }
+
+    private SignalSender newSender(TaskExecutor executor, HouseholdEventStreams streams) {
+        return new SignalSender(executor, streams, new StreamMetrics(new SimpleMeterRegistry()));
     }
 }

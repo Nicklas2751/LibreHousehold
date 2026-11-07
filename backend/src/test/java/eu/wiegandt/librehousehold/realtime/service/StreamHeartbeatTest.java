@@ -1,7 +1,9 @@
 package eu.wiegandt.librehousehold.realtime.service;
 
+import eu.wiegandt.librehousehold.realtime.config.RealtimeProperties;
 import eu.wiegandt.librehousehold.realtime.model.CloseReason;
 import eu.wiegandt.librehousehold.realtime.model.StreamConnection;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -12,12 +14,14 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.task.SyncTaskExecutor;
+import org.springframework.core.task.TaskExecutor;
 import org.springframework.security.core.session.SessionInformation;
 import org.springframework.security.core.session.SessionRegistry;
-import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter.SseEventBuilder;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
 import java.util.List;
@@ -54,14 +58,14 @@ class StreamHeartbeatTest {
         @Test
         void validSession_heartbeatCommentSent() throws IOException {
             // given
-            var streams = new HouseholdEventStreams();
+            var streams = newStreams();
             var emitter = mock(SseEmitter.class);
             streams.register(new StreamConnection(UUID.randomUUID(), UUID.randomUUID(), "session", emitter));
             doReturn(new SessionInformation(PRINCIPAL, "session", new Date())).when(sessionRegistry)
                     .getSessionInformation("session");
 
             // when
-            new StreamHeartbeat(streams, new SignalSender(new SyncTaskExecutor(), streams), sessionRegistry).tick();
+            new StreamHeartbeat(streams, newSender(new SyncTaskExecutor(), streams), sessionRegistry).tick();
 
             // then
             var event = ArgumentCaptor.forClass(SseEventBuilder.class);
@@ -73,14 +77,14 @@ class StreamHeartbeatTest {
         @MethodSource("endedSessions")
         void endedSession_connectionRemovedWithReason(SessionInformation session, CloseReason expectedReason) {
             // given
-            var streams = spy(new HouseholdEventStreams());
+            var streams = spy(newStreams());
             var connection = new StreamConnection(UUID.randomUUID(), UUID.randomUUID(), "session",
                     mock(SseEmitter.class));
             streams.register(connection);
             doReturn(session).when(sessionRegistry).getSessionInformation("session");
 
             // when
-            new StreamHeartbeat(streams, new SignalSender(new SyncTaskExecutor(), streams), sessionRegistry).tick();
+            new StreamHeartbeat(streams, newSender(new SyncTaskExecutor(), streams), sessionRegistry).tick();
 
             // then
             verify(streams).remove(connection, expectedReason);
@@ -90,13 +94,13 @@ class StreamHeartbeatTest {
         @MethodSource("endedSessions")
         void endedSession_streamCompletedWithoutEvent(SessionInformation session, CloseReason ignoredReason) {
             // given
-            var streams = new HouseholdEventStreams();
+            var streams = newStreams();
             var emitter = mock(SseEmitter.class);
             streams.register(new StreamConnection(UUID.randomUUID(), UUID.randomUUID(), "session", emitter));
             doReturn(session).when(sessionRegistry).getSessionInformation("session");
 
             // when
-            new StreamHeartbeat(streams, new SignalSender(new SyncTaskExecutor(), streams), sessionRegistry).tick();
+            new StreamHeartbeat(streams, newSender(new SyncTaskExecutor(), streams), sessionRegistry).tick();
 
             // then
             verify(emitter).complete();
@@ -106,7 +110,7 @@ class StreamHeartbeatTest {
         @Test
         void oneConnectionFails_otherConnectionStillReceivesHeartbeat() throws IOException {
             // given
-            var streams = new HouseholdEventStreams();
+            var streams = newStreams();
             var householdId = UUID.randomUUID();
             var failingEmitter = mock(SseEmitter.class);
             var healthyEmitter = mock(SseEmitter.class);
@@ -119,7 +123,7 @@ class StreamHeartbeatTest {
                     .getSessionInformation("session-b");
 
             // when
-            new StreamHeartbeat(streams, new SignalSender(new SyncTaskExecutor(), streams), sessionRegistry).tick();
+            new StreamHeartbeat(streams, newSender(new SyncTaskExecutor(), streams), sessionRegistry).tick();
 
             // then
             verify(healthyEmitter).send(any(SseEventBuilder.class));
@@ -128,7 +132,7 @@ class StreamHeartbeatTest {
         @Test
         void validSession_lastRequestOfSessionUnchanged() {
             // given
-            var streams = new HouseholdEventStreams();
+            var streams = newStreams();
             streams.register(new StreamConnection(UUID.randomUUID(), UUID.randomUUID(), "session",
                     mock(SseEmitter.class)));
             var lastRequest = Date.from(Instant.parse("2026-11-07T18:00:00Z"));
@@ -136,7 +140,7 @@ class StreamHeartbeatTest {
             doReturn(session).when(sessionRegistry).getSessionInformation("session");
 
             // when
-            new StreamHeartbeat(streams, new SignalSender(new SyncTaskExecutor(), streams), sessionRegistry).tick();
+            new StreamHeartbeat(streams, newSender(new SyncTaskExecutor(), streams), sessionRegistry).tick();
 
             // then
             assertThat(session.getLastRequest()).isEqualTo(lastRequest);
@@ -153,5 +157,15 @@ class StreamHeartbeatTest {
         return event.build().stream()
                 .map(part -> String.valueOf(part.getData()))
                 .collect(Collectors.joining());
+    }
+
+    // The defaults of application.yaml; only the limit tests of HouseholdEventStreamsTest need others
+    private HouseholdEventStreams newStreams() {
+        return new HouseholdEventStreams(new RealtimeProperties(Duration.ofSeconds(5), Duration.ofMinutes(25), 5, 10,
+                500, Duration.ofSeconds(30)), new StreamMetrics(new SimpleMeterRegistry()));
+    }
+
+    private SignalSender newSender(TaskExecutor executor, HouseholdEventStreams streams) {
+        return new SignalSender(executor, streams, new StreamMetrics(new SimpleMeterRegistry()));
     }
 }
