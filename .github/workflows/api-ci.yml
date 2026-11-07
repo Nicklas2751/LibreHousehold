@@ -1,0 +1,35 @@
+name: API CI
+
+# Called by ci.yml, which decides whether the API contracts changed. Lints the OpenAPI specification
+# of the REST API with Spectral and validates the AsyncAPI specification of the realtime event stream
+# (ADR 019).
+on:
+  workflow_call:
+
+defaults:
+  run:
+    working-directory: api
+
+jobs:
+  validate:
+    name: Lint and validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: api/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint OpenAPI specification
+        run: npm run lint:openapi
+
+      - name: Validate AsyncAPI specification
+        run: npm run validate:asyncapi

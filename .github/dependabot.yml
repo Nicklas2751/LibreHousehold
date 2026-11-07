@@ -46,6 +46,18 @@ updates:
         patterns:
           - "@sveltejs/*"
 
+  # AsyncAPI CLI validating the realtime event contract
+  - package-ecosystem: "npm"
+    directory: "/api"
+    schedule:
+      interval: "daily"
+    cooldown:
+      default-days: 5
+    labels:
+      - "dependencies"
+      - "npm"
+    open-pull-requests-limit: 5
+
   # documentation site generator (Antora) and its extensions
   - package-ecosystem: "npm"
     directory: "/docs"

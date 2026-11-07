@@ -1659,7 +1659,7 @@ paths:
             The login is refused although the credentials may be right: the e-mail address is not
             verified yet (/problems/email-not-verified), this instance only allows social login
             (/problems/local-login-disabled), or the account is temporarily locked after repeated
-            failed attempts (/problems/account-locked, see AccountLockedProblem and Retry-After).
+            failed attempts (/problems/account-locked, with lockedUntil and Retry-After).
           headers:
             Retry-After:
               description: Only for /problems/account-locked. Seconds until the lock ends.
@@ -1669,8 +1669,10 @@ paths:
           content:
             application/problem+json:
               schema:
-                # /problems/account-locked additionally carries lockedUntil, see AccountLockedProblem
-                $ref: '#/components/schemas/Problem'
+                # anyOf, not oneOf: every AccountLockedProblem is a valid Problem as well
+                anyOf:
+                  - $ref: '#/components/schemas/Problem'
+                  - $ref: '#/components/schemas/AccountLockedProblem'
               examples:
                 emailNotVerified:
                   value:
@@ -1725,6 +1727,8 @@ paths:
       tags:
         - session
       operationId: logout
+      # No session needed, see the description; the XSRF-TOKEN is still required
+      security: []
       responses:
         "204":
           description: Session ended.
@@ -3195,7 +3199,12 @@ components:
     sessionCookie:
       type: apiKey
       in: cookie
-      name: SESSION
+      name: JSESSIONID
       description: >
-        Session cookie required for authenticated requests. State-changing
-        requests additionally require a matching `X-XSRF-TOKEN` header.
+        Session cookie of the backend-for-frontend (ADR-014), required for authenticated requests.
+        It is set by login, household setup, invite join and the social login callback; it is
+        httpOnly, Secure and SameSite=Lax, so it is never readable by JavaScript and the browser
+        sends it automatically on same-origin requests. The name follows the servlet container
+        default and can be changed with `server.servlet.session.cookie.name`. State-changing
+        requests additionally require the value of the `XSRF-TOKEN` cookie in the `X-XSRF-TOKEN`
+        header.

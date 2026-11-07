@@ -92,6 +92,22 @@ cd backend
 ```
 This regenerates the API interfaces and models into `backend/target/generated-sources/openapi`. **Do not edit these generated Java files manually.**
 
+**Validating the specs:**
+Both specs are checked from `api/` (Node 24; `@asyncapi/cli` requires >= 24.11):
+```bash
+cd api
+npm ci
+npm run validate            # both of the following
+npm run lint:openapi        # Spectral, ruleset api/.spectral.yaml (spectral:oas); warnings fail
+npm run validate:asyncapi   # AsyncAPI CLI; even infos fail
+```
+The CI job `API` (`api-ci.yml`, called from `ci.yml`) runs both whenever `api/openapi.yml`, `api/asyncapi.yml` or the tooling changes.
+
+**Realtime event stream (AsyncAPI):**
+The SSE stream `GET /v1/household/{householdId}/events` (ADR-019) is described only in `api/asyncapi.yml`, not in `openapi.yml`. Change the event contract there first, then the code. No code is generated from the spec; payload types in frontend and backend are handwritten and reviewed against it. `validate:asyncapi` points `ASYNCAPI_METRICS_CONFIG_PATH` to the checked-in `api/asyncapi-analytics.json`, because the AsyncAPI CLI otherwise sends anonymous usage metrics on every local run and writes `~/.asyncapi-analytics` (it skips them only when `CI=true`). Run the CLI through `npm run`, not through a bare `npx asyncapi`.
+
+**mokapi loads every file in `api/`** (`--Providers.File.Directory`). `api/.mokapiignore` keeps it to `openapi.yml` and `mokapi.js`: without it, mokapi executes scripts from `api/node_modules`, starts the servers of `asyncapi.yml` as Kafka brokers (one on its own port 8080) and crashes. Every new non-mock file in `api/` belongs in `.mokapiignore`.
+
 ### Testing & Quality
 
 **Frontend (`frontend/`):**
@@ -299,7 +315,7 @@ export const functionName = async (
 
 ### OpenAPI Development
 
-- Validate OpenAPI changes before committing.
+- Validate OpenAPI changes before committing (`npm run lint:openapi` in `api/`).
 - Ensure all new schemas and properties have `example` values.
 - Use `PATCH` for partial resource updates, with the request body containing the fields to update.
 - Follow REST best practices: the path identifies the resource, the body contains the changes.

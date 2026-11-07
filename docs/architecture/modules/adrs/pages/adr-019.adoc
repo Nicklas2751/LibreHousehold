@@ -1,0 +1,114 @@
+[[adr-019]]
+= ADR 019: Realtime Updates via Server-Sent Events (Notify, then Refetch)
+
+== Context
+
+When one member of a household changes something - creates a task, records an expense, joins the household - the other members only see it after reloading. The app should show these changes to every member without a reload.
+
+The solution has to fit the existing architecture:
+
+- Writes go through the REST API, defined first in `api/openapi.yml` (xref:adr-010.adoc[ADR 010]).
+- Authentication is session-based with an httpOnly cookie; no token ever reaches JavaScript (xref:adr-013.adoc[ADR 013], xref:adr-014.adoc[ADR 014]). Access to a household is checked per request by `HouseholdAccessGuard`.
+- An account belongs to exactly one household (xref:adr-012.adoc[ADR 012]), so one connection always concerns exactly one household.
+- The backend is a Spring MVC modular monolith (xref:adr-004.adoc[ADR 004]). Sessions, the `SessionRegistry` and the rate limiter live in process memory, so the system effectively runs as a single instance.
+- Self-hosting must stay simple (xref:arc42:01_introduction_and_goals.adoc#QG3[QG3]), the code understandable for contributors (xref:arc42:01_introduction_and_goals.adoc#QG4[QG4]), and household data confidential (xref:arc42:01_introduction_and_goals.adoc#QG2[QG2]).
+- Households are small (2-10 people) and changes are rare.
+
+Two properties of the existing session handling shape the solution. First, ending a session via `SessionInformation.expireNow()` (member removed, household deleted, password reset) does not destroy it; only the next request is rejected. A long-running stream makes no next request. Second, an open browser tab is no user activity: a stream must not keep a session alive beyond its inactivity timeout.
+
+== Considered Options
+
+Option A: Polling or refetch on focus; Option B: Server-Sent Events (SSE) as an invalidation channel; Option C: WebSocket (raw or STOMP); Option D: External realtime hub (Mercure, Centrifugo); Option E: Local-first sync engine (PowerSync, Electric, Zero)
+
+== Decision Outcome
+
+Option B: the backend pushes thin change signals over SSE, and the client reloads the affected data through the REST API ("notify, then refetch").
+
+*Transport and channel.* `GET /v1/household/\{householdId}/events` returns `text/event-stream`, implemented with Spring MVC's `SseEmitter`. The channel is the household. The `householdId` in the path is checked with `@PreAuthorize` and `HouseholdAccessGuard.isMember` before the first byte is sent, exactly like every REST endpoint. Writes stay REST.
+
+*Thin events.* An event consists of a type from a fixed set (SSE field `event:`, e.g. `task.created`) and the payload `{entity, entityId, occurredAt}` (SSE field `data:`). It carries no business data, no household ID (the channel is the household) and no actor. Authorization therefore stays in one place, the REST endpoints, and the stream cannot leak data the receiver could not read anyway. Derived data such as balances and statistics is reloaded through its own endpoints; there is no separate event for it.
+
+*Contract.* The stream is described in `api/asyncapi.yml` (AsyncAPI 3.1), the single source of truth for it, analogous to `api/openapi.yml` for REST. The endpoint is not duplicated in `openapi.yml`. The AsyncAPI CLI validates the specification locally and in CI. No code is generated: the payloads are one flat schema and a fixed list of event names, which handwritten code reviewed against the specification covers. Code-first tooling that derives AsyncAPI from code is ruled out, as it contradicts API first.
+
+*No replay.* The server keeps no event buffer and ignores `Last-Event-ID`. On every open of the stream (first connect and every reconnect) and when the app becomes visible again, the client reloads its active data. This also covers mobile browsers that kill background connections without reporting an error.
+
+*Lifetime.* A stream never outlives its session or its membership. The emitter remembers its session; every heartbeat checks whether the session is still valid and not expired in the `SessionRegistry`, which covers logout, timeout and every `expireNow()` path. Removing a member or deleting the household closes the affected streams immediately. The stream does not extend the session: the server does not touch the session while streaming, and the client closes the stream when the user has been idle for nearly the session timeout. As a consequence, an unattended device stops showing live changes once its session has expired.
+
+*Module.* A new module `realtime` maps the public domain events of `tasks`, `expenses` and `household` to stream signals and sends them to the open streams of the household. The business modules know nothing about it, and no module references `realtime`. Its allowed dependencies are declared in its `package-info.java` from the start. The module `session` (the pre-redirect session endpoint of xref:adr-017.adoc[ADR 017]) is unrelated and stays separate. The empty package `events` is removed, so it cannot be confused with `realtime`.
+
+*Listener semantics - a deliberate deviation from xref:adr-011.adoc[ADR 011].* `realtime` listens with a synchronous `@TransactionalEventListener(phase = AFTER_COMMIT)` instead of `@ApplicationModuleListener`, and its listeners create no entry in the Event Publication Registry. ADR 011 chose `@ApplicationModuleListener` for its at-least-once delivery, which a change signal does not need: a signal lost by a restart is made good by the resync every client performs on reconnect, and replaying a signal after a restart reaches no client that missed it. By default, Spring Modulith 2.1.2 records a publication for _every_ `AFTER_COMMIT` transactional listener, not only for `@ApplicationModuleListener`. The backend therefore sets `spring.modulith.events.registry-trigger-annotation` to `org.springframework.modulith.events.ApplicationModuleListener`. All existing listeners that need the registry already use this annotation, so their behavior does not change. Like every `AFTER_COMMIT` listener, the publishing method must run inside a transaction, otherwise Spring silently skips the listener.
+
+*Out of scope.* Notifications while the app is closed (Web Push) are a different feature. Offline-first and sync engines (Option E) need their own decision; this decision does not rule them out, as the event contract is independent of the transport.
+
+== Pros and Cons of the Options
+
+.Overview of the pros and cons of the considered options
+[cols="2a,2a"]
+|===
+|Pros |Cons
+
+2+^s|Option A: Polling or refetch on focus
+|
+- Trivial, no new infrastructure
+- Robust on mobile devices
+|
+- Not immediate: the latency equals the polling interval
+- Needless load that grows as the interval shrinks
+
+2+^s|Option B: SSE as an invalidation channel (chosen)
+|
+- Plain HTTP: session cookie, Spring Security, `HouseholdAccessGuard`, reverse proxy and observability work as for any endpoint
+- Writes stay in OpenAPI, CSRF protection and the generated client
+- No new dependency in the backend (`SseEmitter` is part of Spring MVC), no new container
+- Built-in reconnect in the browser's `EventSource`
+|
+- Server to client only, text only - sufficient here
+- `EventSource` exposes no HTTP status; the client has to ask `/me` after an error
+- Dead connections are only noticed on the next write, so a heartbeat is needed
+- More than about six tabs per browser need HTTP/2 at the reverse proxy
+
+2+^s|Option C: WebSocket (raw or STOMP)
+|
+- Bidirectional with low latency
+- STOMP brings topics, heartbeats and a broker relay
+|
+- A second protocol path next to REST: security on message level, CSRF on CONNECT, origin checks against cross-site WebSocket hijacking
+- New dependency and more concepts for contributors, although writes already use REST
+- Only pays off for live collaboration, presence or chat, none of which is planned
+
+2+^s|Option D: External realtime hub (Mercure, Centrifugo)
+|
+- History, replay, presence and horizontal scaling are solved
+|
+- An additional container to operate, against QG3
+- The hub needs its own subscriber tokens in the browser, against xref:adr-014.adoc[ADR 014]
+- Oversized for households of 2-10 people
+
+2+^s|Option E: Local-first sync engine (PowerSync, Electric, Zero)
+|
+- Solves realtime and offline-first at once
+|
+- Bypasses the API-first layer for reads (xref:adr-010.adoc[ADR 010]) and needs authorization rules next to Spring Security
+- An additional sync service and a strong dependency on one vendor
+- A fundamental architecture change that belongs in its own decision
+
+|===
+
+== Consequences
+
+**Negative:**
+
+- Every change costs one REST request per receiving client. Negligible at household size.
+- The backend can only run as a single instance, because the open streams live in process memory like sessions and rate limits. Fanning out across instances (e.g. via PostgreSQL `LISTEN/NOTIFY`) is only worth it once sessions and rate limiting are clustered too.
+- `realtime` deviates from xref:adr-011.adoc[ADR 011]: its listeners run synchronously in the publishing thread after the commit and have no delivery guarantee. Sending to the streams must therefore never throw into the publisher and must not block it on a slow client.
+- The reverse proxy needs streaming-specific settings (no buffering, a read timeout above the heartbeat interval, HTTP/2).
+- An unattended device (e.g. a wall tablet) stops showing live changes after its session has expired.
+- A new npm dependency (`@asyncapi/cli`) in `api/` for validation.
+
+**Positive:**
+
+- Authorization stays in the REST endpoints only; the stream cannot leak data.
+- No new backend dependency and no new container; the deployment stays as simple as before (QG3).
+- The contract is described API first and validated in CI, like the REST API.
+- Business modules stay unaware of realtime; adding a new event type only touches `realtime`, the contract and the client.
+- Transport and contract are independent: WebSocket, replay or a sync engine remain possible later.

@@ -1,0 +1,462 @@
+asyncapi: 3.1.0
+info:
+  title: LibreHousehold Realtime Events
+  version: 1.0.0
+  description: |
+    Server-Sent Events (SSE) stream that tells every member of a household that something in the
+    household changed (ADR 019). This spec is the single source of truth for the stream; the endpoint
+    is deliberately not described in `openapi.yml` as well.
+
+    **Notify, then refetch.** Every event is a thin invalidation signal without business data. The
+    client reloads the affected resource through the REST API (`openapi.yml`), so authorization and
+    data shaping stay in the REST endpoints only. Writes never go through the stream.
+
+    **Wire format.** Each message is sent as one SSE event:
+
+    - `event:` carries the message `name` (e.g. `task.created`). The set of names is fixed.
+    - `data:` carries the payload as single-line JSON.
+    - `retry:` is sent by the server to set the reconnect delay of `EventSource`.
+    - Heartbeats are SSE comment lines (`: heartbeat`) sent about every 25 seconds. They carry no
+      event and keep proxies from closing an idle connection.
+
+    **Resync.** There is no replay: the server keeps no event buffer and ignores `Last-Event-ID`.
+    On every `open` of the stream (first connect and every reconnect), the client reloads all active
+    stores, because events sent while the connection was down are lost.
+
+    **Lifetime.** The stream never outlives the session or the membership it was opened with. It
+    ends after logout, session expiry, an expired session (e.g. password reset) or when the member
+    is removed or the household deleted. An open stream does not count as user activity and does
+    not extend the session.
+  contact:
+    name: LibreHousehold Maintainer Nicklas Wiegandt
+    url: https://nicklas.wiegandt.eu
+    email: nicklas+librehousehold@wiegandt.eu
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+servers:
+  mokapi:
+    host: localhost
+    protocol: http
+    description: Local development mokapi server
+  local:
+    host: localhost:8080
+    pathname: /v1
+    protocol: http
+    description: Local started backend server
+    security:
+      - $ref: '#/components/securitySchemes/sessionCookie'
+channels:
+  householdEvents:
+    address: /household/{householdId}/events
+    title: Household events
+    summary: Change signals for one household.
+    description: |
+      One channel per household. Because an account belongs to exactly one household (ADR 012),
+      a client opens exactly one stream. The `householdId` in the path is checked against the
+      authenticated member before the first byte is sent.
+    parameters:
+      householdId:
+        description: The ID of the household whose changes are streamed (UUID).
+        examples:
+          - 0b9f3c4e-2f6a-4c1d-9a7e-3b8d5e2f1a90
+    messages:
+      taskCreated:
+        $ref: '#/components/messages/taskCreated'
+      taskUpdated:
+        $ref: '#/components/messages/taskUpdated'
+      taskDeleted:
+        $ref: '#/components/messages/taskDeleted'
+      taskDone:
+        $ref: '#/components/messages/taskDone'
+      expenseCreated:
+        $ref: '#/components/messages/expenseCreated'
+      expenseUpdated:
+        $ref: '#/components/messages/expenseUpdated'
+      expenseDeleted:
+        $ref: '#/components/messages/expenseDeleted'
+      reimbursementCreated:
+        $ref: '#/components/messages/reimbursementCreated'
+      reimbursementUpdated:
+        $ref: '#/components/messages/reimbursementUpdated'
+      reimbursementDeleted:
+        $ref: '#/components/messages/reimbursementDeleted'
+      categoryCreated:
+        $ref: '#/components/messages/categoryCreated'
+      categoryUpdated:
+        $ref: '#/components/messages/categoryUpdated'
+      categoryDeleted:
+        $ref: '#/components/messages/categoryDeleted'
+      memberJoined:
+        $ref: '#/components/messages/memberJoined'
+      memberUpdated:
+        $ref: '#/components/messages/memberUpdated'
+      memberRemoved:
+        $ref: '#/components/messages/memberRemoved'
+      householdUpdated:
+        $ref: '#/components/messages/householdUpdated'
+      householdDeleted:
+        $ref: '#/components/messages/householdDeleted'
+      sessionTerminated:
+        $ref: '#/components/messages/sessionTerminated'
+operations:
+  receiveHouseholdEvents:
+    action: receive
+    channel:
+      $ref: '#/channels/householdEvents'
+    title: Receive household events
+    summary: Opens the event stream of a household (server to client only).
+    description: |
+      `GET /v1/household/{householdId}/events` with `Accept: text/event-stream`. The response has
+      `Content-Type: text/event-stream`, `Cache-Control: no-store` and `X-Accel-Buffering: no`.
+      The request has no side effects.
+
+      Errors while opening the stream are plain HTTP responses, no stream is opened:
+
+      - `401 Unauthorized`: no valid session. Never a redirect to the login page.
+      - `403 Forbidden`: the authenticated member does not belong to the household in the path.
+      - `429 Too Many Requests` with `Retry-After`: too many open streams for the session, the
+        member or the server.
+
+      The body is a `ProblemDetail` (`application/problem+json`) if the client accepts it; without
+      internal details in either case. `EventSource` does not expose the status code: on `error`
+      with `readyState === CLOSED` the client calls `GET /v1/me` to find out whether the session is
+      still valid.
+    security:
+      - $ref: '#/components/securitySchemes/sessionCookie'
+    bindings:
+      http:
+        method: GET
+        bindingVersion: 0.3.0
+    messages:
+      - $ref: '#/channels/householdEvents/messages/taskCreated'
+      - $ref: '#/channels/householdEvents/messages/taskUpdated'
+      - $ref: '#/channels/householdEvents/messages/taskDeleted'
+      - $ref: '#/channels/householdEvents/messages/taskDone'
+      - $ref: '#/channels/householdEvents/messages/expenseCreated'
+      - $ref: '#/channels/householdEvents/messages/expenseUpdated'
+      - $ref: '#/channels/householdEvents/messages/expenseDeleted'
+      - $ref: '#/channels/householdEvents/messages/reimbursementCreated'
+      - $ref: '#/channels/householdEvents/messages/reimbursementUpdated'
+      - $ref: '#/channels/householdEvents/messages/reimbursementDeleted'
+      - $ref: '#/channels/householdEvents/messages/categoryCreated'
+      - $ref: '#/channels/householdEvents/messages/categoryUpdated'
+      - $ref: '#/channels/householdEvents/messages/categoryDeleted'
+      - $ref: '#/channels/householdEvents/messages/memberJoined'
+      - $ref: '#/channels/householdEvents/messages/memberUpdated'
+      - $ref: '#/channels/householdEvents/messages/memberRemoved'
+      - $ref: '#/channels/householdEvents/messages/householdUpdated'
+      - $ref: '#/channels/householdEvents/messages/householdDeleted'
+      - $ref: '#/channels/householdEvents/messages/sessionTerminated'
+components:
+  securitySchemes:
+    sessionCookie:
+      type: httpApiKey
+      in: cookie
+      name: JSESSIONID
+      description: |
+        The httpOnly session cookie of the BFF (ADR 014). `EventSource` sends it automatically on
+        same-origin requests; no token is handled in JavaScript.
+  schemas:
+    InvalidationSignal:
+      type: object
+      description: |
+        Says that an entity of the household changed. Contains no business data: the client
+        reloads the entity through the REST API.
+      additionalProperties: false
+      required:
+        - entity
+        - entityId
+        - occurredAt
+      properties:
+        entity:
+          $ref: '#/components/schemas/Entity'
+        entityId:
+          type: string
+          format: uuid
+          description: The ID of the changed entity, as used in the REST API.
+          examples:
+            - 7c1e2d3f-4a5b-4c6d-8e9f-0a1b2c3d4e5f
+        occurredAt:
+          type: string
+          format: date-time
+          description: When the change was committed (UTC).
+          examples:
+            - '2026-11-07T18:30:00Z'
+      examples:
+        - entity: task
+          entityId: 7c1e2d3f-4a5b-4c6d-8e9f-0a1b2c3d4e5f
+          occurredAt: '2026-11-07T18:30:00Z'
+    Entity:
+      type: string
+      description: The kind of entity that changed. Matches the message name prefix.
+      enum:
+        - task
+        - expense
+        - reimbursement
+        - category
+        - member
+        - household
+      examples:
+        - task
+    SessionTerminatedSignal:
+      type: object
+      description: |
+        The server is about to close the stream because the member was removed or the household
+        deleted. Carries no entity ID: the only ID it could carry is the session's, which never
+        leaves the httpOnly cookie. The client calls `GET /v1/me`, which leads to the login page.
+      additionalProperties: false
+      required:
+        - occurredAt
+      properties:
+        occurredAt:
+          type: string
+          format: date-time
+          description: When the session was terminated (UTC).
+          examples:
+            - '2026-11-07T18:30:00Z'
+      examples:
+        - occurredAt: '2026-11-07T18:30:00Z'
+  messages:
+    taskCreated:
+      name: task.created
+      title: Task created
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/InvalidationSignal'
+      examples:
+        - name: taskCreated
+          payload:
+            entity: task
+            entityId: 7c1e2d3f-4a5b-4c6d-8e9f-0a1b2c3d4e5f
+            occurredAt: '2026-11-07T18:30:00Z'
+    taskUpdated:
+      name: task.updated
+      title: Task updated
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/InvalidationSignal'
+      examples:
+        - name: taskUpdated
+          payload:
+            entity: task
+            entityId: 7c1e2d3f-4a5b-4c6d-8e9f-0a1b2c3d4e5f
+            occurredAt: '2026-11-07T18:30:00Z'
+    taskDeleted:
+      name: task.deleted
+      title: Task deleted
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/InvalidationSignal'
+      examples:
+        - name: taskDeleted
+          payload:
+            entity: task
+            entityId: 7c1e2d3f-4a5b-4c6d-8e9f-0a1b2c3d4e5f
+            occurredAt: '2026-11-07T18:30:00Z'
+    taskDone:
+      name: task.done
+      title: Task marked as done or not done
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/InvalidationSignal'
+      examples:
+        - name: taskDone
+          payload:
+            entity: task
+            entityId: 7c1e2d3f-4a5b-4c6d-8e9f-0a1b2c3d4e5f
+            occurredAt: '2026-11-07T18:30:00Z'
+    expenseCreated:
+      name: expense.created
+      title: Expense created
+      description: Balances and statistics change as well; the client reloads them too.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/InvalidationSignal'
+      examples:
+        - name: expenseCreated
+          payload:
+            entity: expense
+            entityId: 3a4b5c6d-7e8f-4a0b-9c1d-2e3f4a5b6c7d
+            occurredAt: '2026-11-07T18:30:00Z'
+    expenseUpdated:
+      name: expense.updated
+      title: Expense updated
+      description: Balances and statistics change as well; the client reloads them too.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/InvalidationSignal'
+      examples:
+        - name: expenseUpdated
+          payload:
+            entity: expense
+            entityId: 3a4b5c6d-7e8f-4a0b-9c1d-2e3f4a5b6c7d
+            occurredAt: '2026-11-07T18:30:00Z'
+    expenseDeleted:
+      name: expense.deleted
+      title: Expense deleted
+      description: Balances and statistics change as well; the client reloads them too.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/InvalidationSignal'
+      examples:
+        - name: expenseDeleted
+          payload:
+            entity: expense
+            entityId: 3a4b5c6d-7e8f-4a0b-9c1d-2e3f4a5b6c7d
+            occurredAt: '2026-11-07T18:30:00Z'
+    reimbursementCreated:
+      name: reimbursement.created
+      title: Reimbursement created
+      description: Balances, statistics and expenses (`isMutable`) change as well; the client reloads them too.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/InvalidationSignal'
+      examples:
+        - name: reimbursementCreated
+          payload:
+            entity: reimbursement
+            entityId: 9d8c7b6a-5f4e-4d3c-8b2a-1f0e9d8c7b6a
+            occurredAt: '2026-11-07T18:30:00Z'
+    reimbursementUpdated:
+      name: reimbursement.updated
+      title: Reimbursement updated
+      description: Balances, statistics and expenses (`isMutable`) change as well; the client reloads them too.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/InvalidationSignal'
+      examples:
+        - name: reimbursementUpdated
+          payload:
+            entity: reimbursement
+            entityId: 9d8c7b6a-5f4e-4d3c-8b2a-1f0e9d8c7b6a
+            occurredAt: '2026-11-07T18:30:00Z'
+    reimbursementDeleted:
+      name: reimbursement.deleted
+      title: Reimbursement deleted
+      description: Balances, statistics and expenses (`isMutable`) change as well; the client reloads them too.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/InvalidationSignal'
+      examples:
+        - name: reimbursementDeleted
+          payload:
+            entity: reimbursement
+            entityId: 9d8c7b6a-5f4e-4d3c-8b2a-1f0e9d8c7b6a
+            occurredAt: '2026-11-07T18:30:00Z'
+    categoryCreated:
+      name: category.created
+      title: Expense category created
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/InvalidationSignal'
+      examples:
+        - name: categoryCreated
+          payload:
+            entity: category
+            entityId: 2b3c4d5e-6f7a-4b8c-9d0e-1f2a3b4c5d6e
+            occurredAt: '2026-11-07T18:30:00Z'
+    categoryUpdated:
+      name: category.updated
+      title: Expense category updated
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/InvalidationSignal'
+      examples:
+        - name: categoryUpdated
+          payload:
+            entity: category
+            entityId: 2b3c4d5e-6f7a-4b8c-9d0e-1f2a3b4c5d6e
+            occurredAt: '2026-11-07T18:30:00Z'
+    categoryDeleted:
+      name: category.deleted
+      title: Expense category deleted
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/InvalidationSignal'
+      examples:
+        - name: categoryDeleted
+          payload:
+            entity: category
+            entityId: 2b3c4d5e-6f7a-4b8c-9d0e-1f2a3b4c5d6e
+            occurredAt: '2026-11-07T18:30:00Z'
+    memberJoined:
+      name: member.joined
+      title: Member joined the household
+      description: Balances and statistics change as well; the client reloads them too.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/InvalidationSignal'
+      examples:
+        - name: memberJoined
+          payload:
+            entity: member
+            entityId: 5e6f7a8b-9c0d-4e1f-8a2b-3c4d5e6f7a8b
+            occurredAt: '2026-11-07T18:30:00Z'
+    memberUpdated:
+      name: member.updated
+      title: Member updated
+      description: Includes a change of the household admin. Balances and statistics change as well; the client reloads them too.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/InvalidationSignal'
+      examples:
+        - name: memberUpdated
+          payload:
+            entity: member
+            entityId: 5e6f7a8b-9c0d-4e1f-8a2b-3c4d5e6f7a8b
+            occurredAt: '2026-11-07T18:30:00Z'
+    memberRemoved:
+      name: member.removed
+      title: Member removed from the household
+      description: |
+        Sent to the remaining members. The removed member gets `session.terminated` instead.
+        Balances and statistics change as well; the client reloads them too.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/InvalidationSignal'
+      examples:
+        - name: memberRemoved
+          payload:
+            entity: member
+            entityId: 5e6f7a8b-9c0d-4e1f-8a2b-3c4d5e6f7a8b
+            occurredAt: '2026-11-07T18:30:00Z'
+    householdUpdated:
+      name: household.updated
+      title: Household updated
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/InvalidationSignal'
+      examples:
+        - name: householdUpdated
+          payload:
+            entity: household
+            entityId: 0b9f3c4e-2f6a-4c1d-9a7e-3b8d5e2f1a90
+            occurredAt: '2026-11-07T18:30:00Z'
+    householdDeleted:
+      name: household.deleted
+      title: Household deleted
+      description: Always followed by `session.terminated`, after which the server closes the stream.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/InvalidationSignal'
+      examples:
+        - name: householdDeleted
+          payload:
+            entity: household
+            entityId: 0b9f3c4e-2f6a-4c1d-9a7e-3b8d5e2f1a90
+            occurredAt: '2026-11-07T18:30:00Z'
+    sessionTerminated:
+      name: session.terminated
+      title: Session terminated
+      description: |
+        Last message of a stream whose member was removed or whose household was deleted; the
+        server closes the stream right after it. Other ends of a stream (logout, session expiry,
+        password reset) close it without this message.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/SessionTerminatedSignal'
+      examples:
+        - name: sessionTerminated
+          payload:
+            occurredAt: '2026-11-07T18:30:00Z'
