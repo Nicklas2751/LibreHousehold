@@ -59,7 +59,7 @@ describe('forgot-password page', () => {
 		// then
 		await expect
 			.element(page.getByText('Hast du dich über einen Anbieter registriert'))
-			.toHaveTextContent('„Weiter mit Google / GitHub“');
+			.toMatchTextContent('„Weiter mit Google / GitHub“');
 	});
 
 	it('success without providers — shows no social hint', async () => {

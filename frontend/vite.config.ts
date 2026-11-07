@@ -64,7 +64,9 @@ export default defineConfig({
 						enabled: true,
 						// Fixed locale so specs see the base language regardless of the machine's language
 						provider: playwright({ contextOptions: { locale: 'en-US' } }),
-						instances: [{ browser: 'chromium' }]
+						instances: [{ browser: 'chromium' }],
+						// Vitest 5 matches locator text exactly by default; the specs match on text fragments
+						locators: { exact: false }
 					},
 					include: ['src/**/*.svelte.{test,spec}.{js,ts}'],
 					exclude: ['src/lib/server/**'],
