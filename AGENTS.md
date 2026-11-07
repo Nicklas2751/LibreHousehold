@@ -96,6 +96,7 @@ This regenerates the API interfaces and models into `backend/target/generated-so
 
 **Frontend (`frontend/`):**
 - **Unit Tests:** `npm run test:unit` (Vitest). Run tests with `npm run test`
+- **Coverage:** `npm run test:coverage` writes `coverage/lcov.info` (`@vitest/coverage-v8`), which the CI hands to SonarCloud. V8 coverage only works with Chromium in browser mode; other browsers would need `@vitest/coverage-istanbul`.
 - **Linting:** `npm run lint` (ESLint + Prettier)
 - **Formatting:** `npm run format`
 - **Type Check:** `npm run check`

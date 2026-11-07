@@ -43,6 +43,13 @@ export default defineConfig({
 	},
 	test: {
 		expect: { requireAssertions: true },
+		coverage: {
+			provider: 'v8',
+			// lcov feeds SonarCloud (sonar.javascript.lcov.reportPaths); text gives a quick local summary.
+			reporter: ['lcov', 'text-summary'],
+			include: ['src/**/*.{ts,svelte}'],
+			exclude: ['src/**/*.{test,spec}.{js,ts}', 'src/generated-sources/**', 'src/lib/paraglide/**']
+		},
 		projects: [
 			{
 				extends: './vite.config.ts',

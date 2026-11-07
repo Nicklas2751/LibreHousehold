@@ -14,6 +14,7 @@
 		"lint": "prettier --check . && eslint .",
 		"test:unit": "vitest",
 		"test": "npm run test:unit -- --run",
+		"test:coverage": "npm run test:unit -- --run --coverage",
 		"openapi": "rm -rf src/generated-sources/openapi; npx @openapitools/openapi-generator-cli generate -i ../api/openapi.yml -g typescript-fetch -o src/generated-sources/openapi --additional-properties=supportsES6=true,modelPropertyNaming=original",
 		"paraglide": "paraglide-js compile --project ./project.inlang --outdir ./src/lib/paraglide"
 	},
@@ -29,6 +30,7 @@
 		"@types/node": "^26",
 		"@vitest/browser": "^4.1.10",
 		"@vitest/browser-playwright": "^4.1.8",
+		"@vitest/coverage-v8": "^4.1.11",
 		"daisyui": "^5.7.50",
 		"eslint": "^10.14.0",
 		"eslint-config-prettier": "^10.1.8",
