@@ -63,3 +63,9 @@ updates:
         patterns:
           - "antora"
           - "@antora/*"
+    ignore:
+      # asciidoctor-kroki 1.x and later require @asciidoctor/core 4, Antora 3.2 still ships core 2.2.
+      # npm installs both side by side without an error, but the build fails at runtime
+      # ("parent.applySubs is not a function"). Remove this once Antora ships @asciidoctor/core 4.
+      - dependency-name: "asciidoctor-kroki"
+        versions: [">=1.0.0"]
