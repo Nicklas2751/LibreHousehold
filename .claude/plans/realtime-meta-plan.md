@@ -317,8 +317,8 @@ Service. Das WebSocket Security Cheat Sheet dient nur zur Abgrenzung (Option C).
   `spring.modulith.events.registry-trigger-annotation=org.springframework.modulith.events.ApplicationModuleListener`
   das auf annotierte Listener ein. Alle bestehenden `AFTER_COMMIT`-Listener nutzen bereits
   `@ApplicationModuleListener`, `AccountLockoutListener` ist ein reiner `@EventListener` und nicht
-  betroffen. Die Property wird mit dem ersten `realtime`-Listener gesetzt (R2.4). Ein IT muss
-  belegen, dass für ihn keine Zeile in `event_publication` entsteht. Ursprüngliche Aufgabe: `@ApplicationModuleListener` persistiert jede Publikation in
+  betroffen. Die Property ist mit dem ersten `realtime`-Listener gesetzt (R1.4). Ein IT belegt,
+  dass für ihn keine Zeile in `event_publication` entsteht. Ursprüngliche Aufgabe: `@ApplicationModuleListener` persistiert jede Publikation in
   `event_publication` und wiederholt sie nach einem Neustart. Für flüchtige Push-Signale ist das
   unnötig (Clients resyncen ohnehin beim Reconnect). Zu entscheiden: synchroner
   `@TransactionalEventListener(phase = AFTER_COMMIT)` ohne Registry-Eintrag vs. Modulith-Standard
@@ -351,19 +351,19 @@ Service. Das WebSocket Security Cheat Sheet dient nur zur Abgrenzung (Option C).
 
 ## Phase R1: Backend-Fundament
 
-- **R1.1 Stream-Endpoint und Emitter-Registry.** Implementierungsplan für R1.1–R1.6: [`realtime-plan-r1.md`](realtime-plan-r1.md). `GET /v1/household/{householdId}/events` liefert
+- ✅ **R1.1 Stream-Endpoint und Emitter-Registry.** Implementierungsplan für R1.1–R1.6: [`realtime-plan-r1.md`](realtime-plan-r1.md). `GET /v1/household/{householdId}/events` liefert
   `SseEmitter`, geschützt durch `@PreAuthorize` mit `HouseholdAccessGuard.isMember` (RT1).
   Thread-sichere Registry `householdId → Set<Emitter>`. Jeder Emitter kennt Session-ID und memberId
   (für RT3, R1.4). Cleanup über `onCompletion`/`onTimeout`/`onError`. Response-Header nach RT9.
   Event-Typen nur aus dem Enum, `data` nur als JSON (RT6). Keine Seiteneffekte (RT8).
-- **R1.2 Spring-Security-Integration.** Der Endpoint liegt hinter `authenticated()` (bzw. dem
+- ✅ **R1.2 Spring-Security-Integration.** Der Endpoint liegt hinter `authenticated()` (bzw. dem
   `AccountPrincipalAuthorizationManager`). Der SecurityContext muss auch bei `ASYNC`-Dispatches
   erhalten bleiben (bekannte Falle: ein Access Denied nach dem ersten Event bzw. „response is already
   committed"). Authentifizierung und Membership werden **vor** dem ersten Byte geprüft. Wegen
   `Accept: text/event-stream` greift der 401-Entry-Point, nicht der Login-Redirect. Das muss ein Test
   absichern. Session-Ende: **nicht** auf `HttpSessionDestroyedEvent` verlassen, weil `expireNow()`
   (SES7, RESET1) keins auslöst. Stattdessen der Session-Check im Heartbeat (RT3).
-- **R1.3 Heartbeat, Timeouts und Session-Verhalten.** Kommentar-Heartbeat (Vorschlag: alle 25 s, unter Nginx'
+- ✅ **R1.3 Heartbeat, Timeouts und Session-Verhalten.** Kommentar-Heartbeat (Vorschlag: alle 25 s, unter Nginx'
   Default `proxy_read_timeout` 60 s). Jeder Tick prüft die Session (RT3). Server-seitiges
   `retry:`-Feld für das Reconnect-Backoff. **Spike vorab (RT4):** Berührt ein laufender
   Async-Request bzw. der Reconnect die Tomcat-Session (`lastAccessedTime`), und läuft die Session
@@ -398,16 +398,16 @@ Service. Das WebSocket Security Cheat Sheet dient nur zur Abgrenzung (Option C).
       Zeitpunkt. Der Heartbeat räumt solche Verbindungen spätestens nach einem Tick ab.
     - Tomcat übernimmt `server.servlet.session.timeout` nur in Minuten. Kürzere Werte für Tests
       gehen nur über `Session.setMaxInactiveInterval` am Tomcat-`Manager`.
-- **R1.4 Lifecycle-Kopplung.** Listener auf `MemberRemoved` und `HouseholdDeleted` schließen
+- ✅ **R1.4 Lifecycle-Kopplung.** Listener auf `MemberRemoved` und `HouseholdDeleted` schließen
   Emitter sofort (vorher `session.terminated` senden). Logout schließt die Emitter der Session. Für
   alle übrigen Fälle (Passwort-Reset, Session-Timeout, künftige `expireNow()`-Pfade) greift der
   Heartbeat-Check aus RT3.
-- **R1.5 Ressourcen, Logging und Observability.** Limits pro Session, pro Member und global (RT5),
+- ✅ **R1.5 Ressourcen, Logging und Observability.** Limits pro Session, pro Member und global (RT5),
   Antwort 429 mit `Retry-After`. Security-Logging nach RT10. Micrometer-Gauge „aktive Streams",
   Counter „gesendete Events" und „geschlossene Streams nach Grund". Prüfen, ob
   `spring.threads.virtual.enabled` für Heartbeat/Broadcast sinnvoll ist (nicht zwingend, da
   Async-Servlet).
-- **R1.6 Integrationstests.** `*IT` mit echtem Server (`RANDOM_PORT`) und HTTP-Client, der den
+- ✅ **R1.6 Integrationstests.** `*IT` mit echtem Server (`RANDOM_PORT`) und HTTP-Client, der den
   Stream liest. Ausführen mit `./mvnw verify`, nicht `test`. Fälle:
     - Event kommt nach Commit an, kein Event bei Rollback
     - fremder Haushalt im Pfad → 403, kein Stream (RT1)
@@ -417,6 +417,14 @@ Service. Das WebSocket Security Cheat Sheet dient nur zur Abgrenzung (Option C).
     - Limit überschritten → 429 (RT5)
     - toter Client bricht den Broadcast an andere nicht ab (RT12)
     - Payload mit Zeilenumbruch erzeugt kein zusätzliches Event (RT6)
+
+  **Stand nach R1 (2026-11-07):** R1.1–R1.6 umgesetzt (Commits `7f9269a` bis `f228107`),
+  `./mvnw clean verify` grün. Offen und nach R2 verschoben: „Event kommt nach Commit an, kein Event
+  bei Rollback" (es gibt in R1 kein Fach-Event) und der RT12-Teil „Fehler im Listener rollen die
+  fachliche Transaktion nicht zurück" (bisher nur strukturell über `AFTER_COMMIT` abgesichert, ein IT
+  mit Fehler im Listener kommt zusammen mit den Rollback-ITs). Zeilenumbrüche im Payload: Spring teilt
+  mehrzeilige Daten selbst auf mehrere `data:`-Zeilen desselben Events auf, ein zusätzliches Event
+  entsteht nicht. Jackson schreibt ohnehin einzeilig, das prüft ein Vertrags-IT.
 
   Gesendete Events werden gegen die Message-Schemas aus `api/asyncapi.yml` geprüft (Vertragstreue).
 
@@ -502,6 +510,23 @@ Service. Das WebSocket Security Cheat Sheet dient nur zur Abgrenzung (Option C).
 - **R4.3 AGENTS.md:** Der AsyncAPI-Workflow (Ort der Spec, Validierung, Regel „Vertrag zuerst",
   Telemetrie) steht seit R0.5 im Abschnitt „API Updates". Offen bleiben die Findings aus der Umsetzung (z. B. Security-Async-Dispatch, Session-Verhalten
   aus dem Spike in R1.3, Testmuster für SSE). Dazu der AsyncAPI-Workflow analog zu „API Updates":
+    - Findings aus R1 (Kandidaten für AGENTS.md, Details in den Commits von R1.1–R1.6):
+        - `authorizeHttpRequests` autorisiert auch den `ASYNC`-Dispatch. Endet ein Stream nach dem
+          Logout, scheitert die Ablehnung an der committeten Antwort und wird als ERROR geloggt.
+          Fix: `dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()` in `SecurityConfig`.
+        - Offene `SseEmitter` blockieren Tomcats Graceful Shutdown (30 s). `HouseholdEventStreams`
+          schließt deshalb alle Emitter beim `ContextClosedEvent`.
+        - Session-Verhalten laut Spike R1.3: Request-Ende und Reconnect berühren die Session, der
+          offene Stream nicht. RT4 hängt am clientseitigen Trennen (R3.2). ADR-019 („the stream
+          does not extend the session") entsprechend präzisieren.
+        - Mehrere Signale an eine Verbindung (z. B. `household.deleted`, `session.terminated`,
+          dann `complete()`) laufen als **eine** Executor-Task, sonst kann der Thread-Pool sie
+          umsortieren.
+        - Method Security veröffentlicht `AuthorizationDeniedEvent`s nur, wenn ein
+          `AuthorizationEventPublisher`-Bean existiert; die Request-Ebene tut es immer.
+        - Testmuster für SSE: Stream mit JDK-`HttpClient` (`BodyHandlers.ofLines()`) lesen
+          (`SseTestClient`), `RestTestClient` liefert die Antwort erst am Ende. Tomcat übernimmt
+          `server.servlet.session.timeout` nur in Minuten.
     - wo die Spec liegt
     - wie sie validiert wird
     - wie Code neu generiert wird (falls R0.5 Generierung vorsieht)
