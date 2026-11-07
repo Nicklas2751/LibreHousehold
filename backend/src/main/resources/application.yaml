@@ -178,6 +178,16 @@ librehousehold:
     # and when), then deleted so event_publication does not grow without bound.
     completed-retention: 30d
 
+  realtime:
+    # Sent as the SSE "retry:" field (ADR-019, api/asyncapi.yml): how long EventSource waits before
+    # it reconnects after the stream ended. 5 seconds lets a restarting server come back without a
+    # burst of reconnects, while a member still sees changes again shortly after a dropped connection.
+    reconnect-delay: 5s
+    # How long a single stream stays open before the server ends it and EventSource reconnects.
+    # Below the 30-minute session timeout on purpose: a stream must never outlive its session, and
+    # every reconnect runs the full authentication and membership check again.
+    emitter-timeout: 25m
+
   notifications:
     templates:
       # Empty by default: no override directory active, only the bundled email templates/messages
