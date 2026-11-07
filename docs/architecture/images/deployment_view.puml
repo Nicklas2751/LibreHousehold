@@ -25,7 +25,7 @@ node "User Devices" <<device>> as devices {
 
 node "Server Infrastructure" <<server>> as server {
   node "Backend Container" <<container>> as backend_container {
-    component "LibreHousehold Backend\n(Kotlin, Spring Boot)" <<backend>> as backend
+    component "LibreHousehold Backend\n(Java, Spring Boot)" <<backend>> as backend
   }
 
   node "Nginx Container" <<container>> as nginx_container {
@@ -36,6 +36,7 @@ node "Server Infrastructure" <<server>> as server {
 
 component "External E-Mail Server (SMTP)" <<external>> as mail_server
 database "Database" <<external>> as database
+component "Social Login Provider\n(OAuth2/OIDC, optional)" <<external>> as ext_auth
 
 
 ' Connections
@@ -47,6 +48,7 @@ browser_mobile -d-> nginx : "HTTPS requests"
 
 backend -d-> mail_server : "send notifications"
 backend -d-> database : "persistence"
+backend -d-> ext_auth : "authentication (OAuth2/OIDC)"
 
 ' Hidden connections for better layout
 devices -[hidden]d-> server

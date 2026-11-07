@@ -1,9 +1,8 @@
 :jbake-title: ADR 010: Use API first with OpenAPI Specification
 :jbake-type: page_toc
-// Change to 'published' when the ADR is finalized
-:jbake-status: draft
+:jbake-status: published
 :jbake-menu: adrs
-:jbake-order: 1
+:jbake-order: 10
 
 [[adr-010]]
 = ADR 010: Use API first with OpenAPI Specification

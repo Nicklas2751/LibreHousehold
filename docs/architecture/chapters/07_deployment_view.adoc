@@ -108,4 +108,5 @@ Social login is optional. Providers are configured with Spring Boot's standard `
 |Backend API |Backend Container |Docker Image (Java JAR)
 |Web Server |Nginx Container |Nginx configuration
 |E-Mail Service |External SMTP Server |SMTP configuration
+|Social Login (optional) |External OAuth2/OIDC Provider |Client registration (`spring.security.oauth2.client.*`)
 |===

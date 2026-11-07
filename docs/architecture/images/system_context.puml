@@ -7,18 +7,23 @@ skinparam component {
 skinparam nodesep 20
 
 component "LibreHousehold" <<system>> as librehousehold {
+        portOut "SMTP" as smtp
+        portOut "OAuth2/OIDC" as oauth
 }
 
 actor "User" as user
 actor "Administrator" as admin
 
 node "E-Mail Server" as mail
+node "Social Login Provider" <<optional>> as ext_auth
 
-user -> librehousehold
-admin -> librehousehold
-librehousehold -> mail
+user -l-> librehousehold
+user --> ext_auth
+admin -r-> librehousehold
+smtp --> mail
+oauth --> ext_auth
 
-user -[hidden]-> admin
+admin -[hidden]-> user
 
 legend bottom
   <#GhostWhite,#GhostWhite>|        |= __Legend__ |
