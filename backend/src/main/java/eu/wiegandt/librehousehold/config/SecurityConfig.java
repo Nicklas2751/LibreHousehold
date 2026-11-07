@@ -1,6 +1,7 @@
 package eu.wiegandt.librehousehold.config;
 
 import eu.wiegandt.librehousehold.household.LocalLoginProperties;
+import jakarta.servlet.DispatcherType;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -113,6 +114,12 @@ public class SecurityConfig {
             OncePerRequestFilter rateLimitingFilter,
             @Value("${server.servlet.session.cookie.name:JSESSIONID}") String sessionCookieName) {
         http.authorizeHttpRequests(authorize -> authorize
+                        // Spring Security authorizes every dispatch. An ASYNC dispatch only resumes a
+                        // request whose REQUEST dispatch was already authorized, e.g. when a streamed
+                        // response ends. By then the session may be gone (logout), and a denial could
+                        // only fail on the committed response. ADR-019 binds a stream to its session
+                        // through a session check while streaming, not through this re-authorization.
+                        .dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()
                         // "/error" must stay public: Spring MVC forwards internally to it for any
                         // non-2xx response, and that forward is itself subject to these rules.
                         .requestMatchers("/error",
