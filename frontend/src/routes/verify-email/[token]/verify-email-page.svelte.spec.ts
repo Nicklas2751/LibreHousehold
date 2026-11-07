@@ -29,7 +29,8 @@ function currentUser(): CurrentUser {
 		household: { id: 'household-1', name: 'Musterhaushalt' },
 		preferences: { theme: 'light', language: 'de' },
 		emailVerified: false,
-		socialLoginOnly: false
+		socialLoginOnly: false,
+		sessionTimeoutSeconds: 1800
 	};
 }
 

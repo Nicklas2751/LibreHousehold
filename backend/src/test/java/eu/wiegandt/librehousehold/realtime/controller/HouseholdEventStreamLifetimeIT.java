@@ -7,13 +7,18 @@ import eu.wiegandt.librehousehold.household.repository.AccountRepository;
 import eu.wiegandt.librehousehold.household.repository.HouseholdRepository;
 import eu.wiegandt.librehousehold.household.repository.MemberRepository;
 import eu.wiegandt.librehousehold.household.service.AccountService;
+import eu.wiegandt.librehousehold.household.service.MemberSessions;
 import eu.wiegandt.librehousehold.realtime.SseTestClient;
+import eu.wiegandt.librehousehold.realtime.SseTestClient.SseEvent;
 import eu.wiegandt.librehousehold.realtime.service.HouseholdEventStreams;
 import org.instancio.Instancio;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureRestTestClient;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
@@ -33,26 +38,40 @@ import static org.awaitility.Awaitility.await;
 import static org.instancio.Select.field;
 
 /**
- * The end of a stream after its emitter timeout (ADR-019). A separate class, since the short
- * timeout needs its own application context; the other stream tests keep the default.
+ * How long a stream lives: until its emitter timeout, or until the heartbeat finds its session ended
+ * (ADR-019, RT3). A separate class, since the short timeout and heartbeat interval need their own
+ * application context; the other stream tests keep the defaults.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
-        "librehousehold.realtime.emitter-timeout=1s",
+        // Long enough to tell a stream ended by the heartbeat from one ended by the timeout
+        "librehousehold.realtime.emitter-timeout=3s",
+        "librehousehold.realtime.heartbeat-interval=200ms",
         // The login limits themselves are covered by RateLimitingIT
         "librehousehold.security.rate-limit.login-per-ip.max-attempts=10000",
         "librehousehold.security.rate-limit.login.max-attempts=10000"
 })
 @Import(TestcontainersConfiguration.class)
 @AutoConfigureRestTestClient
-class HouseholdEventStreamTimeoutIT {
+@ExtendWith(OutputCaptureExtension.class)
+class HouseholdEventStreamLifetimeIT {
 
     private static final String BASE_PATH = "/v1";
     private static final String RAW_PASSWORD = "correct horse battery staple";
     private static final String XSRF_COOKIE = "XSRF-TOKEN";
     private static final String XSRF_HEADER = "X-XSRF-TOKEN";
     private static final Map<String, String> NO_COOKIES = Map.of();
-    // Well above the emitter timeout of 1 second
+    // Well above the emitter timeout of 3 seconds
     private static final Duration CLOSE_TIMEOUT = Duration.ofSeconds(10);
+    private static final Duration EVENT_TIMEOUT = Duration.ofSeconds(2);
+    // A few heartbeat intervals, but well below the emitter timeout
+    private static final Duration HEARTBEAT_CLOSE_TIMEOUT = Duration.ofSeconds(1);
+    // How long the log is watched after the stream ended; the container logs a failed dispatch right away
+    private static final Duration LOG_QUIET_PERIOD = Duration.ofSeconds(1);
+    private static final SseEvent HEARTBEAT = new SseEvent(null, null, null, List.of("heartbeat"));
+    private static final String COMMITTED_RESPONSE_FAILURE = "response is already committed";
+    private static final String ACCESS_DENIED_FAILURE = "AccessDeniedException";
+    private static final String AUTHORIZATION_DENIED_FAILURE = "AuthorizationDeniedException";
+    private static final String DISPATCH_FAILURE = "Servlet.service()";
 
     @LocalServerPort
     private int port;
@@ -75,6 +94,9 @@ class HouseholdEventStreamTimeoutIT {
     @Autowired
     private AccountRepository accountRepository;
 
+    @Autowired
+    private MemberSessions memberSessions;
+
     @Test
     void openStream_emitterTimeoutElapses_connectionRemovedFromRegistry() throws Exception {
         // given
@@ -87,6 +109,57 @@ class HouseholdEventStreamTimeoutIT {
             // then
             await().atMost(CLOSE_TIMEOUT)
                     .untilAsserted(() -> assertThat(streams.connectionsOf(householdId)).isEmpty());
+        }
+    }
+
+    @Test
+    void openStream_member_heartbeatCommentsReceived() throws Exception {
+        // given
+        var member = createVerifiedMember(createHousehold());
+
+        // when
+        try (var stream = SseTestClient.open(streamUri(member.householdId()), loggedInCookies(member))) {
+            stream.awaitEvent(EVENT_TIMEOUT);
+
+            // then
+            assertThat(List.of(stream.awaitEvent(EVENT_TIMEOUT), stream.awaitEvent(EVENT_TIMEOUT)))
+                    .containsExactly(HEARTBEAT, HEARTBEAT);
+        }
+    }
+
+    @Test
+    void openStream_sessionsOfMemberExpired_streamClosedByNextHeartbeat() throws Exception {
+        // given
+        var member = createVerifiedMember(createHousehold());
+
+        try (var stream = SseTestClient.open(streamUri(member.householdId()), loggedInCookies(member))) {
+            stream.awaitEvent(EVENT_TIMEOUT);
+
+            // when
+            memberSessions.expireAll(member.getId());
+
+            // then
+            assertThat(stream.awaitClosed(HEARTBEAT_CLOSE_TIMEOUT)).isTrue();
+        }
+    }
+
+    @Test
+    void openStream_sessionsOfMemberExpired_noDispatchFailureLogged(CapturedOutput output) throws Exception {
+        // given
+        var member = createVerifiedMember(createHousehold());
+
+        try (var stream = SseTestClient.open(streamUri(member.householdId()), loggedInCookies(member))) {
+            stream.awaitEvent(EVENT_TIMEOUT);
+
+            // when
+            memberSessions.expireAll(member.getId());
+            stream.awaitClosed(HEARTBEAT_CLOSE_TIMEOUT);
+
+            // then
+            await().during(LOG_QUIET_PERIOD).atMost(LOG_QUIET_PERIOD.multipliedBy(2))
+                    .untilAsserted(() -> assertThat(output.getAll())
+                            .doesNotContain(COMMITTED_RESPONSE_FAILURE, ACCESS_DENIED_FAILURE,
+                                    AUTHORIZATION_DENIED_FAILURE, DISPATCH_FAILURE));
         }
     }
 

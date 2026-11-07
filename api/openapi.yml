@@ -3030,6 +3030,7 @@ components:
         - preferences
         - emailVerified
         - socialLoginOnly
+        - sessionTimeoutSeconds
       description: Member, household and preferences data for the authenticated session.
       properties:
         member:
@@ -3050,6 +3051,15 @@ components:
             password or request a password reset. False for accounts with a local password, even
             if a social login provider is linked to them.
           example: false
+        sessionTimeoutSeconds:
+          type: integer
+          minimum: 1
+          description: >
+            Inactivity timeout of the session in seconds, as configured on the server. The session
+            ends after this long without a request. Every reconnect of the event stream is such a
+            request, so the client closes its stream when the user has been idle for nearly this
+            long; otherwise the stream would keep an idle session alive.
+          example: 1800
 
     EmailVerificationConfirm:
       type: object

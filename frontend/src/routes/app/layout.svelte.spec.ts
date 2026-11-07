@@ -35,6 +35,7 @@ function currentUser(overrides: Partial<CurrentUser> = {}): CurrentUser {
 		preferences: { theme: 'light', language: 'de' },
 		emailVerified: false,
 		socialLoginOnly: false,
+		sessionTimeoutSeconds: 1800,
 		...overrides
 	};
 }

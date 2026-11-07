@@ -54,6 +54,10 @@ public class HouseholdEventStreams {
         connections.forEach(this::closeForShutdown);
     }
 
+    public Set<StreamConnection> connections() {
+        return Set.copyOf(connections);
+    }
+
     public Set<StreamConnection> connectionsOf(UUID householdId) {
         return connectionsMatching(connection -> connection.householdId().equals(householdId));
     }
