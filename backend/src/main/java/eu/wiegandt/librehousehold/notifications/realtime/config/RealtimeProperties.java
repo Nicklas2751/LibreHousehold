@@ -1,14 +1,13 @@
 package eu.wiegandt.librehousehold.notifications.realtime.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.boot.context.properties.bind.DefaultValue;
 import org.springframework.validation.annotation.Validated;
 
 import java.time.Duration;
 
 /**
- * Settings of the household event stream (ADR-019), see {@code librehousehold.notifications.realtime} in
- * {@code application.yaml} for the reasoning behind the defaults.
+ * Settings of the household event stream (ADR-019). The values and the reasoning behind them live only
+ * in {@code librehousehold.notifications.realtime} of {@code application.yaml}.
  *
  * @param reconnectDelay        sent as the SSE {@code retry:} field, the delay before {@code EventSource}
  *                              reconnects
@@ -22,10 +21,6 @@ import java.time.Duration;
 @ConfigurationProperties(prefix = "librehousehold.notifications.realtime")
 @Validated
 @EmitterTimeoutBelowSessionTimeout
-public record RealtimeProperties(@DefaultValue("5s") Duration reconnectDelay,
-                                 @DefaultValue("25m") Duration emitterTimeout,
-                                 @DefaultValue("5") int maxStreamsPerSession,
-                                 @DefaultValue("10") int maxStreamsPerMember,
-                                 @DefaultValue("500") int maxStreams,
-                                 @DefaultValue("30s") Duration retryAfter) {
+public record RealtimeProperties(Duration reconnectDelay, Duration emitterTimeout, int maxStreamsPerSession,
+                                 int maxStreamsPerMember, int maxStreams, Duration retryAfter) {
 }

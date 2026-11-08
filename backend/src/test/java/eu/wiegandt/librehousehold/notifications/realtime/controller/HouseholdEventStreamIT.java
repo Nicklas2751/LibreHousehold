@@ -245,6 +245,25 @@ class HouseholdEventStreamIT {
             }
         }
 
+        // The ConcurrentSessionFilter rejects before the AuthorizationFilter, so no denial event reports it (RT10)
+        @Test
+        void openStream_expiredSession_rejectionLoggedAsWarning(CapturedOutput output) throws Exception {
+            // given
+            var member = createVerifiedMember(createHousehold());
+            var cookies = loggedInCookies(member);
+            sessionRegistry.getSessionInformation(cookies.get(SESSION_COOKIE)).expireNow();
+            var rejection = "Request GET " + BASE_PATH + "/household/" + member.householdId() + "/events of member "
+                    + member.getId() + " rejected: session expired";
+
+            // when
+            try (var _ = SseTestClient.open(streamUri(member.householdId()), cookies)) {
+
+                // then
+                assertThat(output.getAll().lines())
+                        .anyMatch(line -> line.contains(WARN_LEVEL) && line.contains(rejection));
+            }
+        }
+
         @Test
         void openStream_logout_streamClosed() throws Exception {
             // given
