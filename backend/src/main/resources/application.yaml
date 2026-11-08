@@ -56,7 +56,7 @@ server:
   servlet:
     session:
       # Set explicitly instead of relying on Tomcat's default of the same value: the event stream and
-      # the client align with it (ADR-019). librehousehold.realtime.emitter-timeout must stay below it
+      # the client align with it (ADR-019). librehousehold.notifications.realtime.emitter-timeout must stay below it
       # (checked at startup), and GET /me hands it to the client as sessionTimeoutSeconds, so the
       # client can close its stream before an idle session times out. Tomcat only applies whole minutes.
       timeout: 30m
@@ -188,32 +188,6 @@ librehousehold:
     # and when), then deleted so event_publication does not grow without bound.
     completed-retention: 30d
 
-  realtime:
-    # Sent as the SSE "retry:" field (ADR-019, api/asyncapi.yml): how long EventSource waits before
-    # it reconnects after the stream ended. 5 seconds lets a restarting server come back without a
-    # burst of reconnects, while a member still sees changes again shortly after a dropped connection.
-    reconnect-delay: 5s
-    # How long a single stream stays open before the server ends it and EventSource reconnects.
-    # Below the 30-minute session timeout on purpose: a stream must never outlive its session, and
-    # every reconnect runs the full authentication and membership check again.
-    emitter-timeout: 25m
-    # How often every open stream gets an SSE comment (": heartbeat") and its session is checked
-    # against the SessionRegistry (RT3). Below the 60-second default proxy_read_timeout of Nginx, so
-    # the proxy never closes an idle stream; also the longest time a stream outlives a session ended
-    # by expireNow() (e.g. password reset), which no event reports.
-    heartbeat-interval: 25s
-    # Limits for streams open at the same time (RT5): every stream holds a connection and a slot in
-    # the registry, so without them a single session could exhaust the server. A stream beyond a
-    # limit is rejected with 429 and Retry-After. 5 per session covers a member with several tabs;
-    # 10 per member allows a second device; 500 per instance is far above what a self-hosted
-    # instance with a few households needs, while still bounding memory and connections.
-    max-streams-per-session: 5
-    max-streams-per-member: 10
-    max-streams: 500
-    # Sent as Retry-After with a rejected stream. Long enough that a client does not hammer the
-    # server while its other tabs are still open.
-    retry-after: 30s
-
   notifications:
     templates:
       # Empty by default: no override directory active, only the bundled email templates/messages
@@ -223,3 +197,29 @@ librehousehold:
       # LIBREHOUSEHOLD_NOTIFICATIONS_TEMPLATES_OVERRIDE_DIR=/config/templates. Overridden keys/files
       # take precedence; anything not overridden falls back to the bundled default.
       override-dir: ""
+
+    realtime:
+      # Sent as the SSE "retry:" field (ADR-019, api/asyncapi.yml): how long EventSource waits before
+      # it reconnects after the stream ended. 5 seconds lets a restarting server come back without a
+      # burst of reconnects, while a member still sees changes again shortly after a dropped connection.
+      reconnect-delay: 5s
+      # How long a single stream stays open before the server ends it and EventSource reconnects.
+      # Below the 30-minute session timeout on purpose: a stream must never outlive its session, and
+      # every reconnect runs the full authentication and membership check again.
+      emitter-timeout: 25m
+      # How often every open stream gets an SSE comment (": heartbeat") and its session is checked
+      # against the SessionRegistry (RT3). Below the 60-second default proxy_read_timeout of Nginx, so
+      # the proxy never closes an idle stream; also the longest time a stream outlives a session ended
+      # by expireNow() (e.g. password reset), which no event reports.
+      heartbeat-interval: 25s
+      # Limits for streams open at the same time (RT5): every stream holds a connection and a slot in
+      # the registry, so without them a single session could exhaust the server. A stream beyond a
+      # limit is rejected with 429 and Retry-After. 5 per session covers a member with several tabs;
+      # 10 per member allows a second device; 500 per instance is far above what a self-hosted
+      # instance with a few households needs, while still bounding memory and connections.
+      max-streams-per-session: 5
+      max-streams-per-member: 10
+      max-streams: 500
+      # Sent as Retry-After with a rejected stream. Long enough that a client does not hammer the
+      # server while its other tabs are still open.
+      retry-after: 30s

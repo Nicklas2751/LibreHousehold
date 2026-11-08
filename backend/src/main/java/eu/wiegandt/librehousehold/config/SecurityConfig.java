@@ -102,7 +102,7 @@ public class SecurityConfig {
 
     /**
      * Publishes every denied authorization as an {@code AuthorizationDeniedEvent}, so modules can log
-     * rejected access to their endpoints (decision 6.2 of the realtime plan, RT10). The filter chain
+     * rejected access to their endpoints (RT10 of the realtime stream, ADR-019). The filter chain
      * would publish request-level denials without this bean, but method security, i.e.
      * {@code @PreAuthorize}, publishes only when such a bean exists.
      */

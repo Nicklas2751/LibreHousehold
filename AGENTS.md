@@ -368,6 +368,14 @@ Integration tests for login, logout, session and CSRF behaviour run the real ser
 
 `@ApplicationModuleListener` is an async `@TransactionalEventListener(AFTER_COMMIT)`. If `publishEvent` runs without an active transaction, Spring silently skips the listener, while Spring Modulith still records the publication in `event_publication`. Nothing fails; the mail is just never sent. This bug hit twice (`UnverifiedAccountExpiryJob` deletion warning, `resendVerificationEmail`). Every method that publishes such an event must therefore run inside a transaction: `@Transactional` called through the Spring proxy, or `TransactionOperations` for loops in non-transactional jobs. Its test must check the real effect, e.g. the mail arriving in Mailpit; a test of a timestamp or a recorded event does not catch the bug. Failed publications are resubmitted by `EventPublicationMaintenanceJob` (see Arc42 chapter 8, "Event Delivery and Resubmission").
 
+### Only `@ApplicationModuleListener` creates Event Publication Registry entries
+
+`application.yaml` sets `spring.modulith.events.registry-trigger-annotation` to `org.springframework.modulith.events.ApplicationModuleListener` (ADR-019). Without it, Spring Modulith records a publication for *every* `AFTER_COMMIT` transactional listener. The setting applies to all modules: a plain `@TransactionalEventListener` is never persisted in `event_publication`, never resubmitted by `EventPublicationMaintenanceJob`, and a failure in it is lost. That is intended for the realtime stream listeners in `notifications.realtime`, whose lost signals the client's resync makes good. A listener that needs at-least-once delivery (e-mails, cleanup of module data) must use `@ApplicationModuleListener`.
+
+### `package-info.java`: the generated `model` package counts as a module
+
+The OpenAPI generator writes the backend models to `eu.wiegandt.librehousehold.model`, a direct sub-package of the application package, so Spring Modulith treats it as a module named `model`. A module that declares `@ApplicationModule(allowedDependencies = …)` and uses a generated model type (e.g. `notifications` with `UserPreferences`) must list `"model"`, otherwise `ApplicationTests` fails with "depends on module 'model'".
+
 ### CI: `CI result` is the only required check
 
 `.github/workflows/ci.yml` runs for every pull request and every push to any branch, without path filters. A `changes` job diffs the commit range (pull request: against its base; `main`: against the previous push; other branches: against the merge base with `main`) and calls `backend-ci.yml` / `frontend-ci.yml` (reusable, `workflow_call` only) when their area changed, including changes to the workflow files themselves. The `ci-result` job ("CI result") is the only check required by the `main` ruleset: it fails if any job in its `needs` failed or was cancelled, and passes if they were skipped.
