@@ -54,7 +54,7 @@ The project uses a *hybrid approach* (Option C):
   The consuming module listens with `@ApplicationModuleListener`, which runs asynchronously in a new transaction after the producing transaction has committed.
   Events are used here because the producer must not need to know which other modules are interested in the change.
 +
-NOTE: Exception: the `realtime` module listens with a synchronous `@TransactionalEventListener(phase = AFTER_COMMIT)` without an entry in the Event Publication Registry, because a lost change signal is made good by the client's resync; see xref:adr-019.adoc[ADR 019].
+NOTE: Exception: the realtime stream of the `notifications` module (`notifications.realtime`) listens with a synchronous `@TransactionalEventListener(phase = AFTER_COMMIT)` without an entry in the Event Publication Registry, because a lost change signal is made good by the client's resync; see xref:adr-019.adoc[ADR 019].
 
 * *Intra-module communication* (e.g. between the expense and reimbursement services within the `expenses` module) uses direct Spring bean injection without any restrictions.
 

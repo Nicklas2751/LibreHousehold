@@ -24,7 +24,7 @@ These modules don't share any code but communicate via the defined ports.
 |Administration _(planned)_ |The Administration module is responsible for managing the application, including user management and system settings. |Supporting
 |User Settings |The User Settings module is responsible for managing user-specific preferences (e.g. language, theme, notification channels). |Generic
 |App Settings |The App Settings module is a special module only in the frontend for managing frontend (App) specific settings. It has no shared business rules and is not a bounded context. |_(technical, frontend-only)_
-|Notifications |The Notifications module is responsible for sending and showing notifications to the user. It also allows users to configure their notification settings. |Generic
+|Notifications |The Notifications module is responsible for sending and showing notifications to the user: e-mails and the realtime change signals that open clients receive over Server-Sent Events (xref:adrs:adr-019.adoc[ADR 019]). It also allows users to configure their notification settings. |Generic
 |===
 
 See <<section-subdomain-classification>> below for what these types mean and why they were assigned this way.

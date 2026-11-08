@@ -300,7 +300,7 @@ Service. Das WebSocket Security Cheat Sheet dient nur zur Abgrenzung (Option C).
     - **Konventionen wie bei OpenAPI:** Jedes Schema und jede Property bekommt ein `example`. Die
       Spec wird vor jedem Commit validiert (siehe R0.5).
     - Fachdaten-Schemas werden wegen der dünnen Events nicht referenziert.
-- ✅ **R0.3 Modulschnitt.** Erledigt 2026-11-07: Neues Modul `realtime` (in ADR-019 beschrieben,
+- ✅ **R0.3 Modulschnitt.** **Korrigiert 2026-11-08:** Der Stream gehört in das Modul `notifications` (Paket `notifications.realtime`), weil Arc42 Kap. 5 dieses Modul für das Senden und Anzeigen von Benachrichtigungen vorsieht. ADR-019 und ADR-011 sind angepasst, Properties und Metriken heißen `librehousehold.notifications.realtime.*`. Wo unten noch vom Modul `realtime` die Rede ist, ist `notifications.realtime` gemeint. Ursprünglich erledigt 2026-11-07: Neues Modul `realtime` (in ADR-019 beschrieben,
   angelegt wird es in R1.1 samt `package-info.java`). Das leere `events`-Verzeichnis ist gelöscht. Das
   Modul `session` (ADR-017, Pre-Redirect-Session) hat keine Überschneidung. Ursprüngliche Aufgabe: Vorschlag: neues Modul `realtime` (kennt die öffentlichen Event-Records von
   `tasks`/`expenses`/`household`, wird von niemandem referenziert). Fachmodule wissen nichts von
@@ -522,6 +522,8 @@ Service. Das WebSocket Security Cheat Sheet dient nur zur Abgrenzung (Option C).
         - Mehrere Signale an eine Verbindung (z. B. `household.deleted`, `session.terminated`,
           dann `complete()`) laufen als **eine** Executor-Task, sonst kann der Thread-Pool sie
           umsortieren.
+        - ADR-019 ist bereits präzisiert (Reconnect setzt das Session-Timeout zurück). Die Wirkung
+          der Registry-Trigger-Property auf alle Module steht bereits in AGENTS.md.
         - Method Security veröffentlicht `AuthorizationDeniedEvent`s nur, wenn ein
           `AuthorizationEventPublisher`-Bean existiert; die Request-Ebene tut es immer.
         - Testmuster für SSE: Stream mit JDK-`HttpClient` (`BodyHandlers.ofLines()`) lesen
