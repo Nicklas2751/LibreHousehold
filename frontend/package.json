@@ -34,7 +34,7 @@
 		"daisyui": "^5.7.50",
 		"eslint": "^10.14.0",
 		"eslint-config-prettier": "^10.1.8",
-		"eslint-plugin-svelte": "^3.23.1",
+		"eslint-plugin-svelte": "^3.24.0",
 		"globals": "^17.14.0",
 		"playwright": "^1.65.0",
 		"prettier": "^3.9.10",
