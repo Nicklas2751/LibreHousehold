@@ -45,6 +45,12 @@ updates:
       sveltekit:
         patterns:
           - "@sveltejs/*"
+    ignore:
+      # TypeScript 7.0 has no stable programmatic API yet, so svelte-check (peer: ^5 || ^6)
+      # cannot use it and npm ci fails with ERESOLVE. Microsoft calls this a point-in-time issue.
+      # Remove this once svelte-check supports TypeScript 7.
+      - dependency-name: "typescript"
+        versions: ["7.0.x"]
 
   # AsyncAPI CLI validating the realtime event contract
   - package-ecosystem: "npm"

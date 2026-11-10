@@ -190,6 +190,10 @@ LibreHousehold/
   - `src/lib`: Shared components, utilities, and stores. Imported via the `#lib` subpath import from `package.json` (SvelteKit 3 no longer generates `$lib`); imports need the file extension, e.g. `#lib/stores/taskStore.ts`.
   - `src/lib/stores`: State management
   - `src/generated-sources`: **Do not edit manually**; generated API clients
+- **TypeScript 7:** `dependabot.yml` ignores `typescript` `7.0.x`. TypeScript 7.0 has no stable
+  programmatic API, so Svelte tooling still requires TypeScript 6 (`svelte-check` peer:
+  `^5.0.0 || ^6.0.0`) and `npm ci` fails with `ERESOLVE`. 7.1 is proposed again; if it still fails,
+  widen the range. Remove the rule once `svelte-check` accepts TypeScript 7.
 
 ### Documentation
 
