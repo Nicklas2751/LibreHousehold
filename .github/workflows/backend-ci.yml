@@ -55,7 +55,7 @@ jobs:
           path: backend/target
 
       - name: SonarCloud Scan
-        uses: SonarSource/sonarqube-scan-action@v8.4.0
+        uses: SonarSource/sonarqube-scan-action@v8.4.1
         with:
           projectBaseDir: backend
           # Without waiting, the scan only uploads the analysis and the job stays green on a failed quality gate
