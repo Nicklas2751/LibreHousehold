@@ -9,6 +9,6 @@
   },
   "devDependencies": {
     "@asyncapi/cli": "6.2.3",
-    "@stoplight/spectral-cli": "6.17.0"
+    "@stoplight/spectral-cli": "6.17.1"
   }
 }
