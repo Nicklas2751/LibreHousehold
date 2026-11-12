@@ -8,7 +8,7 @@
     "validate:asyncapi": "ASYNCAPI_METRICS_CONFIG_PATH=asyncapi-analytics.json asyncapi validate asyncapi.yml --fail-severity=info"
   },
   "devDependencies": {
-    "@asyncapi/cli": "6.2.3",
+    "@asyncapi/cli": "6.3.0",
     "@stoplight/spectral-cli": "6.17.1"
   }
 }
